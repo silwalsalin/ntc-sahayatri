@@ -1,5 +1,5 @@
 // src/pages/LoginPage.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Try to import local images with fallback
@@ -26,6 +26,7 @@ const LoginPage = () => {
   // Language state
   const [language, setLanguage] = useState('np');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
 
   // Login form state
   const [formData, setFormData] = useState({
@@ -34,9 +35,34 @@ const LoginPage = () => {
     rememberMe: false
   });
 
-  // Error state
+  // Error and loading state
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Handle scroll for header effects
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Check if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    const user = localStorage.getItem('adminUser');
+    const role = localStorage.getItem('userRole');
+    
+    if (token && user) {
+      if (role === 'admin') {
+        navigate('/admin-dashboard');
+      } else if (role === 'staff') {
+        navigate('/staff-dashboard');
+      }
+    }
+  }, [navigate]);
 
   const content = {
     np: {
@@ -59,6 +85,7 @@ const LoginPage = () => {
       rememberMe: 'मलाई सम्झनुहोस्',
       forgotPassword: 'पासवर्ड बिर्सनुभयो?',
       loginBtn: 'लगइन गर्नुहोस्',
+      loggingIn: 'लगइन हुँदैछ...',
       backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
       demoCredentials: 'डेमो प्रमाणपत्रहरू:',
       adminUser: 'प्रशासक: admin@ntc',
@@ -66,11 +93,14 @@ const LoginPage = () => {
       staffUser: 'कर्मचारी: staff@ntc',
       staffPass: 'पासवर्ड: staff123',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
-      copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।'
+      copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
+      loginSuccess: '✅ लगइन सफल! पुन: निर्देशित हुँदैछ...',
+      loginError: '❌ अमान्य प्रयोगकर्ता नाम वा पासवर्ड।',
+      requiredFields: 'कृपया प्रयोगकर्ता नाम र पासवर्ड भर्नुहोस्।'
     },
     en: {
       weAreHere: 'We are here for you',
-      contactNumber: '01-4960008',
+      contactNumber: 'Contact: 01-4960008',
       emailAddress: 'coo@ntc.net.np',
       departmentName: 'Nepal Telecommunications Authority',
       departmentAddress: 'Bhadrakali Plaza, Kathmandu',
@@ -88,6 +118,7 @@ const LoginPage = () => {
       rememberMe: 'Remember me',
       forgotPassword: 'Forgot Password?',
       loginBtn: 'Login',
+      loggingIn: 'Logging in...',
       backToHome: 'Back to Home',
       demoCredentials: 'Demo Credentials:',
       adminUser: 'Admin: admin@ntc',
@@ -95,7 +126,10 @@ const LoginPage = () => {
       staffUser: 'Staff: staff@ntc',
       staffPass: 'Password: staff123',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
-      copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.'
+      copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
+      loginSuccess: '✅ Login successful! Redirecting...',
+      loginError: '❌ Invalid username or password.',
+      requiredFields: 'Please enter username and password.'
     }
   };
 
@@ -110,29 +144,63 @@ const LoginPage = () => {
     setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!formData.username || !formData.password) {
-      setError(language === 'np' ? 'कृपया प्रयोगकर्ता नाम र पासवर्ड भर्नुहोस्।' : 'Please enter username and password.');
+      setError(t.requiredFields);
       return;
     }
 
+    setIsLoading(true);
+    setError('');
+
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     // Demo authentication
-    if ((formData.username === 'admin@ntc' || formData.username === 'admin') && formData.password === 'admin123') {
-      localStorage.setItem('isLoggedIn', 'true');
+    const username = formData.username.toLowerCase();
+    const password = formData.password;
+
+    // Admin login
+    if ((username === 'admin@ntc' || username === 'admin') && password === 'admin123') {
+      // Store admin session
+      localStorage.setItem('adminToken', 'dummy-admin-token-12345');
+      localStorage.setItem('adminUser', JSON.stringify({
+        id: 1,
+        name: 'Admin User',
+        email: 'admin@ntc.com',
+        role: 'admin'
+      }));
       localStorage.setItem('userRole', 'admin');
-      localStorage.setItem('userName', 'Admin');
-      alert(language === 'np' ? '✅ प्रशासक लगइन सफल!' : '✅ Admin login successful!');
-      navigate('/admin');
-    } else if ((formData.username === 'staff@ntc' || formData.username === 'staff') && formData.password === 'staff123') {
+      localStorage.setItem('userName', 'Admin User');
       localStorage.setItem('isLoggedIn', 'true');
+      
+      // Show success message
+      alert(t.loginSuccess);
+      
+      // Redirect to admin dashboard
+      navigate('/admin-dashboard');
+    } 
+    // Staff login
+    else if ((username === 'staff@ntc' || username === 'staff') && password === 'staff123') {
+      localStorage.setItem('staffToken', 'dummy-staff-token-12345');
+      localStorage.setItem('staffUser', JSON.stringify({
+        id: 2,
+        name: 'Staff User',
+        email: 'staff@ntc.com',
+        role: 'staff'
+      }));
       localStorage.setItem('userRole', 'staff');
-      localStorage.setItem('userName', 'Staff');
-      alert(language === 'np' ? '✅ कर्मचारी लगइन सफल!' : '✅ Staff login successful!');
-      navigate('/dashboard');
-    } else {
-      setError(language === 'np' ? '❌ अमान्य प्रयोगकर्ता नाम वा पासवर्ड।' : '❌ Invalid username or password.');
+      localStorage.setItem('userName', 'Staff User');
+      localStorage.setItem('isLoggedIn', 'true');
+      
+      alert(t.loginSuccess);
+      navigate('/staff-dashboard');
+    } 
+    else {
+      setError(t.loginError);
+      setIsLoading(false);
     }
   };
 
@@ -161,7 +229,7 @@ const LoginPage = () => {
   return (
     <div className="login-page">
       {/* HEADER 1 - Top Bar */}
-      <div className="header-1">
+      <div className={`header-1 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
         <div className="container-1">
           <div className="header-left">
             <div className="we-are-here">
@@ -212,7 +280,7 @@ const LoginPage = () => {
       </div>
 
       {/* HEADER 2 - Department Level with Logos */}
-      <div className="header-2">
+      <div className={`header-2 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
         <div className="container-2">
           <div className="logo-left">
             <LogoImage 
@@ -265,6 +333,8 @@ const LoginPage = () => {
                     value={formData.username}
                     onChange={handleInputChange}
                     placeholder={t.enterUsername}
+                    autoComplete="username"
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -279,11 +349,14 @@ const LoginPage = () => {
                     value={formData.password}
                     onChange={handleInputChange}
                     placeholder={t.enterPassword}
+                    autoComplete="current-password"
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
                     className="password-toggle"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
                   >
                     {showPassword ? "👁️" : "👁️‍🗨️"}
                   </button>
@@ -297,21 +370,58 @@ const LoginPage = () => {
                     name="rememberMe"
                     checked={formData.rememberMe}
                     onChange={handleInputChange}
+                    disabled={isLoading}
                   />
                   <span>{t.rememberMe}</span>
                 </label>
                 <a href="/forgot-password" className="forgot-password">{t.forgotPassword}</a>
               </div>
 
-              <button type="submit" className="btn-login">
-                <span>🔓</span> {t.loginBtn}
+              <button type="submit" className="btn-login" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <span className="spinner">⏳</span> {t.loggingIn}
+                  </>
+                ) : (
+                  <>
+                    <span>🔓</span> {t.loginBtn}
+                  </>
+                )}
               </button>
             </form>
+
+            {/* Demo Credentials */}
+            <div className="demo-credentials">
+              <div className="demo-title">{t.demoCredentials}</div>
+              <div className="demo-info">
+                <code>{t.adminUser}</code>
+                <code>{t.adminPass}</code>
+              </div>
+              <div className="demo-info">
+                <code>{t.staffUser}</code>
+                <code>{t.staffPass}</code>
+              </div>
+            </div>
+
+            <div className="back-to-home">
+              <button onClick={() => navigate('/')} className="btn-back" disabled={isLoading}>
+                ← {t.backToHome}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-    
+      {/* Footer */}
+      <footer className="footer">
+        <div className="footer-content">
+          <div className="footer-copyright">
+            <p>{t.footerTagline}</p>
+            <p className="copyright-text">{t.copyright}</p>
+          </div>
+        </div>
+      </footer>
+
       <style jsx>{`
         * {
           margin: 0;
@@ -337,6 +447,11 @@ const LoginPage = () => {
           padding: 10px 0;
           z-index: 1040;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+          transition: all 0.3s ease;
+        }
+
+        .header-1.header-scrolled {
+          padding: 6px 0;
         }
 
         .container-1 {
@@ -383,6 +498,7 @@ const LoginPage = () => {
           display: flex;
           align-items: center;
           gap: 15px;
+          flex-wrap: wrap;
         }
 
         .contact-info-item {
@@ -463,7 +579,14 @@ const LoginPage = () => {
           z-index: 1030;
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
+          transition: all 0.3s ease;
         }
+
+        .header-2.header-scrolled {
+          padding: 8px 0;
+          top: 45px;
+        }
+
         .container-2 {
           max-width: 1400px;
           margin: 0 auto;
@@ -493,8 +616,8 @@ const LoginPage = () => {
 
         /* Main Content */
         .main-content {
-          padding-top: 135px;
-          min-height: calc(100vh - 235px);
+          padding-top: 155px;
+          min-height: calc(100vh - 200px);
         }
 
         .login-container {
@@ -599,6 +722,11 @@ const LoginPage = () => {
           box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
         }
 
+        .form-group input:disabled {
+          background: #f0f0f0;
+          cursor: not-allowed;
+        }
+
         .password-toggle {
           position: absolute;
           right: 16px;
@@ -607,6 +735,11 @@ const LoginPage = () => {
           cursor: pointer;
           font-size: 1.1rem;
           padding: 0;
+        }
+
+        .password-toggle:disabled {
+          cursor: not-allowed;
+          opacity: 0.5;
         }
 
         .form-options {
@@ -629,6 +762,10 @@ const LoginPage = () => {
           width: 16px;
           height: 16px;
           cursor: pointer;
+        }
+
+        .checkbox-label input:disabled {
+          cursor: not-allowed;
         }
 
         .forgot-password {
@@ -660,9 +797,24 @@ const LoginPage = () => {
           gap: 10px;
         }
 
-        .btn-login:hover {
+        .btn-login:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 10px 25px rgba(21, 101, 192, 0.3);
+        }
+
+        .btn-login:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        .spinner {
+          display: inline-block;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
 
         /* Demo Credentials */
@@ -684,6 +836,7 @@ const LoginPage = () => {
           justify-content: center;
           gap: 20px;
           margin-bottom: 8px;
+          flex-wrap: wrap;
         }
 
         .demo-info code {
@@ -713,11 +866,16 @@ const LoginPage = () => {
           font-size: 0.9rem;
         }
 
-        .btn-back:hover {
+        .btn-back:hover:not(:disabled) {
           background: #1565c0;
           color: white;
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(21, 101, 192, 0.2);
+        }
+
+        .btn-back:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         /* Footer */
@@ -747,13 +905,53 @@ const LoginPage = () => {
 
         /* Responsive */
         @media (max-width: 768px) {
-          .main-content { padding-top: 200px; }
-          .login-card { padding: 32px 24px; }
-          .login-header h2 { font-size: 1.5rem; }
-          .demo-info { flex-direction: column; align-items: center; gap: 8px; }
-          .container-1, .container-2 { flex-direction: column; text-align: center; }
-          .header-left, .header-right, .logo-left, .logo-right { justify-content: center; }
-          .contact-info-group { flex-direction: column; }
+          .main-content { 
+            padding-top: 220px; 
+          }
+          .login-card { 
+            padding: 32px 24px; 
+          }
+          .login-header h2 { 
+            font-size: 1.5rem; 
+          }
+          .demo-info { 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 8px; 
+          }
+          .container-1, .container-2 { 
+            flex-direction: column; 
+            text-align: center;
+            padding: 0 20px;
+          }
+          .header-left, .header-right, .logo-left, .logo-right { 
+            justify-content: center; 
+          }
+          .contact-info-group { 
+            flex-direction: column; 
+          }
+          .logo-left, .logo-right {
+            display: none;
+          }
+          .dept-text-center {
+            flex: 1;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .main-content {
+            padding-top: 250px;
+          }
+          
+          .login-card {
+            padding: 24px 20px;
+          }
+          
+          .form-options {
+            flex-direction: column;
+            gap: 12px;
+            align-items: flex-start;
+          }
         }
       `}</style>
     </div>
