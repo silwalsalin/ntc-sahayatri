@@ -120,7 +120,6 @@ const LoginPage = () => {
 
     // Demo authentication
     if ((formData.username === 'admin@ntc' || formData.username === 'admin') && formData.password === 'admin123') {
-      // Store login state
       localStorage.setItem('isLoggedIn', 'true');
       localStorage.setItem('userRole', 'admin');
       localStorage.setItem('userName', 'Admin');
@@ -238,28 +237,6 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* HEADER 3 - Navigation Bar */}
-      <div className="header-3">
-        <div className="container-3">
-          <div className="nav-menu-left">
-            <button onClick={() => navigate('/')} className="nav-btn">
-              <span className="nav-icon">🏠</span>
-              <span className="nav-text">{t.home}</span>
-            </button>
-            <button onClick={() => navigate('/faqs')} className="nav-btn">
-              <span className="nav-icon">❓</span>
-              <span className="nav-text">{t.faqs}</span>
-            </button>
-          </div>
-          <div className="login-btn-right">
-            <button className="login-btn-active">
-              <span className="login-icon">🔐</span>
-              <span className="login-text">{t.login}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="main-content">
         <div className="login-container">
@@ -323,45 +300,18 @@ const LoginPage = () => {
                   />
                   <span>{t.rememberMe}</span>
                 </label>
-                <a href="#" className="forgot-password">{t.forgotPassword}</a>
+                <a href="/forgot-password" className="forgot-password">{t.forgotPassword}</a>
               </div>
 
               <button type="submit" className="btn-login">
                 <span>🔓</span> {t.loginBtn}
               </button>
             </form>
-
-            <div className="demo-credentials">
-              <p className="demo-title">{t.demoCredentials}</p>
-              <div className="demo-info">
-                <code>{t.adminUser}</code>
-                <code>{t.adminPass}</code>
-              </div>
-              <div className="demo-info">
-                <code>{t.staffUser}</code>
-                <code>{t.staffPass}</code>
-              </div>
-            </div>
-
-            <div className="back-to-home">
-              <button onClick={() => navigate('/')} className="btn-back">
-                ← {t.backToHome}
-              </button>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="footer-content">
-          <div className="footer-copyright">
-            <p>{t.footerTagline}</p>
-            <p className="copyright-text">{t.copyright}</p>
-          </div>
-        </div>
-      </footer>
-
+    
       <style jsx>{`
         * {
           margin: 0;
@@ -541,71 +491,10 @@ const LoginPage = () => {
         .dept-name { font-size: 1rem; font-weight: 700; color: #0d47a1; letter-spacing: 1px; }
         .dept-address { font-size: 0.75rem; opacity: 0.7; color: #555; margin-top: 3px; }
 
-        /* HEADER 3 - Navigation Bar */
-        .header-3 {
-          position: fixed;
-          top: 119px;
-          left: 0;
-          width: 100%;
-          background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
-          color: white;
-          padding: 12px 0;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          z-index: 1020;
-        }
-        .container-3 {
-          max-width: 1400px;
-          margin: 0 auto;
-          padding: 0 40px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 20px;
-        }
-        .nav-menu-left { display: flex; gap: 20px; align-items: center; }
-        .nav-btn {
-          background: transparent;
-          border: none;
-          color: white;
-          font-size: 1rem;
-          font-weight: 600;
-          cursor: pointer;
-          padding: 8px 20px;
-          border-radius: 40px;
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .nav-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-1px); }
-        .nav-icon { font-size: 1.1rem; }
-        .nav-text { font-size: 0.95rem; }
-        .login-btn-right { display: flex; align-items: center; }
-        .login-btn-active {
-          background: white;
-          border: 2px solid white;
-          color: #1565c0;
-          font-size: 0.95rem;
-          font-weight: 600;
-          cursor: pointer;
-          padding: 8px 28px;
-          border-radius: 40px;
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          white-space: nowrap;
-        }
-        .login-btn-active:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-
         /* Main Content */
         .main-content {
-          padding-top: 195px;
-          min-height: calc(100vh - 255px);
+          padding-top: 135px;
+          min-height: calc(100vh - 235px);
         }
 
         .login-container {
@@ -858,12 +747,12 @@ const LoginPage = () => {
 
         /* Responsive */
         @media (max-width: 768px) {
-          .main-content { padding-top: 330px; }
+          .main-content { padding-top: 200px; }
           .login-card { padding: 32px 24px; }
           .login-header h2 { font-size: 1.5rem; }
           .demo-info { flex-direction: column; align-items: center; gap: 8px; }
-          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; }
-          .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
+          .container-1, .container-2 { flex-direction: column; text-align: center; }
+          .header-left, .header-right, .logo-left, .logo-right { justify-content: center; }
           .contact-info-group { flex-direction: column; }
         }
       `}</style>

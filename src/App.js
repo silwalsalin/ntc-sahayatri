@@ -11,6 +11,7 @@ import Complaints from './pages/Complaints';
 import Policy from './pages/Policy';
 import FAQS from './pages/FAQS';
 import LoginPage from './pages/LoginPage';
+import ForgotPassword from './pages/ForgotPassword';
 function App() {
   return (
     <Router>
@@ -24,6 +25,7 @@ function App() {
           <Route path="/policy" element={<Policy />} />
           <Route path="/faqs" element={<FAQS />} />
           <Route path="/admin-login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
         </Routes>
       </div>
