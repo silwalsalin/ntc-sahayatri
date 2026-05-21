@@ -12,6 +12,9 @@ import Policy from './pages/Policy';
 import FAQS from './pages/FAQS';
 import LoginPage from './pages/LoginPage';
 import ForgotPassword from './pages/ForgotPassword';
+import Verifyotp from './pages/Verifyotp';
+import ResetPassword from './pages/ResetPassword';
+
 function App() {
   return (
     <Router>
@@ -26,7 +29,8 @@ function App() {
           <Route path="/faqs" element={<FAQS />} />
           <Route path="/admin-login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-
+          <Route path="/verify-otp" element={<Verifyotp />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
       </div>
     </Router>

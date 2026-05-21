@@ -1,5 +1,5 @@
-// src/pages/ForgotPassword.js
-import React, { useState } from 'react';
+// src/pages/VerifyOtp.js
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Try to import local images with fallback
@@ -20,7 +20,7 @@ try {
   heroImage = null;
 }
 
-const ForgotPassword = () => {
+const VerifyOtp = () => {
   const navigate = useNavigate();
   
   // Language state
@@ -28,11 +28,34 @@ const ForgotPassword = () => {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
   // Form state
-  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [registeredEmails] = useState(['user@example.com', 'test@ntc.com', 'admin@ntc.net.np']);
+  const [resendTimer, setResendTimer] = useState(0);
+  
+  // Get email and saved OTP from session storage
+  const [email, setEmail] = useState('');
+  const [savedOtp, setSavedOtp] = useState('');
+
+  useEffect(() => {
+    // Retrieve data from session storage when component mounts
+    const storedEmail = sessionStorage.getItem('resetEmail');
+    const storedOtp = sessionStorage.getItem('resetOtp');
+    
+    if (storedEmail) {
+      setEmail(storedEmail);
+    } else {
+      // If no email found, redirect back to forgot password
+      navigate('/forgot-password');
+    }
+    
+    if (storedOtp) {
+      setSavedOtp(storedOtp);
+    } else {
+      setSavedOtp('123456'); // Default demo OTP
+    }
+  }, [navigate]);
 
   const content = {
     np: {
@@ -46,19 +69,20 @@ const ForgotPassword = () => {
       home: 'गृह पृष्ठ',
       faqs: 'बारम्बार सोधिने प्रश्नहरू',
       login: 'लगइन',
-      forgotPassword: 'पासवर्ड बिर्सनुभयो?',
-      enterEmail: 'आफ्नो इमेल ठेगाना प्रविष्ट गर्नुहोस्',
-      weWillSendOtp: 'हामी तपाईंको इमेलमा OTP पठाउनेछौं',
-      sendOtp: 'OTP पठाउनुहोस्',
+      verifyOtp: 'OTP प्रमाणित गर्नुहोस्',
+      enterOtp: 'OTP कोड प्रविष्ट गर्नुहोस्',
+      verifyBtn: 'प्रमाणित गर्नुहोस्',
+      resendOtp: 'OTP पुन: पठाउनुहोस्',
       backToLogin: 'लगइन पृष्ठमा फर्कनुहोस्',
       backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
-      emailRequired: 'कृपया इमेल ठेगाना प्रविष्ट गर्नुहोस्',
-      invalidEmail: 'कृपया मान्य इमेल ठेगाना प्रविष्ट गर्नुहोस्',
-      emailNotRegistered: 'यो इमेल ठेगाना दर्ता छैन। कृपया फरक इमेल प्रयोग गर्नुहोस्',
-      otpSent: 'OTP सफलतापूर्वक {email} मा पठाइयो! कृपया आफ्नो इमेल जाँच गर्नुहोस्',
+      otpRequired: 'कृपया OTP कोड प्रविष्ट गर्नुहोस्',
+      invalidOtp: 'अमान्य OTP कोड। कृपया फेरि प्रयास गर्नुहोस्',
+      otpVerified: 'OTP सफलतापूर्वक प्रमाणित भयो!',
+      resendDisabled: 'कृपया पुन: पठाउनको लागि {} सेकेन्ड पर्खनुहोस्',
+      otpSent: 'OTP पुन: पठाइयो! कृपया आफ्नो इमेल जाँच गर्नुहोस्',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
-      demoNote: 'डेमो इमेलहरू: user@example.com, test@ntc.com, admin@ntc.net.np'
+      redirecting: 'पुन: निर्देशित हुँदै...'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -71,68 +95,84 @@ const ForgotPassword = () => {
       home: 'Home',
       faqs: 'FAQs',
       login: 'Login',
-      forgotPassword: 'Forgot Password?',
-      enterEmail: 'Enter your email address',
-      weWillSendOtp: 'We will send you an OTP to reset your password',
-      sendOtp: 'Send OTP',
+      verifyOtp: 'Verify OTP',
+      enterOtp: 'Enter OTP Code',
+      verifyBtn: 'Verify',
+      resendOtp: 'Resend OTP',
       backToLogin: 'Back to Login',
       backToHome: 'Back to Home',
-      emailRequired: 'Please enter your email address',
-      invalidEmail: 'Please enter a valid email address',
-      emailNotRegistered: 'This email is not registered. Please use a different email',
-      otpSent: 'OTP sent successfully to {email}! Please check your email',
+      otpRequired: 'Please enter the OTP code',
+      invalidOtp: 'Invalid OTP code. Please try again',
+      otpVerified: 'OTP verified successfully!',
+      resendDisabled: 'Please wait {} seconds to resend',
+      otpSent: 'OTP resent successfully! Please check your email',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
-      demoNote: 'Demo emails: user@example.com, test@ntc.com, admin@ntc.net.np'
+      redirecting: 'Redirecting...'
     }
   };
 
   const t = content[language];
 
-  const isValidEmail = (email) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const startResendTimer = (seconds) => {
+    setResendTimer(seconds);
+    const interval = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
   };
 
-  const isEmailRegistered = (email) => {
-    return registeredEmails.includes(email.toLowerCase());
-  };
-
-  const handleSendOtp = (e) => {
+  const handleVerifyOtp = (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     
-    if (!email) {
-      setError(t.emailRequired);
+    if (!otp) {
+      setError(t.otpRequired);
       return;
     }
     
-    if (!isValidEmail(email)) {
-      setError(t.invalidEmail);
-      return;
-    }
-    
-    if (!isEmailRegistered(email)) {
-      setError(t.emailNotRegistered);
+    if (otp !== savedOtp) {
+      setError(t.invalidOtp);
       return;
     }
     
     setLoading(true);
     
     setTimeout(() => {
-      const demoOtp = '123456';
-      setSuccess(t.otpSent.replace('{email}', email));
+      setSuccess(t.otpVerified);
       setLoading(false);
       
-      // Store email and OTP in session storage for the next page
-      sessionStorage.setItem('resetEmail', email);
-      sessionStorage.setItem('resetOtp', demoOtp);
-      
-      // Navigate to OTP verification page after 1 second
       setTimeout(() => {
-        navigate('/verify-otp');
-      }, 1000);
-    }, 1500);
+        navigate('/reset-password');
+      }, 1500);
+    }, 1000);
+  };
+
+  const handleResendOtp = () => {
+    if (resendTimer > 0) {
+      setError(t.resendDisabled.replace('{}', resendTimer));
+      return;
+    }
+    
+    setLoading(true);
+    
+    // Simulate API call to resend OTP
+    setTimeout(() => {
+      const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      sessionStorage.setItem('resetOtp', newOtp);
+      setSavedOtp(newOtp);
+      setSuccess(t.otpSent);
+      setLoading(false);
+      startResendTimer(30);
+      console.log(`New OTP for ${email}: ${newOtp}`);
+    }, 1000);
   };
 
   const handleLanguageChange = (lang) => {
@@ -158,7 +198,7 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="forgot-password-page">
+    <div className="verify-otp-page">
       {/* HEADER 1 - Top Bar */}
       <div className="header-1">
         <div className="container-1">
@@ -238,12 +278,12 @@ const ForgotPassword = () => {
 
       {/* Main Content */}
       <div className="main-content">
-        <div className="forgot-container">
-          <div className="forgot-card">
-            <div className="forgot-header">
-              <div className="forgot-icon">🔑</div>
-              <h2>{t.forgotPassword}</h2>
-              <p>{t.weWillSendOtp}</p>
+        <div className="verify-container">
+          <div className="verify-card">
+            <div className="verify-header">
+              <div className="verify-icon">🔐</div>
+              <h2>{t.verifyOtp}</h2>
+              <p>{t.emailAddress} {email}</p>
             </div>
 
             {error && (
@@ -260,25 +300,37 @@ const ForgotPassword = () => {
               </div>
             )}
 
-            <form onSubmit={handleSendOtp} className="forgot-form">
+            <form onSubmit={handleVerifyOtp} className="verify-form">
               <div className="form-group">
-                <label>{t.emailAddress}</label>
+                <label>{t.enterOtp}</label>
                 <div className="input-wrapper">
-                  <span className="input-icon">✉️</span>
+                  <span className="input-icon">🔢</span>
                   <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={t.enterEmail}
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    placeholder="000000"
+                    maxLength="6"
                     disabled={loading}
+                    autoFocus
                   />
                 </div>
-                <p className="demo-note-inline">💡 {t.demoNote}</p>
               </div>
 
               <button type="submit" className="btn-submit" disabled={loading}>
                 {loading ? <span className="loading-spinner"></span> : null}
-                {loading ? (language === 'np' ? 'पठाउँदै...' : 'Sending...') : t.sendOtp}
+                {loading ? (language === 'np' ? 'प्रमाणित गर्दै...' : 'Verifying...') : t.verifyBtn}
+              </button>
+
+              <button 
+                type="button" 
+                className="btn-resend" 
+                onClick={handleResendOtp}
+                disabled={resendTimer > 0 || loading}
+              >
+                {resendTimer > 0 
+                  ? `${t.resendOtp} (${resendTimer}s)` 
+                  : t.resendOtp}
               </button>
             </form>
 
@@ -286,7 +338,7 @@ const ForgotPassword = () => {
               <button onClick={() => navigate('/admin-login')} className="btn-back-link">
                 ← {t.backToLogin}
               </button>
-            
+             
             </div>
           </div>
         </div>
@@ -301,7 +353,7 @@ const ForgotPassword = () => {
           box-sizing: border-box;
         }
 
-        .forgot-password-page {
+        .verify-otp-page {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
@@ -479,39 +531,42 @@ const ForgotPassword = () => {
           min-height: calc(100vh - 235px);
         }
 
-        .forgot-container {
+        .verify-container {
           max-width: 500px;
           margin: 0 auto;
           padding: 40px 24px;
         }
 
-        .forgot-card {
+        .verify-card {
           background: white;
           border-radius: 32px;
           padding: 48px;
           box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+          text-align: center;
         }
 
-        .forgot-header {
-          text-align: center;
+        .verify-header {
           margin-bottom: 32px;
         }
 
-        .forgot-icon {
+        .verify-icon {
           font-size: 3rem;
           margin-bottom: 16px;
         }
 
-        .forgot-header h2 {
+        .verify-header h2 {
           font-size: 1.8rem;
           color: #0d47a1;
           margin-bottom: 8px;
         }
 
-        .forgot-header p {
+        .verify-header p {
           color: #6c8196;
+          font-size: 0.85rem;
+          word-break: break-all;
         }
 
+        /* Error and Success Messages */
         .error-message {
           background: #ffebee;
           border-left: 4px solid #f44336;
@@ -548,7 +603,8 @@ const ForgotPassword = () => {
           font-size: 0.85rem;
         }
 
-        .forgot-form {
+        /* Form Styles */
+        .verify-form {
           text-align: left;
         }
 
@@ -586,6 +642,9 @@ const ForgotPassword = () => {
           font-family: inherit;
           transition: all 0.3s ease;
           background: #f8fafc;
+          text-align: center;
+          font-size: 1.2rem;
+          letter-spacing: 4px;
         }
 
         .form-group input:focus {
@@ -598,12 +657,6 @@ const ForgotPassword = () => {
         .form-group input:disabled {
           background: #f5f5f5;
           cursor: not-allowed;
-        }
-
-        .demo-note-inline {
-          font-size: 0.7rem;
-          color: #f57c00;
-          margin-top: 8px;
         }
 
         .btn-submit {
@@ -621,6 +674,7 @@ const ForgotPassword = () => {
           align-items: center;
           justify-content: center;
           gap: 10px;
+          margin-bottom: 12px;
         }
 
         .btn-submit:hover:not(:disabled) {
@@ -630,6 +684,30 @@ const ForgotPassword = () => {
 
         .btn-submit:disabled {
           opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        .btn-resend {
+          width: 100%;
+          padding: 14px;
+          background: transparent;
+          border: 2px solid #1565c0;
+          color: #1565c0;
+          border-radius: 40px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          font-size: 0.95rem;
+        }
+
+        .btn-resend:hover:not(:disabled) {
+          background: #1565c0;
+          color: white;
+          transform: translateY(-2px);
+        }
+
+        .btn-resend:disabled {
+          opacity: 0.5;
           cursor: not-allowed;
         }
 
@@ -648,6 +726,7 @@ const ForgotPassword = () => {
           100% { transform: rotate(360deg); }
         }
 
+        /* Back Links */
         .back-links {
           display: flex;
           justify-content: center;
@@ -672,19 +751,22 @@ const ForgotPassword = () => {
           text-decoration: underline;
         }
 
+   
 
+        /* Responsive */
         @media (max-width: 768px) {
           .main-content { padding-top: 200px; }
-          .forgot-card { padding: 32px 24px; }
-          .forgot-header h2 { font-size: 1.5rem; }
+          .verify-card { padding: 32px 24px; }
+          .verify-header h2 { font-size: 1.5rem; }
           .back-links { flex-direction: column; align-items: center; gap: 10px; }
           .container-1, .container-2 { flex-direction: column; text-align: center; }
           .header-left, .header-right, .logo-left, .logo-right { justify-content: center; }
           .contact-info-group { flex-direction: column; }
+          .form-group input { font-size: 1rem; letter-spacing: 2px; }
         }
       `}</style>
     </div>
   );
 };
 
-export default ForgotPassword;
+export default VerifyOtp;

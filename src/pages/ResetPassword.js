@@ -1,5 +1,5 @@
-// src/pages/ForgotPassword.js
-import React, { useState } from 'react';
+// src/pages/ResetPassword.js
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Try to import local images with fallback
@@ -20,7 +20,7 @@ try {
   heroImage = null;
 }
 
-const ForgotPassword = () => {
+const ResetPassword = () => {
   const navigate = useNavigate();
   
   // Language state
@@ -28,11 +28,54 @@ const ForgotPassword = () => {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
   // Form state
-  const [email, setEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [registeredEmails] = useState(['user@example.com', 'test@ntc.com', 'admin@ntc.net.np']);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    // Retrieve email from session storage
+    const storedEmail = sessionStorage.getItem('resetEmail');
+    
+    if (storedEmail) {
+      setEmail(storedEmail);
+    } else {
+      // If no email found, redirect back to forgot password
+      navigate('/forgot-password');
+    }
+  }, [navigate]);
+
+  // Password strength indicator
+  const getPasswordStrength = (password) => {
+    if (!password) return 0;
+    let strength = 0;
+    if (password.length >= 6) strength++;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    return Math.min(strength, 4);
+  };
+
+  const passwordStrength = getPasswordStrength(newPassword);
+  
+  const getStrengthText = () => {
+    if (!newPassword) return '';
+    const texts = {
+      np: ['कमजोर', 'मध्यम', 'बलियो', 'धेरै बलियो'],
+      en: ['Weak', 'Medium', 'Strong', 'Very Strong']
+    };
+    return texts[language][passwordStrength - 1] || '';
+  };
+  
+  const getStrengthColor = () => {
+    const colors = ['#ff4444', '#ffaa44', '#44ff44', '#00aa44'];
+    return colors[passwordStrength - 1] || '#e0e0e0';
+  };
 
   const content = {
     np: {
@@ -46,19 +89,22 @@ const ForgotPassword = () => {
       home: 'गृह पृष्ठ',
       faqs: 'बारम्बार सोधिने प्रश्नहरू',
       login: 'लगइन',
-      forgotPassword: 'पासवर्ड बिर्सनुभयो?',
-      enterEmail: 'आफ्नो इमेल ठेगाना प्रविष्ट गर्नुहोस्',
-      weWillSendOtp: 'हामी तपाईंको इमेलमा OTP पठाउनेछौं',
-      sendOtp: 'OTP पठाउनुहोस्',
+      resetPassword: 'पासवर्ड रिसेट गर्नुहोस्',
+      newPassword: 'नयाँ पासवर्ड',
+      enterNewPassword: 'नयाँ पासवर्ड प्रविष्ट गर्नुहोस्',
+      confirmPassword: 'पासवर्ड पुष्टि गर्नुहोस्',
+      enterConfirmPassword: 'पासवर्ड पुन: प्रविष्ट गर्नुहोस्',
+      resetBtn: 'पासवर्ड रिसेट गर्नुहोस्',
       backToLogin: 'लगइन पृष्ठमा फर्कनुहोस्',
       backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
-      emailRequired: 'कृपया इमेल ठेगाना प्रविष्ट गर्नुहोस्',
-      invalidEmail: 'कृपया मान्य इमेल ठेगाना प्रविष्ट गर्नुहोस्',
-      emailNotRegistered: 'यो इमेल ठेगाना दर्ता छैन। कृपया फरक इमेल प्रयोग गर्नुहोस्',
-      otpSent: 'OTP सफलतापूर्वक {email} मा पठाइयो! कृपया आफ्नो इमेल जाँच गर्नुहोस्',
+      passwordRequired: 'कृपया नयाँ पासवर्ड प्रविष्ट गर्नुहोस्',
+      passwordMismatch: 'पासवर्ड मिलेन। कृपया फेरि प्रयास गर्नुहोस्',
+      passwordLength: 'पासवर्ड कम्तीमा ६ क्यारेक्टरको हुनुपर्छ',
+      passwordReset: 'पासवर्ड सफलतापूर्वक रिसेट भयो! कृपया नयाँ पासवर्ड प्रयोग गरी लगइन गर्नुहोस्',
+      passwordStrength: 'पासवर्ड बलियोपन:',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
-      demoNote: 'डेमो इमेलहरू: user@example.com, test@ntc.com, admin@ntc.net.np'
+      redirecting: 'पुन: निर्देशित हुँदै...'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -71,67 +117,62 @@ const ForgotPassword = () => {
       home: 'Home',
       faqs: 'FAQs',
       login: 'Login',
-      forgotPassword: 'Forgot Password?',
-      enterEmail: 'Enter your email address',
-      weWillSendOtp: 'We will send you an OTP to reset your password',
-      sendOtp: 'Send OTP',
+      resetPassword: 'Reset Password',
+      newPassword: 'New Password',
+      enterNewPassword: 'Enter new password',
+      confirmPassword: 'Confirm Password',
+      enterConfirmPassword: 'Re-enter your password',
+      resetBtn: 'Reset Password',
       backToLogin: 'Back to Login',
       backToHome: 'Back to Home',
-      emailRequired: 'Please enter your email address',
-      invalidEmail: 'Please enter a valid email address',
-      emailNotRegistered: 'This email is not registered. Please use a different email',
-      otpSent: 'OTP sent successfully to {email}! Please check your email',
+      passwordRequired: 'Please enter a new password',
+      passwordMismatch: 'Passwords do not match',
+      passwordLength: 'Password must be at least 6 characters',
+      passwordReset: 'Password reset successfully! Please login with your new password',
+      passwordStrength: 'Password Strength:',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
-      demoNote: 'Demo emails: user@example.com, test@ntc.com, admin@ntc.net.np'
+      redirecting: 'Redirecting...'
     }
   };
 
   const t = content[language];
 
-  const isValidEmail = (email) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
-
-  const isEmailRegistered = (email) => {
-    return registeredEmails.includes(email.toLowerCase());
-  };
-
-  const handleSendOtp = (e) => {
+  const handleResetPassword = (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     
-    if (!email) {
-      setError(t.emailRequired);
+    if (!newPassword) {
+      setError(t.passwordRequired);
       return;
     }
     
-    if (!isValidEmail(email)) {
-      setError(t.invalidEmail);
+    if (newPassword.length < 6) {
+      setError(t.passwordLength);
       return;
     }
     
-    if (!isEmailRegistered(email)) {
-      setError(t.emailNotRegistered);
+    if (newPassword !== confirmPassword) {
+      setError(t.passwordMismatch);
       return;
     }
     
     setLoading(true);
     
+    // Simulate API call to reset password
     setTimeout(() => {
-      const demoOtp = '123456';
-      setSuccess(t.otpSent.replace('{email}', email));
+      setSuccess(t.passwordReset);
       setLoading(false);
       
-      // Store email and OTP in session storage for the next page
-      sessionStorage.setItem('resetEmail', email);
-      sessionStorage.setItem('resetOtp', demoOtp);
+      // Clear session storage
+      sessionStorage.removeItem('resetEmail');
+      sessionStorage.removeItem('resetOtp');
       
-      // Navigate to OTP verification page after 1 second
+      // Redirect to login after 2 seconds
       setTimeout(() => {
-        navigate('/verify-otp');
-      }, 1000);
+        navigate('/admin-login');
+      }, 2000);
     }, 1500);
   };
 
@@ -158,7 +199,7 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="forgot-password-page">
+    <div className="reset-password-page">
       {/* HEADER 1 - Top Bar */}
       <div className="header-1">
         <div className="container-1">
@@ -238,12 +279,12 @@ const ForgotPassword = () => {
 
       {/* Main Content */}
       <div className="main-content">
-        <div className="forgot-container">
-          <div className="forgot-card">
-            <div className="forgot-header">
-              <div className="forgot-icon">🔑</div>
-              <h2>{t.forgotPassword}</h2>
-              <p>{t.weWillSendOtp}</p>
+        <div className="reset-container">
+          <div className="reset-card">
+            <div className="reset-header">
+              <div className="reset-icon">🔒</div>
+              <h2>{t.resetPassword}</h2>
+              <p>{t.emailAddress} {email}</p>
             </div>
 
             {error && (
@@ -257,28 +298,84 @@ const ForgotPassword = () => {
               <div className="success-message">
                 <span className="success-icon">✅</span>
                 <span>{success}</span>
+                {loading && <span className="redirect-text">{t.redirecting}</span>}
               </div>
             )}
 
-            <form onSubmit={handleSendOtp} className="forgot-form">
+            <form onSubmit={handleResetPassword} className="reset-form">
               <div className="form-group">
-                <label>{t.emailAddress}</label>
+                <label>{t.newPassword}</label>
                 <div className="input-wrapper">
-                  <span className="input-icon">✉️</span>
+                  <span className="input-icon">🔒</span>
                   <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={t.enterEmail}
+                    type={showPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder={t.enterNewPassword}
+                    disabled={loading}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                </div>
+                {newPassword && (
+                  <div className="password-strength">
+                    <span className="strength-label">{t.passwordStrength}</span>
+                    <div className="strength-bar">
+                      <div 
+                        className="strength-level" 
+                        style={{ 
+                          width: `${(passwordStrength / 4) * 100}%`,
+                          backgroundColor: getStrengthColor()
+                        }}
+                      ></div>
+                    </div>
+                    <span className="strength-text" style={{ color: getStrengthColor() }}>
+                      {getStrengthText()}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label>{t.confirmPassword}</label>
+                <div className="input-wrapper">
+                  <span className="input-icon">🔒</span>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder={t.enterConfirmPassword}
                     disabled={loading}
                   />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
+                  </button>
                 </div>
-                <p className="demo-note-inline">💡 {t.demoNote}</p>
+                {confirmPassword && newPassword !== confirmPassword && (
+                  <div className="password-match-error">
+                    <span>⚠️</span> {t.passwordMismatch}
+                  </div>
+                )}
+                {confirmPassword && newPassword === confirmPassword && newPassword.length >= 6 && (
+                  <div className="password-match-success">
+                    <span>✅</span> पासवर्ड मिल्यो
+                  </div>
+                )}
               </div>
 
               <button type="submit" className="btn-submit" disabled={loading}>
                 {loading ? <span className="loading-spinner"></span> : null}
-                {loading ? (language === 'np' ? 'पठाउँदै...' : 'Sending...') : t.sendOtp}
+                {loading ? (language === 'np' ? 'रिसेट गर्दै...' : 'Resetting...') : t.resetBtn}
               </button>
             </form>
 
@@ -292,7 +389,7 @@ const ForgotPassword = () => {
         </div>
       </div>
 
-    
+      
 
       <style jsx>{`
         * {
@@ -301,7 +398,7 @@ const ForgotPassword = () => {
           box-sizing: border-box;
         }
 
-        .forgot-password-page {
+        .reset-password-page {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
@@ -479,39 +576,42 @@ const ForgotPassword = () => {
           min-height: calc(100vh - 235px);
         }
 
-        .forgot-container {
+        .reset-container {
           max-width: 500px;
           margin: 0 auto;
           padding: 40px 24px;
         }
 
-        .forgot-card {
+        .reset-card {
           background: white;
           border-radius: 32px;
           padding: 48px;
           box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+          text-align: center;
         }
 
-        .forgot-header {
-          text-align: center;
+        .reset-header {
           margin-bottom: 32px;
         }
 
-        .forgot-icon {
+        .reset-icon {
           font-size: 3rem;
           margin-bottom: 16px;
         }
 
-        .forgot-header h2 {
+        .reset-header h2 {
           font-size: 1.8rem;
           color: #0d47a1;
           margin-bottom: 8px;
         }
 
-        .forgot-header p {
+        .reset-header p {
           color: #6c8196;
+          font-size: 0.85rem;
+          word-break: break-all;
         }
 
+        /* Error and Success Messages */
         .error-message {
           background: #ffebee;
           border-left: 4px solid #f44336;
@@ -532,6 +632,7 @@ const ForgotPassword = () => {
           align-items: center;
           gap: 10px;
           margin-bottom: 24px;
+          flex-wrap: wrap;
         }
 
         .error-icon, .success-icon {
@@ -548,7 +649,14 @@ const ForgotPassword = () => {
           font-size: 0.85rem;
         }
 
-        .forgot-form {
+        .redirect-text {
+          font-size: 0.75rem;
+          color: #1565c0;
+          margin-left: auto;
+        }
+
+        /* Form Styles */
+        .reset-form {
           text-align: left;
         }
 
@@ -600,10 +708,62 @@ const ForgotPassword = () => {
           cursor: not-allowed;
         }
 
-        .demo-note-inline {
-          font-size: 0.7rem;
-          color: #f57c00;
+        .password-toggle {
+          position: absolute;
+          right: 16px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 1.1rem;
+          padding: 0;
+        }
+
+        /* Password Strength Indicator */
+        .password-strength {
           margin-top: 8px;
+        }
+
+        .strength-label {
+          font-size: 0.7rem;
+          color: #888;
+          margin-right: 8px;
+        }
+
+        .strength-bar {
+          height: 4px;
+          background: #e0e0e0;
+          border-radius: 4px;
+          overflow: hidden;
+          margin: 8px 0;
+        }
+
+        .strength-level {
+          height: 100%;
+          transition: width 0.3s ease;
+        }
+
+        .strength-text {
+          font-size: 0.7rem;
+          font-weight: 500;
+        }
+
+        /* Password Match Indicators */
+        .password-match-error {
+          font-size: 0.7rem;
+          color: #c62828;
+          margin-top: 8px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .password-match-success {
+          font-size: 0.7rem;
+          color: #2e7d32;
+          margin-top: 8px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
         }
 
         .btn-submit {
@@ -648,6 +808,7 @@ const ForgotPassword = () => {
           100% { transform: rotate(360deg); }
         }
 
+        /* Back Links */
         .back-links {
           display: flex;
           justify-content: center;
@@ -672,11 +833,13 @@ const ForgotPassword = () => {
           text-decoration: underline;
         }
 
+      
 
+        /* Responsive */
         @media (max-width: 768px) {
           .main-content { padding-top: 200px; }
-          .forgot-card { padding: 32px 24px; }
-          .forgot-header h2 { font-size: 1.5rem; }
+          .reset-card { padding: 32px 24px; }
+          .reset-header h2 { font-size: 1.5rem; }
           .back-links { flex-direction: column; align-items: center; gap: 10px; }
           .container-1, .container-2 { flex-direction: column; text-align: center; }
           .header-left, .header-right, .logo-left, .logo-right { justify-content: center; }
@@ -687,4 +850,4 @@ const ForgotPassword = () => {
   );
 };
 
-export default ForgotPassword;
+export default ResetPassword;
