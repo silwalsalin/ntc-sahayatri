@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Try to import local images with fallback
-let ntcLogo, govLogo, heroImage;
+let ntcLogo, govLogo;
 try {
   ntcLogo = require('../img/ntc-logo.png');
 } catch (e) {
@@ -13,11 +13,6 @@ try {
   govLogo = require('../img/logo.png');
 } catch (e) {
   govLogo = null;
-}
-try {
-  heroImage = require('../img/image.png');
-} catch (e) {
-  heroImage = null;
 }
 
 const LoginPage = () => {
@@ -39,6 +34,7 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Handle scroll for header effects
   useEffect(() => {
@@ -49,20 +45,18 @@ const LoginPage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Check if already logged in
+  // Check if already logged in - Clear any existing session first
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    const user = localStorage.getItem('adminUser');
-    const role = localStorage.getItem('userRole');
+    // Clear any existing session to ensure clean login
+    // Comment this out if you want to keep the session
+    // localStorage.removeItem('adminToken');
+    // localStorage.removeItem('adminUser');
+    // localStorage.removeItem('userRole');
+    // localStorage.removeItem('userName');
+    // localStorage.removeItem('isLoggedIn');
     
-    if (token && user) {
-      if (role === 'admin') {
-        navigate('/admin-dashboard');
-      } else if (role === 'staff') {
-        navigate('/staff-dashboard');
-      }
-    }
-  }, [navigate]);
+    setIsCheckingAuth(false);
+  }, []);
 
   const content = {
     np: {
@@ -75,26 +69,24 @@ const LoginPage = () => {
       serviceSub: 'गुनासो ट्र्याकिङ प्रणाली',
       home: 'गृह पृष्ठ',
       faqs: 'बारम्बार सोधिने प्रश्नहरू',
-      login: 'लगइन',
+      login: 'प्रशासक लगइन',
       welcomeBack: 'पुन: स्वागत छ',
-      loginToAccount: 'आफ्नो खातामा लगइन गर्नुहोस्',
+      loginToAccount: 'प्रशासक खातामा लगइन गर्नुहोस्',
       username: 'प्रयोगकर्ता नाम / इमेल',
       enterUsername: 'आफ्नो प्रयोगकर्ता नाम वा इमेल प्रविष्ट गर्नुहोस्',
       password: 'पासवर्ड',
       enterPassword: 'आफ्नो पासवर्ड प्रविष्ट गर्नुहोस्',
       rememberMe: 'मलाई सम्झनुहोस्',
       forgotPassword: 'पासवर्ड बिर्सनुभयो?',
-      loginBtn: 'लगइन गर्नुहोस्',
+      loginBtn: 'प्रशासक लगइन',
       loggingIn: 'लगइन हुँदैछ...',
       backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
       demoCredentials: 'डेमो प्रमाणपत्रहरू:',
       adminUser: 'प्रशासक: admin@ntc',
       adminPass: 'पासवर्ड: admin123',
-      staffUser: 'कर्मचारी: staff@ntc',
-      staffPass: 'पासवर्ड: staff123',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
-      loginSuccess: '✅ लगइन सफल! पुन: निर्देशित हुँदैछ...',
+      loginSuccess: '✅ लगइन सफल! प्रशासक ड्यासबोर्डमा जाँदै...',
       loginError: '❌ अमान्य प्रयोगकर्ता नाम वा पासवर्ड।',
       requiredFields: 'कृपया प्रयोगकर्ता नाम र पासवर्ड भर्नुहोस्।'
     },
@@ -108,26 +100,24 @@ const LoginPage = () => {
       serviceSub: 'Complaint Tracking System',
       home: 'Home',
       faqs: 'FAQs',
-      login: 'Login',
+      login: 'Admin Login',
       welcomeBack: 'Welcome Back',
-      loginToAccount: 'Login to your account',
+      loginToAccount: 'Login to Admin Account',
       username: 'Username / Email',
       enterUsername: 'Enter your username or email',
       password: 'Password',
       enterPassword: 'Enter your password',
       rememberMe: 'Remember me',
       forgotPassword: 'Forgot Password?',
-      loginBtn: 'Login',
+      loginBtn: 'Admin Login',
       loggingIn: 'Logging in...',
       backToHome: 'Back to Home',
       demoCredentials: 'Demo Credentials:',
       adminUser: 'Admin: admin@ntc',
       adminPass: 'Password: admin123',
-      staffUser: 'Staff: staff@ntc',
-      staffPass: 'Password: staff123',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
-      loginSuccess: '✅ Login successful! Redirecting...',
+      loginSuccess: '✅ Login successful! Redirecting to Admin Dashboard...',
       loginError: '❌ Invalid username or password.',
       requiredFields: 'Please enter username and password.'
     }
@@ -156,21 +146,25 @@ const LoginPage = () => {
     setError('');
 
     // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Demo authentication
+    // Demo authentication - Only Admin login allowed
     const username = formData.username.toLowerCase();
     const password = formData.password;
 
-    // Admin login
+    // Admin login credentials
     if ((username === 'admin@ntc' || username === 'admin') && password === 'admin123') {
+      // Clear any existing session first
+      localStorage.clear();
+      
       // Store admin session
-      localStorage.setItem('adminToken', 'dummy-admin-token-12345');
+      localStorage.setItem('adminToken', 'dummy-admin-token-' + Date.now());
       localStorage.setItem('adminUser', JSON.stringify({
         id: 1,
         name: 'Admin User',
         email: 'admin@ntc.com',
-        role: 'admin'
+        role: 'admin',
+        loginTime: new Date().toISOString()
       }));
       localStorage.setItem('userRole', 'admin');
       localStorage.setItem('userName', 'Admin User');
@@ -180,23 +174,7 @@ const LoginPage = () => {
       alert(t.loginSuccess);
       
       // Redirect to admin dashboard
-      navigate('/admin-dashboard');
-    } 
-    // Staff login
-    else if ((username === 'staff@ntc' || username === 'staff') && password === 'staff123') {
-      localStorage.setItem('staffToken', 'dummy-staff-token-12345');
-      localStorage.setItem('staffUser', JSON.stringify({
-        id: 2,
-        name: 'Staff User',
-        email: 'staff@ntc.com',
-        role: 'staff'
-      }));
-      localStorage.setItem('userRole', 'staff');
-      localStorage.setItem('userName', 'Staff User');
-      localStorage.setItem('isLoggedIn', 'true');
-      
-      alert(t.loginSuccess);
-      navigate('/staff-dashboard');
+      navigate('/admin-dashboard', { replace: true });
     } 
     else {
       setError(t.loginError);
@@ -207,6 +185,20 @@ const LoginPage = () => {
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
     setShowLanguageDropdown(false);
+  };
+
+  const handleLogout = () => {
+    // Clear all localStorage items
+    localStorage.clear();
+    // Reset form
+    setFormData({
+      username: '',
+      password: '',
+      rememberMe: false
+    });
+    setError('');
+    // Reload the page to reset state
+    window.location.reload();
   };
 
   const LogoImage = ({ src, alt, fallback, className }) => {
@@ -225,6 +217,15 @@ const LoginPage = () => {
       />
     );
   };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="login-page">
@@ -315,6 +316,13 @@ const LoginPage = () => {
               <p>{t.loginToAccount}</p>
             </div>
 
+            {/* Clear Session Button */}
+            <div className="clear-session">
+              <button type="button" className="clear-session-btn" onClick={handleLogout}>
+                🗑️ {language === 'np' ? 'सेसन सफा गर्नुहोस्' : 'Clear Session'}
+              </button>
+            </div>
+
             {error && (
               <div className="error-message">
                 <span className="error-icon">⚠️</span>
@@ -397,10 +405,6 @@ const LoginPage = () => {
                 <code>{t.adminUser}</code>
                 <code>{t.adminPass}</code>
               </div>
-              <div className="demo-info">
-                <code>{t.staffUser}</code>
-                <code>{t.staffPass}</code>
-              </div>
             </div>
 
             <div className="back-to-home">
@@ -434,6 +438,28 @@ const LoginPage = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
           min-height: 100vh;
+        }
+
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          gap: 16px;
+        }
+
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid #e5e7eb;
+          border-top-color: #3b82f6;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
 
         /* HEADER 1 - Top Bar */
@@ -628,8 +654,8 @@ const LoginPage = () => {
 
         .login-card {
           background: white;
-          border-radius: 32px;
-          padding: 48px;
+          border-radius: 24px;
+          padding: 40px;
           box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         }
 
@@ -653,7 +679,26 @@ const LoginPage = () => {
           color: #6c8196;
         }
 
-        /* Error Message */
+        .clear-session {
+          text-align: right;
+          margin-bottom: 16px;
+        }
+
+        .clear-session-btn {
+          background: #fee2e2;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 0.7rem;
+          cursor: pointer;
+          color: #dc2626;
+          transition: all 0.2s;
+        }
+
+        .clear-session-btn:hover {
+          background: #fecaca;
+        }
+
         .error-message {
           background: #ffebee;
           border-left: 4px solid #f44336;
@@ -665,24 +710,11 @@ const LoginPage = () => {
           margin-bottom: 24px;
         }
 
-        .error-icon {
-          font-size: 1.1rem;
-        }
+        .error-icon { font-size: 1.1rem; }
+        .error-message span:last-child { color: #c62828; font-size: 0.85rem; }
 
-        .error-message span:last-child {
-          color: #c62828;
-          font-size: 0.85rem;
-        }
-
-        /* Login Form */
-        .login-form {
-          text-align: left;
-        }
-
-        .form-group {
-          margin-bottom: 24px;
-        }
-
+        .login-form { text-align: left; }
+        .form-group { margin-bottom: 24px; }
         .form-group label {
           display: block;
           font-weight: 600;
@@ -764,21 +796,12 @@ const LoginPage = () => {
           cursor: pointer;
         }
 
-        .checkbox-label input:disabled {
-          cursor: not-allowed;
-        }
-
         .forgot-password {
           font-size: 0.85rem;
           color: #1565c0;
           text-decoration: none;
-          transition: color 0.3s;
         }
-
-        .forgot-password:hover {
-          color: #0d47a1;
-          text-decoration: underline;
-        }
+        .forgot-password:hover { color: #0d47a1; text-decoration: underline; }
 
         .btn-login {
           width: 100%;
@@ -817,7 +840,6 @@ const LoginPage = () => {
           to { transform: rotate(360deg); }
         }
 
-        /* Demo Credentials */
         .demo-credentials {
           margin-top: 32px;
           padding-top: 24px;
@@ -848,12 +870,7 @@ const LoginPage = () => {
           font-family: monospace;
         }
 
-        /* Back Button */
-        .back-to-home {
-          margin-top: 24px;
-          text-align: center;
-        }
-
+        .back-to-home { margin-top: 24px; text-align: center; }
         .btn-back {
           background: transparent;
           border: 2px solid #1565c0;
@@ -865,20 +882,9 @@ const LoginPage = () => {
           transition: all 0.3s ease;
           font-size: 0.9rem;
         }
+        .btn-back:hover:not(:disabled) { background: #1565c0; color: white; transform: translateY(-2px); }
+        .btn-back:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .btn-back:hover:not(:disabled) {
-          background: #1565c0;
-          color: white;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(21, 101, 192, 0.2);
-        }
-
-        .btn-back:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        /* Footer */
         .footer {
           background: #0d2b5e;
           color: white;
@@ -886,72 +892,26 @@ const LoginPage = () => {
           margin-top: 40px;
           text-align: center;
         }
+        .footer-content { max-width: 1200px; margin: 0 auto; }
+        .footer-copyright { text-align: center; font-size: 0.7rem; opacity: 0.7; }
+        .copyright-text { margin-top: 5px; font-size: 0.65rem; }
 
-        .footer-content {
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-
-        .footer-copyright {
-          text-align: center;
-          font-size: 0.7rem;
-          opacity: 0.7;
-        }
-
-        .copyright-text {
-          margin-top: 5px;
-          font-size: 0.65rem;
-        }
-
-        /* Responsive */
         @media (max-width: 768px) {
-          .main-content { 
-            padding-top: 220px; 
-          }
-          .login-card { 
-            padding: 32px 24px; 
-          }
-          .login-header h2 { 
-            font-size: 1.5rem; 
-          }
-          .demo-info { 
-            flex-direction: column; 
-            align-items: center; 
-            gap: 8px; 
-          }
-          .container-1, .container-2 { 
-            flex-direction: column; 
-            text-align: center;
-            padding: 0 20px;
-          }
-          .header-left, .header-right, .logo-left, .logo-right { 
-            justify-content: center; 
-          }
-          .contact-info-group { 
-            flex-direction: column; 
-          }
-          .logo-left, .logo-right {
-            display: none;
-          }
-          .dept-text-center {
-            flex: 1;
-          }
+          .main-content { padding-top: 220px; }
+          .login-card { padding: 32px 24px; }
+          .login-header h2 { font-size: 1.5rem; }
+          .demo-info { flex-direction: column; align-items: center; gap: 8px; }
+          .container-1, .container-2 { flex-direction: column; text-align: center; padding: 0 20px; }
+          .header-left, .header-right, .logo-left, .logo-right { justify-content: center; }
+          .contact-info-group { flex-direction: column; }
+          .logo-left, .logo-right { display: none; }
+          .dept-text-center { flex: 1; }
         }
 
         @media (max-width: 480px) {
-          .main-content {
-            padding-top: 250px;
-          }
-          
-          .login-card {
-            padding: 24px 20px;
-          }
-          
-          .form-options {
-            flex-direction: column;
-            gap: 12px;
-            align-items: flex-start;
-          }
+          .main-content { padding-top: 250px; }
+          .login-card { padding: 24px 20px; }
+          .form-options { flex-direction: column; gap: 12px; align-items: flex-start; }
         }
       `}</style>
     </div>
