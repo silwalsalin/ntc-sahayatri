@@ -19,6 +19,14 @@ import AdminComplaints from './pages/AdminComplaints';
 import AdminComplaintsPending from './pages/AdminComplaintsPending';
 import AdminComplaintsInProgress from './pages/AdminComplaintsInprogress';
 import AdminComplaintsResolved from './pages/AdminComplaintsResolved';
+import AdminUsers from './pages/AdminUsers';
+import AdminReportsComplaints from './pages/AdminReportsComplaints';
+import AdminReportsUsers from './pages/AdminReportsUsers';
+import AdminAnalytics from './pages/AdminAnalytics';
+import AdminNotifications from './pages/AdminNotifications';
+import AdminSettingsGeneral from './pages/AdminSettingsGeneral';
+import AdminSettingsSecurity from './pages/AdminSettingsSecurity';
+import AdminDocumentation from './pages/AdminDocumentation';
 function App() {
   return (
     <Router>
@@ -40,7 +48,14 @@ function App() {
           <Route path="/admin-complaints/pending" element={<AdminComplaintsPending />} />
           <Route path="/admin-complaints/in-progress" element={<AdminComplaintsInProgress />} />
           <Route path="/admin-complaints/resolved" element={<AdminComplaintsResolved />} />
-  
+          <Route path="/admin-users" element={<AdminUsers />} />  
+          <Route path="/admin-reports/complaints" element={<AdminReportsComplaints />} />
+          <Route path="/admin-reports/users" element={<AdminReportsUsers />} />
+          <Route path="/admin-analytics" element={<AdminAnalytics />} />
+          <Route path="/admin-notifications" element={<AdminNotifications />} />
+          <Route path="/admin-settings/general" element={<AdminSettingsGeneral />} />
+          <Route path="/admin-settings/security" element={<AdminSettingsSecurity />} />
+          <Route path="/admin-documentation" element={<AdminDocumentation />} />
         </Routes>
       </div>
     </Router>

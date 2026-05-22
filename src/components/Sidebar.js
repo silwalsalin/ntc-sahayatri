@@ -89,7 +89,6 @@ const Sidebar = ({ language }) => {
       label: t.users,
       children: [
         { id: 'all-users', icon: '👤', label: t.allUsers, path: '/admin-users' },
-        { id: 'add-user', icon: '➕', label: t.addUser, path: '/admin-users/add' }
       ]
     },
     {
