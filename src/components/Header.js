@@ -60,7 +60,7 @@ const Header = ({ language, setLanguage, adminName = "Admin" }) => {
     localStorage.removeItem('userRole');
     localStorage.removeItem('userName');
     localStorage.removeItem('isLoggedIn');
-    navigate('/admin-login');
+    navigate('/');
   };
 
   const LogoImage = ({ src, alt, fallback, className }) => {
