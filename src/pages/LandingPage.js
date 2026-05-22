@@ -55,10 +55,9 @@ const LandingPage = () => {
   // Image states for fallback
   const [heroImageError, setHeroImageError] = useState(false);
   const [emailIconError, setEmailIconError] = useState(false);
-  const [phoneIconErrors, setPhoneIconErrors] = useState({});
   const [scrollY, setScrollY] = useState(0);
 
-  // Handle scroll for header effects
+  // Handle scroll for header effects - but no minimization
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
@@ -67,54 +66,50 @@ const LandingPage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Complaint channels - With bilingual names and icons
   const complaintChannels = [
     { id: 'website', name: 'वेबसाइट पोर्टल', enName: 'Website Portal', icon: '🌐', isImage: false, color: '#1565c0', bgColor: '#e3f2fd' },
     { id: 'phone', name: 'फोन', enName: 'Phone', icon: phoneIcon, isImage: true, fallback: '📞', color: '#42a5f5', bgColor: '#e3f2fd' },
     { id: 'sms', name: 'एसएमएस', enName: 'SMS', icon: smsIcon, isImage: true, fallback: '💬', color: '#4caf50', bgColor: '#e8f5e9' },
     { id: 'whatsapp', name: 'व्हाट्सएप', enName: 'WhatsApp', icon: whatsappIcon, isImage: true, fallback: '💬', color: '#25D366', bgColor: '#d4edda' },
     { id: 'viber', name: 'भाइबर', enName: 'Viber', icon: viberIcon, isImage: true, fallback: '📱', color: '#7360f2', bgColor: '#e8e0f5' },
-    { id: 'email', name: 'इमेल', enName: 'Email', icon: emailIcon, isImage: true, fallback: '✉️', color: '#ea4335', bgColor: '#fce4ec' }
+    { id: 'email', name: 'इमेल', enName: 'Email', icon: emailIcon, isImage: true, fallback: '✉️', color: '#ea4335', bgColor: '#fce4ec' },
   ];
 
-  // Public complaints table data (Bilingual)
   const publicComplaints = [
     { id: 1, name: 'राम बहादुर', enName: 'Ram Bahadur', complaint: 'इन्टरनेट जडान समस्या', enComplaint: 'Internet connection issue', date: '२०८०-०१-१५', enDate: '2024-01-15', status: 'प्रगतिमा', enStatus: 'In Progress' },
     { id: 2, name: 'सीता शर्मा', enName: 'Sita Sharma', complaint: 'रिचार्ज नभएको', enComplaint: 'Recharge not credited', date: '२०८०-०१-१८', enDate: '2024-01-18', status: 'समाधान भयो', enStatus: 'Resolved' },
     { id: 3, name: 'हरि प्रसाद', enName: 'Hari Prasad', complaint: 'सिम क्रियाशील नभएको', enComplaint: 'SIM not activated', date: '२०८०-०१-२०', enDate: '2024-01-20', status: 'विचाराधीन', enStatus: 'Pending' },
     { id: 4, name: 'गीता अधिकारी', enName: 'Gita Adhikari', complaint: 'बिलिङ त्रुटि', enComplaint: 'Billing error', date: '२०८०-०१-२२', enDate: '2024-01-22', status: 'प्रगतिमा', enStatus: 'In Progress' },
-    { id: 5, name: 'विकास न्यौपाने', enName: 'Bikash Neupane', complaint: 'सिग्नल समस्या', enComplaint: 'Signal issue', date: '२०८०-०१-२५', enDate: '2024-01-25', status: 'समीक्षामा', enStatus: 'Under Review' }
+    { id: 5, name: 'विकास न्यौपाने', enName: 'Bikash Neupane', complaint: 'सिग्नल समस्या', enComplaint: 'Signal issue', date: '२०८०-०१-२५', enDate: '2024-01-25', status: 'समीक्षामा', enStatus: 'Under Review' },
   ];
 
-  // Latest status counts with translations
   const statusCounts = {
     np: [
       { title: 'हालसम्म दर्ता भएका कुल गुनासोहरू', count: '1,00,387', range: '(पछिल्लो २४ घण्टामा: +१२५)' },
       { title: 'समीक्षा भई कारबाहीको पर्खाइमा रहेका गुनासोहरू', count: '15,154', range: '(पछिल्लो २४ घण्टामा: +४२)' },
-      { title: 'सहायता टोलीद्वारा हालसम्म समाधान नभएका गुनासोहरू', count: '75,306', range: '(पछिल्लो २४ घण्टामा: -१८)' }
+      { title: 'सहायता टोलीद्वारा हालसम्म समाधान नभएका गुनासोहरू', count: '75,306', range: '(पछिल्लो २४ घण्टामा: -१८)' },
     ],
     en: [
       { title: 'Total complaints registered to date', count: '100,387', range: '(Last 24h: +125)' },
       { title: 'Complaints reviewed but awaiting action', count: '15,154', range: '(Last 24h: +42)' },
-      { title: 'Complaints not yet resolved by support team', count: '75,306', range: '(Last 24h: -18)' }
-    ]
+      { title: 'Complaints not yet resolved by support team', count: '75,306', range: '(Last 24h: -18)' },
+    ],
   };
 
   const latestComplaints = [
     { category: 'सिम कार्ड गुनासो', enCategory: 'SIM Card Complaints', date: '२०८०-०१-१२', enDate: '2024-01-12' },
     { category: 'इन्टरनेट सेवा गुनासो', enCategory: 'Internet Service Complaints', date: '२०८०-०१-१२', enDate: '2024-01-12' },
     { category: 'रिचार्ज र ब्यालेन्स समस्या', enCategory: 'Recharge & Balance Issues', date: '२०८०-०१-१२', enDate: '2024-01-12' },
-    { category: 'सेवा सक्रियता/निष्क्रियता', enCategory: 'Service Activation/Deactivation', date: '२०८०-०२-३०', enDate: '2024-02-28' }
+    { category: 'सेवा सक्रियता/निष्क्रियता', enCategory: 'Service Activation/Deactivation', date: '२०८०-०२-३०', enDate: '2024-02-28' },
   ];
 
-  // Statistics data
   const channelStats = [
     { name: 'वेबसाइट पोर्टल', enName: 'Website Portal', percentage: 45.788, color: '#1565c0' },
     { name: 'कल सेन्टर', enName: 'Call Center', percentage: 3.099, color: '#42a5f5' },
     { name: 'व्हाट्सएप सपोर्ट', enName: 'WhatsApp Support', percentage: 2.581, color: '#25D366' },
     { name: 'इमेल सपोर्ट', enName: 'Email Support', percentage: 1.697, color: '#ea4335' },
     { name: 'भाइबर', enName: 'Viber', percentage: 0.588, color: '#7360f2' },
-    { name: 'निवेदन पत्र', enName: 'Application Letter', percentage: 0.312, color: '#e67e22' }
+    { name: 'निवेदन पत्र', enName: 'Application Letter', percentage: 0.312, color: '#e67e22' },
   ];
 
   const content = {
@@ -156,7 +151,7 @@ const LandingPage = () => {
       netcomSignalComplaints: 'नेटकम र सिग्नल गुनासोहरू',
       netcomSignalText: 'नेटकम र सिग्नल गुनासोहरू एनटीसी गुनासो पोर्टलमा दर्ता गरिएका छन्।',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
-      copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।'
+      copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
     },
     en: {
       weAreHere: 'We are here for you',
@@ -168,10 +163,10 @@ const LandingPage = () => {
       serviceSub: 'Complaint Tracking System',
       home: 'Home',
       faqs: 'FAQs',
-      login: 'Login',
+      login: 'Admin Login',
       heroTitle: 'Do you have concerns regarding Nepal Telecom services, billing, internet connectivity, or customer support?',
       heroText: 'Please submit your complaint through the NTC Grievance Portal. Our team is ready to help you.',
-      heroQuote: 'Let us know—we\'re here to help resolve it!',
+      heroQuote: "Let us know — we're here to help resolve it!",
       submitComplaint: 'Submit Complaint',
       trackComplaint: 'Track Complaint',
       complaintRegarding: 'Complaint Regarding',
@@ -196,8 +191,8 @@ const LandingPage = () => {
       netcomSignalComplaints: 'Netcom & Signal Complaints',
       netcomSignalText: 'Netcom & Signal Complaints registered on NTC portal.',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
-      copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.'
-    }
+      copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
+    },
   };
 
   const t = content[language];
@@ -211,14 +206,10 @@ const LandingPage = () => {
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId);
     if (element) {
-      const headerOffset = 200;
+      const headerOffset = 195;
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-      
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+      window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
     }
   };
 
@@ -235,49 +226,36 @@ const LandingPage = () => {
 
   const LogoImage = ({ src, alt, fallback, className }) => {
     const [imgError, setImgError] = useState(false);
-    
     if (imgError || !src) {
       return <div className={`logo-fallback ${className}`}>{fallback}</div>;
     }
-    
-    return (
-      <img 
-        src={src} 
-        alt={alt} 
-        className={className}
-        onError={() => setImgError(true)}
-      />
-    );
+    return <img src={src} alt={alt} className={className} onError={() => setImgError(true)} />;
   };
 
-  const ChannelIcon = ({ channel, index }) => {
+  const ChannelIcon = ({ channel }) => {
     const [imgError, setImgError] = useState(false);
-    const errorKey = `${channel.id}_${index}`;
-    
     if (channel.isImage && !imgError && channel.icon) {
       return (
-        <img 
-          src={channel.icon} 
+        <img
+          src={channel.icon}
           alt={channel.enName}
           className="channel-icon-image"
           onError={() => setImgError(true)}
         />
       );
     }
-    
     return <span className="channel-emoji" style={{ color: channel.color }}>{channel.fallback || channel.icon}</span>;
   };
 
   const EmailIconComponent = ({ className }) => {
     const [error, setError] = useState(false);
-    
     if (error || !emailIcon) {
       return <span className={className || "contact-icon"}>✉️</span>;
     }
     return (
-      <img 
-        src={emailIcon} 
-        alt="Email" 
+      <img
+        src={emailIcon}
+        alt="Email"
         className={className || "contact-icon-image"}
         onError={() => setError(true)}
       />
@@ -287,7 +265,7 @@ const LandingPage = () => {
   return (
     <div className="landing-page">
       {/* HEADER 1 - Top Bar */}
-      <div className={`header-1 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
+      <div className="header-1">
         <div className="container-1">
           <div className="header-left">
             <div className="we-are-here">
@@ -306,7 +284,7 @@ const LandingPage = () => {
               </div>
             </div>
             <div className="language-dropdown">
-              <button 
+              <button
                 className="language-selector"
                 onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
               >
@@ -316,14 +294,14 @@ const LandingPage = () => {
               </button>
               {showLanguageDropdown && (
                 <div className="dropdown-menu">
-                  <button 
+                  <button
                     className={`dropdown-item ${language === 'np' ? 'active' : ''}`}
                     onClick={() => handleLanguageChange('np')}
                   >
                     <span className="lang-flag">🇳🇵</span>
                     <span>नेपाली</span>
                   </button>
-                  <button 
+                  <button
                     className={`dropdown-item ${language === 'en' ? 'active' : ''}`}
                     onClick={() => handleLanguageChange('en')}
                   >
@@ -338,33 +316,23 @@ const LandingPage = () => {
       </div>
 
       {/* HEADER 2 - Department Level with Logos */}
-      <div className={`header-2 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
+      <div className="header-2">
         <div className="container-2">
           <div className="logo-left">
-            <LogoImage 
-              src={ntcLogo} 
-              alt="NTC Logo" 
-              fallback="📡"
-              className="ntc-logo"
-            />
+            <LogoImage src={ntcLogo} alt="NTC Logo" fallback="📡" className="ntc-logo" />
           </div>
           <div className="dept-text-center">
             <div className="dept-name">{t.departmentName}</div>
             <div className="dept-address">{t.departmentAddress}</div>
           </div>
           <div className="logo-right">
-            <LogoImage 
-              src={govLogo} 
-              alt="Government Logo" 
-              fallback="🇳🇵"
-              className="gov-logo"
-            />
+            <LogoImage src={govLogo} alt="Government Logo" fallback="🇳🇵" className="gov-logo" />
           </div>
         </div>
       </div>
 
       {/* HEADER 3 - Navigation Bar */}
-      <div className={`header-3 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
+      <div className="header-3">
         <div className="container-3">
           <div className="nav-menu-left">
             <button onClick={() => scrollToSection('home')} className="nav-btn">
@@ -396,37 +364,17 @@ const LandingPage = () => {
               <p>{t.heroText}</p>
               <div className="hero-quote">✨ {t.heroQuote} ✨</div>
               <div className="hero-buttons">
-                <button 
-                  className="btn-primary"
-                  onClick={() => navigate('/submit-complaint')}
-                >
-                  📝 {t.submitComplaint}
-                </button>
-                <button 
-                  className="btn-secondary"
-                  onClick={() => navigate('/track-complaint')}
-                >
-                  🔍 {t.trackComplaint}
-                </button>
+                <button className="btn-primary" onClick={() => navigate('/submit-complaint')}>📝 {t.submitComplaint}</button>
+                <button className="btn-secondary" onClick={() => navigate('/track-complaint')}>🔍 {t.trackComplaint}</button>
               </div>
               <div className="complaint-regarding-container">
-                <button 
-                  className="btn-complaint-regarding"
-                  onClick={() => navigate('/complaint-regarding')}
-                >
-                  📋 {t.complaintRegarding}
-                </button>
+                <button className="btn-complaint-regarding" onClick={() => navigate('/complaint-regarding')}>📋 {t.complaintRegarding}</button>
               </div>
             </div>
             <div className="hero-right">
               {!heroImageError && heroImage ? (
                 <div className="hero-image-wrapper">
-                  <img 
-                    src={heroImage} 
-                    alt="NTC Customer Support" 
-                    className="hero-illustration"
-                    onError={() => setHeroImageError(true)}
-                  />
+                  <img src={heroImage} alt="NTC Customer Support" className="hero-illustration" onError={() => setHeroImageError(true)} />
                 </div>
               ) : (
                 <div className="hero-illustration-fallback">
@@ -447,7 +395,7 @@ const LandingPage = () => {
               {complaintChannels.map((channel, index) => (
                 <div key={index} className="channel-item">
                   <div className="channel-icon-wrapper" style={{ backgroundColor: channel.bgColor }}>
-                    <ChannelIcon channel={channel} index={index} />
+                    <ChannelIcon channel={channel} />
                   </div>
                   <span className="channel-name">{language === 'np' ? channel.name : channel.enName}</span>
                 </div>
@@ -512,7 +460,7 @@ const LandingPage = () => {
                     <span className="stat-name">{language === 'np' ? stat.name : stat.enName}</span>
                     <span className="stat-percentage">{stat.percentage}%</span>
                   </div>
-                  <div className="stat-bar" style={{ width: `${Math.min(stat.percentage * 2.2, 100)}%`, backgroundColor: stat.color }}></div>
+                  <div className="stat-bar" style={{ width: `${Math.min(stat.percentage * 2.2, 100)}%`, backgroundColor: stat.color }} />
                 </div>
               ))}
             </div>
@@ -589,11 +537,6 @@ const LandingPage = () => {
           padding: 10px 0;
           z-index: 1040;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-          transition: all 0.3s ease;
-        }
-
-        .header-1.header-scrolled {
-          padding: 6px 0;
         }
 
         .container-1 {
@@ -640,7 +583,6 @@ const LandingPage = () => {
           display: flex;
           align-items: center;
           gap: 15px;
-          flex-wrap: wrap;
         }
 
         .contact-info-item {
@@ -659,26 +601,12 @@ const LandingPage = () => {
           transform: translateY(-1px);
         }
 
-        .contact-icon {
-          font-size: 0.85rem;
-        }
-
-        .contact-icon-image {
-          width: 14px;
-          height: 14px;
-          object-fit: contain;
-        }
-
-        .contact-text {
-          font-size: 0.75rem;
-          font-weight: 500;
-        }
+        .contact-icon { font-size: 0.85rem; }
+        .contact-text { font-size: 0.75rem; font-weight: 500; }
+        .contact-icon-image { width: 14px; height: 14px; object-fit: contain; }
 
         /* Language Dropdown */
-        .language-dropdown { 
-          position: relative; 
-        }
-        
+        .language-dropdown { position: relative; }
         .language-selector {
           display: flex;
           align-items: center;
@@ -693,20 +621,9 @@ const LandingPage = () => {
           font-weight: 500;
           transition: all 0.3s ease;
         }
-        
-        .language-selector:hover { 
-          background: rgba(255,255,255,0.25); 
-        }
-        
-        .lang-icon { 
-          font-size: 0.85rem; 
-        }
-        
-        .dropdown-arrow { 
-          font-size: 0.6rem; 
-          margin-left: 5px; 
-        }
-        
+        .language-selector:hover { background: rgba(255,255,255,0.25); }
+        .lang-icon { font-size: 0.85rem; }
+        .dropdown-arrow { font-size: 0.6rem; margin-left: 5px; }
         .dropdown-menu {
           position: absolute;
           top: 38px;
@@ -718,7 +635,6 @@ const LandingPage = () => {
           z-index: 1050;
           min-width: 120px;
         }
-        
         .dropdown-item {
           display: flex;
           align-items: center;
@@ -732,19 +648,9 @@ const LandingPage = () => {
           transition: all 0.2s ease;
           text-align: left;
         }
-        
-        .dropdown-item:hover { 
-          background: #f0f2f5; 
-        }
-        
-        .dropdown-item.active { 
-          background: #1565c0; 
-          color: white; 
-        }
-        
-        .lang-flag { 
-          font-size: 1rem; 
-        }
+        .dropdown-item:hover { background: #f0f2f5; }
+        .dropdown-item.active { background: #1565c0; color: white; }
+        .lang-flag { font-size: 1rem; }
 
         /* HEADER 2 - Department Level */
         .header-2 {
@@ -758,14 +664,7 @@ const LandingPage = () => {
           z-index: 1030;
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
-          transition: all 0.3s ease;
         }
-        
-        .header-2.header-scrolled {
-          padding: 8px 0;
-          top: 45px;
-        }
-        
         .container-2 {
           max-width: 1400px;
           margin: 0 auto;
@@ -775,25 +674,9 @@ const LandingPage = () => {
           align-items: center;
           gap: 30px;
         }
-        
-        .logo-left { 
-          flex: 1; 
-          display: flex; 
-          justify-content: flex-start; 
-        }
-        
-        .logo-right { 
-          flex: 1; 
-          display: flex; 
-          justify-content: flex-end; 
-        }
-        
-        .ntc-logo, .gov-logo { 
-          height: 50px; 
-          width: auto; 
-          object-fit: contain; 
-        }
-        
+        .logo-left { flex: 1; display: flex; justify-content: flex-start; }
+        .logo-right { flex: 1; display: flex; justify-content: flex-end; }
+        .ntc-logo, .gov-logo { height: 50px; width: auto; object-fit: contain; }
         .logo-fallback {
           font-size: 2rem;
           width: 50px;
@@ -805,25 +688,9 @@ const LandingPage = () => {
           border-radius: 50%;
           color: white;
         }
-        
-        .dept-text-center { 
-          flex: 2; 
-          text-align: center; 
-        }
-        
-        .dept-name { 
-          font-size: 1rem; 
-          font-weight: 700; 
-          color: #0d47a1; 
-          letter-spacing: 1px; 
-        }
-        
-        .dept-address { 
-          font-size: 0.75rem; 
-          opacity: 0.7; 
-          color: #555; 
-          margin-top: 3px; 
-        }
+        .dept-text-center { flex: 2; text-align: center; }
+        .dept-name { font-size: 1rem; font-weight: 700; color: #0d47a1; letter-spacing: 1px; }
+        .dept-address { font-size: 0.75rem; opacity: 0.7; color: #555; margin-top: 3px; }
 
         /* HEADER 3 - Navigation Bar */
         .header-3 {
@@ -836,14 +703,7 @@ const LandingPage = () => {
           padding: 12px 0;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
           z-index: 1020;
-          transition: all 0.3s ease;
         }
-        
-        .header-3.header-scrolled {
-          top: 101px;
-          padding: 8px 0;
-        }
-        
         .container-3 {
           max-width: 1400px;
           margin: 0 auto;
@@ -854,13 +714,7 @@ const LandingPage = () => {
           flex-wrap: wrap;
           gap: 20px;
         }
-        
-        .nav-menu-left { 
-          display: flex; 
-          gap: 20px; 
-          align-items: center; 
-        }
-        
+        .nav-menu-left { display: flex; gap: 20px; align-items: center; }
         .nav-btn {
           background: transparent;
           border: none;
@@ -875,25 +729,10 @@ const LandingPage = () => {
           align-items: center;
           gap: 8px;
         }
-        
-        .nav-btn:hover { 
-          background: rgba(255,255,255,0.15); 
-          transform: translateY(-1px); 
-        }
-        
-        .nav-icon { 
-          font-size: 1.1rem; 
-        }
-        
-        .nav-text { 
-          font-size: 0.95rem; 
-        }
-        
-        .login-btn-right { 
-          display: flex; 
-          align-items: center; 
-        }
-        
+        .nav-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-1px); }
+        .nav-icon { font-size: 1.1rem; }
+        .nav-text { font-size: 0.95rem; }
+        .login-btn-right { display: flex; align-items: center; }
         .login-btn {
           background: transparent;
           border: 2px solid white;
@@ -909,15 +748,9 @@ const LandingPage = () => {
           gap: 8px;
           white-space: nowrap;
         }
-        
-        .login-btn:hover { 
-          background: white; 
-          color: #1565c0; 
-          transform: translateY(-2px); 
-          box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
-        }
+        .login-btn:hover { background: white; color: #1565c0; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 
-        /* Main content - Fixed overlapping */
+        /* Main Content */
         .main-content {
           padding-top: 195px;
         }
@@ -992,29 +825,16 @@ const LandingPage = () => {
           background: #1565c0;
           color: white;
         }
-        .btn-primary:hover { 
-          background: #0d47a1; 
-          transform: translateY(-2px); 
-          box-shadow: 0 6px 14px rgba(0,0,0,0.15); 
-        }
+        .btn-primary:hover { background: #0d47a1; transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.15); }
 
         .btn-secondary {
           background: white;
           color: #1565c0;
           border: 2px solid #1565c0;
         }
-        .btn-secondary:hover { 
-          background: #1565c0; 
-          color: white; 
-          transform: translateY(-2px); 
-          box-shadow: 0 6px 14px rgba(0,0,0,0.15); 
-        }
+        .btn-secondary:hover { background: #1565c0; color: white; transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.15); }
 
-        .complaint-regarding-container { 
-          margin-top: 15px; 
-          text-align: left; 
-        }
-        
+        .complaint-regarding-container { margin-top: 15px; text-align: left; }
         .btn-complaint-regarding {
           padding: 16px 36px;
           border-radius: 50px;
@@ -1030,41 +850,11 @@ const LandingPage = () => {
           gap: 12px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
-        
-        .btn-complaint-regarding:hover { 
-          background: #1565c0; 
-          color: white; 
-          transform: translateY(-2px); 
-          box-shadow: 0 6px 14px rgba(0,0,0,0.15); 
-        }
+        .btn-complaint-regarding:hover { background: #1565c0; color: white; transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.15); }
 
-        .hero-right { 
-          flex: 1; 
-          display: flex; 
-          justify-content: flex-end; 
-          align-items: center; 
-          min-width: 300px; 
-        }
-        
-        .hero-image-wrapper { 
-          width: 100%; 
-          max-width: 650px; 
-          background: transparent; 
-          border-radius: 20px; 
-          display: flex; 
-          justify-content: center; 
-          align-items: center; 
-        }
-        
-        .hero-illustration { 
-          width: 100%; 
-          max-width: 600px; 
-          height: auto; 
-          border-radius: 20px; 
-          object-fit: contain; 
-          display: block; 
-        }
-        
+        .hero-right { flex: 1; display: flex; justify-content: flex-end; align-items: center; min-width: 300px; }
+        .hero-image-wrapper { width: 100%; max-width: 650px; background: transparent; border-radius: 20px; display: flex; justify-content: center; align-items: center; }
+        .hero-illustration { width: 100%; max-width: 600px; height: auto; border-radius: 20px; object-fit: contain; display: block; }
         .hero-illustration-fallback {
           width: 100%;
           max-width: 450px;
@@ -1078,22 +868,9 @@ const LandingPage = () => {
           color: white;
           text-align: center;
         }
-        
-        .fallback-icon { 
-          font-size: 4rem; 
-          margin-bottom: 20px; 
-        }
-        
-        .fallback-text { 
-          font-size: 1.3rem; 
-          font-weight: 600; 
-          margin-bottom: 10px; 
-        }
-        
-        .fallback-subtext { 
-          font-size: 0.9rem; 
-          opacity: 0.9; 
-        }
+        .fallback-icon { font-size: 4rem; margin-bottom: 20px; }
+        .fallback-text { font-size: 1.3rem; font-weight: 600; margin-bottom: 10px; }
+        .fallback-subtext { font-size: 0.9rem; opacity: 0.9; }
 
         /* Complaint Channels Section */
         .channels-section {
@@ -1101,12 +878,7 @@ const LandingPage = () => {
           padding: 40px 24px;
           border-bottom: 1px solid #e2e9f0;
         }
-        
-        .channels-container { 
-          max-width: 1200px; 
-          margin: 0 auto; 
-        }
-        
+        .channels-container { max-width: 1200px; margin: 0 auto; }
         .channels-title {
           font-size: 1.3rem;
           font-weight: 600;
@@ -1116,7 +888,6 @@ const LandingPage = () => {
           border-bottom: 2px solid #1565c0;
           display: inline-block;
         }
-        
         .channels-list {
           display: flex;
           flex-wrap: wrap;
@@ -1124,7 +895,6 @@ const LandingPage = () => {
           margin-top: 20px;
           justify-content: center;
         }
-        
         .channel-item {
           display: flex;
           flex-direction: column;
@@ -1138,14 +908,12 @@ const LandingPage = () => {
           cursor: default;
           min-width: 100px;
         }
-        
         .channel-item:hover {
           transform: translateY(-4px);
           box-shadow: 0 8px 20px rgba(0,0,0,0.1);
           border-color: #1565c0;
           background: linear-gradient(135deg, #ffffff, #e3f2fd);
         }
-        
         .channel-icon-wrapper {
           width: 60px;
           height: 60px;
@@ -1155,23 +923,9 @@ const LandingPage = () => {
           justify-content: center;
           transition: all 0.3s ease;
         }
-        
-        .channel-icon-image {
-          width: 35px;
-          height: 35px;
-          object-fit: contain;
-        }
-        
-        .channel-emoji {
-          font-size: 2rem;
-        }
-        
-        .channel-name {
-          font-size: 0.85rem;
-          font-weight: 600;
-          color: #1a2c3e;
-          text-align: center;
-        }
+        .channel-icon-image { width: 35px; height: 35px; object-fit: contain; }
+        .channel-emoji { font-size: 2rem; }
+        .channel-name { font-size: 0.85rem; font-weight: 600; color: #1a2c3e; text-align: center; }
 
         /* Public Complaints and Latest Status Container */
         .stats-public-container {
@@ -1182,7 +936,6 @@ const LandingPage = () => {
           grid-template-columns: 1fr 1fr;
           gap: 32px;
         }
-        
         .public-complaints-card, .latest-status-card {
           background: white;
           border-radius: 20px;
@@ -1190,7 +943,6 @@ const LandingPage = () => {
           box-shadow: 0 2px 12px rgba(0,0,0,0.08);
           border: 1px solid #e8e8e8;
         }
-        
         .public-complaints-card h3, .latest-status-card h3 {
           font-size: 1.3rem;
           color: #0d47a1;
@@ -1198,152 +950,36 @@ const LandingPage = () => {
           border-left: 4px solid #1565c0;
           padding-left: 16px;
         }
-        
-        .table-wrapper { 
-          overflow-x: auto; 
-        }
-        
-        .complaints-table { 
-          width: 100%; 
-          border-collapse: collapse; 
-        }
-        
-        .complaints-table th, .complaints-table td { 
-          padding: 12px; 
-          text-align: left; 
-          border-bottom: 1px solid #e0e0e0; 
-        }
-        
-        .complaints-table th { 
-          background: #f5f7fa; 
-          font-weight: 600; 
-          color: #0d47a1; 
-        }
-        
-        .complaints-table tr:hover { 
-          background: #f8fafc; 
-        }
-        
-        .status-badge { 
-          display: inline-block; 
-          padding: 4px 12px; 
-          border-radius: 20px; 
-          font-size: 0.75rem; 
-          font-weight: 600; 
-        }
-        
-        .status-progress { 
-          background: #fff3cd; 
-          color: #856404; 
-        }
-        
-        .status-resolved { 
-          background: #d4edda; 
-          color: #155724; 
-        }
-        
-        .status-pending { 
-          background: #f8d7da; 
-          color: #721c24; 
-        }
-        
-        .status-review { 
-          background: #fff3cd; 
-          color: #856404; 
-        }
-        
-        .status-item { 
-          background: #f5f7fa; 
-          padding: 16px; 
-          border-radius: 12px; 
-          margin-bottom: 16px; 
-        }
-        
-        .status-title { 
-          font-weight: 500; 
-          margin-bottom: 8px; 
-          color: #1a2c3e; 
-        }
-        
-        .status-number { 
-          font-size: 1.3rem; 
-          font-weight: 700; 
-          color: #1565c0; 
-        }
-        
-        .status-range { 
-          font-size: 0.75rem; 
-          font-weight: normal; 
-          color: #6c8196; 
-        }
+        .table-wrapper { overflow-x: auto; }
+        .complaints-table { width: 100%; border-collapse: collapse; }
+        .complaints-table th, .complaints-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        .complaints-table th { background: #f5f7fa; font-weight: 600; color: #0d47a1; }
+        .complaints-table tr:hover { background: #f8fafc; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .status-progress { background: #fff3cd; color: #856404; }
+        .status-resolved { background: #d4edda; color: #155724; }
+        .status-pending { background: #f8d7da; color: #721c24; }
+        .status-review { background: #fff3cd; color: #856404; }
+        .status-item { background: #f5f7fa; padding: 16px; border-radius: 12px; margin-bottom: 16px; }
+        .status-title { font-weight: 500; margin-bottom: 8px; color: #1a2c3e; }
+        .status-number { font-size: 1.3rem; font-weight: 700; color: #1565c0; }
+        .status-range { font-size: 0.75rem; font-weight: normal; color: #6c8196; }
 
         /* Statistics */
         .statistics {
           background: white;
           padding: 48px 24px;
         }
-        
-        .container { 
-          max-width: 1000px; 
-          margin: 0 auto; 
-        }
-        
-        .statistics h3 { 
-          text-align: center; 
-          margin-bottom: 32px; 
-          color: #0d47a1; 
-          font-size: 1.3rem; 
-        }
-        
-        .stats-grid { 
-          display: flex; 
-          flex-direction: column; 
-          gap: 12px; 
-          margin-bottom: 32px; 
-        }
-        
-        .stat-card { 
-          background: #f5f7fa; 
-          border-radius: 12px; 
-          overflow: hidden; 
-        }
-        
-        .stat-bar { 
-          height: 8px; 
-          transition: width 0.5s; 
-        }
-        
-        .stat-info { 
-          padding: 12px 16px; 
-          display: flex; 
-          justify-content: space-between; 
-          font-weight: 500; 
-        }
-        
-        .quick-links { 
-          text-align: center; 
-          padding-top: 20px; 
-          border-top: 1px solid #e0e0e0; 
-        }
-        
-        .quick-links span { 
-          font-weight: 600; 
-          margin-right: 16px; 
-          color: #1565c0; 
-        }
-        
-        .quick-links button { 
-          background: none; 
-          border: none; 
-          color: #1565c0; 
-          margin: 0 8px; 
-          cursor: pointer; 
-          font-weight: 500; 
-        }
-        
-        .quick-links button:hover {
-          text-decoration: underline;
-        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .statistics h3 { text-align: center; margin-bottom: 32px; color: #0d47a1; font-size: 1.3rem; }
+        .stats-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+        .stat-card { background: #f5f7fa; border-radius: 12px; overflow: hidden; }
+        .stat-bar { height: 8px; transition: width 0.5s; }
+        .stat-info { padding: 12px 16px; display: flex; justify-content: space-between; font-weight: 500; }
+        .quick-links { text-align: center; padding-top: 20px; border-top: 1px solid #e0e0e0; }
+        .quick-links span { font-weight: 600; margin-right: 16px; color: #1565c0; }
+        .quick-links button { background: none; border: none; color: #1565c0; margin: 0 8px; cursor: pointer; font-weight: 500; }
+        .quick-links button:hover { text-decoration: underline; }
 
         /* Signal Section */
         .signal-section {
@@ -1351,13 +987,7 @@ const LandingPage = () => {
           margin: 0 auto;
           padding: 0 24px 48px;
         }
-        
-        .signal-container { 
-          display: grid; 
-          grid-template-columns: 1fr 1fr; 
-          gap: 32px; 
-        }
-        
+        .signal-container { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
         .signal-card, .contact-card {
           background: white;
           border-radius: 20px;
@@ -1365,7 +995,6 @@ const LandingPage = () => {
           box-shadow: 0 2px 12px rgba(0,0,0,0.08);
           border: 1px solid #e8e8e8;
         }
-        
         .signal-card h3, .contact-card h3 {
           font-size: 1.3rem;
           color: #0d47a1;
@@ -1373,47 +1002,19 @@ const LandingPage = () => {
           border-left: 4px solid #1565c0;
           padding-left: 16px;
         }
-        
-        .complaint-list { 
-          margin-top: 20px; 
-        }
-        
+        .complaint-list { margin-top: 20px; }
         .complaint-item {
           display: flex;
           justify-content: space-between;
           padding: 12px 0;
           border-bottom: 1px solid #e0e0e0;
         }
-        
-        .complaint-item:last-child { 
-          border-bottom: none; 
-        }
-        
-        .complaint-category { 
-          font-weight: 500; 
-          color: #1a2c3e; 
-        }
-        
-        .complaint-date { 
-          color: #6c8196; 
-          font-size: 0.85rem; 
-        }
-        
-        .contact-details { 
-          line-height: 2; 
-        }
-        
-        .contact-details p { 
-          margin: 10px 0; 
-        }
-
-        .contact-card-email-icon {
-          width: 14px;
-          height: 14px;
-          object-fit: contain;
-          vertical-align: middle;
-          margin-right: 2px;
-        }
+        .complaint-item:last-child { border-bottom: none; }
+        .complaint-category { font-weight: 500; color: #1a2c3e; }
+        .complaint-date { color: #6c8196; font-size: 0.85rem; }
+        .contact-details { line-height: 2; }
+        .contact-details p { margin: 10px 0; }
+        .contact-card-email-icon { width: 14px; height: 14px; object-fit: contain; vertical-align: middle; margin-right: 2px; }
 
         /* Footer */
         .footer {
@@ -1423,171 +1024,47 @@ const LandingPage = () => {
           margin-top: 0;
           text-align: center;
         }
-        
-        .footer-content { 
-          max-width: 1200px; 
-          margin: 0 auto; 
-        }
-        
-        .footer-copyright { 
-          text-align: center; 
-          font-size: 0.7rem; 
-          opacity: 0.7; 
-        }
-        
-        .copyright-text { 
-          margin-top: 5px; 
-          font-size: 0.65rem; 
-        }
+        .footer-content { max-width: 1200px; margin: 0 auto; }
+        .footer-copyright { text-align: center; font-size: 0.7rem; opacity: 0.7; }
+        .copyright-text { margin-top: 5px; font-size: 0.65rem; }
 
-        /* Responsive Design */
+        /* Responsive */
         @media (max-width: 1024px) {
-          .stats-public-container {
-            grid-template-columns: 1fr;
-            gap: 24px;
-          }
-          
-          .signal-container {
-            grid-template-columns: 1fr;
-            gap: 24px;
-          }
-          
-          .hero-container {
-            flex-direction: column;
-            text-align: center;
-          }
-          
-          .hero-left {
-            text-align: center;
-          }
-          
-          .hero-buttons {
-            justify-content: center;
-          }
-          
-          .complaint-regarding-container {
-            text-align: center;
-          }
-          
-          .hero-right {
-            justify-content: center;
-            margin-top: 30px;
-          }
+          .stats-public-container { grid-template-columns: 1fr; gap: 24px; }
+          .signal-container { grid-template-columns: 1fr; gap: 24px; }
+          .hero-container { flex-direction: column; text-align: center; }
+          .hero-left { text-align: center; }
+          .hero-buttons { justify-content: center; }
+          .complaint-regarding-container { text-align: center; }
+          .hero-right { justify-content: center; margin-top: 30px; }
         }
 
         @media (max-width: 768px) {
-          .main-content {
-            padding-top: 280px;
-          }
-          
-          .hero {
-            padding: 40px 20px;
-          }
-          
-          .hero-left h2 {
-            font-size: 1.3rem;
-          }
-          
-          .hero-left p {
-            font-size: 0.95rem;
-          }
-          
-          .container-1, 
-          .container-2, 
-          .container-3 {
-            flex-direction: column;
-            text-align: center;
-            padding: 0 20px;
-          }
-          
-          .header-left, 
-          .header-right, 
-          .logo-left, 
-          .logo-right, 
-          .nav-menu-left {
-            justify-content: center;
-          }
-          
-          .contact-info-group {
-            flex-direction: column;
-          }
-          
-          .logo-left, 
-          .logo-right {
-            display: none;
-          }
-          
-          .dept-text-center {
-            flex: 1;
-          }
-          
-          .channel-item {
-            min-width: 80px;
-            padding: 15px;
-          }
-          
-          .channel-icon-wrapper {
-            width: 50px;
-            height: 50px;
-          }
-          
-          .channel-icon-image {
-            width: 28px;
-            height: 28px;
-          }
-          
-          .channel-emoji {
-            font-size: 1.6rem;
-          }
-          
-          .channel-name {
-            font-size: 0.7rem;
-          }
-          
-          .stats-public-container,
-          .signal-section {
-            padding: 32px 20px;
-          }
-          
-          .public-complaints-card,
-          .latest-status-card,
-          .signal-card,
-          .contact-card {
-            padding: 20px;
-          }
+          .main-content { padding-top: 280px; }
+          .hero { padding: 40px 20px; }
+          .hero-left h2 { fontSize: 1.3rem; }
+          .hero-left p { fontSize: 0.95rem; }
+          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; padding: 0 20px; }
+          .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
+          .contact-info-group { flex-direction: column; }
+          .logo-left, .logo-right { display: none; }
+          .dept-text-center { flex: 1; }
+          .channel-item { min-width: 80px; padding: 15px; }
+          .channel-icon-wrapper { width: 50px; height: 50px; }
+          .channel-icon-image { width: 28px; height: 28px; }
+          .channel-emoji { font-size: 1.6rem; }
+          .channel-name { font-size: 0.7rem; }
+          .stats-public-container, .signal-section { padding: 32px 20px; }
+          .public-complaints-card, .latest-status-card, .signal-card, .contact-card { padding: 20px; }
         }
 
         @media (max-width: 480px) {
-          .main-content {
-            padding-top: 320px;
-          }
-          
-          .hero-buttons {
-            flex-direction: column;
-            align-items: center;
-          }
-          
-          .btn-primary, 
-          .btn-secondary,
-          .btn-complaint-regarding {
-            width: 100%;
-            justify-content: center;
-          }
-          
-          .complaints-table th,
-          .complaints-table td {
-            padding: 8px;
-            font-size: 0.75rem;
-          }
-          
-          .channels-list {
-            gap: 12px;
-          }
-          
-          .channel-item {
-            min-width: 70px;
-            padding: 10px;
-          }
+          .main-content { padding-top: 320px; }
+          .hero-buttons { flex-direction: column; align-items: center; }
+          .btn-primary, .btn-secondary, .btn-complaint-regarding { width: 100%; justify-content: center; }
+          .complaints-table th, .complaints-table td { padding: 8px; font-size: 0.75rem; }
+          .channels-list { gap: 12px; }
+          .channel-item { min-width: 70px; padding: 10px; }
         }
       `}</style>
     </div>

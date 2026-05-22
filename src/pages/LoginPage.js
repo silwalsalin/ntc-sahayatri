@@ -1,5 +1,5 @@
 // src/pages/LoginPage.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Try to import local images with fallback
@@ -21,7 +21,6 @@ const LoginPage = () => {
   // Language state
   const [language, setLanguage] = useState('np');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
 
   // Login form state
   const [formData, setFormData] = useState({
@@ -34,29 +33,6 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-
-  // Handle scroll for header effects
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Check if already logged in - Clear any existing session first
-  useEffect(() => {
-    // Clear any existing session to ensure clean login
-    // Comment this out if you want to keep the session
-    // localStorage.removeItem('adminToken');
-    // localStorage.removeItem('adminUser');
-    // localStorage.removeItem('userRole');
-    // localStorage.removeItem('userName');
-    // localStorage.removeItem('isLoggedIn');
-    
-    setIsCheckingAuth(false);
-  }, []);
 
   const content = {
     np: {
@@ -145,19 +121,14 @@ const LoginPage = () => {
     setIsLoading(true);
     setError('');
 
-    // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Demo authentication - Only Admin login allowed
     const username = formData.username.toLowerCase();
     const password = formData.password;
 
-    // Admin login credentials
     if ((username === 'admin@ntc' || username === 'admin') && password === 'admin123') {
-      // Clear any existing session first
       localStorage.clear();
       
-      // Store admin session
       localStorage.setItem('adminToken', 'dummy-admin-token-' + Date.now());
       localStorage.setItem('adminUser', JSON.stringify({
         id: 1,
@@ -170,10 +141,7 @@ const LoginPage = () => {
       localStorage.setItem('userName', 'Admin User');
       localStorage.setItem('isLoggedIn', 'true');
       
-      // Show success message
       alert(t.loginSuccess);
-      
-      // Redirect to admin dashboard
       navigate('/admin-dashboard', { replace: true });
     } 
     else {
@@ -185,20 +153,6 @@ const LoginPage = () => {
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
     setShowLanguageDropdown(false);
-  };
-
-  const handleLogout = () => {
-    // Clear all localStorage items
-    localStorage.clear();
-    // Reset form
-    setFormData({
-      username: '',
-      password: '',
-      rememberMe: false
-    });
-    setError('');
-    // Reload the page to reset state
-    window.location.reload();
   };
 
   const LogoImage = ({ src, alt, fallback, className }) => {
@@ -218,19 +172,10 @@ const LoginPage = () => {
     );
   };
 
-  if (isCheckingAuth) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="login-page">
       {/* HEADER 1 - Top Bar */}
-      <div className={`header-1 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
+      <div className="header-1">
         <div className="container-1">
           <div className="header-left">
             <div className="we-are-here">
@@ -281,7 +226,7 @@ const LoginPage = () => {
       </div>
 
       {/* HEADER 2 - Department Level with Logos */}
-      <div className={`header-2 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
+      <div className="header-2">
         <div className="container-2">
           <div className="logo-left">
             <LogoImage 
@@ -314,13 +259,6 @@ const LoginPage = () => {
               <div className="login-icon">🔐</div>
               <h2>{t.welcomeBack}</h2>
               <p>{t.loginToAccount}</p>
-            </div>
-
-            {/* Clear Session Button */}
-            <div className="clear-session">
-              <button type="button" className="clear-session-btn" onClick={handleLogout}>
-                🗑️ {language === 'np' ? 'सेसन सफा गर्नुहोस्' : 'Clear Session'}
-              </button>
             </div>
 
             {error && (
@@ -416,15 +354,6 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="footer-content">
-          <div className="footer-copyright">
-            <p>{t.footerTagline}</p>
-            <p className="copyright-text">{t.copyright}</p>
-          </div>
-        </div>
-      </footer>
 
       <style jsx>{`
         * {
@@ -440,28 +369,6 @@ const LoginPage = () => {
           min-height: 100vh;
         }
 
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e5e7eb;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-
         /* HEADER 1 - Top Bar */
         .header-1 {
           position: fixed;
@@ -473,11 +380,6 @@ const LoginPage = () => {
           padding: 10px 0;
           z-index: 1040;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-          transition: all 0.3s ease;
-        }
-
-        .header-1.header-scrolled {
-          padding: 6px 0;
         }
 
         .container-1 {
@@ -524,7 +426,6 @@ const LoginPage = () => {
           display: flex;
           align-items: center;
           gap: 15px;
-          flex-wrap: wrap;
         }
 
         .contact-info-item {
@@ -605,14 +506,7 @@ const LoginPage = () => {
           z-index: 1030;
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
-          transition: all 0.3s ease;
         }
-
-        .header-2.header-scrolled {
-          padding: 8px 0;
-          top: 45px;
-        }
-
         .container-2 {
           max-width: 1400px;
           margin: 0 auto;
@@ -677,26 +571,6 @@ const LoginPage = () => {
 
         .login-header p {
           color: #6c8196;
-        }
-
-        .clear-session {
-          text-align: right;
-          margin-bottom: 16px;
-        }
-
-        .clear-session-btn {
-          background: #fee2e2;
-          border: none;
-          padding: 6px 12px;
-          border-radius: 20px;
-          font-size: 0.7rem;
-          cursor: pointer;
-          color: #dc2626;
-          transition: all 0.2s;
-        }
-
-        .clear-session-btn:hover {
-          background: #fecaca;
         }
 
         .error-message {
@@ -885,16 +759,6 @@ const LoginPage = () => {
         .btn-back:hover:not(:disabled) { background: #1565c0; color: white; transform: translateY(-2px); }
         .btn-back:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .footer {
-          background: #0d2b5e;
-          color: white;
-          padding: 20px 24px;
-          margin-top: 40px;
-          text-align: center;
-        }
-        .footer-content { max-width: 1200px; margin: 0 auto; }
-        .footer-copyright { text-align: center; font-size: 0.7rem; opacity: 0.7; }
-        .copyright-text { margin-top: 5px; font-size: 0.65rem; }
 
         @media (max-width: 768px) {
           .main-content { padding-top: 220px; }

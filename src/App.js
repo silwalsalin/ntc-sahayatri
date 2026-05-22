@@ -15,7 +15,10 @@ import ForgotPassword from './pages/ForgotPassword';
 import Verifyotp from './pages/Verifyotp';
 import ResetPassword from './pages/ResetPassword';
 import AdminDashboard from './pages/AdminDashboard';
-
+import AdminComplaints from './pages/AdminComplaints';
+import AdminComplaintsPending from './pages/AdminComplaintsPending';
+import AdminComplaintsInProgress from './pages/AdminComplaintsInprogress';
+import AdminComplaintsResolved from './pages/AdminComplaintsResolved';
 function App() {
   return (
     <Router>
@@ -33,6 +36,11 @@ function App() {
           <Route path="/verify-otp" element={<Verifyotp />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          <Route path="/admin-complaints" element={<AdminComplaints />} />
+          <Route path="/admin-complaints/pending" element={<AdminComplaintsPending />} />
+          <Route path="/admin-complaints/in-progress" element={<AdminComplaintsInProgress />} />
+          <Route path="/admin-complaints/resolved" element={<AdminComplaintsResolved />} />
+  
         </Routes>
       </div>
     </Router>

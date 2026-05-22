@@ -1,9 +1,9 @@
-// src/pages/LandingPage.js
-import React, { useState, useEffect } from 'react';
+// src/pages/ComplaintRegarding.js
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Try to import local images with fallback
-let ntcLogo, govLogo, heroImage, phoneIcon, smsIcon, whatsappIcon, viberIcon, emailIcon;
+let ntcLogo, govLogo, heroImage;
 try {
   ntcLogo = require('../img/ntc-logo.png');
 } catch (e) {
@@ -19,103 +19,55 @@ try {
 } catch (e) {
   heroImage = null;
 }
-try {
-  phoneIcon = require('../img/phone.png');
-} catch (e) {
-  phoneIcon = null;
-}
-try {
-  smsIcon = require('../img/sms.png');
-} catch (e) {
-  smsIcon = null;
-}
-try {
-  whatsappIcon = require('../img/whatsapp.png');
-} catch (e) {
-  whatsappIcon = null;
-}
-try {
-  viberIcon = require('../img/viber.png');
-} catch (e) {
-  viberIcon = null;
-}
-try {
-  emailIcon = require('../img/email.png');
-} catch (e) {
-  emailIcon = null;
-}
 
-const LandingPage = () => {
+const ComplaintRegarding = () => {
   const navigate = useNavigate();
   
   // Language state
   const [language, setLanguage] = useState('np');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
-  // Image states for fallback
-  const [heroImageError, setHeroImageError] = useState(false);
-  const [emailIconError, setEmailIconError] = useState(false);
-  const [phoneIconErrors, setPhoneIconErrors] = useState({});
-  const [scrollY, setScrollY] = useState(0);
+  // State for complaint form
+  const [formData, setFormData] = useState({
+    complaintType: '',
+    subject: '',
+    description: '',
+    priority: 'medium',
+    name: '',
+    email: '',
+    phone: '',
+    address: ''
+  });
 
-  // Handle scroll for header effects
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
+  // File upload state
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [dragActive, setDragActive] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  // Subject options based on complaint type
+  const getSubjectOptions = () => {
+    const commonSubjects = {
+      np: {
+        service: ['इन्टरनेट जडान समस्या', 'फोन कल ड्रप हुने', 'ढिलो इन्टरनेट स्पीड', 'सेवा नभएको', 'सेवा विच्छेद'],
+        billing: ['बढी बिल आएको', 'बिल नआएको', 'रिचार्ज नभएको', 'पैसा कट्टी भएको', 'डबल चार्ज'],
+        technical: ['वेबसाइट काम नगर्ने', 'एप क्र्याश हुने', 'लगइन समस्या', 'डाटा ढिलो', 'सफ्टवेयर त्रुटि'],
+        network: ['नेटवर्क नभएको', 'सिग्नल कमजोर', 'कभरेज समस्या', 'रोमिङ समस्या', '४जी/५जी समस्या'],
+        other: ['अन्य समस्या', 'सुझाव', 'गुनासो', 'प्रश्न', 'जानकारी']
+      },
+      en: {
+        service: ['Internet Connection Issue', 'Call Drop Problem', 'Slow Internet Speed', 'Service Not Working', 'Service Disruption'],
+        billing: ['Excessive Billing', 'Bill Not Received', 'Recharge Not Credited', 'Wrong Deduction', 'Double Charge'],
+        technical: ['Website Not Working', 'App Crashes', 'Login Issue', 'Data Delay', 'Software Bug'],
+        network: ['No Network', 'Weak Signal', 'Coverage Issue', 'Roaming Problem', '4G/5G Issue'],
+        other: ['Other Issue', 'Suggestion', 'Complaint', 'Inquiry', 'Information']
+      }
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Complaint channels - With bilingual names and icons
-  const complaintChannels = [
-    { id: 'website', name: 'वेबसाइट पोर्टल', enName: 'Website Portal', icon: '🌐', isImage: false, color: '#1565c0', bgColor: '#e3f2fd' },
-    { id: 'phone', name: 'फोन', enName: 'Phone', icon: phoneIcon, isImage: true, fallback: '📞', color: '#42a5f5', bgColor: '#e3f2fd' },
-    { id: 'sms', name: 'एसएमएस', enName: 'SMS', icon: smsIcon, isImage: true, fallback: '💬', color: '#4caf50', bgColor: '#e8f5e9' },
-    { id: 'whatsapp', name: 'व्हाट्सएप', enName: 'WhatsApp', icon: whatsappIcon, isImage: true, fallback: '💬', color: '#25D366', bgColor: '#d4edda' },
-    { id: 'viber', name: 'भाइबर', enName: 'Viber', icon: viberIcon, isImage: true, fallback: '📱', color: '#7360f2', bgColor: '#e8e0f5' },
-    { id: 'email', name: 'इमेल', enName: 'Email', icon: emailIcon, isImage: true, fallback: '✉️', color: '#ea4335', bgColor: '#fce4ec' }
-  ];
-
-  // Public complaints table data (Bilingual)
-  const publicComplaints = [
-    { id: 1, name: 'राम बहादुर', enName: 'Ram Bahadur', complaint: 'इन्टरनेट जडान समस्या', enComplaint: 'Internet connection issue', date: '२०८०-०१-१५', enDate: '2024-01-15', status: 'प्रगतिमा', enStatus: 'In Progress' },
-    { id: 2, name: 'सीता शर्मा', enName: 'Sita Sharma', complaint: 'रिचार्ज नभएको', enComplaint: 'Recharge not credited', date: '२०८०-०१-१८', enDate: '2024-01-18', status: 'समाधान भयो', enStatus: 'Resolved' },
-    { id: 3, name: 'हरि प्रसाद', enName: 'Hari Prasad', complaint: 'सिम क्रियाशील नभएको', enComplaint: 'SIM not activated', date: '२०८०-०१-२०', enDate: '2024-01-20', status: 'विचाराधीन', enStatus: 'Pending' },
-    { id: 4, name: 'गीता अधिकारी', enName: 'Gita Adhikari', complaint: 'बिलिङ त्रुटि', enComplaint: 'Billing error', date: '२०८०-०१-२२', enDate: '2024-01-22', status: 'प्रगतिमा', enStatus: 'In Progress' },
-    { id: 5, name: 'विकास न्यौपाने', enName: 'Bikash Neupane', complaint: 'सिग्नल समस्या', enComplaint: 'Signal issue', date: '२०८०-०१-२५', enDate: '2024-01-25', status: 'समीक्षामा', enStatus: 'Under Review' }
-  ];
-
-  // Latest status counts with translations
-  const statusCounts = {
-    np: [
-      { title: 'हालसम्म दर्ता भएका कुल गुनासोहरू', count: '1,00,387', range: '(पछिल्लो २४ घण्टामा: +१२५)' },
-      { title: 'समीक्षा भई कारबाहीको पर्खाइमा रहेका गुनासोहरू', count: '15,154', range: '(पछिल्लो २४ घण्टामा: +४२)' },
-      { title: 'सहायता टोलीद्वारा हालसम्म समाधान नभएका गुनासोहरू', count: '75,306', range: '(पछिल्लो २४ घण्टामा: -१८)' }
-    ],
-    en: [
-      { title: 'Total complaints registered to date', count: '100,387', range: '(Last 24h: +125)' },
-      { title: 'Complaints reviewed but awaiting action', count: '15,154', range: '(Last 24h: +42)' },
-      { title: 'Complaints not yet resolved by support team', count: '75,306', range: '(Last 24h: -18)' }
-    ]
+    
+    const type = formData.complaintType || 'other';
+    const lang = language === 'np' ? 'np' : 'en';
+    const options = commonSubjects[lang][type] || commonSubjects[lang].other;
+    return options;
   };
-
-  const latestComplaints = [
-    { category: 'सिम कार्ड गुनासो', enCategory: 'SIM Card Complaints', date: '२०८०-०१-१२', enDate: '2024-01-12' },
-    { category: 'इन्टरनेट सेवा गुनासो', enCategory: 'Internet Service Complaints', date: '२०८०-०१-१२', enDate: '2024-01-12' },
-    { category: 'रिचार्ज र ब्यालेन्स समस्या', enCategory: 'Recharge & Balance Issues', date: '२०८०-०१-१२', enDate: '2024-01-12' },
-    { category: 'सेवा सक्रियता/निष्क्रियता', enCategory: 'Service Activation/Deactivation', date: '२०८०-०२-३०', enDate: '2024-02-28' }
-  ];
-
-  // Statistics data
-  const channelStats = [
-    { name: 'वेबसाइट पोर्टल', enName: 'Website Portal', percentage: 45.788, color: '#1565c0' },
-    { name: 'कल सेन्टर', enName: 'Call Center', percentage: 3.099, color: '#42a5f5' },
-    { name: 'व्हाट्सएप सपोर्ट', enName: 'WhatsApp Support', percentage: 2.581, color: '#25D366' },
-    { name: 'इमेल सपोर्ट', enName: 'Email Support', percentage: 1.697, color: '#ea4335' },
-    { name: 'भाइबर', enName: 'Viber', percentage: 0.588, color: '#7360f2' },
-    { name: 'निवेदन पत्र', enName: 'Application Letter', percentage: 0.312, color: '#e67e22' }
-  ];
 
   const content = {
     np: {
@@ -129,34 +81,49 @@ const LandingPage = () => {
       home: 'गृह पृष्ठ',
       faqs: 'बारम्बार सोधिने प्रश्नहरू',
       login: 'लगइन',
-      heroTitle: 'के तपाईंलाई नेपाल दूरसञ्चार सेवा, बिलिङ, इन्टरनेट जडान, वा ग्राहक सहायतासम्बन्धी समस्या छ?',
-      heroText: 'कृपया एनटीसी ग्रिव्यान्स पोर्टलमार्फत आफ्नो उजुरी दिनुहोस्। हाम्रो टोली तपाईंलाई सहयोग गर्न तयार छ।',
-      heroQuote: 'हामीलाई जानकारी दिनुहोस् - हामी यसलाई समाधान गर्न यहाँ छौं!',
-      submitComplaint: 'उजुरी दिनुहोस्',
-      trackComplaint: 'उजुरी ट्र्याक गर्नुहोस्',
       complaintRegarding: 'गुनासो सम्बन्धी',
-      channelsTitle: 'गुनासोको लागि उपलब्ध च्यानलहरू:',
-      publicComplaintsTitle: 'सार्वजनिक रूपमा दर्ता गरिएका गुनासोहरू',
-      latestStatusTitle: 'गुनासो ट्र्याकिङ प्रणालीबाट प्राप्त नवीनतम स्थिति',
-      complaintId: 'क्र.स.',
-      complainantName: 'उजुरीकर्ताको नाम',
-      complaintDetails: 'उजुरीको विवरण',
-      complaintDate: 'मिति',
-      complaintStatus: 'स्थिति',
-      statsTitle: 'गुनासो ट्र्याकिङ प्रणालीद्वारा प्राप्त गुनासोहरूको नवीनतम स्थिति',
-      links: 'लिङ्कहरू:',
-      complaints: 'गुनासोहरू',
-      policy: 'नीति',
-      contactInfo: 'सम्पर्क जानकारी',
-      helpline: 'हेल्पलाइन',
-      tollFree: 'टोल फ्री',
-      email: 'इमेल',
+      complaintInfo: 'गुनासो जानकारी',
+      selectComplaintType: 'गुनासोको प्रकार चयन गर्नुहोस्',
+      serviceRelated: 'सेवा सम्बन्धी',
+      billingRelated: 'बिलिङ सम्बन्धी',
+      technicalRelated: 'प्राविधिक सम्बन्धी',
+      networkRelated: 'नेटवर्क सम्बन्धी',
+      other: 'अन्य',
+      subject: 'विषय',
+      selectSubject: 'विषय चयन गर्नुहोस्',
+      description: 'विवरण',
+      enterDescription: 'गुनासोको विस्तृत विवरण लेख्नुहोस्',
+      priority: 'प्राथमिकता',
+      high: 'उच्च',
+      medium: 'मध्यम',
+      low: 'न्यून',
+      personalInfo: 'व्यक्तिगत जानकारी',
+      fullName: 'पुरा नाम',
+      enterFullName: 'आफ्नो पुरा नाम प्रविष्ट गर्नुहोस्',
+      emailAddress: 'इमेल ठेगाना',
+      enterEmail: 'example@email.com',
+      mobileNumber: 'मोबाइल नम्बर',
+      enterMobile: '९८XXXXXXXX',
       address: 'ठेगाना',
-      phone: 'फोन',
-      netcomSignalComplaints: 'नेटकम र सिग्नल गुनासोहरू',
-      netcomSignalText: 'नेटकम र सिग्नल गुनासोहरू एनटीसी गुनासो पोर्टलमा दर्ता गरिएका छन्।',
+      enterAddress: 'आफ्नो ठेगाना प्रविष्ट गर्नुहोस्',
+      attachments: 'संलग्नकहरू',
+      dragDrop: 'फाइलहरू यहाँ तान्नुहोस् वा क्लिक गरेर अपलोड गर्नुहोस्',
+      supportedFiles: 'समर्थित फाइलहरू: PDF, JPG, PNG, DOC (max 5MB)',
+      submitComplaint: 'गुनासो पेश गर्नुहोस्',
+      backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
-      copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।'
+      copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
+      required: 'आवश्यक',
+      optional: 'वैकल्पिक',
+      selectComplaintTypeError: 'कृपया गुनासोको प्रकार चयन गर्नुहोस्',
+      selectSubjectError: 'कृपया विषय चयन गर्नुहोस्',
+      descriptionError: 'कृपया विवरण भर्नुहोस्',
+      nameError: 'कृपया पुरा नाम भर्नुहोस्',
+      phoneError: 'कृपया मोबाइल नम्बर भर्नुहोस्',
+      phoneInvalidError: 'कृपया मान्य मोबाइल नम्बर प्रविष्ट गर्नुहोस् (९८XXXXXXXX वा ९७XXXXXXXX)',
+      successMessage: 'तपाईंको गुनासो सफलतापूर्वक पेश भयो। हाम्रो टोली चाँडै सम्पर्क गर्नेछ।',
+      fileTooLarge: 'फाइल ५MB भन्दा ठुलो छ',
+      invalidFileType: 'अमान्य फाइल प्रकार। कृपया PDF, JPG, PNG, वा DOC मात्र अपलोड गर्नुहोस्'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -169,68 +136,208 @@ const LandingPage = () => {
       home: 'Home',
       faqs: 'FAQs',
       login: 'Login',
-      heroTitle: 'Do you have concerns regarding Nepal Telecom services, billing, internet connectivity, or customer support?',
-      heroText: 'Please submit your complaint through the NTC Grievance Portal. Our team is ready to help you.',
-      heroQuote: 'Let us know—we\'re here to help resolve it!',
-      submitComplaint: 'Submit Complaint',
-      trackComplaint: 'Track Complaint',
       complaintRegarding: 'Complaint Regarding',
-      channelsTitle: 'Channels available for complaint:',
-      publicComplaintsTitle: 'Publicly Registered Complaints',
-      latestStatusTitle: 'Latest Status from Complaint Tracking System',
-      complaintId: 'S.No.',
-      complainantName: 'Complainant Name',
-      complaintDetails: 'Complaint Details',
-      complaintDate: 'Date',
-      complaintStatus: 'Status',
-      statsTitle: 'Latest status of complaints received',
-      links: 'LINKS:',
-      complaints: 'Complaints',
-      policy: 'Policy',
-      contactInfo: 'Contact Information',
-      helpline: 'Helpline',
-      tollFree: 'Toll Free',
-      email: 'Email',
+      complaintInfo: 'Complaint Information',
+      selectComplaintType: 'Select complaint type',
+      serviceRelated: 'Service Related',
+      billingRelated: 'Billing Related',
+      technicalRelated: 'Technical Related',
+      networkRelated: 'Network Related',
+      other: 'Other',
+      subject: 'Subject',
+      selectSubject: 'Select a subject',
+      description: 'Description',
+      enterDescription: 'Write detailed description of your complaint',
+      priority: 'Priority',
+      high: 'High',
+      medium: 'Medium',
+      low: 'Low',
+      personalInfo: 'Personal Information',
+      fullName: 'Full Name',
+      enterFullName: 'Enter your full name',
+      emailAddress: 'Email Address',
+      enterEmail: 'example@email.com',
+      mobileNumber: 'Mobile Number',
+      enterMobile: '98XXXXXXXX',
       address: 'Address',
-      phone: 'Phone',
-      netcomSignalComplaints: 'Netcom & Signal Complaints',
-      netcomSignalText: 'Netcom & Signal Complaints registered on NTC portal.',
+      enterAddress: 'Enter your address',
+      attachments: 'Attachments',
+      dragDrop: 'Drag & drop files here or click to upload',
+      supportedFiles: 'Supported files: PDF, JPG, PNG, DOC (max 5MB)',
+      submitComplaint: 'Submit Complaint',
+      backToHome: 'Back to Home',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
-      copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.'
+      copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
+      required: 'Required',
+      optional: 'Optional',
+      selectComplaintTypeError: 'Please select complaint type',
+      selectSubjectError: 'Please select subject',
+      descriptionError: 'Please enter description',
+      nameError: 'Please enter your name',
+      phoneError: 'Please enter mobile number',
+      phoneInvalidError: 'Please enter a valid mobile number (98XXXXXXXX or 97XXXXXXXX)',
+      successMessage: 'Your complaint has been submitted successfully. Our team will contact you soon.',
+      fileTooLarge: 'File is larger than 5MB',
+      invalidFileType: 'Invalid file type. Please upload only PDF, JPG, PNG, or DOC files.'
     }
   };
 
   const t = content[language];
-  const currentStatusCounts = statusCounts[language];
+
+  // Validate phone number (Nepal format)
+  const validatePhoneNumber = (phone) => {
+    const phoneRegex = /^[9][7-8][0-9]{8}$/;
+    return phoneRegex.test(phone);
+  };
+
+  // Validate file
+  const validateFile = (file) => {
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword'];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    
+    if (!validTypes.includes(file.type)) {
+      return { valid: false, error: t.invalidFileType };
+    }
+    if (file.size > maxSize) {
+      return { valid: false, error: t.fileTooLarge };
+    }
+    return { valid: true, error: null };
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      const validFiles = [];
+      const newErrors = [];
+      
+      files.forEach(file => {
+        const validation = validateFile(file);
+        if (validation.valid) {
+          validFiles.push(file);
+        } else {
+          newErrors.push(validation.error);
+        }
+      });
+      
+      if (newErrors.length > 0) {
+        alert(newErrors.join('\n'));
+      }
+      
+      setSelectedFiles(prev => [...prev, ...validFiles]);
+    }
+  };
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files) {
+      const files = Array.from(e.dataTransfer.files);
+      const validFiles = [];
+      const newErrors = [];
+      
+      files.forEach(file => {
+        const validation = validateFile(file);
+        if (validation.valid) {
+          validFiles.push(file);
+        } else {
+          newErrors.push(validation.error);
+        }
+      });
+      
+      if (newErrors.length > 0) {
+        alert(newErrors.join('\n'));
+      }
+      
+      setSelectedFiles(prev => [...prev, ...validFiles]);
+    }
+  };
+
+  const removeFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.complaintType) {
+      newErrors.complaintType = t.selectComplaintTypeError;
+    }
+    
+    if (!formData.subject) {
+      newErrors.subject = t.selectSubjectError;
+    }
+    
+    if (!formData.description.trim()) {
+      newErrors.description = t.descriptionError;
+    }
+    
+    if (!formData.name.trim()) {
+      newErrors.name = t.nameError;
+    }
+    
+    if (!formData.phone.trim()) {
+      newErrors.phone = t.phoneError;
+    } else if (!validatePhoneNumber(formData.phone)) {
+      newErrors.phone = t.phoneInvalidError;
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      const firstErrorField = Object.keys(errors)[0];
+      if (firstErrorField) {
+        const element = document.querySelector(`[name="${firstErrorField}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+      return;
+    }
+
+    console.log('Form submitted:', { ...formData, files: selectedFiles });
+    alert(t.successMessage);
+
+    setFormData({
+      complaintType: '',
+      subject: '',
+      description: '',
+      priority: 'medium',
+      name: '',
+      email: '',
+      phone: '',
+      address: ''
+    });
+    setSelectedFiles([]);
+    setErrors({});
+  };
 
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
     setShowLanguageDropdown(false);
-  };
-
-  const scrollToSection = (sectionId) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      const headerOffset = 200;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-      
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-    }
-  };
-
-  const getStatusClass = (status) => {
-    if (status === 'प्रगतिमा' || status === 'In Progress') return 'status-progress';
-    if (status === 'समाधान भयो' || status === 'Resolved') return 'status-resolved';
-    if (status === 'समीक्षामा' || status === 'Under Review') return 'status-review';
-    return 'status-pending';
-  };
-
-  const getStatusText = (npStatus, enStatus) => {
-    return language === 'np' ? npStatus : enStatus;
   };
 
   const LogoImage = ({ src, alt, fallback, className }) => {
@@ -250,44 +357,10 @@ const LandingPage = () => {
     );
   };
 
-  const ChannelIcon = ({ channel, index }) => {
-    const [imgError, setImgError] = useState(false);
-    const errorKey = `${channel.id}_${index}`;
-    
-    if (channel.isImage && !imgError && channel.icon) {
-      return (
-        <img 
-          src={channel.icon} 
-          alt={channel.enName}
-          className="channel-icon-image"
-          onError={() => setImgError(true)}
-        />
-      );
-    }
-    
-    return <span className="channel-emoji" style={{ color: channel.color }}>{channel.fallback || channel.icon}</span>;
-  };
-
-  const EmailIconComponent = ({ className }) => {
-    const [error, setError] = useState(false);
-    
-    if (error || !emailIcon) {
-      return <span className={className || "contact-icon"}>✉️</span>;
-    }
-    return (
-      <img 
-        src={emailIcon} 
-        alt="Email" 
-        className={className || "contact-icon-image"}
-        onError={() => setError(true)}
-      />
-    );
-  };
-
   return (
-    <div className="landing-page">
+    <div className="complaint-regarding-page">
       {/* HEADER 1 - Top Bar */}
-      <div className={`header-1 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
+      <div className="header-1">
         <div className="container-1">
           <div className="header-left">
             <div className="we-are-here">
@@ -301,7 +374,7 @@ const LandingPage = () => {
                 <span className="contact-text">{t.contactNumber}</span>
               </div>
               <div className="contact-info-item">
-                <EmailIconComponent className="contact-icon-image" />
+                <span className="contact-icon">✉️</span>
                 <span className="contact-text">{t.emailAddress}</span>
               </div>
             </div>
@@ -338,7 +411,7 @@ const LandingPage = () => {
       </div>
 
       {/* HEADER 2 - Department Level with Logos */}
-      <div className={`header-2 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
+      <div className="header-2">
         <div className="container-2">
           <div className="logo-left">
             <LogoImage 
@@ -364,10 +437,10 @@ const LandingPage = () => {
       </div>
 
       {/* HEADER 3 - Navigation Bar */}
-      <div className={`header-3 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
+      <div className="header-3">
         <div className="container-3">
           <div className="nav-menu-left">
-            <button onClick={() => scrollToSection('home')} className="nav-btn">
+            <button onClick={() => navigate('/')} className="nav-btn">
               <span className="nav-icon">🏠</span>
               <span className="nav-text">{t.home}</span>
             </button>
@@ -387,182 +460,265 @@ const LandingPage = () => {
 
       {/* Main Content */}
       <div className="main-content">
-        {/* Hero Section */}
-        <section id="home" className="hero">
-          <div className="hero-container">
-            <div className="hero-left">
-              <div className="hero-icon">📢</div>
-              <h2>{t.heroTitle}</h2>
-              <p>{t.heroText}</p>
-              <div className="hero-quote">✨ {t.heroQuote} ✨</div>
-              <div className="hero-buttons">
-                <button 
-                  className="btn-primary"
-                  onClick={() => navigate('/submit-complaint')}
-                >
-                  📝 {t.submitComplaint}
-                </button>
-                <button 
-                  className="btn-secondary"
-                  onClick={() => navigate('/track-complaint')}
-                >
-                  🔍 {t.trackComplaint}
-                </button>
-              </div>
-              <div className="complaint-regarding-container">
-                <button 
-                  className="btn-complaint-regarding"
-                  onClick={() => navigate('/complaint-regarding')}
-                >
-                  📋 {t.complaintRegarding}
-                </button>
-              </div>
+        <div className="complaint-container">
+          <div className="complaint-card">
+            <div className="complaint-header">
+              <div className="header-icon">📋</div>
+              <h2>{t.complaintRegarding}</h2>
+              <p>{t.complaintInfo}</p>
             </div>
-            <div className="hero-right">
-              {!heroImageError && heroImage ? (
-                <div className="hero-image-wrapper">
-                  <img 
-                    src={heroImage} 
-                    alt="NTC Customer Support" 
-                    className="hero-illustration"
-                    onError={() => setHeroImageError(true)}
+            
+            <form onSubmit={handleSubmit} className="complaint-form">
+              {/* Complaint Type */}
+              <div className="form-section">
+                <h3 className="section-title">{t.selectComplaintType} <span className="required">*</span></h3>
+                <div className="complaint-types">
+                  <label className={`type-option ${formData.complaintType === 'service' ? 'active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="complaintType"
+                      value="service"
+                      onChange={handleInputChange}
+                    />
+                    <span className="type-icon">🔧</span>
+                    <span className="type-name">{t.serviceRelated}</span>
+                  </label>
+                  <label className={`type-option ${formData.complaintType === 'billing' ? 'active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="complaintType"
+                      value="billing"
+                      onChange={handleInputChange}
+                    />
+                    <span className="type-icon">💰</span>
+                    <span className="type-name">{t.billingRelated}</span>
+                  </label>
+                  <label className={`type-option ${formData.complaintType === 'technical' ? 'active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="complaintType"
+                      value="technical"
+                      onChange={handleInputChange}
+                    />
+                    <span className="type-icon">💻</span>
+                    <span className="type-name">{t.technicalRelated}</span>
+                  </label>
+                  <label className={`type-option ${formData.complaintType === 'network' ? 'active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="complaintType"
+                      value="network"
+                      onChange={handleInputChange}
+                    />
+                    <span className="type-icon">📡</span>
+                    <span className="type-name">{t.networkRelated}</span>
+                  </label>
+                  <label className={`type-option ${formData.complaintType === 'other' ? 'active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="complaintType"
+                      value="other"
+                      onChange={handleInputChange}
+                    />
+                    <span className="type-icon">📝</span>
+                    <span className="type-name">{t.other}</span>
+                  </label>
+                </div>
+                {errors.complaintType && <div className="error-message-field">{errors.complaintType}</div>}
+              </div>
+
+              {/* Subject - Dropdown */}
+              <div className="form-section">
+                <h3 className="section-title">{t.subject} <span className="required">*</span></h3>
+                <div className="form-group">
+                  <select
+                    name="subject"
+                    value={formData.subject}
+                    onChange={handleInputChange}
+                    required
+                    disabled={!formData.complaintType}
+                  >
+                    <option value="">{t.selectSubject}</option>
+                    {getSubjectOptions().map((option, index) => (
+                      <option key={index} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  {!formData.complaintType && (
+                    <p className="helper-text">
+                      {language === 'np' ? 'कृपया पहिले गुनासोको प्रकार चयन गर्नुहोस्' : 'Please select complaint type first'}
+                    </p>
+                  )}
+                  {errors.subject && <div className="error-message-field">{errors.subject}</div>}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="form-section">
+                <h3 className="section-title">{t.description} <span className="required">*</span></h3>
+                <div className="form-group">
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    rows="5"
+                    placeholder={t.enterDescription}
+                    required
+                  ></textarea>
+                  {errors.description && <div className="error-message-field">{errors.description}</div>}
+                </div>
+              </div>
+
+              {/* Priority */}
+              <div className="form-section">
+                <h3 className="section-title">{t.priority}</h3>
+                <div className="priority-options">
+                  <label className={`priority-option ${formData.priority === 'high' ? 'active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="priority"
+                      value="high"
+                      onChange={handleInputChange}
+                    />
+                    <span className="priority-badge high">🔴 {t.high}</span>
+                  </label>
+                  <label className={`priority-option ${formData.priority === 'medium' ? 'active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="priority"
+                      value="medium"
+                      onChange={handleInputChange}
+                    />
+                    <span className="priority-badge medium">🟡 {t.medium}</span>
+                  </label>
+                  <label className={`priority-option ${formData.priority === 'low' ? 'active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="priority"
+                      value="low"
+                      onChange={handleInputChange}
+                    />
+                    <span className="priority-badge low">🟢 {t.low}</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Personal Information */}
+              <div className="form-section">
+                <h3 className="section-title">{t.personalInfo}</h3>
+                <div className="personal-info-grid">
+                  <div className="form-group">
+                    <label>{t.fullName} <span className="required">*</span></label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      placeholder={t.enterFullName}
+                      required
+                    />
+                    {errors.name && <div className="error-message-field">{errors.name}</div>}
+                  </div>
+                  <div className="form-group">
+                    <label>{t.emailAddress} <span className="optional">({t.optional})</span></label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder={t.enterEmail}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>{t.mobileNumber} <span className="required">*</span></label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      placeholder={t.enterMobile}
+                      required
+                    />
+                    {errors.phone && <div className="error-message-field">{errors.phone}</div>}
+                  </div>
+                  <div className="form-group">
+                    <label>{t.address} <span className="optional">({t.optional})</span></label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      placeholder={t.enterAddress}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Attachments */}
+              <div className="form-section">
+                <h3 className="section-title">{t.attachments} <span className="optional">({t.optional})</span></h3>
+                <div 
+                  className={`drop-zone ${dragActive ? 'drag-active' : ''}`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  onClick={() => document.getElementById('fileInput').click()}
+                >
+                  <div className="drop-zone-content">
+                    <span className="upload-icon">📎</span>
+                    <p>{t.dragDrop}</p>
+                    <button type="button" className="upload-btn">📁 {t.attachments}</button>
+                  </div>
+                  <input 
+                    type="file" 
+                    id="fileInput" 
+                    multiple
+                    onChange={handleFileChange} 
+                    style={{ display: 'none' }} 
+                    accept=".pdf,.jpg,.jpeg,.png,.doc"
                   />
                 </div>
-              ) : (
-                <div className="hero-illustration-fallback">
-                  <div className="fallback-icon">📱</div>
-                  <div className="fallback-text">NTC Customer Support</div>
-                  <div className="fallback-subtext">24/7 Available</div>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Complaint Channels Section */}
-        <section className="channels-section">
-          <div className="channels-container">
-            <h3 className="channels-title">{t.channelsTitle}</h3>
-            <div className="channels-list">
-              {complaintChannels.map((channel, index) => (
-                <div key={index} className="channel-item">
-                  <div className="channel-icon-wrapper" style={{ backgroundColor: channel.bgColor }}>
-                    <ChannelIcon channel={channel} index={index} />
+                <p className="supported-files">{t.supportedFiles}</p>
+                
+                {selectedFiles.length > 0 && (
+                  <div className="file-list">
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className="file-item">
+                        <span className="file-icon">📄</span>
+                        <span className="file-name">{file.name}</span>
+                        <span className="file-size">({(file.size / 1024).toFixed(2)} KB)</span>
+                        <button type="button" onClick={() => removeFile(index)} className="remove-file">✕</button>
+                      </div>
+                    ))}
                   </div>
-                  <span className="channel-name">{language === 'np' ? channel.name : channel.enName}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Public Complaints Table and Latest Status Side by Side */}
-        <div className="stats-public-container">
-          <div className="public-complaints-card">
-            <h3>📋 {t.publicComplaintsTitle}</h3>
-            <div className="table-wrapper">
-              <table className="complaints-table">
-                <thead>
-                  <tr>
-                    <th>{t.complaintId}</th>
-                    <th>{t.complainantName}</th>
-                    <th>{t.complaintDetails}</th>
-                    <th>{t.complaintDate}</th>
-                    <th>{t.complaintStatus}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {publicComplaints.map((complaint) => (
-                    <tr key={complaint.id}>
-                      <td>{complaint.id}</td>
-                      <td>{language === 'np' ? complaint.name : complaint.enName}</td>
-                      <td>{language === 'np' ? complaint.complaint : complaint.enComplaint}</td>
-                      <td>{language === 'np' ? complaint.date : complaint.enDate}</td>
-                      <td>
-                        <span className={`status-badge ${getStatusClass(complaint.status)}`}>
-                          {getStatusText(complaint.status, complaint.enStatus)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="latest-status-card">
-            <h3>📊 {t.latestStatusTitle}</h3>
-            {currentStatusCounts.map((item, idx) => (
-              <div key={idx} className="status-item">
-                <div className="status-title">{item.title}</div>
-                <div className="status-number">{item.count} <span className="status-range">{item.range}</span></div>
+                )}
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Statistics Section */}
-        <section className="statistics">
-          <div className="container">
-            <h3>{t.statsTitle}</h3>
-            <div className="stats-grid">
-              {channelStats.map((stat, index) => (
-                <div key={index} className="stat-card">
-                  <div className="stat-info">
-                    <span className="stat-name">{language === 'np' ? stat.name : stat.enName}</span>
-                    <span className="stat-percentage">{stat.percentage}%</span>
-                  </div>
-                  <div className="stat-bar" style={{ width: `${Math.min(stat.percentage * 2.2, 100)}%`, backgroundColor: stat.color }}></div>
-                </div>
-              ))}
-            </div>
-            <div className="quick-links">
-              <span>{t.links}</span>
-              <button onClick={() => navigate('/complaints')}>{t.complaints}</button>
-              <button onClick={() => navigate('/faqs')}>{t.faqs}</button>
-              <button onClick={() => navigate('/policy')}>{t.policy}</button>
-            </div>
-          </div>
-        </section>
-
-        {/* Netcom & Signal Complaints Section */}
-        <div className="signal-section">
-          <div className="signal-container">
-            <div className="signal-card">
-              <h3>📶 {t.netcomSignalComplaints}</h3>
-              <p>{t.netcomSignalText}</p>
-              <div className="complaint-list">
-                {latestComplaints.map((complaint, idx) => (
-                  <div key={idx} className="complaint-item">
-                    <span className="complaint-category">{language === 'np' ? complaint.category : complaint.enCategory}</span>
-                    <span className="complaint-date">{language === 'np' ? complaint.date : complaint.enDate}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="contact-card">
-              <h3>📞 {t.contactInfo}</h3>
-              <div className="contact-details">
-                <p><strong>📱 {t.helpline}:</strong> 198 ({t.tollFree})</p>
-                <p><strong><EmailIconComponent className="contact-card-email-icon" /> {t.email}:</strong> {t.emailAddress}</p>
-                <p><strong>📍 {t.address}:</strong> {t.departmentAddress}</p>
-                <p><strong>📞 {t.phone}:</strong> {t.contactNumber}</p>
-              </div>
+              
+              <button type="submit" className="btn-submit">
+                📌 {t.submitComplaint}
+              </button>
+            </form>
+            
+            <div className="back-to-home">
+              <button onClick={() => navigate('/')} className="btn-back">
+                ← {t.backToHome}
+              </button>
             </div>
           </div>
         </div>
-
-        {/* Footer */}
-        <footer className="footer">
-          <div className="footer-content">
-            <div className="footer-copyright">
-              <p>{t.footerTagline}</p>
-              <p className="copyright-text">{t.copyright}</p>
-            </div>
-          </div>
-        </footer>
       </div>
+
+      {/* Footer */}
+      <footer className="footer">
+        <div className="footer-content">
+          <div className="footer-copyright">
+            <p>{t.footerTagline}</p>
+            <p className="copyright-text">{t.copyright}</p>
+          </div>
+        </div>
+      </footer>
 
       <style jsx>{`
         * {
@@ -571,9 +727,9 @@ const LandingPage = () => {
           box-sizing: border-box;
         }
 
-        .landing-page {
+        .complaint-regarding-page {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
-          background: #f5f7fa;
+          background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
           min-height: 100vh;
         }
@@ -589,11 +745,6 @@ const LandingPage = () => {
           padding: 10px 0;
           z-index: 1040;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-          transition: all 0.3s ease;
-        }
-
-        .header-1.header-scrolled {
-          padding: 6px 0;
         }
 
         .container-1 {
@@ -640,7 +791,6 @@ const LandingPage = () => {
           display: flex;
           align-items: center;
           gap: 15px;
-          flex-wrap: wrap;
         }
 
         .contact-info-item {
@@ -659,26 +809,11 @@ const LandingPage = () => {
           transform: translateY(-1px);
         }
 
-        .contact-icon {
-          font-size: 0.85rem;
-        }
-
-        .contact-icon-image {
-          width: 14px;
-          height: 14px;
-          object-fit: contain;
-        }
-
-        .contact-text {
-          font-size: 0.75rem;
-          font-weight: 500;
-        }
+        .contact-icon { font-size: 0.85rem; }
+        .contact-text { font-size: 0.75rem; font-weight: 500; }
 
         /* Language Dropdown */
-        .language-dropdown { 
-          position: relative; 
-        }
-        
+        .language-dropdown { position: relative; }
         .language-selector {
           display: flex;
           align-items: center;
@@ -693,20 +828,9 @@ const LandingPage = () => {
           font-weight: 500;
           transition: all 0.3s ease;
         }
-        
-        .language-selector:hover { 
-          background: rgba(255,255,255,0.25); 
-        }
-        
-        .lang-icon { 
-          font-size: 0.85rem; 
-        }
-        
-        .dropdown-arrow { 
-          font-size: 0.6rem; 
-          margin-left: 5px; 
-        }
-        
+        .language-selector:hover { background: rgba(255,255,255,0.25); }
+        .lang-icon { font-size: 0.85rem; }
+        .dropdown-arrow { font-size: 0.6rem; margin-left: 5px; }
         .dropdown-menu {
           position: absolute;
           top: 38px;
@@ -718,7 +842,6 @@ const LandingPage = () => {
           z-index: 1050;
           min-width: 120px;
         }
-        
         .dropdown-item {
           display: flex;
           align-items: center;
@@ -732,19 +855,9 @@ const LandingPage = () => {
           transition: all 0.2s ease;
           text-align: left;
         }
-        
-        .dropdown-item:hover { 
-          background: #f0f2f5; 
-        }
-        
-        .dropdown-item.active { 
-          background: #1565c0; 
-          color: white; 
-        }
-        
-        .lang-flag { 
-          font-size: 1rem; 
-        }
+        .dropdown-item:hover { background: #f0f2f5; }
+        .dropdown-item.active { background: #1565c0; color: white; }
+        .lang-flag { font-size: 1rem; }
 
         /* HEADER 2 - Department Level */
         .header-2 {
@@ -758,14 +871,7 @@ const LandingPage = () => {
           z-index: 1030;
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
-          transition: all 0.3s ease;
         }
-        
-        .header-2.header-scrolled {
-          padding: 8px 0;
-          top: 45px;
-        }
-        
         .container-2 {
           max-width: 1400px;
           margin: 0 auto;
@@ -775,25 +881,9 @@ const LandingPage = () => {
           align-items: center;
           gap: 30px;
         }
-        
-        .logo-left { 
-          flex: 1; 
-          display: flex; 
-          justify-content: flex-start; 
-        }
-        
-        .logo-right { 
-          flex: 1; 
-          display: flex; 
-          justify-content: flex-end; 
-        }
-        
-        .ntc-logo, .gov-logo { 
-          height: 50px; 
-          width: auto; 
-          object-fit: contain; 
-        }
-        
+        .logo-left { flex: 1; display: flex; justify-content: flex-start; }
+        .logo-right { flex: 1; display: flex; justify-content: flex-end; }
+        .ntc-logo, .gov-logo { height: 50px; width: auto; object-fit: contain; }
         .logo-fallback {
           font-size: 2rem;
           width: 50px;
@@ -805,25 +895,9 @@ const LandingPage = () => {
           border-radius: 50%;
           color: white;
         }
-        
-        .dept-text-center { 
-          flex: 2; 
-          text-align: center; 
-        }
-        
-        .dept-name { 
-          font-size: 1rem; 
-          font-weight: 700; 
-          color: #0d47a1; 
-          letter-spacing: 1px; 
-        }
-        
-        .dept-address { 
-          font-size: 0.75rem; 
-          opacity: 0.7; 
-          color: #555; 
-          margin-top: 3px; 
-        }
+        .dept-text-center { flex: 2; text-align: center; }
+        .dept-name { font-size: 1rem; font-weight: 700; color: #0d47a1; letter-spacing: 1px; }
+        .dept-address { font-size: 0.75rem; opacity: 0.7; color: #555; margin-top: 3px; }
 
         /* HEADER 3 - Navigation Bar */
         .header-3 {
@@ -836,14 +910,7 @@ const LandingPage = () => {
           padding: 12px 0;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
           z-index: 1020;
-          transition: all 0.3s ease;
         }
-        
-        .header-3.header-scrolled {
-          top: 101px;
-          padding: 8px 0;
-        }
-        
         .container-3 {
           max-width: 1400px;
           margin: 0 auto;
@@ -854,13 +921,7 @@ const LandingPage = () => {
           flex-wrap: wrap;
           gap: 20px;
         }
-        
-        .nav-menu-left { 
-          display: flex; 
-          gap: 20px; 
-          align-items: center; 
-        }
-        
+        .nav-menu-left { display: flex; gap: 20px; align-items: center; }
         .nav-btn {
           background: transparent;
           border: none;
@@ -875,25 +936,10 @@ const LandingPage = () => {
           align-items: center;
           gap: 8px;
         }
-        
-        .nav-btn:hover { 
-          background: rgba(255,255,255,0.15); 
-          transform: translateY(-1px); 
-        }
-        
-        .nav-icon { 
-          font-size: 1.1rem; 
-        }
-        
-        .nav-text { 
-          font-size: 0.95rem; 
-        }
-        
-        .login-btn-right { 
-          display: flex; 
-          align-items: center; 
-        }
-        
+        .nav-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-1px); }
+        .nav-icon { font-size: 1.1rem; }
+        .nav-text { font-size: 0.95rem; }
+        .login-btn-right { display: flex; align-items: center; }
         .login-btn {
           background: transparent;
           border: 2px solid white;
@@ -909,689 +955,327 @@ const LandingPage = () => {
           gap: 8px;
           white-space: nowrap;
         }
-        
-        .login-btn:hover { 
-          background: white; 
-          color: #1565c0; 
-          transform: translateY(-2px); 
-          box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
-        }
+        .login-btn:hover { background: white; color: #1565c0; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 
-        /* Main content - Fixed overlapping */
+        /* Main Content */
         .main-content {
           padding-top: 195px;
+          min-height: calc(100vh - 255px);
         }
 
-        /* Hero Section */
-        .hero {
-          background: linear-gradient(135deg, #e3f2fd 0%, #f0f7ff 100%);
-          padding: 60px 40px;
-          border-bottom: 4px solid #1565c0;
-        }
-
-        .hero-container {
-          max-width: 1400px;
+        .complaint-container {
+          max-width: 1000px;
           margin: 0 auto;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 50px;
-          flex-wrap: wrap;
+          padding: 40px 24px;
         }
 
-        .hero-left {
-          flex: 1;
-          min-width: 320px;
+        .complaint-card {
+          background: white;
+          border-radius: 24px;
+          padding: 48px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         }
 
-        .hero-icon {
+        .complaint-header {
+          text-align: center;
+          margin-bottom: 40px;
+        }
+
+        .header-icon {
           font-size: 3rem;
-          margin-bottom: 20px;
+          margin-bottom: 16px;
         }
 
-        .hero-left h2 {
+        .complaint-header h2 {
           font-size: 1.8rem;
           color: #0d47a1;
-          margin-bottom: 20px;
-          line-height: 1.4;
+          margin-bottom: 8px;
         }
 
-        .hero-left p {
+        .complaint-header p {
+          color: #6c8196;
+        }
+
+        .complaint-form { text-align: left; }
+        .form-section {
+          margin-bottom: 32px;
+          border-bottom: 1px solid #e8e8e8;
+          padding-bottom: 24px;
+        }
+        .form-section:last-of-type { border-bottom: none; }
+        .section-title {
           font-size: 1.1rem;
-          color: #2c4e6e;
-          margin-bottom: 20px;
-          line-height: 1.6;
-        }
-
-        .hero-quote {
-          font-size: 1.2rem;
           font-weight: 600;
-          color: #1565c0;
-          margin-bottom: 30px;
-          font-style: italic;
+          color: #0d47a1;
+          margin-bottom: 16px;
+        }
+        .required {
+          color: #dc3545;
+          font-size: 0.8rem;
+        }
+        .optional {
+          color: #888;
+          font-size: 0.75rem;
+          font-weight: normal;
+        }
+        .helper-text {
+          font-size: 0.75rem;
+          color: #f57c00;
+          margin-top: 6px;
+        }
+        .error-message-field {
+          color: #dc3545;
+          font-size: 0.75rem;
+          margin-top: 6px;
         }
 
-        .hero-buttons {
+        /* Complaint Types */
+        .complaint-types {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 12px;
+        }
+        .type-option {
           display: flex;
-          gap: 20px;
-          flex-wrap: wrap;
-          margin-bottom: 20px;
+          align-items: center;
+          gap: 10px;
+          padding: 12px 16px;
+          border: 2px solid #e0e0e0;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+        .type-option.active {
+          border-color: #1565c0;
+          background: #e3f2fd;
+        }
+        .type-option input {
+          display: none;
+        }
+        .type-icon {
+          font-size: 1.2rem;
+        }
+        .type-name {
+          font-size: 0.9rem;
+          font-weight: 500;
         }
 
-        .btn-primary, .btn-secondary {
-          padding: 14px 32px;
+        /* Priority Options */
+        .priority-options {
+          display: flex;
+          gap: 15px;
+          flex-wrap: wrap;
+        }
+        .priority-option {
+          cursor: pointer;
+        }
+        .priority-option input {
+          display: none;
+        }
+        .priority-badge {
+          display: inline-block;
+          padding: 8px 20px;
+          border-radius: 30px;
+          font-size: 0.85rem;
+          font-weight: 500;
+          transition: all 0.3s ease;
+          border: 2px solid transparent;
+        }
+        .priority-badge.high {
+          background: #ffebee;
+          color: #c62828;
+        }
+        .priority-badge.medium {
+          background: #fff8e1;
+          color: #f57c00;
+        }
+        .priority-badge.low {
+          background: #e8f5e9;
+          color: #2e7d32;
+        }
+        .priority-option.active .priority-badge {
+          border-color: #1565c0;
+          transform: scale(1.05);
+        }
+
+        /* Personal Info Grid */
+        .personal-info-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 20px;
+        }
+        .form-group label {
+          display: block;
+          font-size: 0.85rem;
+          font-weight: 500;
+          margin-bottom: 8px;
+          color: #2c4e6e;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+          width: 100%;
+          padding: 12px 16px;
+          border: 1.5px solid #e0e0e0;
+          border-radius: 12px;
+          font-size: 0.9rem;
+          font-family: inherit;
+          transition: all 0.3s ease;
+          background: white;
+        }
+        .form-group select:disabled {
+          background: #f5f5f5;
+          cursor: not-allowed;
+          opacity: 0.7;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+          outline: none;
+          border-color: #1565c0;
+          box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+          border: 2px dashed #ccc;
+          border-radius: 16px;
+          padding: 40px 20px;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          background: #fafafa;
+        }
+        .drop-zone.drag-active {
+          border-color: #1565c0;
+          background: #e3f2fd;
+        }
+        .drop-zone-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+        }
+        .upload-icon { font-size: 2.5rem; }
+        .upload-btn {
+          background: #1565c0;
+          color: white;
+          border: none;
+          padding: 10px 24px;
+          border-radius: 30px;
+          cursor: pointer;
+          font-size: 0.85rem;
+          transition: all 0.3s ease;
+        }
+        .upload-btn:hover { background: #0d47a1; }
+        .supported-files {
+          font-size: 0.7rem;
+          color: #888;
+          margin-top: 8px;
+        }
+
+        /* File List */
+        .file-list {
+          margin-top: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .file-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 16px;
+          background: #f5f5f5;
+          border-radius: 8px;
+        }
+        .file-icon { font-size: 1rem; }
+        .file-name { flex: 1; font-size: 0.85rem; }
+        .file-size { font-size: 0.7rem; color: #888; }
+        .remove-file {
+          background: none;
+          border: none;
+          font-size: 1.1rem;
+          cursor: pointer;
+          color: #dc3545;
+        }
+        .remove-file:hover { color: #c62828; }
+
+        .btn-submit {
+          width: 100%;
+          padding: 16px;
+          background: linear-gradient(135deg, #1565c0, #0d47a1);
+          color: white;
+          border: none;
+          border-radius: 40px;
+          font-weight: 700;
+          font-size: 1.1rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          margin-top: 20px;
+        }
+        .btn-submit:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 25px rgba(21, 101, 192, 0.3);
+        }
+        .back-to-home { margin-top: 24px; text-align: center; }
+        .btn-back {
+          background: transparent;
+          border: 2px solid #1565c0;
+          color: #1565c0;
+          padding: 10px 28px;
           border-radius: 40px;
           font-weight: 600;
           cursor: pointer;
-          transition: 0.3s;
-          border: none;
-          font-size: 1rem;
-        }
-
-        .btn-primary {
-          background: #1565c0;
-          color: white;
-        }
-        .btn-primary:hover { 
-          background: #0d47a1; 
-          transform: translateY(-2px); 
-          box-shadow: 0 6px 14px rgba(0,0,0,0.15); 
-        }
-
-        .btn-secondary {
-          background: white;
-          color: #1565c0;
-          border: 2px solid #1565c0;
-        }
-        .btn-secondary:hover { 
-          background: #1565c0; 
-          color: white; 
-          transform: translateY(-2px); 
-          box-shadow: 0 6px 14px rgba(0,0,0,0.15); 
-        }
-
-        .complaint-regarding-container { 
-          margin-top: 15px; 
-          text-align: left; 
-        }
-        
-        .btn-complaint-regarding {
-          padding: 16px 36px;
-          border-radius: 50px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: 0.3s;
-          border: 2px solid #1565c0;
-          font-size: 1.1rem;
-          background: white;
-          color: #1565c0;
-          display: inline-flex;
-          align-items: center;
-          gap: 12px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-        
-        .btn-complaint-regarding:hover { 
-          background: #1565c0; 
-          color: white; 
-          transform: translateY(-2px); 
-          box-shadow: 0 6px 14px rgba(0,0,0,0.15); 
-        }
-
-        .hero-right { 
-          flex: 1; 
-          display: flex; 
-          justify-content: flex-end; 
-          align-items: center; 
-          min-width: 300px; 
-        }
-        
-        .hero-image-wrapper { 
-          width: 100%; 
-          max-width: 650px; 
-          background: transparent; 
-          border-radius: 20px; 
-          display: flex; 
-          justify-content: center; 
-          align-items: center; 
-        }
-        
-        .hero-illustration { 
-          width: 100%; 
-          max-width: 600px; 
-          height: auto; 
-          border-radius: 20px; 
-          object-fit: contain; 
-          display: block; 
-        }
-        
-        .hero-illustration-fallback {
-          width: 100%;
-          max-width: 450px;
-          background: linear-gradient(135deg, #1565c0, #42a5f5);
-          border-radius: 20px;
-          padding: 50px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          text-align: center;
-        }
-        
-        .fallback-icon { 
-          font-size: 4rem; 
-          margin-bottom: 20px; 
-        }
-        
-        .fallback-text { 
-          font-size: 1.3rem; 
-          font-weight: 600; 
-          margin-bottom: 10px; 
-        }
-        
-        .fallback-subtext { 
-          font-size: 0.9rem; 
-          opacity: 0.9; 
-        }
-
-        /* Complaint Channels Section */
-        .channels-section {
-          background: white;
-          padding: 40px 24px;
-          border-bottom: 1px solid #e2e9f0;
-        }
-        
-        .channels-container { 
-          max-width: 1200px; 
-          margin: 0 auto; 
-        }
-        
-        .channels-title {
-          font-size: 1.3rem;
-          font-weight: 600;
-          color: #1a2c3e;
-          margin-bottom: 24px;
-          padding-bottom: 12px;
-          border-bottom: 2px solid #1565c0;
-          display: inline-block;
-        }
-        
-        .channels-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 24px;
-          margin-top: 20px;
-          justify-content: center;
-        }
-        
-        .channel-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 12px;
-          padding: 20px;
-          background: #f8fafc;
-          border-radius: 16px;
-          border: 1px solid #e2e8f0;
           transition: all 0.3s ease;
-          cursor: default;
-          min-width: 100px;
+          font-size: 0.9rem;
         }
-        
-        .channel-item:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-          border-color: #1565c0;
-          background: linear-gradient(135deg, #ffffff, #e3f2fd);
-        }
-        
-        .channel-icon-wrapper {
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.3s ease;
-        }
-        
-        .channel-icon-image {
-          width: 35px;
-          height: 35px;
-          object-fit: contain;
-        }
-        
-        .channel-emoji {
-          font-size: 2rem;
-        }
-        
-        .channel-name {
-          font-size: 0.85rem;
-          font-weight: 600;
-          color: #1a2c3e;
-          text-align: center;
-        }
-
-        /* Public Complaints and Latest Status Container */
-        .stats-public-container {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 48px 24px;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 32px;
-        }
-        
-        .public-complaints-card, .latest-status-card {
-          background: white;
-          border-radius: 20px;
-          padding: 28px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-          border: 1px solid #e8e8e8;
-        }
-        
-        .public-complaints-card h3, .latest-status-card h3 {
-          font-size: 1.3rem;
-          color: #0d47a1;
-          margin-bottom: 20px;
-          border-left: 4px solid #1565c0;
-          padding-left: 16px;
-        }
-        
-        .table-wrapper { 
-          overflow-x: auto; 
-        }
-        
-        .complaints-table { 
-          width: 100%; 
-          border-collapse: collapse; 
-        }
-        
-        .complaints-table th, .complaints-table td { 
-          padding: 12px; 
-          text-align: left; 
-          border-bottom: 1px solid #e0e0e0; 
-        }
-        
-        .complaints-table th { 
-          background: #f5f7fa; 
-          font-weight: 600; 
-          color: #0d47a1; 
-        }
-        
-        .complaints-table tr:hover { 
-          background: #f8fafc; 
-        }
-        
-        .status-badge { 
-          display: inline-block; 
-          padding: 4px 12px; 
-          border-radius: 20px; 
-          font-size: 0.75rem; 
-          font-weight: 600; 
-        }
-        
-        .status-progress { 
-          background: #fff3cd; 
-          color: #856404; 
-        }
-        
-        .status-resolved { 
-          background: #d4edda; 
-          color: #155724; 
-        }
-        
-        .status-pending { 
-          background: #f8d7da; 
-          color: #721c24; 
-        }
-        
-        .status-review { 
-          background: #fff3cd; 
-          color: #856404; 
-        }
-        
-        .status-item { 
-          background: #f5f7fa; 
-          padding: 16px; 
-          border-radius: 12px; 
-          margin-bottom: 16px; 
-        }
-        
-        .status-title { 
-          font-weight: 500; 
-          margin-bottom: 8px; 
-          color: #1a2c3e; 
-        }
-        
-        .status-number { 
-          font-size: 1.3rem; 
-          font-weight: 700; 
-          color: #1565c0; 
-        }
-        
-        .status-range { 
-          font-size: 0.75rem; 
-          font-weight: normal; 
-          color: #6c8196; 
-        }
-
-        /* Statistics */
-        .statistics {
-          background: white;
-          padding: 48px 24px;
-        }
-        
-        .container { 
-          max-width: 1000px; 
-          margin: 0 auto; 
-        }
-        
-        .statistics h3 { 
-          text-align: center; 
-          margin-bottom: 32px; 
-          color: #0d47a1; 
-          font-size: 1.3rem; 
-        }
-        
-        .stats-grid { 
-          display: flex; 
-          flex-direction: column; 
-          gap: 12px; 
-          margin-bottom: 32px; 
-        }
-        
-        .stat-card { 
-          background: #f5f7fa; 
-          border-radius: 12px; 
-          overflow: hidden; 
-        }
-        
-        .stat-bar { 
-          height: 8px; 
-          transition: width 0.5s; 
-        }
-        
-        .stat-info { 
-          padding: 12px 16px; 
-          display: flex; 
-          justify-content: space-between; 
-          font-weight: 500; 
-        }
-        
-        .quick-links { 
-          text-align: center; 
-          padding-top: 20px; 
-          border-top: 1px solid #e0e0e0; 
-        }
-        
-        .quick-links span { 
-          font-weight: 600; 
-          margin-right: 16px; 
-          color: #1565c0; 
-        }
-        
-        .quick-links button { 
-          background: none; 
-          border: none; 
-          color: #1565c0; 
-          margin: 0 8px; 
-          cursor: pointer; 
-          font-weight: 500; 
-        }
-        
-        .quick-links button:hover {
-          text-decoration: underline;
-        }
-
-        /* Signal Section */
-        .signal-section {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 0 24px 48px;
-        }
-        
-        .signal-container { 
-          display: grid; 
-          grid-template-columns: 1fr 1fr; 
-          gap: 32px; 
-        }
-        
-        .signal-card, .contact-card {
-          background: white;
-          border-radius: 20px;
-          padding: 28px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-          border: 1px solid #e8e8e8;
-        }
-        
-        .signal-card h3, .contact-card h3 {
-          font-size: 1.3rem;
-          color: #0d47a1;
-          margin-bottom: 20px;
-          border-left: 4px solid #1565c0;
-          padding-left: 16px;
-        }
-        
-        .complaint-list { 
-          margin-top: 20px; 
-        }
-        
-        .complaint-item {
-          display: flex;
-          justify-content: space-between;
-          padding: 12px 0;
-          border-bottom: 1px solid #e0e0e0;
-        }
-        
-        .complaint-item:last-child { 
-          border-bottom: none; 
-        }
-        
-        .complaint-category { 
-          font-weight: 500; 
-          color: #1a2c3e; 
-        }
-        
-        .complaint-date { 
-          color: #6c8196; 
-          font-size: 0.85rem; 
-        }
-        
-        .contact-details { 
-          line-height: 2; 
-        }
-        
-        .contact-details p { 
-          margin: 10px 0; 
-        }
-
-        .contact-card-email-icon {
-          width: 14px;
-          height: 14px;
-          object-fit: contain;
-          vertical-align: middle;
-          margin-right: 2px;
-        }
+        .btn-back:hover { background: #1565c0; color: white; }
 
         /* Footer */
         .footer {
           background: #0d2b5e;
           color: white;
           padding: 20px 24px;
-          margin-top: 0;
+          margin-top: 40px;
           text-align: center;
         }
-        
-        .footer-content { 
-          max-width: 1200px; 
-          margin: 0 auto; 
+        .footer-content {
+          max-width: 1200px;
+          margin: 0 auto;
         }
-        
-        .footer-copyright { 
-          text-align: center; 
-          font-size: 0.7rem; 
-          opacity: 0.7; 
+        .footer-copyright {
+          text-align: center;
+          font-size: 0.7rem;
+          opacity: 0.7;
         }
-        
-        .copyright-text { 
-          margin-top: 5px; 
-          font-size: 0.65rem; 
+        .copyright-text {
+          margin-top: 5px;
+          font-size: 0.65rem;
         }
 
-        /* Responsive Design */
-        @media (max-width: 1024px) {
-          .stats-public-container {
-            grid-template-columns: 1fr;
-            gap: 24px;
-          }
-          
-          .signal-container {
-            grid-template-columns: 1fr;
-            gap: 24px;
-          }
-          
-          .hero-container {
-            flex-direction: column;
-            text-align: center;
-          }
-          
-          .hero-left {
-            text-align: center;
-          }
-          
-          .hero-buttons {
-            justify-content: center;
-          }
-          
-          .complaint-regarding-container {
-            text-align: center;
-          }
-          
-          .hero-right {
-            justify-content: center;
-            margin-top: 30px;
-          }
-        }
-
+        /* Responsive */
         @media (max-width: 768px) {
-          .main-content {
-            padding-top: 280px;
-          }
-          
-          .hero {
-            padding: 40px 20px;
-          }
-          
-          .hero-left h2 {
-            font-size: 1.3rem;
-          }
-          
-          .hero-left p {
-            font-size: 0.95rem;
-          }
-          
-          .container-1, 
-          .container-2, 
-          .container-3 {
-            flex-direction: column;
-            text-align: center;
-            padding: 0 20px;
-          }
-          
-          .header-left, 
-          .header-right, 
-          .logo-left, 
-          .logo-right, 
-          .nav-menu-left {
-            justify-content: center;
-          }
-          
-          .contact-info-group {
-            flex-direction: column;
-          }
-          
-          .logo-left, 
-          .logo-right {
-            display: none;
-          }
-          
-          .dept-text-center {
-            flex: 1;
-          }
-          
-          .channel-item {
-            min-width: 80px;
-            padding: 15px;
-          }
-          
-          .channel-icon-wrapper {
-            width: 50px;
-            height: 50px;
-          }
-          
-          .channel-icon-image {
-            width: 28px;
-            height: 28px;
-          }
-          
-          .channel-emoji {
-            font-size: 1.6rem;
-          }
-          
-          .channel-name {
-            font-size: 0.7rem;
-          }
-          
-          .stats-public-container,
-          .signal-section {
-            padding: 32px 20px;
-          }
-          
-          .public-complaints-card,
-          .latest-status-card,
-          .signal-card,
-          .contact-card {
-            padding: 20px;
-          }
+          .main-content { padding-top: 330px; }
+          .complaint-card { padding: 28px 20px; }
+          .complaint-header h2 { font-size: 1.4rem; }
+          .personal-info-grid { grid-template-columns: 1fr; }
+          .complaint-types { grid-template-columns: repeat(2, 1fr); }
+          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; }
+          .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
+          .contact-info-group { flex-direction: column; }
+          .logo-left, .logo-right { display: none; }
+          .dept-text-center { flex: 1; }
         }
 
         @media (max-width: 480px) {
-          .main-content {
-            padding-top: 320px;
-          }
-          
-          .hero-buttons {
-            flex-direction: column;
-            align-items: center;
-          }
-          
-          .btn-primary, 
-          .btn-secondary,
-          .btn-complaint-regarding {
-            width: 100%;
-            justify-content: center;
-          }
-          
-          .complaints-table th,
-          .complaints-table td {
-            padding: 8px;
-            font-size: 0.75rem;
-          }
-          
-          .channels-list {
-            gap: 12px;
-          }
-          
-          .channel-item {
-            min-width: 70px;
-            padding: 10px;
-          }
+          .complaint-types { grid-template-columns: 1fr; }
+          .priority-options { flex-direction: column; }
+          .priority-badge { text-align: center; }
         }
       `}</style>
     </div>
   );
 };
 
-export default LandingPage;
+export default ComplaintRegarding;
