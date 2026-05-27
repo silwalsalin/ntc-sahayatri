@@ -458,30 +458,13 @@ app.get('/api/admin/users', async (req, res) => {
             {
                 id: 1,
                 username: 'admin@ntc',
-                email: 'admin@ntc.com',
+                email: 'admin@ntc.net.np',
                 fullName: 'System Administrator',
                 role: 'super_admin',
                 status: 'active',
                 lastLogin: '2024-01-15T10:30:00Z'
             },
-            {
-                id: 2,
-                username: 'support@ntc',
-                email: 'support@ntc.com',
-                fullName: 'Support Staff',
-                role: 'support',
-                status: 'active',
-                lastLogin: '2024-01-14T15:45:00Z'
-            },
-            {
-                id: 3,
-                username: 'viewer@ntc',
-                email: 'viewer@ntc.com',
-                fullName: 'Viewer',
-                role: 'viewer',
-                status: 'inactive',
-                lastLogin: '2024-01-10T09:00:00Z'
-            }
+            
         ];
         
         res.json({
@@ -634,9 +617,8 @@ const startServer = async () => {
             console.log(`\n🚀 Server running on http://localhost:${PORT}`);
             console.log(`📡 API: http://localhost:${PORT}/api`);
             console.log(`\n🔐 Admin Credentials:`);
-            console.log(`   📧 Super Admin: admin@ntc / admin123`);
-            console.log(`   📧 Support Staff: support@ntc / support123`);
-            console.log(`   📧 Viewer: viewer@ntc / viewer123`);
+            console.log(`   📧 Super Admin: admin@ntc.net.np / admin123`);
+        
             console.log(`\n✅ Ready to accept complaints!\n`);
         });
     } catch (error) {
