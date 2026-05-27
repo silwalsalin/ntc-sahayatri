@@ -1,3 +1,4 @@
+// backend/models/Complaint.js
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
@@ -8,73 +9,103 @@ const Complaint = sequelize.define('Complaint', {
         autoIncrement: true
     },
     complaintNumber: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         unique: true,
         allowNull: false
     },
     complaintNumberNp: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
         unique: true
     },
+    // Common fields for all complaint types
     name: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(100),
         allowNull: false
     },
     email: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        type: DataTypes.STRING(100),
         validate: {
             isEmail: true
         }
     },
     phone: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: ''  // Add default value to avoid NOT NULL error
-    },
-    natureOfComplaint: {
-        type: DataTypes.STRING,
-        defaultValue: ''
+        type: DataTypes.STRING(15),
+        allowNull: false
     },
     description: {
         type: DataTypes.TEXT,
         allowNull: false
     },
+    natureOfComplaint: {
+        type: DataTypes.STRING(50)
+    },
+    // Fields for ComplaintRegarding
+    complaintCategory: {
+        type: DataTypes.STRING(50),
+        defaultValue: 'general'
+    },
+    subject: {
+        type: DataTypes.STRING(200)
+    },
+    priority: {
+        type: DataTypes.STRING(20),
+        defaultValue: 'medium'
+    },
+    address: {
+        type: DataTypes.TEXT
+    },
+    landmark: {
+        type: DataTypes.STRING(200)
+    },
+    preferredContact: {
+        type: DataTypes.STRING(20),
+        defaultValue: 'phone'
+    },
+    referenceNumber: {
+        type: DataTypes.STRING(50),
+        unique: true
+    },
+    // Address fields for general complaints
     state: {
-        type: DataTypes.STRING,
-        defaultValue: ''
+        type: DataTypes.STRING(50)
     },
     district: {
-        type: DataTypes.STRING,
-        defaultValue: ''
+        type: DataTypes.STRING(50)
     },
     municipality: {
-        type: DataTypes.STRING,
-        defaultValue: ''
+        type: DataTypes.STRING(100)
     },
     wardNo: {
-        type: DataTypes.STRING,
-        defaultValue: ''
+        type: DataTypes.STRING(10)
     },
     streetAddress: {
-        type: DataTypes.STRING,
-        defaultValue: ''
+        type: DataTypes.STRING(200)
     },
+    // Status fields
     status: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(20),
         defaultValue: 'Pending'
     },
     statusNp: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(20),
         defaultValue: 'विचाराधीन'
     },
     trackingPassword: {
-        type: DataTypes.STRING,
-        defaultValue: ''
+        type: DataTypes.STRING(20)
+    },
+    // Timestamps
+    submittedDate: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW
+    },
+    resolvedDate: {
+        type: DataTypes.DATE
     }
 }, {
     tableName: 'complaints',
-    timestamps: true
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
 });
 
 module.exports = Complaint;

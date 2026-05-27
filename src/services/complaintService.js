@@ -26,7 +26,7 @@ api.interceptors.request.use(
 // Response interceptor for logging
 api.interceptors.response.use(
     (response) => {
-        console.log(`📥 Received response from ${response.config.url}:`, response.data);
+        console.log(`📥 Response from ${response.config.url}:`, response.data);
         return response;
     },
     (error) => {
@@ -36,7 +36,7 @@ api.interceptors.response.use(
 );
 
 export const complaintService = {
-    // Submit new complaint
+    // Submit complaint (handles both general and regarding)
     submitComplaint: async (complaintData) => {
         try {
             const response = await api.post('/complaints/submit', complaintData);
@@ -60,13 +60,10 @@ export const complaintService = {
         }
     },
     
-    // Get all complaints (for admin)
-    getAllComplaints: async (page = 1, limit = 10, status = null) => {
+    // Get all complaints
+    getAllComplaints: async () => {
         try {
-            const params = { page, limit };
-            if (status) params.status = status;
-            
-            const response = await api.get('/complaints', { params });
+            const response = await api.get('/complaints');
             return response.data;
         } catch (error) {
             console.error('Error fetching complaints:', error);
@@ -74,7 +71,18 @@ export const complaintService = {
         }
     },
     
-    // Update complaint status (for admin)
+    // Get complaints by category
+    getComplaintsByCategory: async (category) => {
+        try {
+            const response = await api.get(`/complaints/category/${category}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching complaints by category:', error);
+            throw error.response?.data || { success: false, message: error.message };
+        }
+    },
+    
+    // Update complaint status
     updateComplaintStatus: async (id, statusData) => {
         try {
             const response = await api.put(`/complaints/${id}`, statusData);
@@ -85,7 +93,7 @@ export const complaintService = {
         }
     },
     
-    // Get complaint statistics
+    // Get statistics
     getStatistics: async () => {
         try {
             const response = await api.get('/statistics');
@@ -93,6 +101,17 @@ export const complaintService = {
         } catch (error) {
             console.error('Error fetching statistics:', error);
             throw error.response?.data || { success: false, message: error.message };
+        }
+    },
+    
+    // Health check
+    healthCheck: async () => {
+        try {
+            const response = await api.get('/health');
+            return response.data;
+        } catch (error) {
+            console.error('Health check failed:', error);
+            throw error;
         }
     }
 };

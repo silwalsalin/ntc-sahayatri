@@ -367,9 +367,7 @@ const LandingPage = () => {
                 <button className="btn-primary" onClick={() => navigate('/submit-complaint')}>📝 {t.submitComplaint}</button>
                 <button className="btn-secondary" onClick={() => navigate('/track-complaint')}>🔍 {t.trackComplaint}</button>
               </div>
-              <div className="complaint-regarding-container">
-                <button className="btn-complaint-regarding" onClick={() => navigate('/complaint-regarding')}>📋 {t.complaintRegarding}</button>
-              </div>
+           
             </div>
             <div className="hero-right">
               {!heroImageError && heroImage ? (

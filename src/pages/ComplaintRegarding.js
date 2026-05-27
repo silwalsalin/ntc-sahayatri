@@ -1,6 +1,7 @@
 // src/pages/ComplaintRegarding.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import complaintService from '../services/complaintService';
 
 // Try to import local images with fallback
 let ntcLogo, govLogo, heroImage;
@@ -27,6 +28,16 @@ const ComplaintRegarding = () => {
   const [language, setLanguage] = useState('np');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
+  // Loading state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Success modal state
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successData, setSuccessData] = useState(null);
+  
+  // Reference number for tracking
+  const [referenceNumber, setReferenceNumber] = useState('');
+
   // State for complaint form
   const [formData, setFormData] = useState({
     complaintType: '',
@@ -36,30 +47,138 @@ const ComplaintRegarding = () => {
     name: '',
     email: '',
     phone: '',
-    address: ''
+    address: '',
+    landmark: '',
+    preferredContact: 'phone'
   });
 
   // File upload state
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [dragActive, setDragActive] = useState(false);
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
-  // Subject options based on complaint type
+  // Generate reference number on component mount
+  useEffect(() => {
+    generateReferenceNumber();
+  }, []);
+
+  const generateReferenceNumber = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const ref = `REF-${year}${month}${day}-${random}`;
+    setReferenceNumber(ref);
+  };
+
+  // Subject options based on complaint type with more detailed options
   const getSubjectOptions = () => {
     const commonSubjects = {
       np: {
-        service: ['इन्टरनेट जडान समस्या', 'फोन कल ड्रप हुने', 'ढिलो इन्टरनेट स्पीड', 'सेवा नभएको', 'सेवा विच्छेद'],
-        billing: ['बढी बिल आएको', 'बिल नआएको', 'रिचार्ज नभएको', 'पैसा कट्टी भएको', 'डबल चार्ज'],
-        technical: ['वेबसाइट काम नगर्ने', 'एप क्र्याश हुने', 'लगइन समस्या', 'डाटा ढिलो', 'सफ्टवेयर त्रुटि'],
-        network: ['नेटवर्क नभएको', 'सिग्नल कमजोर', 'कभरेज समस्या', 'रोमिङ समस्या', '४जी/५जी समस्या'],
-        other: ['अन्य समस्या', 'सुझाव', 'गुनासो', 'प्रश्न', 'जानकारी']
+        service: [
+          'इन्टरनेट जडान समस्या', 
+          'फोन कल ड्रप हुने', 
+          'ढिलो इन्टरनेट स्पीड', 
+          'सेवा नभएको', 
+          'सेवा विच्छेद',
+          'नयाँ जडानको लागि अनुरोध',
+          'सेवा स्थानान्तरण',
+          'सेवा स्तरको गुणस्तर'
+        ],
+        billing: [
+          'बढी बिल आएको', 
+          'बिल नआएको', 
+          'रिचार्ज नभएको', 
+          'पैसा कट्टी भएको', 
+          'डबल चार्ज',
+          'बिल विवरणमा त्रुटि',
+          'अटो रिचार्ज समस्या',
+          'प्याकेज बिलिङ त्रुटि'
+        ],
+        technical: [
+          'वेबसाइट काम नगर्ने', 
+          'एप क्र्याश हुने', 
+          'लगइन समस्या', 
+          'डाटा ढिलो', 
+          'सफ्टवेयर त्रुटि',
+          'पासवर्ड रिसेट समस्या',
+          'दुई-चरण प्रमाणीकरण समस्या',
+          'अपडेट पछि समस्या'
+        ],
+        network: [
+          'नेटवर्क नभएको', 
+          'सिग्नल कमजोर', 
+          'कभरेज समस्या', 
+          'रोमिङ समस्या', 
+          '४जी/५जी समस्या',
+          'नेटवर्क स्थिरता',
+          'डाटा स्पीड घट्नु',
+          'विदेशमा रोमिङ'
+        ],
+        other: [
+          'अन्य समस्या', 
+          'सुझाव', 
+          'गुनासो', 
+          'प्रश्न', 
+          'जानकारी',
+          'सेवा प्रतिक्रिया',
+          'कर्मचारी व्यवहार',
+          'शाखा सेवा'
+        ]
       },
       en: {
-        service: ['Internet Connection Issue', 'Call Drop Problem', 'Slow Internet Speed', 'Service Not Working', 'Service Disruption'],
-        billing: ['Excessive Billing', 'Bill Not Received', 'Recharge Not Credited', 'Wrong Deduction', 'Double Charge'],
-        technical: ['Website Not Working', 'App Crashes', 'Login Issue', 'Data Delay', 'Software Bug'],
-        network: ['No Network', 'Weak Signal', 'Coverage Issue', 'Roaming Problem', '4G/5G Issue'],
-        other: ['Other Issue', 'Suggestion', 'Complaint', 'Inquiry', 'Information']
+        service: [
+          'Internet Connection Issue', 
+          'Call Drop Problem', 
+          'Slow Internet Speed', 
+          'Service Not Working', 
+          'Service Disruption',
+          'New Connection Request',
+          'Service Transfer',
+          'Service Quality Issue'
+        ],
+        billing: [
+          'Excessive Billing', 
+          'Bill Not Received', 
+          'Recharge Not Credited', 
+          'Wrong Deduction', 
+          'Double Charge',
+          'Bill Detail Error',
+          'Auto Recharge Issue',
+          'Package Billing Error'
+        ],
+        technical: [
+          'Website Not Working', 
+          'App Crashes', 
+          'Login Issue', 
+          'Data Delay', 
+          'Software Bug',
+          'Password Reset Issue',
+          'Two-Factor Authentication Issue',
+          'Post-Update Problem'
+        ],
+        network: [
+          'No Network', 
+          'Weak Signal', 
+          'Coverage Issue', 
+          'Roaming Problem', 
+          '4G/5G Issue',
+          'Network Stability',
+          'Data Speed Issue',
+          'International Roaming'
+        ],
+        other: [
+          'Other Issue', 
+          'Suggestion', 
+          'Complaint', 
+          'Inquiry', 
+          'Information',
+          'Service Feedback',
+          'Staff Behavior',
+          'Branch Service'
+        ]
       }
     };
     
@@ -83,6 +202,7 @@ const ComplaintRegarding = () => {
       login: 'लगइन',
       complaintRegarding: 'गुनासो सम्बन्धी',
       complaintInfo: 'गुनासो जानकारी',
+      referenceNo: 'सन्दर्भ नम्बर',
       selectComplaintType: 'गुनासोको प्रकार चयन गर्नुहोस्',
       serviceRelated: 'सेवा सम्बन्धी',
       billingRelated: 'बिलिङ सम्बन्धी',
@@ -106,6 +226,12 @@ const ComplaintRegarding = () => {
       enterMobile: '९८XXXXXXXX',
       address: 'ठेगाना',
       enterAddress: 'आफ्नो ठेगाना प्रविष्ट गर्नुहोस्',
+      landmark: 'नजिकैको चिन्ह',
+      enterLandmark: 'नजिकैको प्रख्यात स्थान',
+      preferredContact: 'सम्पर्कको माध्यम',
+      contactPhone: 'फोन कल',
+      contactEmail: 'इमेल',
+      contactSMS: 'एसएमएस',
       attachments: 'संलग्नकहरू',
       dragDrop: 'फाइलहरू यहाँ तान्नुहोस् वा क्लिक गरेर अपलोड गर्नुहोस्',
       supportedFiles: 'समर्थित फाइलहरू: PDF, JPG, PNG, DOC (max 5MB)',
@@ -121,9 +247,19 @@ const ComplaintRegarding = () => {
       nameError: 'कृपया पुरा नाम भर्नुहोस्',
       phoneError: 'कृपया मोबाइल नम्बर भर्नुहोस्',
       phoneInvalidError: 'कृपया मान्य मोबाइल नम्बर प्रविष्ट गर्नुहोस् (९८XXXXXXXX वा ९७XXXXXXXX)',
-      successMessage: 'तपाईंको गुनासो सफलतापूर्वक पेश भयो। हाम्रो टोली चाँडै सम्पर्क गर्नेछ।',
+      emailInvalidError: 'कृपया मान्य इमेल ठेगाना प्रविष्ट गर्नुहोस्',
+      successMessage: '✅ तपाईंको गुनासो सफलतापूर्वक पेश भयो!',
+      ticketId: '📋 टिकेट नम्बर',
+      password: '🔑 पासवर्ड',
+      saveDetails: '💡 कृपया यो विवरण सुरक्षित राख्नुहोस्।',
+      trackNow: '🔍 अहिले ट्र्याक गर्नुहोस्',
+      close: 'बन्द गर्नुहोस्',
       fileTooLarge: 'फाइल ५MB भन्दा ठुलो छ',
-      invalidFileType: 'अमान्य फाइल प्रकार। कृपया PDF, JPG, PNG, वा DOC मात्र अपलोड गर्नुहोस्'
+      invalidFileType: 'अमान्य फाइल प्रकार। कृपया PDF, JPG, PNG, वा DOC मात्र अपलोड गर्नुहोस्',
+      submitting: 'पेश गर्दै...',
+      clearForm: 'फारम खाली गर्नुहोस्',
+      estimatedTime: 'अनुमानित प्रतिक्रिया समय: २४-४८ घण्टा',
+      submitFailed: '❌ गुनासो पेश गर्न असफल। कृपया पछि प्रयास गर्नुहोस्।'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -138,6 +274,7 @@ const ComplaintRegarding = () => {
       login: 'Login',
       complaintRegarding: 'Complaint Regarding',
       complaintInfo: 'Complaint Information',
+      referenceNo: 'Reference Number',
       selectComplaintType: 'Select complaint type',
       serviceRelated: 'Service Related',
       billingRelated: 'Billing Related',
@@ -161,6 +298,12 @@ const ComplaintRegarding = () => {
       enterMobile: '98XXXXXXXX',
       address: 'Address',
       enterAddress: 'Enter your address',
+      landmark: 'Nearby Landmark',
+      enterLandmark: 'Nearby famous place',
+      preferredContact: 'Preferred Contact Method',
+      contactPhone: 'Phone Call',
+      contactEmail: 'Email',
+      contactSMS: 'SMS',
       attachments: 'Attachments',
       dragDrop: 'Drag & drop files here or click to upload',
       supportedFiles: 'Supported files: PDF, JPG, PNG, DOC (max 5MB)',
@@ -176,9 +319,19 @@ const ComplaintRegarding = () => {
       nameError: 'Please enter your name',
       phoneError: 'Please enter mobile number',
       phoneInvalidError: 'Please enter a valid mobile number (98XXXXXXXX or 97XXXXXXXX)',
-      successMessage: 'Your complaint has been submitted successfully. Our team will contact you soon.',
+      emailInvalidError: 'Please enter a valid email address',
+      successMessage: '✅ Your complaint has been submitted successfully!',
+      ticketId: '📋 Ticket ID',
+      password: '🔑 Password',
+      saveDetails: '💡 Please save these details to track your complaint.',
+      trackNow: '🔍 Track Now',
+      close: 'Close',
       fileTooLarge: 'File is larger than 5MB',
-      invalidFileType: 'Invalid file type. Please upload only PDF, JPG, PNG, or DOC files.'
+      invalidFileType: 'Invalid file type. Please upload only PDF, JPG, PNG, or DOC files.',
+      submitting: 'Submitting...',
+      clearForm: 'Clear Form',
+      estimatedTime: 'Estimated response time: 24-48 hours',
+      submitFailed: '❌ Failed to submit complaint. Please try again later.'
     }
   };
 
@@ -190,9 +343,16 @@ const ComplaintRegarding = () => {
     return phoneRegex.test(phone);
   };
 
+  // Validate email
+  const validateEmail = (email) => {
+    if (!email) return true;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   // Validate file
   const validateFile = (file) => {
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword'];
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     const maxSize = 5 * 1024 * 1024; // 5MB
     
     if (!validTypes.includes(file.type)) {
@@ -210,6 +370,10 @@ const ComplaintRegarding = () => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+  };
+
+  const handleBlur = (field) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
   };
 
   const handleFileChange = (e) => {
@@ -275,6 +439,27 @@ const ComplaintRegarding = () => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const clearForm = () => {
+    if (window.confirm(t.clearForm === 'Clear Form' ? 'Are you sure you want to clear all form data?' : 'के तपाईं सबै फारम डाटा खाली गर्न चाहनुहुन्छ?')) {
+      setFormData({
+        complaintType: '',
+        subject: '',
+        description: '',
+        priority: 'medium',
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        landmark: '',
+        preferredContact: 'phone'
+      });
+      setSelectedFiles([]);
+      setErrors({});
+      setTouched({});
+      generateReferenceNumber();
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
     
@@ -300,11 +485,15 @@ const ComplaintRegarding = () => {
       newErrors.phone = t.phoneInvalidError;
     }
     
+    if (formData.email && !validateEmail(formData.email)) {
+      newErrors.email = t.emailInvalidError;
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -318,21 +507,60 @@ const ComplaintRegarding = () => {
       return;
     }
 
-    console.log('Form submitted:', { ...formData, files: selectedFiles });
-    alert(t.successMessage);
+    setIsSubmitting(true);
 
-    setFormData({
-      complaintType: '',
-      subject: '',
-      description: '',
-      priority: 'medium',
-      name: '',
-      email: '',
-      phone: '',
-      address: ''
-    });
-    setSelectedFiles([]);
-    setErrors({});
+    try {
+      // Prepare data for backend - same structure as SubmitComplaint
+      const complaintData = {
+        natureOfComplaint: formData.complaintType, // Map complaintType to natureOfComplaint
+        name: formData.name,
+        description: formData.description,
+        email: formData.email,
+        phone: formData.phone,
+        // Additional fields for ComplaintRegarding
+        subject: formData.subject,
+        priority: formData.priority,
+        address: formData.address,
+        landmark: formData.landmark,
+        preferredContact: formData.preferredContact,
+        referenceNumber: referenceNumber,
+        complaintCategory: 'complaint_regarding' // To identify this type
+      };
+      
+      // Submit to the same backend endpoint
+      const response = await complaintService.submitComplaint(complaintData);
+      
+      if (response.success) {
+        setSuccessData(response.data);
+        setShowSuccess(true);
+        
+        // Reset form
+        setFormData({
+          complaintType: '',
+          subject: '',
+          description: '',
+          priority: 'medium',
+          name: '',
+          email: '',
+          phone: '',
+          address: '',
+          landmark: '',
+          preferredContact: 'phone'
+        });
+        setSelectedFiles([]);
+        setErrors({});
+        setTouched({});
+        generateReferenceNumber();
+      } else {
+        throw new Error(response.message || 'Submission failed');
+      }
+      
+    } catch (error) {
+      console.error('Submission error:', error);
+      alert(t.submitFailed);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleLanguageChange = (lang) => {
@@ -466,6 +694,10 @@ const ComplaintRegarding = () => {
               <div className="header-icon">📋</div>
               <h2>{t.complaintRegarding}</h2>
               <p>{t.complaintInfo}</p>
+              <div className="reference-box">
+                <span className="reference-label">{t.referenceNo}:</span>
+                <span className="reference-value">{referenceNumber}</span>
+              </div>
             </div>
             
             <form onSubmit={handleSubmit} className="complaint-form">
@@ -479,6 +711,7 @@ const ComplaintRegarding = () => {
                       name="complaintType"
                       value="service"
                       onChange={handleInputChange}
+                      onBlur={() => handleBlur('complaintType')}
                     />
                     <span className="type-icon">🔧</span>
                     <span className="type-name">{t.serviceRelated}</span>
@@ -489,6 +722,7 @@ const ComplaintRegarding = () => {
                       name="complaintType"
                       value="billing"
                       onChange={handleInputChange}
+                      onBlur={() => handleBlur('complaintType')}
                     />
                     <span className="type-icon">💰</span>
                     <span className="type-name">{t.billingRelated}</span>
@@ -499,6 +733,7 @@ const ComplaintRegarding = () => {
                       name="complaintType"
                       value="technical"
                       onChange={handleInputChange}
+                      onBlur={() => handleBlur('complaintType')}
                     />
                     <span className="type-icon">💻</span>
                     <span className="type-name">{t.technicalRelated}</span>
@@ -509,6 +744,7 @@ const ComplaintRegarding = () => {
                       name="complaintType"
                       value="network"
                       onChange={handleInputChange}
+                      onBlur={() => handleBlur('complaintType')}
                     />
                     <span className="type-icon">📡</span>
                     <span className="type-name">{t.networkRelated}</span>
@@ -519,12 +755,14 @@ const ComplaintRegarding = () => {
                       name="complaintType"
                       value="other"
                       onChange={handleInputChange}
+                      onBlur={() => handleBlur('complaintType')}
                     />
                     <span className="type-icon">📝</span>
                     <span className="type-name">{t.other}</span>
                   </label>
                 </div>
-                {errors.complaintType && <div className="error-message-field">{errors.complaintType}</div>}
+                {(touched.complaintType || errors.complaintType) && errors.complaintType && 
+                  <div className="error-message-field">{errors.complaintType}</div>}
               </div>
 
               {/* Subject - Dropdown */}
@@ -535,6 +773,7 @@ const ComplaintRegarding = () => {
                     name="subject"
                     value={formData.subject}
                     onChange={handleInputChange}
+                    onBlur={() => handleBlur('subject')}
                     required
                     disabled={!formData.complaintType}
                   >
@@ -550,7 +789,8 @@ const ComplaintRegarding = () => {
                       {language === 'np' ? 'कृपया पहिले गुनासोको प्रकार चयन गर्नुहोस्' : 'Please select complaint type first'}
                     </p>
                   )}
-                  {errors.subject && <div className="error-message-field">{errors.subject}</div>}
+                  {(touched.subject || errors.subject) && errors.subject && 
+                    <div className="error-message-field">{errors.subject}</div>}
                 </div>
               </div>
 
@@ -562,11 +802,13 @@ const ComplaintRegarding = () => {
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
+                    onBlur={() => handleBlur('description')}
                     rows="5"
                     placeholder={t.enterDescription}
                     required
                   ></textarea>
-                  {errors.description && <div className="error-message-field">{errors.description}</div>}
+                  {(touched.description || errors.description) && errors.description && 
+                    <div className="error-message-field">{errors.description}</div>}
                 </div>
               </div>
 
@@ -615,10 +857,12 @@ const ComplaintRegarding = () => {
                       name="name"
                       value={formData.name}
                       onChange={handleInputChange}
+                      onBlur={() => handleBlur('name')}
                       placeholder={t.enterFullName}
                       required
                     />
-                    {errors.name && <div className="error-message-field">{errors.name}</div>}
+                    {(touched.name || errors.name) && errors.name && 
+                      <div className="error-message-field">{errors.name}</div>}
                   </div>
                   <div className="form-group">
                     <label>{t.emailAddress} <span className="optional">({t.optional})</span></label>
@@ -627,8 +871,11 @@ const ComplaintRegarding = () => {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
+                      onBlur={() => handleBlur('email')}
                       placeholder={t.enterEmail}
                     />
+                    {(touched.email || errors.email) && errors.email && 
+                      <div className="error-message-field">{errors.email}</div>}
                   </div>
                   <div className="form-group">
                     <label>{t.mobileNumber} <span className="required">*</span></label>
@@ -637,10 +884,12 @@ const ComplaintRegarding = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
+                      onBlur={() => handleBlur('phone')}
                       placeholder={t.enterMobile}
                       required
                     />
-                    {errors.phone && <div className="error-message-field">{errors.phone}</div>}
+                    {(touched.phone || errors.phone) && errors.phone && 
+                      <div className="error-message-field">{errors.phone}</div>}
                   </div>
                   <div className="form-group">
                     <label>{t.address} <span className="optional">({t.optional})</span></label>
@@ -651,6 +900,28 @@ const ComplaintRegarding = () => {
                       onChange={handleInputChange}
                       placeholder={t.enterAddress}
                     />
+                  </div>
+                  <div className="form-group">
+                    <label>{t.landmark} <span className="optional">({t.optional})</span></label>
+                    <input
+                      type="text"
+                      name="landmark"
+                      value={formData.landmark}
+                      onChange={handleInputChange}
+                      placeholder={t.enterLandmark}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>{t.preferredContact}</label>
+                    <select
+                      name="preferredContact"
+                      value={formData.preferredContact}
+                      onChange={handleInputChange}
+                    >
+                      <option value="phone">{t.contactPhone}</option>
+                      <option value="email">{t.contactEmail}</option>
+                      <option value="sms">{t.contactSMS}</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -677,10 +948,11 @@ const ComplaintRegarding = () => {
                     multiple
                     onChange={handleFileChange} 
                     style={{ display: 'none' }} 
-                    accept=".pdf,.jpg,.jpeg,.png,.doc"
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                   />
                 </div>
                 <p className="supported-files">{t.supportedFiles}</p>
+                <p className="estimated-time">⏱️ {t.estimatedTime}</p>
                 
                 {selectedFiles.length > 0 && (
                   <div className="file-list">
@@ -696,9 +968,14 @@ const ComplaintRegarding = () => {
                 )}
               </div>
               
-              <button type="submit" className="btn-submit">
-                📌 {t.submitComplaint}
-              </button>
+              <div className="form-buttons">
+                <button type="button" onClick={clearForm} className="btn-clear">
+                  🗑️ {t.clearForm}
+                </button>
+                <button type="submit" className="btn-submit" disabled={isSubmitting}>
+                  {isSubmitting ? `⏳ ${t.submitting}` : `📌 ${t.submitComplaint}`}
+                </button>
+              </div>
             </form>
             
             <div className="back-to-home">
@@ -709,6 +986,34 @@ const ComplaintRegarding = () => {
           </div>
         </div>
       </div>
+
+      {/* Success Modal - stays on same page */}
+      {showSuccess && successData && (
+        <div className="success-modal-overlay">
+          <div className="success-modal">
+            <div className="success-icon">✅</div>
+            <h3>{t.successMessage}</h3>
+            <div className="success-details">
+              <p><strong>{t.referenceNo}:</strong> {referenceNumber}</p>
+              <p><strong>{t.ticketId}:</strong> {language === 'np' ? successData.complaintNumberNp : successData.complaintNumber}</p>
+              <p><strong>{t.password}:</strong> {successData.trackingPassword}</p>
+              <p className="save-warning">⚠️ {t.saveDetails}</p>
+            </div>
+            <div className="modal-buttons">
+              <button className="btn-close" onClick={() => setShowSuccess(false)}>
+                {t.close}
+              </button>
+              <button className="btn-track" onClick={() => {
+                sessionStorage.setItem('trackingId', successData.complaintNumber);
+                sessionStorage.setItem('trackingPassword', successData.trackingPassword);
+                navigate('/track-complaint');
+              }}>
+                🔍 {t.trackNow}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="footer">
@@ -996,6 +1301,27 @@ const ComplaintRegarding = () => {
           color: #6c8196;
         }
 
+        .reference-box {
+          margin-top: 15px;
+          padding: 10px 20px;
+          background: #e8f0fe;
+          border-radius: 30px;
+          display: inline-flex;
+          gap: 10px;
+          font-size: 0.9rem;
+        }
+
+        .reference-label {
+          font-weight: 600;
+          color: #0d47a1;
+        }
+
+        .reference-value {
+          font-family: monospace;
+          font-weight: 500;
+          color: #1565c0;
+        }
+
         .complaint-form { text-align: left; }
         .form-section {
           margin-bottom: 32px;
@@ -1027,6 +1353,12 @@ const ComplaintRegarding = () => {
           color: #dc3545;
           font-size: 0.75rem;
           margin-top: 6px;
+        }
+        .estimated-time {
+          font-size: 0.75rem;
+          color: #2e7d32;
+          margin-top: 8px;
+          text-align: right;
         }
 
         /* Complaint Types */
@@ -1201,8 +1533,14 @@ const ComplaintRegarding = () => {
         }
         .remove-file:hover { color: #c62828; }
 
+        .form-buttons {
+          display: flex;
+          gap: 15px;
+          margin-top: 20px;
+        }
+
         .btn-submit {
-          width: 100%;
+          flex: 2;
           padding: 16px;
           background: linear-gradient(135deg, #1565c0, #0d47a1);
           color: white;
@@ -1212,12 +1550,33 @@ const ComplaintRegarding = () => {
           font-size: 1.1rem;
           cursor: pointer;
           transition: all 0.3s ease;
-          margin-top: 20px;
         }
-        .btn-submit:hover {
+        .btn-submit:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 10px 25px rgba(21, 101, 192, 0.3);
         }
+        .btn-submit:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        .btn-clear {
+          flex: 1;
+          padding: 16px;
+          background: #f5f5f5;
+          color: #666;
+          border: 2px solid #ddd;
+          border-radius: 40px;
+          font-weight: 600;
+          font-size: 1rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+        .btn-clear:hover {
+          background: #e0e0e0;
+          border-color: #ccc;
+        }
+
         .back-to-home { margin-top: 24px; text-align: center; }
         .btn-back {
           background: transparent;
@@ -1231,6 +1590,117 @@ const ComplaintRegarding = () => {
           font-size: 0.9rem;
         }
         .btn-back:hover { background: #1565c0; color: white; }
+
+        /* Success Modal */
+        .success-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0,0,0,0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          animation: fadeIn 0.3s ease;
+        }
+
+        .success-modal {
+          background: white;
+          border-radius: 20px;
+          padding: 40px;
+          max-width: 450px;
+          width: 90%;
+          text-align: center;
+          animation: slideUp 0.3s ease;
+        }
+
+        .success-icon {
+          font-size: 4rem;
+          margin-bottom: 20px;
+        }
+
+        .success-modal h3 {
+          color: #0d47a1;
+          font-size: 1.3rem;
+          margin-bottom: 20px;
+        }
+
+        .success-details {
+          background: #f0f7ff;
+          border-radius: 12px;
+          padding: 20px;
+          margin-bottom: 20px;
+          text-align: left;
+        }
+
+        .success-details p {
+          margin: 10px 0;
+          font-size: 0.95rem;
+        }
+
+        .success-details strong {
+          color: #0d47a1;
+        }
+
+        .save-warning {
+          color: #ff9800;
+          font-size: 0.8rem;
+          margin-top: 10px;
+          padding-top: 10px;
+          border-top: 1px solid #ddd;
+        }
+
+        .modal-buttons {
+          display: flex;
+          gap: 15px;
+          justify-content: center;
+        }
+
+        .btn-close, .btn-track {
+          padding: 12px 24px;
+          border: none;
+          border-radius: 40px;
+          font-size: 0.95rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .btn-close {
+          background: #f0f0f0;
+          color: #666;
+        }
+
+        .btn-close:hover {
+          background: #e0e0e0;
+        }
+
+        .btn-track {
+          background: linear-gradient(135deg, #1565c0, #0d47a1);
+          color: white;
+        }
+
+        .btn-track:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(21,101,192,0.3);
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+          from {
+            transform: translateY(50px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
 
         /* Footer */
         .footer {
@@ -1266,6 +1736,9 @@ const ComplaintRegarding = () => {
           .contact-info-group { flex-direction: column; }
           .logo-left, .logo-right { display: none; }
           .dept-text-center { flex: 1; }
+          .success-modal { padding: 25px; margin: 20px; }
+          .modal-buttons { flex-direction: column; }
+          .form-buttons { flex-direction: column; }
         }
 
         @media (max-width: 480px) {

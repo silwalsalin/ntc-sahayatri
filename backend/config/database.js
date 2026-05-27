@@ -1,3 +1,4 @@
+// backend/config/database.js
 const { Sequelize } = require('sequelize');
 
 // SQLite database configuration
@@ -10,7 +11,8 @@ const sequelize = new Sequelize({
 const testConnection = async () => {
     try {
         await sequelize.authenticate();
-        console.log('✅ Database connected successfully');
+        console.log('✅ SQLite Database connected successfully');
+        console.log('📁 Database file: database.sqlite');
         return true;
     } catch (error) {
         console.error('❌ Database connection failed:', error.message);
