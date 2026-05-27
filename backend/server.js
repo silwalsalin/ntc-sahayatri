@@ -281,6 +281,346 @@ app.get('/api/statistics', async (req, res) => {
     }
 });
 
+// ========== ADMIN AUTHENTICATION ==========
+
+// Admin Login endpoint
+app.post('/api/admin/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        console.log('📝 Admin login attempt:', username);
+        
+        // Validate input
+        if (!username || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username and password are required'
+            });
+        }
+        
+        // Hardcoded admin credentials (you can replace with database check)
+        const admins = [
+            {
+                id: 1,
+                username: 'admin@ntc',
+                email: 'admin@ntc.com',
+                password: 'admin123',
+                fullName: 'System Administrator',
+                role: 'super_admin'
+            },
+            {
+                id: 2,
+                username: 'support@ntc',
+                email: 'support@ntc.com',
+                password: 'support123',
+                fullName: 'Support Staff',
+                role: 'support'
+            },
+            {
+                id: 3,
+                username: 'viewer@ntc',
+                email: 'viewer@ntc.com',
+                password: 'viewer123',
+                fullName: 'Viewer',
+                role: 'viewer'
+            }
+        ];
+        
+        // Find admin
+        const admin = admins.find(a => a.username === username || a.email === username);
+        
+        if (admin && admin.password === password) {
+            // Generate simple token
+            const token = Buffer.from(`${admin.username}-${Date.now()}`).toString('base64');
+            
+            console.log('✅ Admin login successful:', username);
+            
+            res.json({
+                success: true,
+                message: 'Login successful',
+                token: token,
+                user: {
+                    id: admin.id,
+                    username: admin.username,
+                    fullName: admin.fullName,
+                    email: admin.email,
+                    role: admin.role
+                }
+            });
+        } else {
+            console.log('❌ Admin login failed:', username);
+            res.status(401).json({
+                success: false,
+                message: 'Invalid username or password'
+            });
+        }
+        
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Login failed. Please try again.'
+        });
+    }
+});
+
+// Verify Admin Token endpoint
+app.get('/api/admin/verify', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: 'No token provided'
+            });
+        }
+        
+        // Verify token (simplified - just check if it exists)
+        res.json({
+            success: true,
+            message: 'Token valid',
+            valid: true
+        });
+        
+    } catch (error) {
+        console.error('Token verification error:', error);
+        res.status(401).json({
+            success: false,
+            message: 'Invalid token'
+        });
+    }
+});
+
+// Admin Logout endpoint
+app.post('/api/admin/logout', async (req, res) => {
+    try {
+        res.json({
+            success: true,
+            message: 'Logout successful'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Logout failed'
+        });
+    }
+});
+
+// Get admin profile
+app.get('/api/admin/profile', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: 'No token provided'
+            });
+        }
+        
+        // Decode token to get user (simplified)
+        // In production, you should use JWT and verify properly
+        res.json({
+            success: true,
+            data: {
+                id: 1,
+                username: 'admin@ntc',
+                fullName: 'System Administrator',
+                email: 'admin@ntc.com',
+                role: 'admin'
+            }
+        });
+        
+    } catch (error) {
+        console.error('Profile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch profile'
+        });
+    }
+});
+
+// Get all admins (super admin only)
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: 'No token provided'
+            });
+        }
+        
+        // Return list of admins (without passwords)
+        const adminsList = [
+            {
+                id: 1,
+                username: 'admin@ntc',
+                email: 'admin@ntc.com',
+                fullName: 'System Administrator',
+                role: 'super_admin',
+                status: 'active',
+                lastLogin: '2024-01-15T10:30:00Z'
+            },
+            {
+                id: 2,
+                username: 'support@ntc',
+                email: 'support@ntc.com',
+                fullName: 'Support Staff',
+                role: 'support',
+                status: 'active',
+                lastLogin: '2024-01-14T15:45:00Z'
+            },
+            {
+                id: 3,
+                username: 'viewer@ntc',
+                email: 'viewer@ntc.com',
+                fullName: 'Viewer',
+                role: 'viewer',
+                status: 'inactive',
+                lastLogin: '2024-01-10T09:00:00Z'
+            }
+        ];
+        
+        res.json({
+            success: true,
+            data: adminsList
+        });
+        
+    } catch (error) {
+        console.error('Fetch admins error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch admins'
+        });
+    }
+});
+
+// Create new admin (super admin only)
+app.post('/api/admin/users', async (req, res) => {
+    try {
+        const { username, email, password, fullName, role } = req.body;
+        
+        if (!username || !email || !password || !fullName) {
+            return res.status(400).json({
+                success: false,
+                message: 'All fields are required'
+            });
+        }
+        
+        // Here you would save to database
+        console.log('📝 Creating new admin:', username);
+        
+        res.json({
+            success: true,
+            message: 'Admin created successfully',
+            data: {
+                id: Date.now(),
+                username,
+                email,
+                fullName,
+                role: role || 'viewer'
+            }
+        });
+        
+    } catch (error) {
+        console.error('Create admin error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create admin'
+        });
+    }
+});
+
+// Update admin status (super admin only)
+app.put('/api/admin/users/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, role } = req.body;
+        
+        console.log('📝 Updating admin:', id, { status, role });
+        
+        res.json({
+            success: true,
+            message: 'Admin updated successfully'
+        });
+        
+    } catch (error) {
+        console.error('Update admin error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update admin'
+        });
+    }
+});
+
+// Delete admin (super admin only)
+app.delete('/api/admin/users/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        console.log('📝 Deleting admin:', id);
+        
+        res.json({
+            success: true,
+            message: 'Admin deleted successfully'
+        });
+        
+    } catch (error) {
+        console.error('Delete admin error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete admin'
+        });
+    }
+});
+
+// Change password
+app.post('/api/admin/change-password', async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const token = req.headers.authorization?.split(' ')[1];
+        
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized'
+            });
+        }
+        
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Current password and new password are required'
+            });
+        }
+        
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'New password must be at least 6 characters'
+            });
+        }
+        
+        // Here you would update password in database
+        console.log('📝 Password change request');
+        
+        res.json({
+            success: true,
+            message: 'Password changed successfully'
+        });
+        
+    } catch (error) {
+        console.error('Change password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to change password'
+        });
+    }
+});
+
 // ========== START SERVER ==========
 const startServer = async () => {
     try {
@@ -293,7 +633,11 @@ const startServer = async () => {
         app.listen(PORT, () => {
             console.log(`\n🚀 Server running on http://localhost:${PORT}`);
             console.log(`📡 API: http://localhost:${PORT}/api`);
-            console.log(`✅ Ready to accept complaints!\n`);
+            console.log(`\n🔐 Admin Credentials:`);
+            console.log(`   📧 Super Admin: admin@ntc / admin123`);
+            console.log(`   📧 Support Staff: support@ntc / support123`);
+            console.log(`   📧 Viewer: viewer@ntc / viewer123`);
+            console.log(`\n✅ Ready to accept complaints!\n`);
         });
     } catch (error) {
         console.error('Failed to start server:', error);

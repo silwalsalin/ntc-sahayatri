@@ -1,6 +1,7 @@
 // src/pages/LoginPage.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 // Try to import local images with fallback
 let ntcLogo, govLogo;
@@ -33,6 +34,33 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [backendStatus, setBackendStatus] = useState('checking');
+
+  // Check if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
+    
+    if (token && isLoggedIn === 'true') {
+      navigate('/admin-dashboard');
+    }
+    
+    checkBackendHealth();
+  }, [navigate]);
+
+  const checkBackendHealth = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/health');
+      if (response.data.status === 'UP' || response.data.status === 'OK') {
+        setBackendStatus('connected');
+      } else {
+        setBackendStatus('disconnected');
+      }
+    } catch (error) {
+      console.error('Backend not reachable:', error);
+      setBackendStatus('disconnected');
+    }
+  };
 
   const content = {
     np: {
@@ -57,14 +85,13 @@ const LoginPage = () => {
       loginBtn: 'प्रशासक लगइन',
       loggingIn: 'लगइन हुँदैछ...',
       backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
-      demoCredentials: 'डेमो प्रमाणपत्रहरू:',
-      adminUser: 'प्रशासक: admin@ntc',
-      adminPass: 'पासवर्ड: admin123',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
       loginSuccess: '✅ लगइन सफल! प्रशासक ड्यासबोर्डमा जाँदै...',
-      loginError: '❌ अमान्य प्रयोगकर्ता नाम वा पासवर्ड।',
-      requiredFields: 'कृपया प्रयोगकर्ता नाम र पासवर्ड भर्नुहोस्।'
+      loginError: '❌ अमान्य प्रयोगकर्ता नाम वा पासवर्ड। कृपया पुन: प्रयास गर्नुहोस्।',
+      requiredFields: 'कृपया प्रयोगकर्ता नाम र पासवर्ड भर्नुहोस्।',
+      backendError: '⚠️ ब्याकेन्ड सर्भर जडान भएन। कृपया पछि प्रयास गर्नुहोस्।',
+      backendOffline: 'ब्याकेन्ड अफलाइन'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -88,14 +115,13 @@ const LoginPage = () => {
       loginBtn: 'Admin Login',
       loggingIn: 'Logging in...',
       backToHome: 'Back to Home',
-      demoCredentials: 'Demo Credentials:',
-      adminUser: 'Admin: admin@ntc',
-      adminPass: 'Password: admin123',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
       loginSuccess: '✅ Login successful! Redirecting to Admin Dashboard...',
-      loginError: '❌ Invalid username or password.',
-      requiredFields: 'Please enter username and password.'
+      loginError: '❌ Invalid username or password. Please try again.',
+      requiredFields: 'Please enter username and password.',
+      backendError: '⚠️ Backend server not connected. Please try again later.',
+      backendOffline: 'Backend Offline'
     }
   };
 
@@ -118,37 +144,64 @@ const LoginPage = () => {
       return;
     }
 
+    if (backendStatus !== 'connected') {
+      setError(t.backendError);
+      return;
+    }
+
     setIsLoading(true);
     setError('');
 
-    await new Promise(resolve => setTimeout(resolve, 800));
+    try {
+      // Send login request to backend
+      const response = await axios.post('http://localhost:5000/api/admin/login', {
+        username: formData.username,
+        password: formData.password
+      });
 
-    const username = formData.username.toLowerCase();
-    const password = formData.password;
-
-    if ((username === 'admin@ntc' || username === 'admin') && password === 'admin123') {
-      localStorage.clear();
+      if (response.data.success) {
+        const { token, user } = response.data;
+        
+        // Store auth data
+        localStorage.setItem('adminToken', token);
+        localStorage.setItem('adminUser', JSON.stringify(user));
+        localStorage.setItem('userRole', user.role);
+        localStorage.setItem('userName', user.fullName || user.username);
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        if (formData.rememberMe) {
+          localStorage.setItem('rememberedUser', formData.username);
+        } else {
+          localStorage.removeItem('rememberedUser');
+        }
+        
+        alert(t.loginSuccess);
+        navigate('/admin-dashboard', { replace: true });
+      } else {
+        setError(response.data.message || t.loginError);
+      }
       
-      localStorage.setItem('adminToken', 'dummy-admin-token-' + Date.now());
-      localStorage.setItem('adminUser', JSON.stringify({
-        id: 1,
-        name: 'Admin User',
-        email: 'admin@ntc.com',
-        role: 'admin',
-        loginTime: new Date().toISOString()
-      }));
-      localStorage.setItem('userRole', 'admin');
-      localStorage.setItem('userName', 'Admin User');
-      localStorage.setItem('isLoggedIn', 'true');
-      
-      alert(t.loginSuccess);
-      navigate('/admin-dashboard', { replace: true });
-    } 
-    else {
-      setError(t.loginError);
+    } catch (error) {
+      console.error('Login error:', error);
+      if (error.response) {
+        setError(error.response.data.message || t.loginError);
+      } else if (error.request) {
+        setError(t.backendError);
+      } else {
+        setError(t.loginError);
+      }
+    } finally {
       setIsLoading(false);
     }
   };
+
+  // Load remembered username
+  useEffect(() => {
+    const rememberedUser = localStorage.getItem('rememberedUser');
+    if (rememberedUser) {
+      setFormData(prev => ({ ...prev, username: rememberedUser, rememberMe: true }));
+    }
+  }, []);
 
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
@@ -174,6 +227,13 @@ const LoginPage = () => {
 
   return (
     <div className="login-page">
+      {/* Backend Status Indicator */}
+      {backendStatus === 'disconnected' && (
+        <div className="backend-warning">
+          ⚠️ {t.backendOffline} - {t.backendError}
+        </div>
+      )}
+
       {/* HEADER 1 - Top Bar */}
       <div className="header-1">
         <div className="container-1">
@@ -323,7 +383,7 @@ const LoginPage = () => {
                 <a href="/forgot-password" className="forgot-password">{t.forgotPassword}</a>
               </div>
 
-              <button type="submit" className="btn-login" disabled={isLoading}>
+              <button type="submit" className="btn-login" disabled={isLoading || backendStatus !== 'connected'}>
                 {isLoading ? (
                   <>
                     <span className="spinner">⏳</span> {t.loggingIn}
@@ -336,15 +396,6 @@ const LoginPage = () => {
               </button>
             </form>
 
-            {/* Demo Credentials */}
-            <div className="demo-credentials">
-              <div className="demo-title">{t.demoCredentials}</div>
-              <div className="demo-info">
-                <code>{t.adminUser}</code>
-                <code>{t.adminPass}</code>
-              </div>
-            </div>
-
             <div className="back-to-home">
               <button onClick={() => navigate('/')} className="btn-back" disabled={isLoading}>
                 ← {t.backToHome}
@@ -353,7 +404,6 @@ const LoginPage = () => {
           </div>
         </div>
       </div>
-
 
       <style jsx>{`
         * {
@@ -367,6 +417,19 @@ const LoginPage = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
           min-height: 100vh;
+        }
+
+        .backend-warning {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          background: #ff9800;
+          color: white;
+          padding: 8px;
+          text-align: center;
+          z-index: 1050;
+          font-size: 0.8rem;
         }
 
         /* HEADER 1 - Top Bar */
@@ -714,36 +777,6 @@ const LoginPage = () => {
           to { transform: rotate(360deg); }
         }
 
-        .demo-credentials {
-          margin-top: 32px;
-          padding-top: 24px;
-          border-top: 1px solid #e0e0e0;
-        }
-
-        .demo-title {
-          font-size: 0.8rem;
-          color: #888;
-          margin-bottom: 12px;
-          text-align: center;
-        }
-
-        .demo-info {
-          display: flex;
-          justify-content: center;
-          gap: 20px;
-          margin-bottom: 8px;
-          flex-wrap: wrap;
-        }
-
-        .demo-info code {
-          background: #f5f5f5;
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 0.7rem;
-          color: #1565c0;
-          font-family: monospace;
-        }
-
         .back-to-home { margin-top: 24px; text-align: center; }
         .btn-back {
           background: transparent;
@@ -759,12 +792,10 @@ const LoginPage = () => {
         .btn-back:hover:not(:disabled) { background: #1565c0; color: white; transform: translateY(-2px); }
         .btn-back:disabled { opacity: 0.5; cursor: not-allowed; }
 
-
         @media (max-width: 768px) {
           .main-content { padding-top: 220px; }
           .login-card { padding: 32px 24px; }
           .login-header h2 { font-size: 1.5rem; }
-          .demo-info { flex-direction: column; align-items: center; gap: 8px; }
           .container-1, .container-2 { flex-direction: column; text-align: center; padding: 0 20px; }
           .header-left, .header-right, .logo-left, .logo-right { justify-content: center; }
           .contact-info-group { flex-direction: column; }
