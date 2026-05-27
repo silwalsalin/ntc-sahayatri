@@ -1,260 +1,150 @@
-// backend/server.js
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
-const { sequelize, Complaint, User, syncDatabase } = require('./models');
-
-// Load environment variables
-dotenv.config();
+const { sequelize, testConnection } = require('./config/database');
+const Complaint = require('./models/Complaint');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = 5000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// Initialize database
-const initializeDatabase = async () => {
-    try {
-        await syncDatabase(false);
-        console.log('✅ Database connected and synced');
-    } catch (error) {
-        console.error('❌ Database connection failed:', error);
-    }
-};
-
-// ========== API ROUTES ==========
+// ========== API ENDPOINTS ==========
 
 // Health check
-app.get('/api/health', async (req, res) => {
-    try {
-        await sequelize.authenticate();
-        res.json({
-            status: 'UP',
-            database: 'Connected',
-            message: 'Backend is running with MySQL!',
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        res.status(500).json({
-            status: 'DOWN',
-            database: 'Disconnected',
-            error: error.message
-        });
-    }
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'OK', message: 'Server is running' });
 });
 
-// Get all complaints with filters
-app.get('/api/complaints', async (req, res) => {
+// Submit complaint
+app.post('/api/complaints/submit', async (req, res) => {
     try {
-        const { status, page = 1, limit = 10 } = req.query;
-        const offset = (page - 1) * limit;
+        const { 
+            name, email, phone, natureOfComplaint, description, 
+            state, district, municipality, wardNo, streetAddress 
+        } = req.body;
         
-        const where = {};
-        if (status) where.status = status;
-        
-        const complaints = await Complaint.findAndCountAll({
-            where,
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            order: [['submittedDate', 'DESC']]
-        });
-        
-        res.json({
-            total: complaints.count,
-            page: parseInt(page),
-            limit: parseInt(limit),
-            totalPages: Math.ceil(complaints.count / limit),
-            data: complaints.rows
-        });
-    } catch (error) {
-        console.error('Error fetching complaints:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get single complaint
-app.get('/api/complaints/:id', async (req, res) => {
-    try {
-        const complaint = await Complaint.findByPk(req.params.id);
-        
-        if (!complaint) {
-            return res.status(404).json({ error: 'Complaint not found' });
-        }
-        
-        res.json(complaint);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Submit new complaint
-app.post('/api/complaints', async (req, res) => {
-    try {
-        const { name, nameEn, complaint, complaintEn, phoneNumber, email, category } = req.body;
+        console.log('Received complaint:', { name, email, phone });
         
         // Validate required fields
-        if (!name || !complaint) {
-            return res.status(400).json({ error: 'Name and complaint are required' });
+        if (!name || !email || !phone || !description) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Name, email, phone, and description are required' 
+            });
         }
         
         // Generate complaint number
         const complaintNumber = `NTC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const complaintNumberNp = `एनटीसी-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const trackingPassword = Math.floor(Math.random() * 9000 + 1000).toString();
         
-        const newComplaint = await Complaint.create({
+        // Create complaint
+        const complaint = await Complaint.create({
             complaintNumber,
+            complaintNumberNp,
             name,
-            nameEn: nameEn || name,
-            complaint,
-            complaintEn: complaintEn || complaint,
-            phoneNumber,
             email,
-            category: category || 'General',
+            phone,
+            natureOfComplaint: natureOfComplaint || '',
+            description,
+            state: state || '',
+            district: district || '',
+            municipality: municipality || '',
+            wardNo: wardNo || '',
+            streetAddress: streetAddress || '',
+            trackingPassword,
             status: 'Pending',
-            statusNp: 'विचाराधीन',
-            submittedDate: new Date()
+            statusNp: 'विचाराधीन'
         });
+        
+        console.log('Complaint saved with ID:', complaint.id);
         
         res.status(201).json({
             success: true,
             message: 'Complaint submitted successfully',
-            data: newComplaint
-        });
-    } catch (error) {
-        console.error('Error submitting complaint:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Update complaint status
-app.put('/api/complaints/:id', async (req, res) => {
-    try {
-        const complaint = await Complaint.findByPk(req.params.id);
-        
-        if (!complaint) {
-            return res.status(404).json({ error: 'Complaint not found' });
-        }
-        
-        const { status, resolution, assignedTo } = req.body;
-        
-        // Update status
-        if (status) {
-            complaint.status = status;
-            complaint.statusNp = getStatusNepali(status);
-        }
-        if (resolution) complaint.resolution = resolution;
-        if (assignedTo) complaint.assignedTo = assignedTo;
-        
-        // Set resolved date if status is Resolved
-        if (status === 'Resolved' && !complaint.resolvedDate) {
-            complaint.resolvedDate = new Date();
-        }
-        
-        await complaint.save();
-        
-        res.json({
-            success: true,
-            message: 'Complaint updated successfully',
-            data: complaint
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Delete complaint
-app.delete('/api/complaints/:id', async (req, res) => {
-    try {
-        const complaint = await Complaint.findByPk(req.params.id);
-        
-        if (!complaint) {
-            return res.status(404).json({ error: 'Complaint not found' });
-        }
-        
-        await complaint.destroy();
-        res.json({ success: true, message: 'Complaint deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get statistics
-app.get('/api/statistics', async (req, res) => {
-    try {
-        const total = await Complaint.count();
-        const pending = await Complaint.count({ where: { status: 'Pending' } });
-        const inProgress = await Complaint.count({ where: { status: 'In Progress' } });
-        const resolved = await Complaint.count({ where: { status: 'Resolved' } });
-        
-        // Get last 30 days complaints
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        const recentComplaints = await Complaint.count({
-            where: {
-                submittedDate: { [Op.gte]: thirtyDaysAgo }
+            data: {
+                id: complaint.id,
+                complaintNumber,
+                complaintNumberNp,
+                trackingPassword,
+                status: 'Pending'
             }
         });
         
-        res.json({
-            total,
-            pending,
-            inProgress,
-            resolved,
-            recentComplaints,
-            resolutionRate: total > 0 ? ((resolved / total) * 100).toFixed(2) : 0
-        });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to submit complaint',
+            error: error.message 
+        });
     }
 });
 
-// Landing page data
-app.get('/api/landing', async (req, res) => {
+// Get all complaints (for display)
+app.get('/api/complaints', async (req, res) => {
     try {
-        const recentComplaints = await Complaint.findAll({
-            limit: 5,
-            order: [['submittedDate', 'DESC']],
-            attributes: ['id', 'name', 'complaint', 'status', 'submittedDate']
+        const complaints = await Complaint.findAll({
+            order: [['createdAt', 'DESC']]
         });
-        
-        const stats = {
-            total: await Complaint.count(),
-            resolved: await Complaint.count({ where: { status: 'Resolved' } }),
-            pending: await Complaint.count({ where: { status: 'Pending' } })
-        };
-        
-        res.json({
-            message: 'Welcome to NTC Complaint System',
-            status: 'success',
-            version: '1.0.0',
-            statistics: stats,
-            recentComplaints
-        });
+        res.json({ success: true, data: complaints });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error fetching complaints:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// Helper function
-function getStatusNepali(status) {
-    const statusMap = {
-        'Pending': 'विचाराधीन',
-        'In Progress': 'प्रगतिमा',
-        'Resolved': 'समाधान भयो',
-        'Closed': 'बन्द',
-        'Rejected': 'अस्वीकृत'
-    };
-    return statusMap[status] || 'विचाराधीन';
-}
-
-// Start server
-initializeDatabase().then(() => {
-    app.listen(PORT, () => {
-        console.log(`✅ Backend server running on http://localhost:${PORT}`);
-        console.log(`📡 API available at http://localhost:${PORT}/api`);
-        console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-    });
+// Track complaint by ID
+app.get('/api/complaints/track/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { password } = req.query;
+        
+        const complaint = await Complaint.findOne({
+            where: { complaintNumber: id }
+        });
+        
+        if (!complaint) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Complaint not found' 
+            });
+        }
+        
+        if (complaint.trackingPassword !== password) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Invalid password' 
+            });
+        }
+        
+        res.json({ success: true, data: complaint });
+    } catch (error) {
+        console.error('Error tracking complaint:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
+
+// ========== START SERVER ==========
+const startServer = async () => {
+    try {
+        await testConnection();
+        
+        // Use force: true to recreate tables (only in development)
+        await sequelize.sync({ force: true });
+        console.log('✅ Database synced and tables created');
+        
+        app.listen(PORT, () => {
+            console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+            console.log(`📡 API: http://localhost:${PORT}/api`);
+            console.log(`✅ Ready to accept complaints!\n`);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
+};
+
+startServer();

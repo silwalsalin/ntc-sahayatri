@@ -1,6 +1,7 @@
 // src/pages/SubmitComplaint.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import complaintService from '../services/complaintService';
 
 // Try to import local images with fallback
 let ntcLogo, govLogo, heroImage;
@@ -27,6 +28,13 @@ const SubmitComplaint = () => {
   const [language, setLanguage] = useState('np');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
+  // Loading state for backend submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Success state to show message without leaving page
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successData, setSuccessData] = useState(null);
+
   // State for complaint form
   const [formData, setFormData] = useState({
     natureOfComplaint: '',
@@ -45,28 +53,162 @@ const SubmitComplaint = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
 
-  // In-memory complaints store
-  const [complaintsStore, setComplaintsStore] = useState([]);
-
-  // Complete Nepal Location Data (simplified for brevity - same as original)
+  // Complete Nepal Location Data with actual districts
   const locationData = {
-    province1: { np: 'प्रदेश नं. १', en: 'Province No. 1', districts: {} },
-    province2: { np: 'मधेश प्रदेश', en: 'Madhesh Province', districts: {} },
-    province3: { np: 'बागमती प्रदेश', en: 'Bagmati Province', districts: {} },
-    province4: { np: 'गण्डकी प्रदेश', en: 'Gandaki Province', districts: {} },
-    province5: { np: 'लुम्बिनी प्रदेश', en: 'Lumbini Province', districts: {} },
-    province6: { np: 'कर्णाली प्रदेश', en: 'Karnali Province', districts: {} },
-    province7: { np: 'सुदूरपश्चिम प्रदेश', en: 'Sudurpashchim Province', districts: {} }
+    province1: { 
+      np: 'प्रदेश नं. १', 
+      en: 'Province No. 1', 
+      districts: {
+        'taplejung': { np: 'ताप्लेजुङ', en: 'Taplejung' },
+        'panchthar': { np: 'पाँचथर', en: 'Panchthar' },
+        'ilam': { np: 'इलाम', en: 'Ilam' },
+        'jhapa': { np: 'झापा', en: 'Jhapa' },
+        'morang': { np: 'मोरङ', en: 'Morang' },
+        'sunsari': { np: 'सुनसरी', en: 'Sunsari' },
+        'dhankuta': { np: 'धनकुटा', en: 'Dhankuta' },
+        'terhathum': { np: 'तेह्रथुम', en: 'Terhathum' },
+        'sankhuwasabha': { np: 'सङ्खुवासभा', en: 'Sankhuwasabha' },
+        'bhojpur': { np: 'भोजपुर', en: 'Bhojpur' },
+        'solukhumbu': { np: 'सोलुखुम्बु', en: 'Solukhumbu' },
+        'okhaldhunga': { np: 'ओखलढुंगा', en: 'Okhaldhunga' },
+        'khotang': { np: 'खोटाङ', en: 'Khotang' },
+        'udayapur': { np: 'उदयपुर', en: 'Udayapur' }
+      }
+    },
+    province2: { 
+      np: 'मधेश प्रदेश', 
+      en: 'Madhesh Province', 
+      districts: {
+        'saptari': { np: 'सप्तरी', en: 'Saptari' },
+        'siraha': { np: 'सिराहा', en: 'Siraha' },
+        'dhanusa': { np: 'धनुषा', en: 'Dhanusa' },
+        'mahottari': { np: 'महोत्तरी', en: 'Mahottari' },
+        'sarlahi': { np: 'सर्लाही', en: 'Sarlahi' },
+        'rautarhat': { np: 'रौतहट', en: 'Rautahat' },
+        'bara': { np: 'बारा', en: 'Bara' },
+        'parsa': { np: 'पर्सा', en: 'Parsa' }
+      }
+    },
+    province3: { 
+      np: 'बागमती प्रदेश', 
+      en: 'Bagmati Province', 
+      districts: {
+        'kathmandu': { np: 'काठमाडौं', en: 'Kathmandu' },
+        'lalitpur': { np: 'ललितपुर', en: 'Lalitpur' },
+        'bhaktapur': { np: 'भक्तपुर', en: 'Bhaktapur' },
+        'kavrepalanchok': { np: 'काभ्रेपलान्चोक', en: 'Kavrepalanchok' },
+        'sindhupalchok': { np: 'सिन्धुपाल्चोक', en: 'Sindhupalchok' },
+        'rasuwa': { np: 'रसुवा', en: 'Rasuwa' },
+        'dhading': { np: 'धादिङ', en: 'Dhading' },
+        'nuwakot': { np: 'नुवाकोट', en: 'Nuwakot' },
+        'sindhuli': { np: 'सिन्धुली', en: 'Sindhuli' },
+        'makwanpur': { np: 'मकवानपुर', en: 'Makwanpur' },
+        'ramechhap': { np: 'रामेछाप', en: 'Ramechhap' },
+        'dolakha': { np: 'दोलखा', en: 'Dolakha' },
+        'chitwan': { np: 'चितवन', en: 'Chitwan' }
+      }
+    },
+    province4: { 
+      np: 'गण्डकी प्रदेश', 
+      en: 'Gandaki Province', 
+      districts: {
+        'gorkha': { np: 'गोरखा', en: 'Gorkha' },
+        'lamjung': { np: 'लमजुङ', en: 'Lamjung' },
+        'tanahu': { np: 'तनहुँ', en: 'Tanahun' },
+        'kaski': { np: 'कास्की', en: 'Kaski' },
+        'manang': { np: 'मनाङ', en: 'Manang' },
+        'mustang': { np: 'मुस्ताङ', en: 'Mustang' },
+        'myagdi': { np: 'म्याग्दी', en: 'Myagdi' },
+        'parbat': { np: 'पर्वत', en: 'Parbat' },
+        'baglung': { np: 'बागलुङ', en: 'Baglung' },
+        'syangja': { np: 'स्याङ्जा', en: 'Syangja' },
+        'nawalpur': { np: 'नवलपुर', en: 'Nawalpur' }
+      }
+    },
+    province5: { 
+      np: 'लुम्बिनी प्रदेश', 
+      en: 'Lumbini Province', 
+      districts: {
+        'kapilbastu': { np: 'कपिलवस्तु', en: 'Kapilbastu' },
+        'rupandehi': { np: 'रुपन्देही', en: 'Rupandehi' },
+        'arghakhanchi': { np: 'अर्घाखाँची', en: 'Arghakhanchi' },
+        'gulmi': { np: 'गुल्मी', en: 'Gulmi' },
+        'palpa': { np: 'पाल्पा', en: 'Palpa' },
+        'dang': { np: 'दाङ', en: 'Dang' },
+        'pyuthan': { np: 'प्युठान', en: 'Pyuthan' },
+        'rolpa': { np: 'रोल्पा', en: 'Rolpa' },
+        'banke': { np: 'बाँके', en: 'Banke' },
+        'bardiya': { np: 'बर्दिया', en: 'Bardiya' }
+      }
+    },
+    province6: { 
+      np: 'कर्णाली प्रदेश', 
+      en: 'Karnali Province', 
+      districts: {
+        'western_ruku': { np: 'पश्चिमी रुकुम', en: 'Western Rukum' },
+        'salyan': { np: 'सल्यान', en: 'Salyan' },
+        'dolpa': { np: 'डोल्पा', en: 'Dolpa' },
+        'jumla': { np: 'जुम्ला', en: 'Jumla' },
+        'mugu': { np: 'मुगु', en: 'Mugu' },
+        'humla': { np: 'हुम्ला', en: 'Humla' },
+        'kalikot': { np: 'कालिकोट', en: 'Kalikot' },
+        'dailekh': { np: 'दैलेख', en: 'Dailekh' },
+        'surkhet': { np: 'सुर्खेत', en: 'Surkhet' },
+        'jajarkot': { np: 'जाजरकोट', en: 'Jajarkot' }
+      }
+    },
+    province7: { 
+      np: 'सुदूरपश्चिम प्रदेश', 
+      en: 'Sudurpashchim Province', 
+      districts: {
+        'bajura': { np: 'बाजुरा', en: 'Bajura' },
+        'bajhang': { np: 'बझाङ', en: 'Bajhang' },
+        'doti': { np: 'डोटी', en: 'Doti' },
+        'achham': { np: 'अछाम', en: 'Achham' },
+        'dadeldhura': { np: 'डडेल्धुरा', en: 'Dadeldhura' },
+        'baitadi': { np: 'बैतडी', en: 'Baitadi' },
+        'darchula': { np: 'दार्चुला', en: 'Darchula' },
+        'kanchanpur': { np: 'कञ्चनपुर', en: 'Kanchanpur' },
+        'kailali': { np: 'कैलाली', en: 'Kailali' }
+      }
+    }
   };
 
   const getDistricts = () => {
     if (!formData.state || !locationData[formData.state]) return [];
-    return [];
+    const districts = locationData[formData.state].districts;
+    return Object.keys(districts).map(key => ({
+      value: key,
+      label: language === 'np' ? districts[key].np : districts[key].en
+    }));
   };
 
   const getMunicipalities = () => {
     if (!formData.state || !formData.district || !locationData[formData.state]) return [];
-    return [];
+    // Add municipalities based on selected district
+    const municipalities = {
+      'kathmandu': [
+        { value: 'kathmandu_metro', np: 'काठमाडौं महानगरपालिका', en: 'Kathmandu Metropolitan City' },
+        { value: 'kirtipur', np: 'कीर्तिपुर नगरपालिका', en: 'Kirtipur Municipality' },
+        { value: 'tokha', np: 'टोखा नगरपालिका', en: 'Tokha Municipality' }
+      ],
+      'lalitpur': [
+        { value: 'lalitpur_metro', np: 'ललितपुर महानगरपालिका', en: 'Lalitpur Metropolitan City' },
+        { value: 'godawari', np: 'गोदावरी नगरपालिका', en: 'Godawari Municipality' }
+      ],
+      'bhaktapur': [
+        { value: 'bhaktapur_muni', np: 'भक्तपुर नगरपालिका', en: 'Bhaktapur Municipality' },
+        { value: 'madhyapur_thimi', np: 'मध्यपुर थिमी नगरपालिका', en: 'Madhyapur Thimi Municipality' }
+      ]
+    };
+    
+    if (municipalities[formData.district]) {
+      return municipalities[formData.district];
+    }
+    return [
+      { value: 'sample_muni', np: 'नमुना नगरपालिका', en: 'Sample Municipality' },
+      { value: 'sample_gaun', np: 'नमुना गाउँपालिका', en: 'Sample Rural Municipality' }
+    ];
   };
 
   const content = {
@@ -114,7 +256,16 @@ const SubmitComplaint = () => {
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
       selectState: 'प्रदेश चयन गर्नुहोस्',
       selectDistrict: 'जिल्ला चयन गर्नुहोस्',
-      selectMunicipality: 'नगरपालिका/गाउँपालिका चयन गर्नुहोस्'
+      selectMunicipality: 'नगरपालिका/गाउँपालिका चयन गर्नुहोस्',
+      submitting: 'दर्ता गर्दै...',
+      submitSuccess: '✅ उजुरी सफलतापूर्वक दर्ता भयो!',
+      ticketId: '📋 टिकेट नम्बर',
+      password: '🔑 पासवर्ड',
+      saveDetails: '💡 कृपया यो विवरण सुरक्षित राख्नुहोस्।',
+      trackQuestion: 'के तपाईं आफ्नो उजुरी ट्र्याक गर्न चाहनुहुन्छ?',
+      submitFailed: '❌ उजुरी दर्ता गर्न असफल। कृपया पछि प्रयास गर्नुहोस्।',
+      close: 'बन्द गर्नुहोस्',
+      trackNow: 'अहिले ट्र्याक गर्नुहोस्'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -160,7 +311,16 @@ const SubmitComplaint = () => {
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
       selectState: 'Select Province',
       selectDistrict: 'Select District',
-      selectMunicipality: 'Select Municipality/VDC'
+      selectMunicipality: 'Select Municipality/VDC',
+      submitting: 'Submitting...',
+      submitSuccess: '✅ Complaint registered successfully!',
+      ticketId: '📋 Ticket ID',
+      password: '🔑 Password',
+      saveDetails: '💡 Please save these details to track your complaint.',
+      trackQuestion: 'Do you want to track your complaint?',
+      submitFailed: '❌ Failed to submit complaint. Please try again later.',
+      close: 'Close',
+      trackNow: 'Track Now'
     }
   };
 
@@ -175,20 +335,6 @@ const SubmitComplaint = () => {
     { value: 'province6', np: 'कर्णाली प्रदेश', en: 'Karnali Province' },
     { value: 'province7', np: 'सुदूरपश्चिम प्रदेश', en: 'Sudurpashchim Province' }
   ];
-
-  const generateTicketId = () => {
-    const num = Math.floor(Math.random() * 900 + 100);
-    return `NTC-२०८०-${num}`;
-  };
-
-  const generateEnTicketId = () => {
-    const num = Math.floor(Math.random() * 900 + 100);
-    return `NTC-2080-${num}`;
-  };
-
-  const generatePassword = () => {
-    return 'pass' + Math.floor(Math.random() * 900 + 100);
-  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -226,7 +372,7 @@ const SubmitComplaint = () => {
     }
   };
 
-  const handleSubmitComplaint = (e) => {
+  const handleSubmitComplaint = async (e) => {
     e.preventDefault();
     
     if (!formData.natureOfComplaint) {
@@ -249,60 +395,52 @@ const SubmitComplaint = () => {
       return;
     }
 
-    const ticketId = generateTicketId();
-    const enTicketId = generateEnTicketId();
-    const password = generatePassword();
-    const today = new Date();
-    const npDate = `${today.getFullYear() - 57}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    setIsSubmitting(true);
 
-    const newComplaint = {
-      ticketId: ticketId,
-      enTicketId: enTicketId,
-      password: password,
-      name: formData.name,
-      enName: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      category: formData.natureOfComplaint,
-      description: formData.description,
-      enDescription: formData.description,
-      status: language === 'np' ? 'विचाराधीन' : 'Pending',
-      enStatus: 'Pending',
-      date: npDate,
-      enDate: today.toISOString().split('T')[0],
-      channel: language === 'np' ? 'वेबसाइट पोर्टल' : 'Website Portal',
-      enChannel: 'Website Portal',
-      address: {
+    try {
+      const complaintData = {
+        natureOfComplaint: formData.natureOfComplaint,
+        name: formData.name,
         state: formData.state,
         district: formData.district,
         municipality: formData.municipality,
         wardNo: formData.wardNo,
-        streetAddress: formData.streetAddress
+        streetAddress: formData.streetAddress,
+        email: formData.email,
+        phone: formData.phone,
+        description: formData.description
+      };
+      
+      const response = await complaintService.submitComplaint(complaintData);
+      
+      if (response.success) {
+        // Store success data
+        setSuccessData(response.data);
+        setShowSuccess(true);
+        
+        // Reset form
+        setFormData({
+          natureOfComplaint: '',
+          name: '',
+          state: '',
+          district: '',
+          municipality: '',
+          wardNo: '',
+          streetAddress: '',
+          email: '',
+          phone: '',
+          description: ''
+        });
+        setSelectedFile(null);
+      } else {
+        throw new Error(response.message || 'Submission failed');
       }
-    };
-
-    setComplaintsStore(prev => [...prev, newComplaint]);
-
-    alert(language === 'np' 
-      ? `✅ उजुरी सफलतापूर्वक दर्ता भयो!\n\n📋 टिकेट नम्बर: ${ticketId}\n🔑 पासवर्ड: ${password}\n\n💡 कृपया यो विवरण सुरक्षित राख्नुहोस्।`
-      : `✅ Complaint registered successfully!\n\n📋 Ticket ID: ${enTicketId}\n🔑 Password: ${password}\n\n💡 Please save these details to track your complaint.`);
-
-    setFormData({
-      natureOfComplaint: '',
-      name: '',
-      state: '',
-      district: '',
-      municipality: '',
-      wardNo: '',
-      streetAddress: '',
-      email: '',
-      phone: '',
-      description: ''
-    });
-    setSelectedFile(null);
-
-    if (window.confirm(language === 'np' ? 'के तपाईं आफ्नो उजुरी ट्र्याक गर्न चाहनुहुन्छ?' : 'Do you want to track your complaint?')) {
-      navigate('/track-complaint');
+      
+    } catch (error) {
+      console.error('Submission error:', error);
+      alert(t.submitFailed);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -625,8 +763,8 @@ const SubmitComplaint = () => {
                 </div>
               </div>
               
-              <button type="submit" className="btn-submit">
-                📌 {t.registerComplaint}
+              <button type="submit" className="btn-submit" disabled={isSubmitting}>
+                {isSubmitting ? `⏳ ${t.submitting}` : `📌 ${t.registerComplaint}`}
               </button>
             </form>
             
@@ -639,6 +777,32 @@ const SubmitComplaint = () => {
         </div>
       </div>
 
+      {/* Success Modal - stays on same page */}
+      {showSuccess && successData && (
+        <div className="success-modal-overlay">
+          <div className="success-modal">
+            <div className="success-icon">✅</div>
+            <h3>{t.submitSuccess}</h3>
+            <div className="success-details">
+              <p><strong>{t.ticketId}:</strong> {language === 'np' ? successData.complaintNumberNp : successData.complaintNumber}</p>
+              <p><strong>{t.password}:</strong> {successData.trackingPassword}</p>
+              <p className="save-warning">⚠️ {t.saveDetails}</p>
+            </div>
+            <div className="modal-buttons">
+              <button className="btn-close" onClick={() => setShowSuccess(false)}>
+                {t.close}
+              </button>
+              <button className="btn-track" onClick={() => {
+                sessionStorage.setItem('trackingId', successData.complaintNumber);
+                sessionStorage.setItem('trackingPassword', successData.trackingPassword);
+                navigate('/track-complaint');
+              }}>
+                🔍 {t.trackNow}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         * {
@@ -1022,7 +1186,8 @@ const SubmitComplaint = () => {
           transition: all 0.3s ease;
           margin-top: 20px;
         }
-        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(21, 101, 192, 0.3); }
+        .btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(21, 101, 192, 0.3); }
+        .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
         .back-to-home { margin-top: 24px; text-align: center; }
         .btn-back {
           background: transparent;
@@ -1037,7 +1202,116 @@ const SubmitComplaint = () => {
         }
         .btn-back:hover { background: #1565c0; color: white; }
 
-     
+        /* Success Modal */
+        .success-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0,0,0,0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          animation: fadeIn 0.3s ease;
+        }
+
+        .success-modal {
+          background: white;
+          border-radius: 20px;
+          padding: 40px;
+          max-width: 450px;
+          width: 90%;
+          text-align: center;
+          animation: slideUp 0.3s ease;
+        }
+
+        .success-icon {
+          font-size: 4rem;
+          margin-bottom: 20px;
+        }
+
+        .success-modal h3 {
+          color: #0d47a1;
+          font-size: 1.5rem;
+          margin-bottom: 20px;
+        }
+
+        .success-details {
+          background: #f0f7ff;
+          border-radius: 12px;
+          padding: 20px;
+          margin-bottom: 20px;
+          text-align: left;
+        }
+
+        .success-details p {
+          margin: 10px 0;
+          font-size: 1rem;
+        }
+
+        .success-details strong {
+          color: #0d47a1;
+        }
+
+        .save-warning {
+          color: #ff9800;
+          font-size: 0.85rem;
+          margin-top: 10px;
+          padding-top: 10px;
+          border-top: 1px solid #ddd;
+        }
+
+        .modal-buttons {
+          display: flex;
+          gap: 15px;
+          justify-content: center;
+        }
+
+        .btn-close, .btn-track {
+          padding: 12px 24px;
+          border: none;
+          border-radius: 40px;
+          font-size: 1rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .btn-close {
+          background: #f0f0f0;
+          color: #666;
+        }
+
+        .btn-close:hover {
+          background: #e0e0e0;
+        }
+
+        .btn-track {
+          background: linear-gradient(135deg, #1565c0, #0d47a1);
+          color: white;
+        }
+
+        .btn-track:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(21,101,192,0.3);
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+          from {
+            transform: translateY(50px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -1049,6 +1323,8 @@ const SubmitComplaint = () => {
           .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; }
           .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
           .contact-info-group { flex-direction: column; }
+          .success-modal { padding: 25px; margin: 20px; }
+          .modal-buttons { flex-direction: column; }
         }
       `}</style>
     </div>

@@ -1,4 +1,3 @@
-// backend/models/Complaint.js
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
@@ -13,65 +12,69 @@ const Complaint = sequelize.define('Complaint', {
         unique: true,
         allowNull: false
     },
+    complaintNumberNp: {
+        type: DataTypes.STRING,
+        unique: true
+    },
     name: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    nameEn: {
-        type: DataTypes.STRING
-    },
-    complaint: {
-        type: DataTypes.TEXT,
-        allowNull: false
-    },
-    complaintEn: {
-        type: DataTypes.TEXT
-    },
-    phoneNumber: {
-        type: DataTypes.STRING,
-        validate: {
-            is: /^[0-9]{10}$/
-        }
-    },
     email: {
         type: DataTypes.STRING,
+        allowNull: false,
         validate: {
             isEmail: true
         }
     },
+    phone: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: ''  // Add default value to avoid NOT NULL error
+    },
+    natureOfComplaint: {
+        type: DataTypes.STRING,
+        defaultValue: ''
+    },
+    description: {
+        type: DataTypes.TEXT,
+        allowNull: false
+    },
+    state: {
+        type: DataTypes.STRING,
+        defaultValue: ''
+    },
+    district: {
+        type: DataTypes.STRING,
+        defaultValue: ''
+    },
+    municipality: {
+        type: DataTypes.STRING,
+        defaultValue: ''
+    },
+    wardNo: {
+        type: DataTypes.STRING,
+        defaultValue: ''
+    },
+    streetAddress: {
+        type: DataTypes.STRING,
+        defaultValue: ''
+    },
     status: {
-        type: DataTypes.ENUM('Pending', 'In Progress', 'Resolved', 'Closed', 'Rejected'),
+        type: DataTypes.STRING,
         defaultValue: 'Pending'
     },
     statusNp: {
-        type: DataTypes.ENUM('विचाराधीन', 'प्रगतिमा', 'समाधान भयो', 'बन्द', 'अस्वीकृत'),
+        type: DataTypes.STRING,
         defaultValue: 'विचाराधीन'
     },
-    priority: {
-        type: DataTypes.ENUM('Low', 'Medium', 'High', 'Urgent'),
-        defaultValue: 'Medium'
-    },
-    category: {
-        type: DataTypes.STRING
-    },
-    resolution: {
-        type: DataTypes.TEXT
-    },
-    assignedTo: {
-        type: DataTypes.STRING
-    },
-    submittedDate: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW
-    },
-    resolvedDate: {
-        type: DataTypes.DATE
+    trackingPassword: {
+        type: DataTypes.STRING,
+        defaultValue: ''
     }
 }, {
     tableName: 'complaints',
-    timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at'
+    timestamps: true
 });
 
 module.exports = Complaint;
