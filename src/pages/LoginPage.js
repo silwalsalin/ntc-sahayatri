@@ -25,7 +25,7 @@ const LoginPage = () => {
 
   // Login form state
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: '',
     rememberMe: false
   });
@@ -76,8 +76,8 @@ const LoginPage = () => {
       login: 'प्रशासक लगइन',
       welcomeBack: 'पुन: स्वागत छ',
       loginToAccount: 'प्रशासक खातामा लगइन गर्नुहोस्',
-      username: 'प्रयोगकर्ता नाम / इमेल',
-      enterUsername: 'आफ्नो प्रयोगकर्ता नाम वा इमेल प्रविष्ट गर्नुहोस्',
+      email: 'इमेल ठेगाना',
+      enterEmail: 'आफ्नो इमेल ठेगाना प्रविष्ट गर्नुहोस्',
       password: 'पासवर्ड',
       enterPassword: 'आफ्नो पासवर्ड प्रविष्ट गर्नुहोस्',
       rememberMe: 'मलाई सम्झनुहोस्',
@@ -88,10 +88,13 @@ const LoginPage = () => {
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
       loginSuccess: '✅ लगइन सफल! प्रशासक ड्यासबोर्डमा जाँदै...',
-      loginError: '❌ अमान्य प्रयोगकर्ता नाम वा पासवर्ड। कृपया पुन: प्रयास गर्नुहोस्।',
-      requiredFields: 'कृपया प्रयोगकर्ता नाम र पासवर्ड भर्नुहोस्।',
+      loginError: '❌ अमान्य इमेल वा पासवर्ड। कृपया पुन: प्रयास गर्नुहोस्।',
+      requiredFields: 'कृपया इमेल र पासवर्ड भर्नुहोस्।',
       backendError: '⚠️ ब्याकेन्ड सर्भर जडान भएन। कृपया पछि प्रयास गर्नुहोस्।',
-      backendOffline: 'ब्याकेन्ड अफलाइन'
+      backendOffline: 'ब्याकेन्ड अफलाइन',
+      demoCredentials: 'डेमो प्रमाणपत्रहरू:',
+      adminEmail: 'प्रशासक: admin@ntc.com',
+      adminPass: 'पासवर्ड: admin123'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -106,8 +109,8 @@ const LoginPage = () => {
       login: 'Admin Login',
       welcomeBack: 'Welcome Back',
       loginToAccount: 'Login to Admin Account',
-      username: 'Username / Email',
-      enterUsername: 'Enter your username or email',
+      email: 'Email Address',
+      enterEmail: 'Enter your email address',
       password: 'Password',
       enterPassword: 'Enter your password',
       rememberMe: 'Remember me',
@@ -118,10 +121,13 @@ const LoginPage = () => {
       footerTagline: 'NTC Sahayatri - Always at Your Service',
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
       loginSuccess: '✅ Login successful! Redirecting to Admin Dashboard...',
-      loginError: '❌ Invalid username or password. Please try again.',
-      requiredFields: 'Please enter username and password.',
+      loginError: '❌ Invalid email or password. Please try again.',
+      requiredFields: 'Please enter email and password.',
       backendError: '⚠️ Backend server not connected. Please try again later.',
-      backendOffline: 'Backend Offline'
+      backendOffline: 'Backend Offline',
+      demoCredentials: 'Demo Credentials:',
+      adminEmail: 'Admin: admin@ntc.com',
+      adminPass: 'Password: admin123'
     }
   };
 
@@ -139,7 +145,7 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.username || !formData.password) {
+    if (!formData.email || !formData.password) {
       setError(t.requiredFields);
       return;
     }
@@ -155,7 +161,7 @@ const LoginPage = () => {
     try {
       // Send login request to backend
       const response = await axios.post('http://localhost:5000/api/admin/login', {
-        username: formData.username,
+        email: formData.email,
         password: formData.password
       });
 
@@ -166,13 +172,14 @@ const LoginPage = () => {
         localStorage.setItem('adminToken', token);
         localStorage.setItem('adminUser', JSON.stringify(user));
         localStorage.setItem('userRole', user.role);
-        localStorage.setItem('userName', user.fullName || user.username);
+        localStorage.setItem('userName', user.fullName);
+        localStorage.setItem('userEmail', user.email);
         localStorage.setItem('isLoggedIn', 'true');
         
         if (formData.rememberMe) {
-          localStorage.setItem('rememberedUser', formData.username);
+          localStorage.setItem('rememberedEmail', formData.email);
         } else {
-          localStorage.removeItem('rememberedUser');
+          localStorage.removeItem('rememberedEmail');
         }
         
         alert(t.loginSuccess);
@@ -195,11 +202,11 @@ const LoginPage = () => {
     }
   };
 
-  // Load remembered username
+  // Load remembered email
   useEffect(() => {
-    const rememberedUser = localStorage.getItem('rememberedUser');
-    if (rememberedUser) {
-      setFormData(prev => ({ ...prev, username: rememberedUser, rememberMe: true }));
+    const rememberedEmail = localStorage.getItem('rememberedEmail');
+    if (rememberedEmail) {
+      setFormData(prev => ({ ...prev, email: rememberedEmail, rememberMe: true }));
     }
   }, []);
 
@@ -330,16 +337,16 @@ const LoginPage = () => {
 
             <form onSubmit={handleSubmit} className="login-form">
               <div className="form-group">
-                <label>{t.username}</label>
+                <label>{t.email}</label>
                 <div className="input-wrapper">
-                  <span className="input-icon">👤</span>
+                  <span className="input-icon">📧</span>
                   <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
+                    type="email"
+                    name="email"
+                    value={formData.email}
                     onChange={handleInputChange}
-                    placeholder={t.enterUsername}
-                    autoComplete="username"
+                    placeholder={t.enterEmail}
+                    autoComplete="email"
                     disabled={isLoading}
                   />
                 </div>
@@ -395,6 +402,15 @@ const LoginPage = () => {
                 )}
               </button>
             </form>
+
+            {/* Demo Credentials */}
+            <div className="demo-credentials">
+              <div className="demo-title">{t.demoCredentials}</div>
+              <div className="demo-info">
+                <code>📧 {t.adminEmail}</code>
+                <code>🔑 {t.adminPass}</code>
+              </div>
+            </div>
 
             <div className="back-to-home">
               <button onClick={() => navigate('/')} className="btn-back" disabled={isLoading}>
@@ -777,6 +793,35 @@ const LoginPage = () => {
           to { transform: rotate(360deg); }
         }
 
+        .demo-credentials {
+          margin-top: 24px;
+          padding-top: 20px;
+          border-top: 1px solid #e0e0e0;
+          text-align: center;
+        }
+
+        .demo-title {
+          font-size: 0.75rem;
+          color: #888;
+          margin-bottom: 8px;
+        }
+
+        .demo-info {
+          display: flex;
+          justify-content: center;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .demo-info code {
+          background: #f5f5f5;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 0.7rem;
+          color: #1565c0;
+          font-family: monospace;
+        }
+
         .back-to-home { margin-top: 24px; text-align: center; }
         .btn-back {
           background: transparent;
@@ -801,6 +846,7 @@ const LoginPage = () => {
           .contact-info-group { flex-direction: column; }
           .logo-left, .logo-right { display: none; }
           .dept-text-center { flex: 1; }
+          .demo-info { flex-direction: column; align-items: center; gap: 8px; }
         }
 
         @media (max-width: 480px) {

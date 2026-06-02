@@ -17,7 +17,6 @@ const Complaint = sequelize.define('Complaint', {
         type: DataTypes.STRING(50),
         unique: true
     },
-    // Common fields for all complaint types
     name: {
         type: DataTypes.STRING(100),
         allowNull: false
@@ -39,7 +38,6 @@ const Complaint = sequelize.define('Complaint', {
     natureOfComplaint: {
         type: DataTypes.STRING(50)
     },
-    // Fields for ComplaintRegarding
     complaintCategory: {
         type: DataTypes.STRING(50),
         defaultValue: 'general'
@@ -65,7 +63,6 @@ const Complaint = sequelize.define('Complaint', {
         type: DataTypes.STRING(50),
         unique: true
     },
-    // Address fields for general complaints
     state: {
         type: DataTypes.STRING(50)
     },
@@ -81,7 +78,6 @@ const Complaint = sequelize.define('Complaint', {
     streetAddress: {
         type: DataTypes.STRING(200)
     },
-    // Status fields
     status: {
         type: DataTypes.STRING(20),
         defaultValue: 'Pending'
@@ -93,7 +89,6 @@ const Complaint = sequelize.define('Complaint', {
     trackingPassword: {
         type: DataTypes.STRING(20)
     },
-    // Timestamps
     submittedDate: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW

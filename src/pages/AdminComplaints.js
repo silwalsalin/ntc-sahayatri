@@ -1,6 +1,7 @@
 // src/pages/AdminComplaints.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 
@@ -15,240 +16,226 @@ const AdminComplaints = () => {
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  
+  // State for complaints from backend
+  const [complaints, setComplaints] = useState([]);
+  const [backendStatus, setBackendStatus] = useState('checking');
 
-  // Sample complaints data
-  const [complaints, setComplaints] = useState([
-    { 
-      id: 1, 
-      ticketId: 'NTC-2024-001', 
-      name: 'रमेश केसी', 
-      enName: 'Ramesh KC',
-      email: 'ramesh@example.com',
-      phone: '9841000001',
-      category: 'internet',
-      category_np: 'इन्टरनेट',
-      category_en: 'Internet',
-      subCategory: 'connection',
-      description: 'फाइबर जडान २ दिनदेखि बन्द छ',
-      enDescription: 'Fiber connection down since 2 days',
-      status: 'in-progress',
-      date: '२०८०-०१-१५',
-      enDate: '2024-01-15',
-      channel: 'वेबसाइट पोर्टल',
-      enChannel: 'Website Portal',
-      priority: 'high',
-      assignedTo: 'प्राविधिक टोली',
-      enAssignedTo: 'Technical Team',
-      resolvedDate: null
-    },
-    { 
-      id: 2, 
-      ticketId: 'NTC-2024-002', 
-      name: 'सीता शर्मा', 
-      enName: 'Sita Sharma',
-      email: 'sita@example.com',
-      phone: '9812345678',
-      category: 'recharge',
-      category_np: 'रिचार्ज',
-      category_en: 'Recharge',
-      subCategory: 'not-credited',
-      description: 'रु. ५०० रिचार्ज गरे पनि ब्यालेन्स अपडेट भएन',
-      enDescription: 'Recharged Rs. 500 but balance not updated',
-      status: 'resolved',
-      date: '२०८०-०१-२०',
-      enDate: '2024-01-20',
-      channel: 'व्हाट्सएप',
-      enChannel: 'WhatsApp',
-      priority: 'medium',
-      assignedTo: 'बिलिङ टोली',
-      enAssignedTo: 'Billing Team',
-      resolvedDate: '२०८०-०१-२२'
-    },
-    { 
-      id: 3, 
-      ticketId: 'NTC-2024-003', 
-      name: 'हरि प्रसाद', 
-      enName: 'Hari Prasad',
-      email: 'hari@example.com',
-      phone: '9823456789',
-      category: 'activation',
-      category_np: 'सक्रियता',
-      category_en: 'Activation',
-      subCategory: 'sim-deactivation',
-      description: 'सिम डिएक्टिभेसन अनुरोध प्रक्रिया भएन',
-      enDescription: 'SIM deactivation request not processed',
-      status: 'pending',
-      date: '२०८०-०१-२५',
-      enDate: '2024-01-25',
-      channel: 'कल सेन्टर',
-      enChannel: 'Call Center',
-      priority: 'low',
-      assignedTo: 'ग्राहक सेवा',
-      enAssignedTo: 'Customer Service',
-      resolvedDate: null
-    },
-    { 
-      id: 4, 
-      ticketId: 'NTC-2024-004', 
-      name: 'विकास न्यौपाने', 
-      enName: 'Bikas Neupane',
-      email: 'bikas@example.com',
-      phone: '9841567890',
-      category: 'signal',
-      category_np: 'सिग्नल',
-      category_en: 'Signal',
-      subCategory: 'weak-signal',
-      description: 'नेटवर्क सिग्नल समस्या - कल ड्रप भइरहेको छ',
-      enDescription: 'Network signal issue - call drops frequently',
-      status: 'review',
-      date: '२०८०-०१-२८',
-      enDate: '2024-01-28',
-      channel: 'वेबसाइट पोर्टल',
-      enChannel: 'Website Portal',
-      priority: 'high',
-      assignedTo: 'नेटवर्क टोली',
-      enAssignedTo: 'Network Team',
-      resolvedDate: null
-    },
-    { 
-      id: 5, 
-      ticketId: 'NTC-2024-005', 
-      name: 'मिना काफ्ले', 
-      enName: 'Mina Kafle',
-      email: 'mina@example.com',
-      phone: '9841234567',
-      category: 'billing',
-      category_np: 'बिलिङ',
-      category_en: 'Billing',
-      subCategory: 'wrong-charge',
-      description: 'गत महिनाको बिलमा गलत चार्ज',
-      enDescription: 'Wrong charge in last month bill',
-      status: 'resolved',
-      date: '२०८०-०१-१०',
-      enDate: '2024-01-10',
-      channel: 'इमेल',
-      enChannel: 'Email',
-      priority: 'medium',
-      assignedTo: 'बिलिङ टोली',
-      enAssignedTo: 'Billing Team',
-      resolvedDate: '२०८०-०१-१५'
-    },
-    { 
-      id: 6, 
-      ticketId: 'NTC-2024-006', 
-      name: 'विवेक श्रेष्ठ', 
-      enName: 'Bivek Shrestha',
-      email: 'bivek@example.com',
-      phone: '9812345670',
-      category: 'technical',
-      category_np: 'प्राविधिक',
-      category_en: 'Technical',
-      subCategory: 'app-issue',
-      description: 'एनटीसी एप काम गर्दैन',
-      enDescription: 'NTC App is not working',
-      status: 'in-progress',
-      date: '२०८०-०२-०१',
-      enDate: '2024-02-01',
-      channel: 'फेसबुक',
-      enChannel: 'Facebook',
-      priority: 'medium',
-      assignedTo: 'प्राविधिक टोली',
-      enAssignedTo: 'Technical Team',
-      resolvedDate: null
-    },
-    { 
-      id: 7, 
-      ticketId: 'NTC-2024-007', 
-      name: 'सरिता गिरी', 
-      enName: 'Sarita Giri',
-      email: 'sarita@example.com',
-      phone: '9845678901',
-      category: 'network',
-      category_np: 'नेटवर्क',
-      category_en: 'Network',
-      subCategory: 'no-coverage',
-      description: 'घरमा नेटवर्क नै छैन',
-      enDescription: 'No network coverage at home',
-      status: 'pending',
-      date: '२०८०-०२-०५',
-      enDate: '2024-02-05',
-      channel: 'फोन',
-      enChannel: 'Phone',
-      priority: 'high',
-      assignedTo: 'नेटवर्क टोली',
-      enAssignedTo: 'Network Team',
-      resolvedDate: null
-    },
-    { 
-      id: 8, 
-      ticketId: 'NTC-2024-008', 
-      name: 'राजन पौडेल', 
-      enName: 'Rajan Poudel',
-      email: 'rajan@example.com',
-      phone: '9847890123',
-      category: 'internet',
-      category_np: 'इन्टरनेट',
-      category_en: 'Internet',
-      subCategory: 'slow-speed',
-      description: 'इन्टरनेट स्पीड धेरै सुस्त छ',
-      enDescription: 'Internet speed is very slow',
-      status: 'review',
-      date: '२०८०-०२-०८',
-      enDate: '2024-02-08',
-      channel: 'वेबसाइट पोर्टल',
-      enChannel: 'Website Portal',
-      priority: 'low',
-      assignedTo: 'प्राविधिक टोली',
-      enAssignedTo: 'Technical Team',
-      resolvedDate: null
-    },
-    { 
-      id: 9, 
-      ticketId: 'NTC-2024-009', 
-      name: 'कमला दाहाल', 
-      enName: 'Kamala Dahal',
-      email: 'kamala@example.com',
-      phone: '9843456789',
-      category: 'recharge',
-      category_np: 'रिचार्ज',
-      category_en: 'Recharge',
-      subCategory: 'not-credited',
-      description: 'अनलाइन रिचार्ज भएन',
-      enDescription: 'Online recharge not processed',
-      status: 'in-progress',
-      date: '२०८०-०२-१०',
-      enDate: '2024-02-10',
-      channel: 'वेबसाइट पोर्टल',
-      enChannel: 'Website Portal',
-      priority: 'high',
-      assignedTo: 'बिलिङ टोली',
-      enAssignedTo: 'Billing Team',
-      resolvedDate: null
-    },
-    { 
-      id: 10, 
-      ticketId: 'NTC-2024-010', 
-      name: 'पुजा थापा', 
-      enName: 'Puja Thapa',
-      email: 'puja@example.com',
-      phone: '9845678123',
-      category: 'billing',
-      category_np: 'बिलिङ',
-      category_en: 'Billing',
-      subCategory: 'excessive-bill',
-      description: 'बिल धेरै आएको छ',
-      enDescription: 'Bill is too high',
-      status: 'resolved',
-      date: '२०८०-०२-१२',
-      enDate: '2024-02-12',
-      channel: 'इमेल',
-      enChannel: 'Email',
-      priority: 'medium',
-      assignedTo: 'बिलिङ टोली',
-      enAssignedTo: 'Billing Team',
-      resolvedDate: '२०८०-०२-१५'
+  // Fetch complaints from backend
+  const fetchComplaints = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/complaints');
+      if (response.data.success && Array.isArray(response.data.data)) {
+        // Transform backend data to match component format
+        const transformedComplaints = response.data.data.map(complaint => ({
+          id: complaint.id,
+          ticketId: complaint.complaintNumber || `NTC-${complaint.id}`,
+          name: complaint.name || 'N/A',
+          enName: complaint.nameEn || complaint.name || 'N/A',
+          email: complaint.email || 'N/A',
+          phone: complaint.phone || 'N/A',
+          category: complaint.category || complaint.natureOfComplaint || 'general',
+          category_np: complaint.categoryNp || complaint.natureOfComplaint || 'सामान्य',
+          category_en: complaint.category || complaint.natureOfComplaint || 'General',
+          subCategory: complaint.subject || 'general',
+          description: complaint.complaint || complaint.description || 'N/A',
+          enDescription: complaint.complaintEn || complaint.complaint || complaint.description || 'N/A',
+          status: mapStatus(complaint.status),
+          date: complaint.date || formatNepaliDate(complaint.submittedDate),
+          enDate: complaint.enDate || formatEnglishDate(complaint.submittedDate),
+          channel: complaint.channel || 'वेबसाइट पोर्टल',
+          enChannel: complaint.enChannel || 'Website Portal',
+          priority: mapPriority(complaint.priority),
+          assignedTo: complaint.assignedTo || (language === 'np' ? 'प्रशासक' : 'Administrator'),
+          enAssignedTo: complaint.enAssignedTo || 'Administrator',
+          resolvedDate: complaint.resolvedDate ? formatNepaliDate(complaint.resolvedDate) : null,
+          enResolvedDate: complaint.resolvedDate ? formatEnglishDate(complaint.resolvedDate) : null,
+          submittedDate: complaint.submittedDate,
+          referenceNumber: complaint.referenceNumber,
+          landmark: complaint.landmark,
+          address: complaint.address,
+          preferredContact: complaint.preferredContact,
+          // Add raw status for debugging
+          rawStatus: complaint.status
+        }));
+        setComplaints(transformedComplaints);
+        setBackendStatus('connected');
+      } else {
+        console.warn('Invalid response format:', response.data);
+        setComplaints(getSampleComplaints());
+        setBackendStatus('disconnected');
+      }
+    } catch (error) {
+      console.error('Error fetching complaints:', error);
+      setComplaints(getSampleComplaints());
+      setBackendStatus('disconnected');
+    } finally {
+      setTimeout(() => setLoading(false), 500);
     }
-  ]);
+  };
+
+  // Map status from backend to component status - Improved mapping
+  const mapStatus = (status) => {
+    if (!status) return 'pending';
+    
+    const statusMap = {
+      // English statuses
+      'Pending': 'pending',
+      'pending': 'pending',
+      'In Progress': 'in-progress',
+      'in-progress': 'in-progress',
+      'inprogress': 'in-progress',
+      'Resolved': 'resolved',
+      'resolved': 'resolved',
+      'Closed': 'resolved',
+      'closed': 'resolved',
+      'Rejected': 'review',
+      'rejected': 'review',
+      'Under Review': 'review',
+      'under review': 'review',
+      'review': 'review',
+      // Nepali statuses
+      'विचाराधीन': 'pending',
+      'प्रगतिमा': 'in-progress',
+      'समाधान भयो': 'resolved',
+      'समाधान': 'resolved',
+      'समीक्षामा': 'review',
+      'बन्द': 'resolved',
+      'अस्वीकृत': 'review'
+    };
+    
+    return statusMap[status] || 'pending';
+  };
+
+  // Map priority from backend to component priority - Improved mapping
+  const mapPriority = (priority) => {
+    if (!priority) return 'medium';
+    
+    const priorityMap = {
+      // English priorities
+      'High': 'high',
+      'high': 'high',
+      'Medium': 'medium',
+      'medium': 'medium',
+      'Low': 'low',
+      'low': 'low',
+      'Urgent': 'high',
+      'urgent': 'high',
+      'Critical': 'high',
+      'critical': 'high',
+      // Nepali priorities
+      'उच्च': 'high',
+      'मध्यम': 'medium',
+      'न्यून': 'low'
+    };
+    
+    return priorityMap[priority] || 'medium';
+  };
+
+  // Format date to Nepali format
+  const formatNepaliDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      const year = d.getFullYear() - 57;
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Format date to English format
+  const formatEnglishDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      return d.toISOString().split('T')[0];
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Get sample complaints as fallback
+  const getSampleComplaints = () => {
+    return [
+      { 
+        id: 1, 
+        ticketId: 'NTC-2024-001', 
+        name: 'रमेश केसी', 
+        enName: 'Ramesh KC',
+        email: 'ramesh@example.com',
+        phone: '9841000001',
+        category: 'internet',
+        category_np: 'इन्टरनेट',
+        category_en: 'Internet',
+        subCategory: 'connection',
+        description: 'फाइबर जडान २ दिनदेखि बन्द छ',
+        enDescription: 'Fiber connection down since 2 days',
+        status: 'in-progress',
+        date: '२०८०-०१-१५',
+        enDate: '2024-01-15',
+        channel: 'वेबसाइट पोर्टल',
+        enChannel: 'Website Portal',
+        priority: 'high',
+        assignedTo: 'प्राविधिक टोली',
+        enAssignedTo: 'Technical Team',
+        resolvedDate: null,
+        rawStatus: 'in-progress'
+      },
+      { 
+        id: 2, 
+        ticketId: 'NTC-2024-002', 
+        name: 'सीता शर्मा', 
+        enName: 'Sita Sharma',
+        email: 'sita@example.com',
+        phone: '9812345678',
+        category: 'recharge',
+        category_np: 'रिचार्ज',
+        category_en: 'Recharge',
+        subCategory: 'not-credited',
+        description: 'रु. ५०० रिचार्ज गरे पनि ब्यालेन्स अपडेट भएन',
+        enDescription: 'Recharged Rs. 500 but balance not updated',
+        status: 'resolved',
+        date: '२०८०-०१-२०',
+        enDate: '2024-01-20',
+        channel: 'व्हाट्सएप',
+        enChannel: 'WhatsApp',
+        priority: 'medium',
+        assignedTo: 'बिलिङ टोली',
+        enAssignedTo: 'Billing Team',
+        resolvedDate: '२०८०-०१-२२',
+        rawStatus: 'resolved'
+      },
+      { 
+        id: 3, 
+        ticketId: 'NTC-2024-003', 
+        name: 'हरि प्रसाद', 
+        enName: 'Hari Prasad',
+        email: 'hari@example.com',
+        phone: '9812345679',
+        category: 'activation',
+        category_np: 'सक्रियता',
+        category_en: 'Activation',
+        subCategory: 'sim-activation',
+        description: 'नयाँ सिम सक्रिय भएन',
+        enDescription: 'New SIM not activated',
+        status: 'pending',
+        date: '२०८०-०२-०१',
+        enDate: '2024-02-01',
+        channel: 'फोन',
+        enChannel: 'Phone',
+        priority: 'high',
+        assignedTo: 'ग्राहक सेवा',
+        enAssignedTo: 'Customer Service',
+        resolvedDate: null,
+        rawStatus: 'pending'
+      }
+    ];
+  };
 
   // Check authentication
   useEffect(() => {
@@ -257,7 +244,7 @@ const AdminComplaints = () => {
     if (!token || !user) {
       navigate('/admin-login');
     } else {
-      setTimeout(() => setLoading(false), 500);
+      fetchComplaints();
     }
   }, [navigate]);
 
@@ -304,7 +291,9 @@ const AdminComplaints = () => {
       totalComplaints: 'कुल गुनासो',
       pendingCount: 'विचाराधीन',
       inProgressCount: 'प्रगतिमा',
-      resolvedCount: 'समाधान'
+      resolvedCount: 'समाधान',
+      loading: 'लोड हुँदै...',
+      refresh: 'रिफ्रेस'
     },
     en: {
       complaintsManagement: 'Complaints Management',
@@ -348,7 +337,9 @@ const AdminComplaints = () => {
       totalComplaints: 'Total Complaints',
       pendingCount: 'Pending',
       inProgressCount: 'In Progress',
-      resolvedCount: 'Resolved'
+      resolvedCount: 'Resolved',
+      loading: 'Loading...',
+      refresh: 'Refresh'
     }
   };
 
@@ -365,34 +356,50 @@ const AdminComplaints = () => {
   };
 
   const getStatusText = (status) => {
-    const texts = {
-      np: { 
-        pending: 'विचाराधीन', 
-        'in-progress': 'प्रगतिमा', 
+    if (language === 'np') {
+      const statusTexts = {
+        pending: 'विचाराधीन',
+        'in-progress': 'प्रगतिमा',
         resolved: 'समाधान',
         review: 'समीक्षामा'
-      },
-      en: { 
-        pending: 'Pending', 
-        'in-progress': 'In Progress', 
+      };
+      return statusTexts[status] || status;
+    } else {
+      const statusTexts = {
+        pending: 'Pending',
+        'in-progress': 'In Progress',
         resolved: 'Resolved',
         review: 'Under Review'
-      }
-    };
-    return texts[language][status] || status;
+      };
+      return statusTexts[status] || status;
+    }
   };
 
   const getPriorityClass = (priority) => {
-    const classes = { high: 'priority-high', medium: 'priority-medium', low: 'priority-low' };
+    const classes = { 
+      high: 'priority-high', 
+      medium: 'priority-medium', 
+      low: 'priority-low' 
+    };
     return classes[priority] || 'priority-medium';
   };
 
   const getPriorityText = (priority) => {
-    const texts = {
-      np: { high: 'उच्च', medium: 'मध्यम', low: 'न्यून' },
-      en: { high: 'High', medium: 'Medium', low: 'Low' }
-    };
-    return texts[language][priority] || priority;
+    if (language === 'np') {
+      const priorityTexts = {
+        high: 'उच्च',
+        medium: 'मध्यम',
+        low: 'न्यून'
+      };
+      return priorityTexts[priority] || priority;
+    } else {
+      const priorityTexts = {
+        high: 'High',
+        medium: 'Medium',
+        low: 'Low'
+      };
+      return priorityTexts[priority] || priority;
+    }
   };
 
   const getCategoryText = (complaint) => {
@@ -442,10 +449,11 @@ const AdminComplaints = () => {
     setSelectedComplaint(null);
   };
 
-  const updateStatus = (id, newStatus) => {
-    setComplaints(prev => prev.map(complaint => 
-      complaint.id === id ? { ...complaint, status: newStatus } : complaint
-    ));
+  // Refresh data
+  const refreshData = () => {
+    setLoading(true);
+    setCurrentPage(1);
+    fetchComplaints();
   };
 
   if (loading) {
@@ -461,6 +469,13 @@ const AdminComplaints = () => {
     <div className="admin-complaints">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
+      {/* Backend Status Banner */}
+      {backendStatus === 'disconnected' && (
+        <div className="backend-warning">
+          ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।' : 'Backend server not connected. Showing sample data.'}
+        </div>
+      )}
+      
       <div className="complaints-container">
         <div className="sidebar-container">
           <Sidebar language={language} />
@@ -472,8 +487,8 @@ const AdminComplaints = () => {
               <h1>{t.complaintsManagement}</h1>
               <p>{t.allComplaints}</p>
             </div>
-            <button className="refresh-btn" onClick={() => window.location.reload()}>
-              🔄 {language === 'np' ? 'रिफ्रेस' : 'Refresh'}
+            <button className="refresh-btn" onClick={refreshData}>
+              🔄 {t.refresh}
             </button>
           </div>
 
@@ -672,7 +687,7 @@ const AdminComplaints = () => {
               {selectedComplaint.resolvedDate && (
                 <div className="detail-row">
                   <label>{t.resolvedDate}:</label>
-                  <span>{language === 'np' ? selectedComplaint.resolvedDate : selectedComplaint.resolvedDate}</span>
+                  <span>{language === 'np' ? selectedComplaint.resolvedDate : selectedComplaint.enResolvedDate}</span>
                 </div>
               )}
               <div className="detail-row">
@@ -706,6 +721,19 @@ const AdminComplaints = () => {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           min-height: 100vh;
+        }
+
+        .backend-warning {
+          position: fixed;
+          top: 195px;
+          left: 0;
+          right: 0;
+          background: #ff9800;
+          color: white;
+          padding: 8px;
+          text-align: center;
+          z-index: 100;
+          font-size: 0.8rem;
         }
 
         .loading-container {

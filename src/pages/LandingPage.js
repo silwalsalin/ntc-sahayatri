@@ -1,6 +1,7 @@
 // src/pages/LandingPage.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 // Try to import local images with fallback
 let ntcLogo, govLogo, heroImage, phoneIcon, smsIcon, whatsappIcon, viberIcon, emailIcon;
@@ -56,8 +57,139 @@ const LandingPage = () => {
   const [heroImageError, setHeroImageError] = useState(false);
   const [emailIconError, setEmailIconError] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  
+  // State for dynamic public complaints from backend
+  const [publicComplaints, setPublicComplaints] = useState([]);
+  const [loadingComplaints, setLoadingComplaints] = useState(true);
+  const [selectedComplaint, setSelectedComplaint] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  // Handle scroll for header effects - but no minimization
+  // Fetch complaints from backend
+  useEffect(() => {
+    fetchPublicComplaints();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchPublicComplaints, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchPublicComplaints = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/complaints');
+      if (response.data.success) {
+        setPublicComplaints(response.data.data);
+      } else {
+        setPublicComplaints(getStaticComplaints());
+      }
+    } catch (error) {
+      console.error('Error fetching complaints:', error);
+      setPublicComplaints(getStaticComplaints());
+    } finally {
+      setLoadingComplaints(false);
+    }
+  };
+
+  // Static fallback data for complaints
+  const getStaticComplaints = () => {
+    return [
+      { 
+        id: 1, 
+        name: 'राम बहादुर', 
+        nameEn: 'Ram Bahadur', 
+        complaint: 'इन्टरनेट जडान समस्या - २ दिन देखि इन्टरनेट चलिरहेको छैन। कृपया समस्या समाधान गरिदिनुहोस्।', 
+        complaintEn: 'Internet connection issue - Internet not working for 2 days. Please resolve the issue.', 
+        date: '२०८०-०१-१५', 
+        dateEn: '2024-01-15', 
+        status: 'प्रगतिमा', 
+        statusEn: 'In Progress',
+        phone: '9841234567',
+        email: 'ram@example.com',
+        category: 'इन्टरनेट सेवा',
+        priority: 'उच्च',
+        complaintNumber: 'NTC-20240115-001',
+        submittedDate: '2024-01-15T10:30:00Z',
+        address: 'काठमाडौं महानगरपालिका, वडा नं. १५',
+        landmark: 'भद्रकाली प्लाजा नजिक',
+        assignedTo: 'प्राविधिक टोली'
+      },
+      { 
+        id: 2, 
+        name: 'सीता शर्मा', 
+        nameEn: 'Sita Sharma', 
+        complaint: 'रु. ५०० को रिचार्ज गरेको तर ब्यालेन्स नआएको। ट्रान्जेक्सन ID: NTC123456', 
+        complaintEn: 'Recharged Rs. 500 but balance not credited. Transaction ID: NTC123456', 
+        date: '२०८०-०१-१८', 
+        dateEn: '2024-01-18', 
+        status: 'समाधान भयो', 
+        statusEn: 'Resolved',
+        phone: '9847654321',
+        email: 'sita@example.com',
+        category: 'रिचार्ज',
+        priority: 'मध्यम',
+        complaintNumber: 'NTC-20240118-002',
+        submittedDate: '2024-01-18T14:20:00Z',
+        address: 'ललितपुर महानगरपालिका, वडा नं. ४',
+        resolution: 'रिचार्ज सफल भयो। ब्यालेन्स जम्मा गरियो।'
+      },
+      { 
+        id: 3, 
+        name: 'हरि प्रसाद', 
+        nameEn: 'Hari Prasad', 
+        complaint: 'नयाँ सिम कार्ड किनेको २४ घण्टा भयो तर सक्रिय भएन।', 
+        complaintEn: 'Bought new SIM card 24 hours ago but not activated yet.', 
+        date: '२०८०-०१-२०', 
+        dateEn: '2024-01-20', 
+        status: 'विचाराधीन', 
+        statusEn: 'Pending',
+        phone: '9812345678',
+        email: 'hari@example.com',
+        category: 'सिम सेवा',
+        priority: 'उच्च',
+        complaintNumber: 'NTC-20240120-003',
+        submittedDate: '2024-01-20T09:15:00Z',
+        address: 'भक्तपुर नगरपालिका, वडा नं. २'
+      },
+      { 
+        id: 4, 
+        name: 'गीता अधिकारी', 
+        nameEn: 'Gita Adhikari', 
+        complaint: 'गत महिनाको बिल मेरो घरबाहेक अर्कै ठेगानाबाट प्रयोग भएको देखाएको छ।', 
+        complaintEn: 'Last month\'s bill shows usage from a different location.', 
+        date: '२०८०-०१-२२', 
+        dateEn: '2024-01-22', 
+        status: 'प्रगतिमा', 
+        statusEn: 'In Progress',
+        phone: '9856789123',
+        email: 'gita@example.com',
+        category: 'बिलिङ',
+        priority: 'मध्यम',
+        complaintNumber: 'NTC-20240122-004',
+        submittedDate: '2024-01-22T16:45:00Z',
+        address: 'पोखरा महानगरपालिका, वडा नं. ८',
+        assignedTo: 'बिलिङ टोली'
+      },
+      { 
+        id: 5, 
+        name: 'विकास न्यौपाने', 
+        nameEn: 'Bikash Neupane', 
+        complaint: 'घरमा नेटवर्क सिग्नल छैन। नजिकको टावरबाट कभरेज नभएको।', 
+        complaintEn: 'No network signal at home. No coverage from nearby tower.', 
+        date: '२०८०-०१-२५', 
+        dateEn: '2024-01-25', 
+        status: 'समीक्षामा', 
+        statusEn: 'Under Review',
+        phone: '9865432109',
+        email: 'bikash@example.com',
+        category: 'नेटवर्क',
+        priority: 'उच्च',
+        complaintNumber: 'NTC-20240125-005',
+        submittedDate: '2024-01-25T11:00:00Z',
+        address: 'चितवन, भरतपुर महानगरपालिका, वडा नं. १२',
+        landmark: 'पुल्चोक चोक नजिक'
+      },
+    ];
+  };
+
+  // Handle scroll for header effects
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
@@ -65,6 +197,78 @@ const LandingPage = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Format date for display
+  const formatDate = (date) => {
+    if (!date) return '-';
+    
+    try {
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) return '-';
+      
+      if (language === 'np') {
+        return dateObj.toLocaleDateString('ne-NP', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } else {
+        return dateObj.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+    } catch (error) {
+      return date;
+    }
+  };
+
+  // Format date for table display
+  const formatTableDate = (date) => {
+    if (!date) return '-';
+    
+    try {
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) return '-';
+      
+      if (language === 'np') {
+        return dateObj.toLocaleDateString('ne-NP', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      } else {
+        return dateObj.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+    } catch (error) {
+      return date;
+    }
+  };
+
+  // Function to view complaint details
+  const viewComplaintDetails = (complaint) => {
+    // Enhance complaint object with formatted dates
+    const enhancedComplaint = {
+      ...complaint,
+      formattedSubmittedDate: complaint.submittedDate ? formatDate(complaint.submittedDate) : 
+                             complaint.created_at ? formatDate(complaint.created_at) :
+                             complaint.createdAt ? formatDate(complaint.createdAt) :
+                             complaint.date || complaint.dateEn || '-',
+      formattedUpdatedDate: complaint.updated_at ? formatDate(complaint.updated_at) :
+                            complaint.updatedAt ? formatDate(complaint.updatedAt) : '-'
+    };
+    setSelectedComplaint(enhancedComplaint);
+    setShowDetailsModal(true);
+  };
 
   const complaintChannels = [
     { id: 'website', name: 'वेबसाइट पोर्टल', enName: 'Website Portal', icon: '🌐', isImage: false, color: '#1565c0', bgColor: '#e3f2fd' },
@@ -75,12 +279,12 @@ const LandingPage = () => {
     { id: 'email', name: 'इमेल', enName: 'Email', icon: emailIcon, isImage: true, fallback: '✉️', color: '#ea4335', bgColor: '#fce4ec' },
   ];
 
-  const publicComplaints = [
-    { id: 1, name: 'राम बहादुर', enName: 'Ram Bahadur', complaint: 'इन्टरनेट जडान समस्या', enComplaint: 'Internet connection issue', date: '२०८०-०१-१५', enDate: '2024-01-15', status: 'प्रगतिमा', enStatus: 'In Progress' },
-    { id: 2, name: 'सीता शर्मा', enName: 'Sita Sharma', complaint: 'रिचार्ज नभएको', enComplaint: 'Recharge not credited', date: '२०८०-०१-१८', enDate: '2024-01-18', status: 'समाधान भयो', enStatus: 'Resolved' },
-    { id: 3, name: 'हरि प्रसाद', enName: 'Hari Prasad', complaint: 'सिम क्रियाशील नभएको', enComplaint: 'SIM not activated', date: '२०८०-०१-२०', enDate: '2024-01-20', status: 'विचाराधीन', enStatus: 'Pending' },
-    { id: 4, name: 'गीता अधिकारी', enName: 'Gita Adhikari', complaint: 'बिलिङ त्रुटि', enComplaint: 'Billing error', date: '२०८०-०१-२२', enDate: '2024-01-22', status: 'प्रगतिमा', enStatus: 'In Progress' },
-    { id: 5, name: 'विकास न्यौपाने', enName: 'Bikash Neupane', complaint: 'सिग्नल समस्या', enComplaint: 'Signal issue', date: '२०८०-०१-२५', enDate: '2024-01-25', status: 'समीक्षामा', enStatus: 'Under Review' },
+  const originalPublicComplaints = [
+    { id: 1, name: 'राम बहादुर', nameEn: 'Ram Bahadur', complaint: 'इन्टरनेट जडान समस्या', complaintEn: 'Internet connection issue', date: '२०८०-०१-१५', dateEn: '2024-01-15', status: 'प्रगतिमा', statusEn: 'In Progress' },
+    { id: 2, name: 'सीता शर्मा', nameEn: 'Sita Sharma', complaint: 'रिचार्ज नभएको', complaintEn: 'Recharge not credited', date: '२०८०-०१-१८', dateEn: '2024-01-18', status: 'समाधान भयो', statusEn: 'Resolved' },
+    { id: 3, name: 'हरि प्रसाद', nameEn: 'Hari Prasad', complaint: 'सिम क्रियाशील नभएको', complaintEn: 'SIM not activated', date: '२०८०-०१-२०', dateEn: '2024-01-20', status: 'विचाराधीन', statusEn: 'Pending' },
+    { id: 4, name: 'गीता अधिकारी', nameEn: 'Gita Adhikari', complaint: 'बिलिङ त्रुटि', complaintEn: 'Billing error', date: '२०८०-०१-२२', dateEn: '2024-01-22', status: 'प्रगतिमा', statusEn: 'In Progress' },
+    { id: 5, name: 'विकास न्यौपाने', nameEn: 'Bikash Neupane', complaint: 'सिग्नल समस्या', complaintEn: 'Signal issue', date: '२०८०-०१-२५', dateEn: '2024-01-25', status: 'समीक्षामा', statusEn: 'Under Review' },
   ];
 
   const statusCounts = {
@@ -138,6 +342,7 @@ const LandingPage = () => {
       complaintDetails: 'उजुरीको विवरण',
       complaintDate: 'मिति',
       complaintStatus: 'स्थिति',
+      viewDetails: 'विवरण हेर्नुहोस्',
       statsTitle: 'गुनासो ट्र्याकिङ प्रणालीद्वारा प्राप्त गुनासोहरूको नवीनतम स्थिति',
       links: 'लिङ्कहरू:',
       complaints: 'गुनासोहरू',
@@ -152,6 +357,23 @@ const LandingPage = () => {
       netcomSignalText: 'नेटकम र सिग्नल गुनासोहरू एनटीसी गुनासो पोर्टलमा दर्ता गरिएका छन्।',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
+      loading: 'लोड हुँदै...',
+      complaintNumber: 'गुनासो नम्बर',
+      category: 'श्रेणी',
+      priority: 'प्राथमिकता',
+      phoneNumber: 'फोन नम्बर',
+      emailAddress: 'इमेल ठेगाना',
+      description: 'विवरण',
+      submittedDate: 'पेश मिति',
+      lastUpdated: 'अन्तिम अपडेट',
+      close: 'बन्द गर्नुहोस्',
+      resolution: 'समाधान विवरण',
+      landmark: 'नजिकैको चिन्ह',
+      assignedTo: 'जिम्मेवार व्यक्ति',
+      complainantInfo: 'उजुरीकर्ताको जानकारी',
+      complaintInfo: 'गुनासो जानकारी',
+      addressInfo: 'ठेगाना जानकारी',
+      dateInfo: 'मिति जानकारी'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -178,6 +400,7 @@ const LandingPage = () => {
       complaintDetails: 'Complaint Details',
       complaintDate: 'Date',
       complaintStatus: 'Status',
+      viewDetails: 'View Details',
       statsTitle: 'Latest status of complaints received',
       links: 'LINKS:',
       complaints: 'Complaints',
@@ -192,6 +415,23 @@ const LandingPage = () => {
       netcomSignalText: 'Netcom & Signal Complaints registered on NTC portal.',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
+      loading: 'Loading...',
+      complaintNumber: 'Complaint Number',
+      category: 'Category',
+      priority: 'Priority',
+      phoneNumber: 'Phone Number',
+      emailAddress: 'Email Address',
+      description: 'Description',
+      submittedDate: 'Submitted Date',
+      lastUpdated: 'Last Updated',
+      close: 'Close',
+      resolution: 'Resolution',
+      landmark: 'Landmark',
+      assignedTo: 'Assigned To',
+      complainantInfo: 'Complainant Information',
+      complaintInfo: 'Complaint Information',
+      addressInfo: 'Address Information',
+      dateInfo: 'Date Information'
     },
   };
 
@@ -214,14 +454,82 @@ const LandingPage = () => {
   };
 
   const getStatusClass = (status) => {
-    if (status === 'प्रगतिमा' || status === 'In Progress') return 'status-progress';
-    if (status === 'समाधान भयो' || status === 'Resolved') return 'status-resolved';
-    if (status === 'समीक्षामा' || status === 'Under Review') return 'status-review';
-    return 'status-pending';
+    const statusMap = {
+      'प्रगतिमा': 'status-progress',
+      'In Progress': 'status-progress',
+      'समाधान भयो': 'status-resolved',
+      'Resolved': 'status-resolved',
+      'विचाराधीन': 'status-pending',
+      'Pending': 'status-pending',
+      'समीक्षामा': 'status-review',
+      'Under Review': 'status-review',
+      'बन्द': 'status-closed',
+      'Closed': 'status-closed',
+      'अस्वीकृत': 'status-rejected',
+      'Rejected': 'status-rejected'
+    };
+    return statusMap[status] || 'status-pending';
   };
 
-  const getStatusText = (npStatus, enStatus) => {
-    return language === 'np' ? npStatus : enStatus;
+  const getStatusText = (status, statusEn) => {
+    if (language === 'np') {
+      return status;
+    }
+    return statusEn || status;
+  };
+
+  // Function to display complaints with view details button
+  const displayComplaints = () => {
+    if (loadingComplaints) {
+      return (
+        <tr>
+          <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
+            {t.loading}
+          </td>
+        </tr>
+      );
+    }
+    
+    const complaintsToShow = publicComplaints.length > 0 ? publicComplaints : originalPublicComplaints;
+    
+    if (complaintsToShow.length === 0) {
+      return (
+        <tr>
+          <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
+            {language === 'np' ? 'हाल कुनै गुनासोहरू छैनन्' : 'No complaints found'}
+          </td>
+        </tr>
+      );
+    }
+    
+    return complaintsToShow.slice(0, 10).map((complaint) => {
+      let displayDate = complaint.submittedDate ? formatTableDate(complaint.submittedDate) : 
+                       complaint.created_at ? formatTableDate(complaint.created_at) :
+                       complaint.createdAt ? formatTableDate(complaint.createdAt) :
+                       complaint.date || complaint.dateEn || '-';
+      
+      return (
+        <tr key={complaint.id}>
+          <td>{complaint.id}</td>
+          <td>{language === 'np' ? complaint.name : (complaint.nameEn || complaint.name)}</td>
+          <td>{language === 'np' ? (complaint.complaint || complaint.description || '-').substring(0, 50) + ((complaint.complaint || complaint.description || '').length > 50 ? '...' : '') : (complaint.complaintEn || complaint.complaint || complaint.description || '-').substring(0, 50) + ((complaint.complaintEn || complaint.complaint || complaint.description || '').length > 50 ? '...' : '')}</td>
+          <td>{displayDate}</td>
+          <td>
+            <span className={`status-badge ${getStatusClass(complaint.status)}`}>
+              {getStatusText(complaint.status, complaint.statusEn)}
+            </span>
+          </td>
+          <td>
+            <button 
+              className="view-details-btn"
+              onClick={() => viewComplaintDetails(complaint)}
+            >
+              🔍 {t.viewDetails}
+            </button>
+          </td>
+        </tr>
+      );
+    });
   };
 
   const LogoImage = ({ src, alt, fallback, className }) => {
@@ -367,7 +675,9 @@ const LandingPage = () => {
                 <button className="btn-primary" onClick={() => navigate('/submit-complaint')}>📝 {t.submitComplaint}</button>
                 <button className="btn-secondary" onClick={() => navigate('/track-complaint')}>🔍 {t.trackComplaint}</button>
               </div>
-           
+              <div className="complaint-regarding-container">
+                <button className="btn-complaint-regarding" onClick={() => navigate('/complaint-regarding')}>📋 {t.complaintRegarding}</button>
+              </div>
             </div>
             <div className="hero-right">
               {!heroImageError && heroImage ? (
@@ -415,22 +725,11 @@ const LandingPage = () => {
                     <th>{t.complaintDetails}</th>
                     <th>{t.complaintDate}</th>
                     <th>{t.complaintStatus}</th>
+                    <th>{t.viewDetails}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {publicComplaints.map((complaint) => (
-                    <tr key={complaint.id}>
-                      <td>{complaint.id}</td>
-                      <td>{language === 'np' ? complaint.name : complaint.enName}</td>
-                      <td>{language === 'np' ? complaint.complaint : complaint.enComplaint}</td>
-                      <td>{language === 'np' ? complaint.date : complaint.enDate}</td>
-                      <td>
-                        <span className={`status-badge ${getStatusClass(complaint.status)}`}>
-                          {getStatusText(complaint.status, complaint.enStatus)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {displayComplaints()}
                 </tbody>
               </table>
             </div>
@@ -509,6 +808,131 @@ const LandingPage = () => {
           </div>
         </footer>
       </div>
+
+      {/* Complaint Details Modal */}
+      {showDetailsModal && selectedComplaint && (
+        <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📋 {language === 'np' ? 'गुनासोको विस्तृत विवरण' : 'Complaint Details'}</h3>
+              <button className="modal-close" onClick={() => setShowDetailsModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              {/* Complaint Information Section */}
+              <div className="detail-section">
+                <h4 className="section-subtitle">📌 {t.complaintInfo}</h4>
+                <div className="detail-row">
+                  <span className="detail-label">{t.complaintNumber}:</span>
+                  <span className="detail-value">{selectedComplaint.complaintNumber || `NTC-${selectedComplaint.id}`}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">{t.category}:</span>
+                  <span className="detail-value">{selectedComplaint.category || (language === 'np' ? 'सामान्य' : 'General')}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">{t.priority}:</span>
+                  <span className={`detail-value ${selectedComplaint.priority === 'उच्च' || selectedComplaint.priority === 'High' ? 'priority-high' : selectedComplaint.priority === 'मध्यम' || selectedComplaint.priority === 'Medium' ? 'priority-medium' : 'priority-low'}`}>
+                    {selectedComplaint.priority || (language === 'np' ? 'मध्यम' : 'Medium')}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">{t.complaintStatus}:</span>
+                  <span className={`status-badge ${getStatusClass(selectedComplaint.status)}`}>
+                    {getStatusText(selectedComplaint.status, selectedComplaint.statusEn)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Complainant Information Section */}
+              <div className="detail-section">
+                <h4 className="section-subtitle">👤 {t.complainantInfo}</h4>
+                <div className="detail-row">
+                  <span className="detail-label">{t.complainantName}:</span>
+                  <span className="detail-value">{language === 'np' ? selectedComplaint.name : (selectedComplaint.nameEn || selectedComplaint.name)}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">{t.phoneNumber}:</span>
+                  <span className="detail-value">{selectedComplaint.phone || selectedComplaint.phoneNumber || 'N/A'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">{t.emailAddress}:</span>
+                  <span className="detail-value">{selectedComplaint.email || 'N/A'}</span>
+                </div>
+              </div>
+
+              {/* Address Information Section */}
+              {(selectedComplaint.address || selectedComplaint.landmark) && (
+                <div className="detail-section">
+                  <h4 className="section-subtitle">📍 {t.addressInfo}</h4>
+                  {selectedComplaint.address && (
+                    <div className="detail-row">
+                      <span className="detail-label">{t.address}:</span>
+                      <span className="detail-value">{selectedComplaint.address}</span>
+                    </div>
+                  )}
+                  {selectedComplaint.landmark && (
+                    <div className="detail-row">
+                      <span className="detail-label">{t.landmark}:</span>
+                      <span className="detail-value">{selectedComplaint.landmark}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Complaint Description Section */}
+              <div className="detail-section">
+                <h4 className="section-subtitle">📝 {t.description}</h4>
+                <div className="detail-row">
+                  <span className="detail-label">{t.complaintDetails}:</span>
+                  <span className="detail-value complaint-text">{language === 'np' ? (selectedComplaint.complaint || selectedComplaint.description || '-') : (selectedComplaint.complaintEn || selectedComplaint.complaint || selectedComplaint.description || '-')}</span>
+                </div>
+              </div>
+
+              {/* Date Information Section */}
+              <div className="detail-section">
+                <h4 className="section-subtitle">📅 {t.dateInfo}</h4>
+                <div className="detail-row">
+                  <span className="detail-label">{t.submittedDate}:</span>
+                  <span className="detail-value">{selectedComplaint.formattedSubmittedDate}</span>
+                </div>
+                {selectedComplaint.formattedUpdatedDate && selectedComplaint.formattedUpdatedDate !== '-' && (
+                  <div className="detail-row">
+                    <span className="detail-label">{t.lastUpdated}:</span>
+                    <span className="detail-value">{selectedComplaint.formattedUpdatedDate}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Resolution Section */}
+              {selectedComplaint.resolution && (
+                <div className="detail-section">
+                  <h4 className="section-subtitle">✅ {t.resolution}</h4>
+                  <div className="detail-row">
+                    <span className="detail-label">{t.resolution}:</span>
+                    <span className="detail-value complaint-text">{selectedComplaint.resolution}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Assigned To Section */}
+              {selectedComplaint.assignedTo && (
+                <div className="detail-section">
+                  <h4 className="section-subtitle">👨‍💼 {t.assignedTo}</h4>
+                  <div className="detail-row">
+                    <span className="detail-label">{t.assignedTo}:</span>
+                    <span className="detail-value">{selectedComplaint.assignedTo}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="modal-btn-close" onClick={() => setShowDetailsModal(false)}>
+                {t.close}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         * {
@@ -958,10 +1382,176 @@ const LandingPage = () => {
         .status-resolved { background: #d4edda; color: #155724; }
         .status-pending { background: #f8d7da; color: #721c24; }
         .status-review { background: #fff3cd; color: #856404; }
+        .status-closed { background: #e0e0e0; color: #555; }
+        .status-rejected { background: #f8d7da; color: #c62828; }
+        
         .status-item { background: #f5f7fa; padding: 16px; border-radius: 12px; margin-bottom: 16px; }
         .status-title { font-weight: 500; margin-bottom: 8px; color: #1a2c3e; }
         .status-number { font-size: 1.3rem; font-weight: 700; color: #1565c0; }
         .status-range { font-size: 0.75rem; font-weight: normal; color: #6c8196; }
+
+        /* View Details Button */
+        .view-details-btn {
+          background: linear-gradient(135deg, #1565c0, #0d47a1);
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 20px;
+          cursor: pointer;
+          font-size: 0.7rem;
+          transition: all 0.3s ease;
+          white-space: nowrap;
+        }
+        .view-details-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(21,101,192,0.3);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0,0,0,0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 24px;
+          max-width: 600px;
+          width: 90%;
+          max-height: 80vh;
+          overflow-y: auto;
+          animation: slideUp 0.3s ease;
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e0e0e0;
+          background: linear-gradient(135deg, #1565c0, #0d47a1);
+          color: white;
+          border-radius: 24px 24px 0 0;
+        }
+
+        .modal-header h3 {
+          margin: 0;
+          font-size: 1.2rem;
+        }
+
+        .modal-close {
+          background: none;
+          border: none;
+          color: white;
+          font-size: 1.2rem;
+          cursor: pointer;
+          padding: 4px 8px;
+          border-radius: 50%;
+          transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+          background: rgba(255,255,255,0.2);
+        }
+
+        .modal-body {
+          padding: 24px;
+        }
+
+        .detail-section {
+          margin-bottom: 20px;
+        }
+
+        .section-subtitle {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #0d47a1;
+          margin-bottom: 12px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e0e0e0;
+        }
+
+        .detail-row {
+          display: flex;
+          margin-bottom: 12px;
+        }
+
+        .detail-label {
+          width: 35%;
+          font-weight: 600;
+          color: #0d47a1;
+        }
+
+        .detail-value {
+          width: 65%;
+          color: #333;
+        }
+
+        .complaint-text {
+          line-height: 1.5;
+          white-space: pre-wrap;
+        }
+
+        .priority-high {
+          color: #c62828;
+          font-weight: 600;
+        }
+
+        .priority-medium {
+          color: #f57c00;
+          font-weight: 600;
+        }
+
+        .priority-low {
+          color: #2e7d32;
+          font-weight: 600;
+        }
+
+        .modal-footer {
+          padding: 16px 24px;
+          border-top: 1px solid #e0e0e0;
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .modal-btn-close {
+          background: #f0f0f0;
+          color: #666;
+          border: none;
+          padding: 10px 24px;
+          border-radius: 40px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .modal-btn-close:hover {
+          background: #e0e0e0;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+          from {
+            transform: translateY(50px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
 
         /* Statistics */
         .statistics {
@@ -1054,6 +1644,9 @@ const LandingPage = () => {
           .channel-name { font-size: 0.7rem; }
           .stats-public-container, .signal-section { padding: 32px 20px; }
           .public-complaints-card, .latest-status-card, .signal-card, .contact-card { padding: 20px; }
+          .detail-row { flex-direction: column; }
+          .detail-label { width: 100%; margin-bottom: 5px; }
+          .detail-value { width: 100%; }
         }
 
         @media (max-width: 480px) {
@@ -1063,6 +1656,7 @@ const LandingPage = () => {
           .complaints-table th, .complaints-table td { padding: 8px; font-size: 0.75rem; }
           .channels-list { gap: 12px; }
           .channel-item { min-width: 70px; padding: 10px; }
+          .view-details-btn { font-size: 0.6rem; padding: 4px 8px; }
         }
       `}</style>
     </div>

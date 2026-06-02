@@ -1,6 +1,7 @@
 // src/pages/AdminComplaintsPending.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 
@@ -16,153 +17,200 @@ const AdminComplaintsPending = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Sample pending complaints data
-  const [complaints, setComplaints] = useState([
-    { 
-      id: 1, 
-      ticketId: 'NTC-2024-003', 
-      name: 'हरि प्रसाद', 
-      enName: 'Hari Prasad',
-      email: 'hari@example.com',
-      phone: '9823456789',
-      category: 'activation',
-      category_np: 'सक्रियता',
-      category_en: 'Activation',
-      subCategory: 'sim-deactivation',
-      description: 'सिम डिएक्टिभेसन अनुरोध प्रक्रिया भएन',
-      enDescription: 'SIM deactivation request not processed',
-      status: 'pending',
-      date: '२०८०-०१-२५',
-      enDate: '2024-01-25',
-      channel: 'कल सेन्टर',
-      enChannel: 'Call Center',
-      priority: 'low',
-      assignedTo: 'ग्राहक सेवा',
-      enAssignedTo: 'Customer Service',
-      daysPending: 15,
-      resolvedDate: null
-    },
-    { 
-      id: 2, 
-      ticketId: 'NTC-2024-007', 
-      name: 'सरिता गिरी', 
-      enName: 'Sarita Giri',
-      email: 'sarita@example.com',
-      phone: '9845678901',
-      category: 'network',
-      category_np: 'नेटवर्क',
-      category_en: 'Network',
-      subCategory: 'no-coverage',
-      description: 'घरमा नेटवर्क नै छैन',
-      enDescription: 'No network coverage at home',
-      status: 'pending',
-      date: '२०८०-०२-०५',
-      enDate: '2024-02-05',
-      channel: 'फोन',
-      enChannel: 'Phone',
-      priority: 'high',
-      assignedTo: 'नेटवर्क टोली',
-      enAssignedTo: 'Network Team',
-      daysPending: 8,
-      resolvedDate: null
-    },
-    { 
-      id: 3, 
-      ticketId: 'NTC-2024-011', 
-      name: 'विनोद कुमार', 
-      enName: 'Binod Kumar',
-      email: 'binod@example.com',
-      phone: '9812345987',
-      category: 'billing',
-      category_np: 'बिलिङ',
-      category_en: 'Billing',
-      subCategory: 'wrong-charge',
-      description: 'बिलमा गलत शुल्क लागेको',
-      enDescription: 'Wrong charges applied in bill',
-      status: 'pending',
-      date: '२०८०-०२-१५',
-      enDate: '2024-02-15',
-      channel: 'इमेल',
-      enChannel: 'Email',
-      priority: 'medium',
-      assignedTo: 'बिलिङ टोली',
-      enAssignedTo: 'Billing Team',
-      daysPending: 5,
-      resolvedDate: null
-    },
-    { 
-      id: 4, 
-      ticketId: 'NTC-2024-012', 
-      name: 'सुनिता खतिवडा', 
-      enName: 'Sunita Khatiwada',
-      email: 'sunita@example.com',
-      phone: '9841234987',
-      category: 'internet',
-      category_np: 'इन्टरनेट',
-      category_en: 'Internet',
-      subCategory: 'connection',
-      description: 'नयाँ जडानको लागि अनुरोध गरेको ७ दिन भयो जडान भएको छैन',
-      enDescription: 'Requested new connection 7 days ago, not installed yet',
-      status: 'pending',
-      date: '२०८०-०२-१८',
-      enDate: '2024-02-18',
-      channel: 'वेबसाइट पोर्टल',
-      enChannel: 'Website Portal',
-      priority: 'high',
-      assignedTo: 'प्राविधिक टोली',
-      enAssignedTo: 'Technical Team',
-      daysPending: 4,
-      resolvedDate: null
-    },
-    { 
-      id: 5, 
-      ticketId: 'NTC-2024-013', 
-      name: 'राम प्रसाद', 
-      enName: 'Ram Prasad',
-      email: 'ram@example.com',
-      phone: '9812345900',
-      category: 'recharge',
-      category_np: 'रिचार्ज',
-      category_en: 'Recharge',
-      subCategory: 'not-credited',
-      description: 'रु २०० रिचार्ज गरेको तर ब्यालेन्स नआएको',
-      enDescription: 'Recharged Rs 200 but balance not credited',
-      status: 'pending',
-      date: '२०८०-०२-२०',
-      enDate: '2024-02-20',
-      channel: 'व्हाट्सएप',
-      enChannel: 'WhatsApp',
-      priority: 'high',
-      assignedTo: 'बिलिङ टोली',
-      enAssignedTo: 'Billing Team',
-      daysPending: 2,
-      resolvedDate: null
-    },
-    { 
-      id: 6, 
-      ticketId: 'NTC-2024-014', 
-      name: 'मनिषा पोखरेल', 
-      enName: 'Manisha Pokharel',
-      email: 'manisha@example.com',
-      phone: '9845678123',
-      category: 'technical',
-      category_np: 'प्राविधिक',
-      category_en: 'Technical',
-      subCategory: 'app-issue',
-      description: 'एनटीसी एप लगइन हुँदैन',
-      enDescription: 'Unable to login to NTC App',
-      status: 'pending',
-      date: '२०८०-०२-२२',
-      enDate: '2024-02-22',
-      channel: 'फेसबुक',
-      enChannel: 'Facebook',
-      priority: 'medium',
-      assignedTo: 'प्राविधिक टोली',
-      enAssignedTo: 'Technical Team',
-      daysPending: 1,
-      resolvedDate: null
+  // State for complaints from backend
+  const [complaints, setComplaints] = useState([]);
+  const [backendStatus, setBackendStatus] = useState('checking');
+
+  // Fetch pending complaints from backend
+  const fetchPendingComplaints = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/complaints');
+      if (response.data.success && Array.isArray(response.data.data)) {
+        // Filter only pending complaints and transform data
+        const pendingComplaints = response.data.data
+          .filter(complaint => {
+            const status = complaint.status || complaint.statusNp;
+            return status === 'Pending' || status === 'विचाराधीन' || status === 'pending';
+          })
+          .map(complaint => ({
+            id: complaint.id,
+            ticketId: complaint.complaintNumber || `NTC-${complaint.id}`,
+            name: complaint.name || 'N/A',
+            enName: complaint.nameEn || complaint.name || 'N/A',
+            email: complaint.email || 'N/A',
+            phone: complaint.phone || 'N/A',
+            category: complaint.category || complaint.natureOfComplaint || 'general',
+            category_np: complaint.categoryNp || complaint.natureOfComplaint || 'सामान्य',
+            category_en: complaint.category || complaint.natureOfComplaint || 'General',
+            subCategory: complaint.subject || 'general',
+            description: complaint.complaint || complaint.description || 'N/A',
+            enDescription: complaint.complaintEn || complaint.complaint || complaint.description || 'N/A',
+            status: 'pending',
+            date: complaint.date || formatNepaliDate(complaint.submittedDate),
+            enDate: complaint.enDate || formatEnglishDate(complaint.submittedDate),
+            channel: complaint.channel || 'वेबसाइट पोर्टल',
+            enChannel: complaint.enChannel || 'Website Portal',
+            priority: mapPriority(complaint.priority),
+            assignedTo: complaint.assignedTo || (language === 'np' ? 'प्रशासक' : 'Administrator'),
+            enAssignedTo: complaint.enAssignedTo || 'Administrator',
+            daysPending: calculateDaysPending(complaint.submittedDate),
+            resolvedDate: null,
+            submittedDate: complaint.submittedDate,
+            referenceNumber: complaint.referenceNumber,
+            landmark: complaint.landmark,
+            address: complaint.address,
+            preferredContact: complaint.preferredContact
+          }));
+        
+        setComplaints(pendingComplaints);
+        setBackendStatus('connected');
+      } else {
+        console.warn('Invalid response format:', response.data);
+        setComplaints(getSamplePendingComplaints());
+        setBackendStatus('disconnected');
+      }
+    } catch (error) {
+      console.error('Error fetching complaints:', error);
+      setComplaints(getSamplePendingComplaints());
+      setBackendStatus('disconnected');
+    } finally {
+      setTimeout(() => setLoading(false), 500);
     }
-  ]);
+  };
+
+  // Calculate days pending
+  const calculateDaysPending = (submittedDate) => {
+    if (!submittedDate) return 1;
+    const submitted = new Date(submittedDate);
+    const today = new Date();
+    const diffTime = Math.abs(today - submitted);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 1;
+  };
+
+  // Map priority from backend to component priority
+  const mapPriority = (priority) => {
+    if (!priority) return 'medium';
+    const priorityMap = {
+      'High': 'high',
+      'high': 'high',
+      'Medium': 'medium',
+      'medium': 'medium',
+      'Low': 'low',
+      'low': 'low',
+      'Urgent': 'high',
+      'urgent': 'high',
+      'उच्च': 'high',
+      'मध्यम': 'medium',
+      'न्यून': 'low'
+    };
+    return priorityMap[priority] || 'medium';
+  };
+
+  // Format date to Nepali format
+  const formatNepaliDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      const year = d.getFullYear() - 57;
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Format date to English format
+  const formatEnglishDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      return d.toISOString().split('T')[0];
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Get sample pending complaints as fallback
+  const getSamplePendingComplaints = () => {
+    return [
+      { 
+        id: 1, 
+        ticketId: 'NTC-2024-003', 
+        name: 'हरि प्रसाद', 
+        enName: 'Hari Prasad',
+        email: 'hari@example.com',
+        phone: '9823456789',
+        category: 'activation',
+        category_np: 'सक्रियता',
+        category_en: 'Activation',
+        subCategory: 'sim-deactivation',
+        description: 'सिम डिएक्टिभेसन अनुरोध प्रक्रिया भएन',
+        enDescription: 'SIM deactivation request not processed',
+        status: 'pending',
+        date: '२०८०-०१-२५',
+        enDate: '2024-01-25',
+        channel: 'कल सेन्टर',
+        enChannel: 'Call Center',
+        priority: 'low',
+        assignedTo: 'ग्राहक सेवा',
+        enAssignedTo: 'Customer Service',
+        daysPending: 15,
+        resolvedDate: null
+      },
+      { 
+        id: 2, 
+        ticketId: 'NTC-2024-007', 
+        name: 'सरिता गिरी', 
+        enName: 'Sarita Giri',
+        email: 'sarita@example.com',
+        phone: '9845678901',
+        category: 'network',
+        category_np: 'नेटवर्क',
+        category_en: 'Network',
+        subCategory: 'no-coverage',
+        description: 'घरमा नेटवर्क नै छैन',
+        enDescription: 'No network coverage at home',
+        status: 'pending',
+        date: '२०८०-०२-०५',
+        enDate: '2024-02-05',
+        channel: 'फोन',
+        enChannel: 'Phone',
+        priority: 'high',
+        assignedTo: 'नेटवर्क टोली',
+        enAssignedTo: 'Network Team',
+        daysPending: 8,
+        resolvedDate: null
+      },
+      { 
+        id: 3, 
+        ticketId: 'NTC-2024-011', 
+        name: 'विनोद कुमार', 
+        enName: 'Binod Kumar',
+        email: 'binod@example.com',
+        phone: '9812345987',
+        category: 'billing',
+        category_np: 'बिलिङ',
+        category_en: 'Billing',
+        subCategory: 'wrong-charge',
+        description: 'बिलमा गलत शुल्क लागेको',
+        enDescription: 'Wrong charges applied in bill',
+        status: 'pending',
+        date: '२०८०-०२-१५',
+        enDate: '2024-02-15',
+        channel: 'इमेल',
+        enChannel: 'Email',
+        priority: 'medium',
+        assignedTo: 'बिलिङ टोली',
+        enAssignedTo: 'Billing Team',
+        daysPending: 5,
+        resolvedDate: null
+      }
+    ];
+  };
 
   // Categories for filter
   const categories = {
@@ -173,7 +221,10 @@ const AdminComplaintsPending = () => {
       activation: 'सक्रियता',
       billing: 'बिलिङ',
       network: 'नेटवर्क',
-      technical: 'प्राविधिक'
+      technical: 'प्राविधिक',
+      service: 'सेवा',
+      signal: 'सिग्नल',
+      general: 'सामान्य'
     },
     en: {
       all: 'All Categories',
@@ -182,7 +233,10 @@ const AdminComplaintsPending = () => {
       activation: 'Activation',
       billing: 'Billing',
       network: 'Network',
-      technical: 'Technical'
+      technical: 'Technical',
+      service: 'Service',
+      signal: 'Signal',
+      general: 'General'
     }
   };
 
@@ -193,7 +247,7 @@ const AdminComplaintsPending = () => {
     if (!token || !user) {
       navigate('/admin-login');
     } else {
-      setTimeout(() => setLoading(false), 500);
+      fetchPendingComplaints();
     }
   }, [navigate]);
 
@@ -234,7 +288,9 @@ const AdminComplaintsPending = () => {
       noComplaintsFound: 'कुनै विचाराधीन गुनासो फेला परेन',
       tryAdjustingFilters: 'कृपया फिल्टर समायोजन गर्नुहोस्',
       totalPending: 'जम्मा विचाराधीन',
-      urgentAttention: 'तत्काल ध्यान दिनुहोस्'
+      urgentAttention: 'तत्काल ध्यान दिनुहोस्',
+      loading: 'लोड हुँदै...',
+      refresh: 'रिफ्रेस'
     },
     en: {
       pendingComplaints: 'Pending Complaints',
@@ -272,7 +328,9 @@ const AdminComplaintsPending = () => {
       noComplaintsFound: 'No pending complaints found',
       tryAdjustingFilters: 'Please try adjusting your filters',
       totalPending: 'Total Pending',
-      urgentAttention: 'Requires Urgent Attention'
+      urgentAttention: 'Requires Urgent Attention',
+      loading: 'Loading...',
+      refresh: 'Refresh'
     }
   };
 
@@ -368,6 +426,13 @@ const AdminComplaintsPending = () => {
     alert(language === 'np' ? 'गुनासो प्रक्रियामा लगियो' : 'Complaint moved to in-progress');
   };
 
+  // Refresh data
+  const refreshData = () => {
+    setLoading(true);
+    setCurrentPage(1);
+    fetchPendingComplaints();
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -381,6 +446,13 @@ const AdminComplaintsPending = () => {
     <div className="admin-pending-complaints">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
+      {/* Backend Status Banner */}
+      {backendStatus === 'disconnected' && (
+        <div className="backend-warning">
+          ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।' : 'Backend server not connected. Showing sample data.'}
+        </div>
+      )}
+      
       <div className="complaints-container">
         <div className="sidebar-container">
           <Sidebar language={language} />
@@ -393,8 +465,13 @@ const AdminComplaintsPending = () => {
               <p>{t.managePending}</p>
             </div>
             <div className="pending-stats">
-              <span className="pending-count">{complaints.length}</span>
-              <span className="pending-label">{t.totalPending}</span>
+              <div>
+                <span className="pending-count">{complaints.length}</span>
+                <span className="pending-label">{t.totalPending}</span>
+              </div>
+              <button className="refresh-btn-small" onClick={refreshData} title={t.refresh}>
+                🔄
+              </button>
             </div>
           </div>
 
@@ -469,7 +546,7 @@ const AdminComplaintsPending = () => {
                       </td>
                       <td>
                         <div className="action-buttons">
-                          <button className="view-btn" onClick={() => openModal(complaint)}>
+                          <button className="view-btn" onClick={() => openModal(complaint)} title={t.viewDetails}>
                             👁️
                           </button>
                           <button className="process-btn" onClick={() => processComplaint(complaint.id)}>
@@ -603,6 +680,19 @@ const AdminComplaintsPending = () => {
           min-height: 100vh;
         }
 
+        .backend-warning {
+          position: fixed;
+          top: 195px;
+          left: 0;
+          right: 0;
+          background: #ff9800;
+          color: white;
+          padding: 8px;
+          text-align: center;
+          z-index: 100;
+          font-size: 0.8rem;
+        }
+
         .loading-container {
           display: flex;
           flex-direction: column;
@@ -674,18 +764,39 @@ const AdminComplaintsPending = () => {
           padding: 8px 20px;
           background: linear-gradient(135deg, #fef3c7, #fde68a);
           border-radius: 12px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
         }
 
         .pending-count {
           font-size: 1.8rem;
           font-weight: 700;
           color: #d97706;
-          display: block;
         }
 
         .pending-label {
           font-size: 0.7rem;
           color: #b45309;
+          display: block;
+        }
+
+        .refresh-btn-small {
+          background: rgba(0,0,0,0.1);
+          border: none;
+          font-size: 1rem;
+          cursor: pointer;
+          padding: 8px;
+          border-radius: 50%;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .refresh-btn-small:hover {
+          background: rgba(0,0,0,0.2);
+          transform: rotate(180deg);
         }
 
         /* Filters */
@@ -785,7 +896,7 @@ const AdminComplaintsPending = () => {
         }
 
         .high-priority-row {
-          border-left: 3px solid #ef4444;
+          background-color: #fef2f2;
         }
 
         .ticket-id {
@@ -1085,6 +1196,9 @@ const AdminComplaintsPending = () => {
             gap: 12px;
           }
           .action-buttons {
+            flex-direction: column;
+          }
+          .pending-stats {
             flex-direction: column;
           }
         }

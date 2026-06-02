@@ -1,6 +1,7 @@
 // src/pages/AdminComplaintsInProgress.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 
@@ -17,177 +18,283 @@ const AdminComplaintsInProgress = () => {
   const [statusUpdate, setStatusUpdate] = useState('');
   const itemsPerPage = 10;
 
-  // Sample in-progress complaints data
-  const [complaints, setComplaints] = useState([
-    { 
-      id: 1, 
-      ticketId: 'NTC-2024-001', 
-      name: 'रमेश केसी', 
-      enName: 'Ramesh KC',
-      email: 'ramesh@example.com',
-      phone: '9841000001',
-      category: 'internet',
-      category_np: 'इन्टरनेट',
-      category_en: 'Internet',
-      subCategory: 'connection',
-      description: 'फाइबर जडान २ दिनदेखि बन्द छ',
-      enDescription: 'Fiber connection down since 2 days',
-      status: 'in-progress',
-      date: '२०८०-०१-१५',
-      enDate: '2024-01-15',
-      channel: 'वेबसाइट पोर्टल',
-      enChannel: 'Website Portal',
-      priority: 'high',
-      assignedTo: 'प्राविधिक टोली',
-      enAssignedTo: 'Technical Team',
-      progressPercent: 75,
-      lastUpdate: '२०८०-०१-२०',
-      enLastUpdate: '2024-01-20',
-      estimatedCompletion: '२०८०-०१-२५',
-      enEstimatedCompletion: '2024-01-25',
-      resolvedDate: null
-    },
-    { 
-      id: 2, 
-      ticketId: 'NTC-2024-006', 
-      name: 'विवेक श्रेष्ठ', 
-      enName: 'Bivek Shrestha',
-      email: 'bivek@example.com',
-      phone: '9812345670',
-      category: 'technical',
-      category_np: 'प्राविधिक',
-      category_en: 'Technical',
-      subCategory: 'app-issue',
-      description: 'एनटीसी एप काम गर्दैन',
-      enDescription: 'NTC App is not working',
-      status: 'in-progress',
-      date: '२०८०-०२-०१',
-      enDate: '2024-02-01',
-      channel: 'फेसबुक',
-      enChannel: 'Facebook',
-      priority: 'medium',
-      assignedTo: 'प्राविधिक टोली',
-      enAssignedTo: 'Technical Team',
-      progressPercent: 40,
-      lastUpdate: '२०८०-०२-०५',
-      enLastUpdate: '2024-02-05',
-      estimatedCompletion: '२०८०-०२-१०',
-      enEstimatedCompletion: '2024-02-10',
-      resolvedDate: null
-    },
-    { 
-      id: 3, 
-      ticketId: 'NTC-2024-009', 
-      name: 'कमला दाहाल', 
-      enName: 'Kamala Dahal',
-      email: 'kamala@example.com',
-      phone: '9843456789',
-      category: 'recharge',
-      category_np: 'रिचार्ज',
-      category_en: 'Recharge',
-      subCategory: 'not-credited',
-      description: 'अनलाइन रिचार्ज भएन',
-      enDescription: 'Online recharge not processed',
-      status: 'in-progress',
-      date: '२०८०-०२-१०',
-      enDate: '2024-02-10',
-      channel: 'वेबसाइट पोर्टल',
-      enChannel: 'Website Portal',
-      priority: 'high',
-      assignedTo: 'बिलिङ टोली',
-      enAssignedTo: 'Billing Team',
-      progressPercent: 60,
-      lastUpdate: '२०८०-०२-१२',
-      enLastUpdate: '2024-02-12',
-      estimatedCompletion: '२०८०-०२-१८',
-      enEstimatedCompletion: '2024-02-18',
-      resolvedDate: null
-    },
-    { 
-      id: 4, 
-      ticketId: 'NTC-2024-015', 
-      name: 'राजन श्रेष्ठ', 
-      enName: 'Rajan Shrestha',
-      email: 'rajan@example.com',
-      phone: '9845678234',
-      category: 'network',
-      category_np: 'नेटवर्क',
-      category_en: 'Network',
-      subCategory: 'weak-signal',
-      description: 'घरमा नेटवर्क सिग्नल कमजोर',
-      enDescription: 'Weak network signal at home',
-      status: 'in-progress',
-      date: '२०८०-०२-१५',
-      enDate: '2024-02-15',
-      channel: 'फोन',
-      enChannel: 'Phone',
-      priority: 'high',
-      assignedTo: 'नेटवर्क टोली',
-      enAssignedTo: 'Network Team',
-      progressPercent: 30,
-      lastUpdate: '२०८०-०२-१६',
-      enLastUpdate: '2024-02-16',
-      estimatedCompletion: '२०८०-०२-२५',
-      enEstimatedCompletion: '2024-02-25',
-      resolvedDate: null
-    },
-    { 
-      id: 5, 
-      ticketId: 'NTC-2024-016', 
-      name: 'सुजाता अधिकारी', 
-      enName: 'Sujata Adhikari',
-      email: 'sujata@example.com',
-      phone: '9812345876',
-      category: 'billing',
-      category_np: 'बिलिङ',
-      category_en: 'Billing',
-      subCategory: 'excessive-bill',
-      description: 'बिल धेरै आएको छ, समीक्षा गरिदिनुहोस्',
-      enDescription: 'Bill is too high, please review',
-      status: 'in-progress',
-      date: '२०८०-०२-१८',
-      enDate: '2024-02-18',
-      channel: 'इमेल',
-      enChannel: 'Email',
-      priority: 'medium',
-      assignedTo: 'बिलिङ टोली',
-      enAssignedTo: 'Billing Team',
-      progressPercent: 50,
-      lastUpdate: '२०८०-०२-२०',
-      enLastUpdate: '2024-02-20',
-      estimatedCompletion: '२०८०-०२-२८',
-      enEstimatedCompletion: '2024-02-28',
-      resolvedDate: null
-    },
-    { 
-      id: 6, 
-      ticketId: 'NTC-2024-017', 
-      name: 'विनोद खनाल', 
-      enName: 'Binod Khanal',
-      email: 'binod@example.com',
-      phone: '9845123789',
-      category: 'activation',
-      category_np: 'सक्रियता',
-      category_en: 'Activation',
-      subCategory: 'sim-activation',
-      description: 'नयाँ सिम कार्ड सक्रिय गरिदिनुहोस्',
-      enDescription: 'Please activate new SIM card',
-      status: 'in-progress',
-      date: '२०८०-०२-२०',
-      enDate: '2024-02-20',
-      channel: 'कल सेन्टर',
-      enChannel: 'Call Center',
-      priority: 'low',
-      assignedTo: 'ग्राहक सेवा',
-      enAssignedTo: 'Customer Service',
-      progressPercent: 85,
-      lastUpdate: '२०८०-०२-२२',
-      enLastUpdate: '2024-02-22',
-      estimatedCompletion: '२०८०-०२-२३',
-      enEstimatedCompletion: '2024-02-23',
-      resolvedDate: null
+  // State for complaints from backend
+  const [complaints, setComplaints] = useState([]);
+  const [backendStatus, setBackendStatus] = useState('checking');
+
+  // Fetch in-progress complaints from backend
+  const fetchInProgressComplaints = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/complaints');
+      if (response.data.success && Array.isArray(response.data.data)) {
+        // Filter only in-progress complaints and transform data
+        const inProgressComplaints = response.data.data
+          .filter(complaint => {
+            const status = complaint.status || complaint.statusNp;
+            return status === 'In Progress' || status === 'प्रगतिमा' || status === 'in-progress';
+          })
+          .map(complaint => ({
+            id: complaint.id,
+            ticketId: complaint.complaintNumber || `NTC-${complaint.id}`,
+            name: complaint.name || 'N/A',
+            enName: complaint.nameEn || complaint.name || 'N/A',
+            email: complaint.email || 'N/A',
+            phone: complaint.phone || 'N/A',
+            category: complaint.category || complaint.natureOfComplaint || 'general',
+            category_np: complaint.categoryNp || complaint.natureOfComplaint || 'सामान्य',
+            category_en: complaint.category || complaint.natureOfComplaint || 'General',
+            subCategory: complaint.subject || 'general',
+            description: complaint.complaint || complaint.description || 'N/A',
+            enDescription: complaint.complaintEn || complaint.complaint || complaint.description || 'N/A',
+            status: 'in-progress',
+            dateNp: complaint.date || formatNepaliDate(complaint.submittedDate),
+            dateEn: complaint.enDate || formatEnglishDate(complaint.submittedDate),
+            channel: complaint.channel || 'वेबसाइट पोर्टल',
+            enChannel: complaint.enChannel || 'Website Portal',
+            priority: mapPriority(complaint.priority),
+            assignedTo: complaint.assignedTo || (language === 'np' ? 'प्रशासक' : 'Administrator'),
+            enAssignedTo: complaint.enAssignedTo || 'Administrator',
+            progressPercent: complaint.progress || calculateProgressPercent(complaint.submittedDate),
+            lastUpdateNp: complaint.updatedAt ? formatNepaliDate(complaint.updatedAt) : formatNepaliDate(complaint.submittedDate),
+            lastUpdateEn: complaint.updatedAt ? formatEnglishDate(complaint.updatedAt) : formatEnglishDate(complaint.submittedDate),
+            estimatedCompletionNp: calculateEstimatedCompletion(complaint.submittedDate, complaint.priority),
+            estimatedCompletionEn: calculateEstimatedCompletionEnglish(complaint.submittedDate, complaint.priority),
+            resolvedDate: null,
+            submittedDate: complaint.submittedDate,
+            referenceNumber: complaint.referenceNumber,
+            landmark: complaint.landmark,
+            address: complaint.address,
+            preferredContact: complaint.preferredContact
+          }));
+        
+        setComplaints(inProgressComplaints);
+        setBackendStatus('connected');
+      } else {
+        console.warn('Invalid response format:', response.data);
+        setComplaints(getSampleInProgressComplaints());
+        setBackendStatus('disconnected');
+      }
+    } catch (error) {
+      console.error('Error fetching complaints:', error);
+      setComplaints(getSampleInProgressComplaints());
+      setBackendStatus('disconnected');
+    } finally {
+      setTimeout(() => setLoading(false), 500);
     }
-  ]);
+  };
+
+  // Calculate progress percentage based on time elapsed
+  const calculateProgressPercent = (submittedDate) => {
+    if (!submittedDate) return 25;
+    
+    const submitted = new Date(submittedDate);
+    const today = new Date();
+    const diffDays = Math.max(1, Math.ceil((today - submitted) / (1000 * 60 * 60 * 24)));
+    
+    // Simple calculation: 10% per day, max 95%
+    return Math.min(95, Math.max(15, diffDays * 10));
+  };
+
+  // Calculate estimated completion date
+  const calculateEstimatedCompletion = (submittedDate, priority) => {
+    if (!submittedDate) return '-';
+    const submitted = new Date(submittedDate);
+    let daysToAdd = 7; // default
+    
+    if (priority === 'high' || priority === 'High' || priority === 'उच्च') {
+      daysToAdd = 3;
+    } else if (priority === 'medium' || priority === 'Medium' || priority === 'मध्यम') {
+      daysToAdd = 5;
+    } else {
+      daysToAdd = 7;
+    }
+    
+    const estimated = new Date(submitted);
+    estimated.setDate(estimated.getDate() + daysToAdd);
+    return formatNepaliDate(estimated);
+  };
+
+  const calculateEstimatedCompletionEnglish = (submittedDate, priority) => {
+    if (!submittedDate) return '-';
+    const submitted = new Date(submittedDate);
+    let daysToAdd = 7;
+    
+    if (priority === 'high' || priority === 'High' || priority === 'उच्च') {
+      daysToAdd = 3;
+    } else if (priority === 'medium' || priority === 'Medium' || priority === 'मध्यम') {
+      daysToAdd = 5;
+    } else {
+      daysToAdd = 7;
+    }
+    
+    const estimated = new Date(submitted);
+    estimated.setDate(estimated.getDate() + daysToAdd);
+    return formatEnglishDate(estimated);
+  };
+
+  // Map priority from backend to component priority
+  const mapPriority = (priority) => {
+    if (!priority) return 'medium';
+    const priorityMap = {
+      'High': 'high',
+      'high': 'high',
+      'Medium': 'medium',
+      'medium': 'medium',
+      'Low': 'low',
+      'low': 'low',
+      'Urgent': 'high',
+      'urgent': 'high',
+      'उच्च': 'high',
+      'मध्यम': 'medium',
+      'न्यून': 'low'
+    };
+    return priorityMap[priority] || 'medium';
+  };
+
+  // Format date to Nepali format
+  const formatNepaliDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      const year = d.getFullYear() - 57;
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Format date to English format
+  const formatEnglishDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      return d.toISOString().split('T')[0];
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Get sample in-progress complaints as fallback
+  const getSampleInProgressComplaints = () => {
+    return [
+      { 
+        id: 1, 
+        ticketId: 'NTC-2024-001', 
+        name: 'रमेश केसी', 
+        enName: 'Ramesh KC',
+        email: 'ramesh@example.com',
+        phone: '9841000001',
+        category: 'internet',
+        category_np: 'इन्टरनेट',
+        category_en: 'Internet',
+        subCategory: 'connection',
+        description: 'फाइबर जडान २ दिनदेखि बन्द छ',
+        enDescription: 'Fiber connection down since 2 days',
+        status: 'in-progress',
+        dateNp: '२०८०-०१-१५',
+        dateEn: '2024-01-15',
+        channel: 'वेबसाइट पोर्टल',
+        enChannel: 'Website Portal',
+        priority: 'high',
+        assignedTo: 'प्राविधिक टोली',
+        enAssignedTo: 'Technical Team',
+        progressPercent: 75,
+        lastUpdateNp: '२०८०-०१-२०',
+        lastUpdateEn: '2024-01-20',
+        estimatedCompletionNp: '२०८०-०१-२५',
+        estimatedCompletionEn: '2024-01-25',
+        resolvedDate: null
+      },
+      { 
+        id: 2, 
+        ticketId: 'NTC-2024-006', 
+        name: 'विवेक श्रेष्ठ', 
+        enName: 'Bivek Shrestha',
+        email: 'bivek@example.com',
+        phone: '9812345670',
+        category: 'technical',
+        category_np: 'प्राविधिक',
+        category_en: 'Technical',
+        subCategory: 'app-issue',
+        description: 'एनटीसी एप काम गर्दैन',
+        enDescription: 'NTC App is not working',
+        status: 'in-progress',
+        dateNp: '२०८०-०२-०१',
+        dateEn: '2024-02-01',
+        channel: 'फेसबुक',
+        enChannel: 'Facebook',
+        priority: 'medium',
+        assignedTo: 'प्राविधिक टोली',
+        enAssignedTo: 'Technical Team',
+        progressPercent: 40,
+        lastUpdateNp: '२०८०-०२-०५',
+        lastUpdateEn: '2024-02-05',
+        estimatedCompletionNp: '२०८०-०२-१०',
+        estimatedCompletionEn: '2024-02-10',
+        resolvedDate: null
+      },
+      { 
+        id: 3, 
+        ticketId: 'NTC-2024-009', 
+        name: 'कमला दाहाल', 
+        enName: 'Kamala Dahal',
+        email: 'kamala@example.com',
+        phone: '9843456789',
+        category: 'recharge',
+        category_np: 'रिचार्ज',
+        category_en: 'Recharge',
+        subCategory: 'not-credited',
+        description: 'अनलाइन रिचार्ज भएन',
+        enDescription: 'Online recharge not processed',
+        status: 'in-progress',
+        dateNp: '२०८०-०२-१०',
+        dateEn: '2024-02-10',
+        channel: 'वेबसाइट पोर्टल',
+        enChannel: 'Website Portal',
+        priority: 'high',
+        assignedTo: 'बिलिङ टोली',
+        enAssignedTo: 'Billing Team',
+        progressPercent: 60,
+        lastUpdateNp: '२०८०-०२-१२',
+        lastUpdateEn: '2024-02-12',
+        estimatedCompletionNp: '२०८०-०२-१८',
+        estimatedCompletionEn: '2024-02-18',
+        resolvedDate: null
+      }
+    ];
+  };
+
+  // Update complaint progress in backend
+  const updateProgressInBackend = async (id, progressPercent) => {
+    try {
+      const response = await axios.put(`http://localhost:5000/api/complaints/${id}`, {
+        progress: progressPercent,
+        status: 'In Progress'
+      });
+      return response.data.success;
+    } catch (error) {
+      console.error('Error updating progress:', error);
+      return false;
+    }
+  };
+
+  // Mark complaint as resolved in backend
+  const markResolvedInBackend = async (id) => {
+    try {
+      const response = await axios.put(`http://localhost:5000/api/complaints/${id}`, {
+        status: 'Resolved',
+        resolvedDate: new Date().toISOString()
+      });
+      return response.data.success;
+    } catch (error) {
+      console.error('Error marking resolved:', error);
+      return false;
+    }
+  };
 
   // Categories for filter
   const categories = {
@@ -198,7 +305,10 @@ const AdminComplaintsInProgress = () => {
       activation: 'सक्रियता',
       billing: 'बिलिङ',
       network: 'नेटवर्क',
-      technical: 'प्राविधिक'
+      technical: 'प्राविधिक',
+      service: 'सेवा',
+      signal: 'सिग्नल',
+      general: 'सामान्य'
     },
     en: {
       all: 'All Categories',
@@ -207,7 +317,10 @@ const AdminComplaintsInProgress = () => {
       activation: 'Activation',
       billing: 'Billing',
       network: 'Network',
-      technical: 'Technical'
+      technical: 'Technical',
+      service: 'Service',
+      signal: 'Signal',
+      general: 'General'
     }
   };
 
@@ -218,7 +331,7 @@ const AdminComplaintsInProgress = () => {
     if (!token || !user) {
       navigate('/admin-login');
     } else {
-      setTimeout(() => setLoading(false), 500);
+      fetchInProgressComplaints();
     }
   }, [navigate]);
 
@@ -265,7 +378,9 @@ const AdminComplaintsInProgress = () => {
       averageProgress: 'औसत प्रगति',
       updateStatus: 'स्थिति अपडेट गर्नुहोस्',
       updateSuccess: 'प्रगति सफलतापूर्वक अपडेट गरियो',
-      resolveSuccess: 'गुनासो समाधान भएको रूपमा चिन्ह लगाइयो'
+      resolveSuccess: 'गुनासो समाधान भएको रूपमा चिन्ह लगाइयो',
+      loading: 'लोड हुँदै...',
+      refresh: 'रिफ्रेस'
     },
     en: {
       inProgressComplaints: 'In Progress Complaints',
@@ -309,7 +424,9 @@ const AdminComplaintsInProgress = () => {
       averageProgress: 'Average Progress',
       updateStatus: 'Update Status',
       updateSuccess: 'Progress updated successfully',
-      resolveSuccess: 'Complaint marked as resolved'
+      resolveSuccess: 'Complaint marked as resolved',
+      loading: 'Loading...',
+      refresh: 'Refresh'
     }
   };
 
@@ -333,8 +450,17 @@ const AdminComplaintsInProgress = () => {
     return categoriesObj[category] || category;
   };
 
-  const getDate = (complaint, field) => {
-    return language === 'np' ? complaint[`${field}`] : complaint[`en${field.charAt(0).toUpperCase() + field.slice(1)}`];
+  // Fixed getDate function
+  const getDate = (complaint) => {
+    return language === 'np' ? complaint.dateNp : complaint.dateEn;
+  };
+
+  const getLastUpdate = (complaint) => {
+    return language === 'np' ? complaint.lastUpdateNp : complaint.lastUpdateEn;
+  };
+
+  const getEstimatedCompletion = (complaint) => {
+    return language === 'np' ? complaint.estimatedCompletionNp : complaint.estimatedCompletionEn;
   };
 
   const getChannel = (complaint) => {
@@ -368,7 +494,7 @@ const AdminComplaintsInProgress = () => {
 
   // Calculate average progress
   const averageProgress = complaints.length > 0 
-    ? Math.round(complaints.reduce((sum, c) => sum + c.progressPercent, 0) / complaints.length)
+    ? Math.round(complaints.reduce((sum, c) => sum + (c.progressPercent || 0), 0) / complaints.length)
     : 0;
 
   // Pagination
@@ -380,7 +506,7 @@ const AdminComplaintsInProgress = () => {
 
   const openModal = (complaint) => {
     setSelectedComplaint(complaint);
-    setStatusUpdate(complaint.progressPercent.toString());
+    setStatusUpdate(complaint.progressPercent?.toString() || '0');
     setShowModal(true);
   };
 
@@ -390,25 +516,48 @@ const AdminComplaintsInProgress = () => {
     setStatusUpdate('');
   };
 
-  const handleProgressUpdate = () => {
+  const handleProgressUpdate = async () => {
     const newProgress = parseInt(statusUpdate);
     if (isNaN(newProgress) || newProgress < 0 || newProgress > 100) {
       alert(language === 'np' ? 'कृपया ०-१०० बीचको मान प्रविष्ट गर्नुहोस्' : 'Please enter a value between 0-100');
       return;
     }
 
-    setComplaints(prev => prev.map(complaint => 
-      complaint.id === selectedComplaint.id 
-        ? { ...complaint, progressPercent: newProgress, lastUpdate: language === 'np' ? '२०८०-०२-२५' : '2024-02-25' }
-        : complaint
-    ));
-    alert(t.updateSuccess);
-    closeModal();
+    // Update in backend
+    const success = await updateProgressInBackend(selectedComplaint.id, newProgress);
+    
+    if (success) {
+      const todayNp = formatNepaliDate(new Date());
+      const todayEn = formatEnglishDate(new Date());
+      
+      setComplaints(prev => prev.map(complaint => 
+        complaint.id === selectedComplaint.id 
+          ? { ...complaint, progressPercent: newProgress, lastUpdateNp: todayNp, lastUpdateEn: todayEn }
+          : complaint
+      ));
+      alert(t.updateSuccess);
+      closeModal();
+    } else {
+      alert(language === 'np' ? 'प्रगति अपडेट गर्न असफल भयो' : 'Failed to update progress');
+    }
   };
 
-  const markAsResolved = (id) => {
-    setComplaints(prev => prev.filter(complaint => complaint.id !== id));
-    alert(t.resolveSuccess);
+  const markAsResolved = async (id) => {
+    const success = await markResolvedInBackend(id);
+    
+    if (success) {
+      setComplaints(prev => prev.filter(complaint => complaint.id !== id));
+      alert(t.resolveSuccess);
+    } else {
+      alert(language === 'np' ? 'गुनासो समाधान गर्न असफल भयो' : 'Failed to mark complaint as resolved');
+    }
+  };
+
+  // Refresh data
+  const refreshData = () => {
+    setLoading(true);
+    setCurrentPage(1);
+    fetchInProgressComplaints();
   };
 
   if (loading) {
@@ -423,6 +572,13 @@ const AdminComplaintsInProgress = () => {
   return (
     <div className="admin-inprogress-complaints">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
+      
+      {/* Backend Status Banner */}
+      {backendStatus === 'disconnected' && (
+        <div className="backend-warning">
+          ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।' : 'Backend server not connected. Showing sample data.'}
+        </div>
+      )}
       
       <div className="complaints-container">
         <div className="sidebar-container">
@@ -444,6 +600,9 @@ const AdminComplaintsInProgress = () => {
                 <span className="stat-value">{averageProgress}%</span>
                 <span className="stat-label">{t.averageProgress}</span>
               </div>
+              <button className="refresh-btn-small" onClick={refreshData} title={t.refresh}>
+                🔄
+              </button>
             </div>
           </div>
 
@@ -502,23 +661,23 @@ const AdminComplaintsInProgress = () => {
                       <td className="ticket-id">{complaint.ticketId}</td>
                       <td>{language === 'np' ? complaint.name : complaint.enName}</td>
                       <td>{getCategoryText(complaint.category)}</td>
-                      <td>{getDate(complaint, 'date')}</td>
+                      <td>{getDate(complaint)}</td>
                       <td>
                         <div className="progress-container">
                           <div className="progress-bar-wrapper">
                             <div 
-                              className={`progress-bar ${getProgressColor(complaint.progressPercent)}`}
-                              style={{ width: `${complaint.progressPercent}%` }}
+                              className={`progress-bar ${getProgressColor(complaint.progressPercent || 0)}`}
+                              style={{ width: `${complaint.progressPercent || 0}%` }}
                             />
                           </div>
-                          <span className="progress-text">{complaint.progressPercent}%</span>
+                          <span className="progress-text">{complaint.progressPercent || 0}%</span>
                         </div>
-                       </td>
+                      </td>
                       <td>
                         <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
                           {getPriorityText(complaint.priority)}
                         </span>
-                       </td>
+                      </td>
                       <td>
                         <div className="action-buttons">
                           <button className="view-btn" onClick={() => openModal(complaint)}>
@@ -528,12 +687,12 @@ const AdminComplaintsInProgress = () => {
                             ✅ {t.markResolved}
                           </button>
                         </div>
-                       </td>
-                     </tr>
+                      </td>
+                    </tr>
                   ))
                 ) : (
-                  <tr>
-                    <td colSpan="7" className="no-data">
+                  <tr className="no-data">
+                    <td colSpan="7">
                       <div className="no-data-content">
                         <span className="no-data-icon">📭</span>
                         <p>{t.noComplaintsFound}</p>
@@ -608,15 +767,15 @@ const AdminComplaintsInProgress = () => {
               </div>
               <div className="detail-row">
                 <label>{t.registeredDate}:</label>
-                <span>{getDate(selectedComplaint, 'date')}</span>
+                <span>{getDate(selectedComplaint)}</span>
               </div>
               <div className="detail-row">
                 <label>{t.lastUpdate}:</label>
-                <span>{getDate(selectedComplaint, 'lastUpdate')}</span>
+                <span>{getLastUpdate(selectedComplaint)}</span>
               </div>
               <div className="detail-row">
                 <label>{t.estimatedCompletion}:</label>
-                <span>{getDate(selectedComplaint, 'estimatedCompletion')}</span>
+                <span>{getEstimatedCompletion(selectedComplaint)}</span>
               </div>
               <div className="detail-row">
                 <label>{t.channel}:</label>
@@ -672,6 +831,19 @@ const AdminComplaintsInProgress = () => {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           min-height: 100vh;
+        }
+
+        .backend-warning {
+          position: fixed;
+          top: 195px;
+          left: 0;
+          right: 0;
+          background: #ff9800;
+          color: white;
+          padding: 8px;
+          text-align: center;
+          z-index: 100;
+          font-size: 0.8rem;
         }
 
         .loading-container {
@@ -743,6 +915,7 @@ const AdminComplaintsInProgress = () => {
         .stats-group {
           display: flex;
           gap: 16px;
+          align-items: center;
         }
 
         .stat-card-small {
@@ -763,6 +936,24 @@ const AdminComplaintsInProgress = () => {
         .stat-card-small .stat-label {
           font-size: 0.7rem;
           color: #64748b;
+        }
+
+        .refresh-btn-small {
+          background: #f1f5f9;
+          border: none;
+          font-size: 1.2rem;
+          cursor: pointer;
+          padding: 8px;
+          border-radius: 50%;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .refresh-btn-small:hover {
+          background: #e2e8f0;
+          transform: rotate(180deg);
         }
 
         /* Filters */
@@ -948,7 +1139,7 @@ const AdminComplaintsInProgress = () => {
 
         .no-data {
           text-align: center;
-          padding: 60px !important;
+          padding: 40px !important;
         }
 
         .no-data-content {
@@ -1156,12 +1347,6 @@ const AdminComplaintsInProgress = () => {
         }
 
         /* Responsive */
-        @media (max-width: 1200px) {
-          .stats-row {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
         @media (max-width: 768px) {
           .complaints-container {
             margin-top: 280px;

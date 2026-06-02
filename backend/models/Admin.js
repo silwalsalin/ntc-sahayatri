@@ -8,11 +8,6 @@ const Admin = sequelize.define('Admin', {
         primaryKey: true,
         autoIncrement: true
     },
-    username: {
-        type: DataTypes.STRING(50),
-        unique: true,
-        allowNull: false
-    },
     email: {
         type: DataTypes.STRING(100),
         unique: true,
@@ -20,6 +15,10 @@ const Admin = sequelize.define('Admin', {
         validate: {
             isEmail: true
         }
+    },
+    username: {
+        type: DataTypes.STRING(50),
+        unique: true
     },
     password: {
         type: DataTypes.STRING(255),
