@@ -1,39 +1,34 @@
-// backend/models/index.js
-const { sequelize } = require('../config/database');
 const Complaint = require('./Complaint');
 const Admin = require('./Admin');
+const Staff = require('./Staff');
 
-const syncDatabase = async (force = false) => {
+const syncDatabase = async () => {
     try {
-        await sequelize.sync({ alter: true });
-        console.log('✅ Database synchronized');
+        // Use force: true only for development to reset tables
+        // WARNING: This will delete all existing data
+        const forceSync = process.env.FORCE_SYNC === 'true';
         
-        // Create default permanent admin if not exists
-        const adminCount = await Admin.count();
-        if (adminCount === 0) {
-            await Admin.create({
-                email: 'admin@ntc.com',
-                username: 'admin@ntc',
-                password: 'admin123',
-                fullName: 'System Administrator',
-                role: 'super_admin',
-                isActive: true
-            });
-            console.log('✅ Default admin user created successfully');
-            console.log('   📧 Email: admin@ntc.com');
-            console.log('   🔑 Password: admin123');
+        if (forceSync) {
+            console.log('⚠️ Force sync enabled - dropping existing tables...');
+            await Complaint.sync({ force: true });
+            await Admin.sync({ force: true });
+            await Staff.sync({ force: true });
+            console.log('✅ Tables recreated successfully');
+        } else {
+            await Complaint.sync({ alter: true });
+            await Admin.sync({ alter: true });
+            await Staff.sync({ alter: true });
+            console.log('✅ Database synchronized successfully');
         }
-        
-        return true;
     } catch (error) {
         console.error('❌ Database sync failed:', error);
-        return false;
+        throw error;
     }
 };
 
 module.exports = {
-    sequelize,
     Complaint,
     Admin,
+    Staff,
     syncDatabase
 };

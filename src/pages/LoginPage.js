@@ -30,6 +30,9 @@ const LoginPage = () => {
     rememberMe: false
   });
 
+  // User type selection (admin or staff)
+  const [userType, setUserType] = useState('admin');
+
   // Error and loading state
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -38,11 +41,17 @@ const LoginPage = () => {
 
   // Check if already logged in
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
+    const token = localStorage.getItem('token');
+    const userRole = localStorage.getItem('userRole');
     const isLoggedIn = localStorage.getItem('isLoggedIn');
     
     if (token && isLoggedIn === 'true') {
-      navigate('/admin-dashboard');
+      // Redirect based on user role
+      if (userRole === 'admin') {
+        navigate('/admin-dashboard');
+      } else if (userRole === 'staff') {
+        navigate('/staff-dashboard');
+      }
     }
     
     checkBackendHealth();
@@ -50,8 +59,10 @@ const LoginPage = () => {
 
   const checkBackendHealth = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/health');
-      if (response.data.status === 'UP' || response.data.status === 'OK') {
+      const response = await axios.get('http://localhost:5000/api/health', {
+        timeout: 5000
+      });
+      if (response.data && (response.data.status === 'UP' || response.data.status === 'OK')) {
         setBackendStatus('connected');
       } else {
         setBackendStatus('disconnected');
@@ -73,28 +84,35 @@ const LoginPage = () => {
       serviceSub: 'गुनासो ट्र्याकिङ प्रणाली',
       home: 'गृह पृष्ठ',
       faqs: 'बारम्बार सोधिने प्रश्नहरू',
-      login: 'प्रशासक लगइन',
+      login: 'लगइन',
+      adminLogin: 'प्रशासक लगइन',
+      staffLogin: 'कर्मचारी लगइन',
       welcomeBack: 'पुन: स्वागत छ',
-      loginToAccount: 'प्रशासक खातामा लगइन गर्नुहोस्',
+      loginToAccount: 'आफ्नो खातामा लगइन गर्नुहोस्',
       email: 'इमेल ठेगाना',
       enterEmail: 'आफ्नो इमेल ठेगाना प्रविष्ट गर्नुहोस्',
       password: 'पासवर्ड',
       enterPassword: 'आफ्नो पासवर्ड प्रविष्ट गर्नुहोस्',
       rememberMe: 'मलाई सम्झनुहोस्',
       forgotPassword: 'पासवर्ड बिर्सनुभयो?',
-      loginBtn: 'प्रशासक लगइन',
+      loginBtn: 'लगइन गर्नुहोस्',
       loggingIn: 'लगइन हुँदैछ...',
       backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
-      loginSuccess: '✅ लगइन सफल! प्रशासक ड्यासबोर्डमा जाँदै...',
+      loginSuccess: '✅ लगइन सफल! ड्यासबोर्डमा जाँदै...',
       loginError: '❌ अमान्य इमेल वा पासवर्ड। कृपया पुन: प्रयास गर्नुहोस्।',
       requiredFields: 'कृपया इमेल र पासवर्ड भर्नुहोस्।',
       backendError: '⚠️ ब्याकेन्ड सर्भर जडान भएन। कृपया पछि प्रयास गर्नुहोस्।',
       backendOffline: 'ब्याकेन्ड अफलाइन',
       demoCredentials: 'डेमो प्रमाणपत्रहरू:',
       adminEmail: 'प्रशासक: admin@ntc.com',
-      adminPass: 'पासवर्ड: admin123'
+      adminPass: 'पासवर्ड: admin123',
+      staffEmail: 'कर्मचारी: staff@ntc.com',
+      staffPass: 'पासवर्ड: staff123',
+      selectUserType: 'प्रयोगकर्ता प्रकार चयन गर्नुहोस्',
+      admin: 'प्रशासक',
+      staff: 'कर्मचारी'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -106,28 +124,35 @@ const LoginPage = () => {
       serviceSub: 'Complaint Tracking System',
       home: 'Home',
       faqs: 'FAQs',
-      login: 'Admin Login',
+      login: 'Login',
+      adminLogin: 'Admin Login',
+      staffLogin: 'Staff Login',
       welcomeBack: 'Welcome Back',
-      loginToAccount: 'Login to Admin Account',
+      loginToAccount: 'Login to Your Account',
       email: 'Email Address',
       enterEmail: 'Enter your email address',
       password: 'Password',
       enterPassword: 'Enter your password',
       rememberMe: 'Remember me',
       forgotPassword: 'Forgot Password?',
-      loginBtn: 'Admin Login',
+      loginBtn: 'Login',
       loggingIn: 'Logging in...',
       backToHome: 'Back to Home',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
-      loginSuccess: '✅ Login successful! Redirecting to Admin Dashboard...',
+      loginSuccess: '✅ Login successful! Redirecting to Dashboard...',
       loginError: '❌ Invalid email or password. Please try again.',
       requiredFields: 'Please enter email and password.',
       backendError: '⚠️ Backend server not connected. Please try again later.',
       backendOffline: 'Backend Offline',
       demoCredentials: 'Demo Credentials:',
       adminEmail: 'Admin: admin@ntc.com',
-      adminPass: 'Password: admin123'
+      adminPass: 'Password: admin123',
+      staffEmail: 'Staff: staff@ntc.com',
+      staffPass: 'Password: staff123',
+      selectUserType: 'Select User Type',
+      admin: 'Admin',
+      staff: 'Staff'
     }
   };
 
@@ -139,10 +164,10 @@ const LoginPage = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
-    setError('');
+    if (error) setError('');
   };
 
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     
     if (!formData.email || !formData.password) {
@@ -159,42 +184,67 @@ const LoginPage = () => {
     setError('');
 
     try {
-      // Send login request to backend
-      const response = await axios.post('http://localhost:5000/api/admin/login', {
+      const endpoint = userType === 'admin' 
+        ? 'http://localhost:5000/api/admin/login'
+        : 'http://localhost:5000/api/staff/login';
+      
+      const loginData = {
         email: formData.email,
         password: formData.password
+      };
+
+      const response = await axios.post(endpoint, loginData, {
+        timeout: 10000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         const { token, user } = response.data;
         
         // Store auth data
-        localStorage.setItem('adminToken', token);
-        localStorage.setItem('adminUser', JSON.stringify(user));
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('userRole', user.role);
-        localStorage.setItem('userName', user.fullName);
+        localStorage.setItem('userName', user.fullName || user.name || (user.role === 'admin' ? 'Administrator' : 'Staff User'));
         localStorage.setItem('userEmail', user.email);
         localStorage.setItem('isLoggedIn', 'true');
         
         if (formData.rememberMe) {
           localStorage.setItem('rememberedEmail', formData.email);
+          localStorage.setItem('rememberedUserType', userType);
         } else {
           localStorage.removeItem('rememberedEmail');
+          localStorage.removeItem('rememberedUserType');
         }
         
-        alert(t.loginSuccess);
-        navigate('/admin-dashboard', { replace: true });
+        // Show success message
+        const successMsg = language === 'np' ? '✅ लगइन सफल! ड्यासबोर्डमा जाँदै...' : '✅ Login successful! Redirecting to Dashboard...';
+        alert(successMsg);
+        
+        // Redirect based on user role
+        if (user.role === 'admin') {
+          window.location.href = '/admin-dashboard';
+        } else if (user.role === 'staff') {
+          window.location.href = '/staff-dashboard';
+        } else {
+          window.location.href = '/dashboard';
+        }
       } else {
-        setError(response.data.message || t.loginError);
+        setError(response.data?.message || t.loginError);
       }
       
     } catch (error) {
       console.error('Login error:', error);
       if (error.response) {
-        setError(error.response.data.message || t.loginError);
+        // Server responded with error status
+        setError(error.response.data?.message || t.loginError);
       } else if (error.request) {
+        // Request was made but no response
         setError(t.backendError);
       } else {
+        // Something else happened
         setError(t.loginError);
       }
     } finally {
@@ -202,11 +252,15 @@ const LoginPage = () => {
     }
   };
 
-  // Load remembered email
+  // Load remembered email and user type
   useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedEmail');
+    const rememberedUserType = localStorage.getItem('rememberedUserType');
     if (rememberedEmail) {
       setFormData(prev => ({ ...prev, email: rememberedEmail, rememberMe: true }));
+    }
+    if (rememberedUserType) {
+      setUserType(rememberedUserType);
     }
   }, []);
 
@@ -231,6 +285,10 @@ const LoginPage = () => {
       />
     );
   };
+
+  // Get current year for copyright
+  const currentYear = new Date().getFullYear();
+  const npYear = currentYear - 57; // Convert to Nepali year approx
 
   return (
     <div className="login-page">
@@ -328,6 +386,24 @@ const LoginPage = () => {
               <p>{t.loginToAccount}</p>
             </div>
 
+            {/* User Type Toggle */}
+            <div className="user-type-toggle">
+              <button
+                type="button"
+                className={`toggle-btn ${userType === 'admin' ? 'active' : ''}`}
+                onClick={() => setUserType('admin')}
+              >
+                👑 {t.adminLogin}
+              </button>
+              <button
+                type="button"
+                className={`toggle-btn ${userType === 'staff' ? 'active' : ''}`}
+                onClick={() => setUserType('staff')}
+              >
+                👤 {t.staffLogin}
+              </button>
+            </div>
+
             {error && (
               <div className="error-message">
                 <span className="error-icon">⚠️</span>
@@ -335,13 +411,14 @@ const LoginPage = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="login-form">
+            <form onSubmit={handleLogin} className="login-form" noValidate>
               <div className="form-group">
-                <label>{t.email}</label>
+                <label htmlFor="email">{t.email}</label>
                 <div className="input-wrapper">
                   <span className="input-icon">📧</span>
                   <input
                     type="email"
+                    id="email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
@@ -353,11 +430,12 @@ const LoginPage = () => {
               </div>
 
               <div className="form-group">
-                <label>{t.password}</label>
+                <label htmlFor="password">{t.password}</label>
                 <div className="input-wrapper">
                   <span className="input-icon">🔒</span>
                   <input
                     type={showPassword ? "text" : "password"}
+                    id="password"
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
@@ -370,6 +448,7 @@ const LoginPage = () => {
                     className="password-toggle"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? "👁️" : "👁️‍🗨️"}
                   </button>
@@ -390,7 +469,11 @@ const LoginPage = () => {
                 <a href="/forgot-password" className="forgot-password">{t.forgotPassword}</a>
               </div>
 
-              <button type="submit" className="btn-login" disabled={isLoading || backendStatus !== 'connected'}>
+              <button 
+                type="submit" 
+                className="btn-login" 
+                disabled={isLoading || backendStatus !== 'connected'}
+              >
                 {isLoading ? (
                   <>
                     <span className="spinner">⏳</span> {t.loggingIn}
@@ -403,21 +486,45 @@ const LoginPage = () => {
               </button>
             </form>
 
-            {/* Demo Credentials */}
+            {/* Demo Credentials - Dynamic based on user type */}
             <div className="demo-credentials">
               <div className="demo-title">{t.demoCredentials}</div>
               <div className="demo-info">
-                <code>📧 {t.adminEmail}</code>
-                <code>🔑 {t.adminPass}</code>
+                {userType === 'admin' ? (
+                  <>
+                    <code>📧 {t.adminEmail}</code>
+                    <code>🔑 {t.adminPass}</code>
+                  </>
+                ) : (
+                  <>
+                    <code>📧 {t.staffEmail}</code>
+                    <code>🔑 {t.staffPass}</code>
+                  </>
+                )}
               </div>
             </div>
 
             <div className="back-to-home">
-              <button onClick={() => navigate('/')} className="btn-back" disabled={isLoading}>
+              <button 
+                type="button"
+                onClick={() => navigate('/')} 
+                className="btn-back" 
+                disabled={isLoading}
+              >
                 ← {t.backToHome}
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="footer">
+        <div className="footer-content">
+          <p className="footer-tagline">{t.footerTagline}</p>
+          <p className="footer-copyright">
+            {language === 'np' ? `© ${npYear} एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।` : `© ${currentYear} NTC Complaint Tracking System. All rights reserved.`}
+          </p>
         </div>
       </div>
 
@@ -433,6 +540,8 @@ const LoginPage = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
           min-height: 100vh;
+          display: flex;
+          flex-direction: column;
         }
 
         .backend-warning {
@@ -615,6 +724,7 @@ const LoginPage = () => {
 
         /* Main Content */
         .main-content {
+          flex: 1;
           padding-top: 155px;
           min-height: calc(100vh - 200px);
         }
@@ -650,6 +760,39 @@ const LoginPage = () => {
 
         .login-header p {
           color: #6c8196;
+        }
+
+        /* User Type Toggle */
+        .user-type-toggle {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 28px;
+          background: #f1f5f9;
+          padding: 6px;
+          border-radius: 60px;
+        }
+
+        .toggle-btn {
+          flex: 1;
+          padding: 12px 20px;
+          border: none;
+          background: transparent;
+          border-radius: 50px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          color: #64748b;
+        }
+
+        .toggle-btn.active {
+          background: linear-gradient(135deg, #1565c0, #0d47a1);
+          color: white;
+          box-shadow: 0 2px 8px rgba(21, 101, 192, 0.3);
+        }
+
+        .toggle-btn:last-child.active {
+          background: linear-gradient(135deg, #10b981, #059669);
         }
 
         .error-message {
@@ -837,6 +980,31 @@ const LoginPage = () => {
         .btn-back:hover:not(:disabled) { background: #1565c0; color: white; transform: translateY(-2px); }
         .btn-back:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        /* Footer */
+        .footer {
+          background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
+          color: white;
+          text-align: center;
+          padding: 20px;
+          margin-top: 40px;
+        }
+
+        .footer-content {
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+
+        .footer-tagline {
+          font-size: 0.85rem;
+          margin-bottom: 8px;
+          opacity: 0.9;
+        }
+
+        .footer-copyright {
+          font-size: 0.7rem;
+          opacity: 0.7;
+        }
+
         @media (max-width: 768px) {
           .main-content { padding-top: 220px; }
           .login-card { padding: 32px 24px; }
@@ -847,6 +1015,8 @@ const LoginPage = () => {
           .logo-left, .logo-right { display: none; }
           .dept-text-center { flex: 1; }
           .demo-info { flex-direction: column; align-items: center; gap: 8px; }
+          .user-type-toggle { flex-direction: column; border-radius: 16px; }
+          .toggle-btn { border-radius: 12px; }
         }
 
         @media (max-width: 480px) {

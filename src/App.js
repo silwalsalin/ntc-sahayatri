@@ -28,6 +28,7 @@ import AdminSettingsGeneral from './pages/AdminSettingsGeneral';
 import AdminSettingsSecurity from './pages/AdminSettingsSecurity';
 import AdminDocumentation from './pages/AdminDocumentation';
 import AdminContact from './pages/AdminContact';
+import StaffDashboard from './pages/StaffDashboard';
 function App() {
   return (
     <Router>
@@ -58,6 +59,7 @@ function App() {
           <Route path="/admin-settings/security" element={<AdminSettingsSecurity />} />
           <Route path="/admin-documentation" element={<AdminDocumentation />} />
           <Route path="/admin-contact" element={<AdminContact />} />
+          <Route path="/staff-dashboard" element={<StaffDashboard />} />
         </Routes>
       </div>
     </Router>

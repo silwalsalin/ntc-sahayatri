@@ -1,4 +1,3 @@
-// backend/models/Complaint.js
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
@@ -9,98 +8,133 @@ const Complaint = sequelize.define('Complaint', {
         autoIncrement: true
     },
     complaintNumber: {
-        type: DataTypes.STRING(50),
+        type: DataTypes.STRING,
         unique: true,
         allowNull: false
     },
     complaintNumberNp: {
-        type: DataTypes.STRING(50),
+        type: DataTypes.STRING,
         unique: true
     },
     name: {
-        type: DataTypes.STRING(100),
+        type: DataTypes.STRING,
         allowNull: false
     },
+    nameEn: {
+        type: DataTypes.STRING
+    },
     email: {
-        type: DataTypes.STRING(100),
+        type: DataTypes.STRING,
+        allowNull: true,
         validate: {
             isEmail: true
         }
     },
     phone: {
-        type: DataTypes.STRING(15),
+        type: DataTypes.STRING,
         allowNull: false
     },
     description: {
         type: DataTypes.TEXT,
         allowNull: false
     },
+    descriptionEn: {
+        type: DataTypes.TEXT
+    },
     natureOfComplaint: {
-        type: DataTypes.STRING(50)
+        type: DataTypes.STRING
     },
     complaintCategory: {
-        type: DataTypes.STRING(50),
+        type: DataTypes.STRING,
         defaultValue: 'general'
     },
     subject: {
-        type: DataTypes.STRING(200)
+        type: DataTypes.STRING
     },
     priority: {
-        type: DataTypes.STRING(20),
+        type: DataTypes.ENUM('low', 'medium', 'high'),
         defaultValue: 'medium'
     },
     address: {
-        type: DataTypes.TEXT
+        type: DataTypes.STRING
     },
     landmark: {
-        type: DataTypes.STRING(200)
+        type: DataTypes.STRING
     },
     preferredContact: {
-        type: DataTypes.STRING(20),
+        type: DataTypes.STRING,
         defaultValue: 'phone'
     },
     referenceNumber: {
-        type: DataTypes.STRING(50),
-        unique: true
+        type: DataTypes.STRING
     },
     state: {
-        type: DataTypes.STRING(50)
+        type: DataTypes.STRING
     },
     district: {
-        type: DataTypes.STRING(50)
+        type: DataTypes.STRING
     },
     municipality: {
-        type: DataTypes.STRING(100)
+        type: DataTypes.STRING
     },
     wardNo: {
-        type: DataTypes.STRING(10)
+        type: DataTypes.STRING
     },
     streetAddress: {
-        type: DataTypes.STRING(200)
+        type: DataTypes.STRING
     },
     status: {
-        type: DataTypes.STRING(20),
+        type: DataTypes.ENUM('Pending', 'In Progress', 'Resolved', 'Closed', 'Rejected'),
         defaultValue: 'Pending'
     },
     statusNp: {
-        type: DataTypes.STRING(20),
+        type: DataTypes.STRING,
         defaultValue: 'विचाराधीन'
     },
     trackingPassword: {
-        type: DataTypes.STRING(20)
+        type: DataTypes.STRING
     },
-    submittedDate: {
+    assignedTo: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    assignedToName: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    assignedDate: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW
+        allowNull: true
     },
     resolvedDate: {
-        type: DataTypes.DATE
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    resolutionDays: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    feedback: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    satisfactionRating: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        validate: {
+            min: 0,
+            max: 5
+        }
+    },
+    resolution: {
+        type: DataTypes.TEXT,
+        allowNull: true
     }
 }, {
     tableName: 'complaints',
     timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at'
+    underscored: true,
+    paranoid: false
 });
 
 module.exports = Complaint;
