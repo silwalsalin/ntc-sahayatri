@@ -48,9 +48,9 @@ const LoginPage = () => {
     if (token && isLoggedIn === 'true') {
       // Redirect based on user role
       if (userRole === 'admin') {
-        navigate('/admin-dashboard');
+        navigate('/admin-dashboard', { replace: true });
       } else if (userRole === 'staff') {
-        navigate('/staff-dashboard');
+        navigate('/staff-dashboard', { replace: true });
       }
     }
     
@@ -99,7 +99,7 @@ const LoginPage = () => {
       loggingIn: 'लगइन हुँदैछ...',
       backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
-      copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
+      copyright: 'एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
       loginSuccess: '✅ लगइन सफल! ड्यासबोर्डमा जाँदै...',
       loginError: '❌ अमान्य इमेल वा पासवर्ड। कृपया पुन: प्रयास गर्नुहोस्।',
       requiredFields: 'कृपया इमेल र पासवर्ड भर्नुहोस्।',
@@ -139,7 +139,7 @@ const LoginPage = () => {
       loggingIn: 'Logging in...',
       backToHome: 'Back to Home',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
-      copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
+      copyright: 'NTC Complaint Tracking System. All rights reserved.',
       loginSuccess: '✅ Login successful! Redirecting to Dashboard...',
       loginError: '❌ Invalid email or password. Please try again.',
       requiredFields: 'Please enter email and password.',
@@ -225,11 +225,11 @@ const LoginPage = () => {
         
         // Redirect based on user role
         if (user.role === 'admin') {
-          window.location.href = '/admin-dashboard';
+          navigate('/admin-dashboard', { replace: true });
         } else if (user.role === 'staff') {
-          window.location.href = '/staff-dashboard';
+          navigate('/staff-dashboard', { replace: true });
         } else {
-          window.location.href = '/dashboard';
+          navigate('/dashboard', { replace: true });
         }
       } else {
         setError(response.data?.message || t.loginError);
@@ -285,10 +285,6 @@ const LoginPage = () => {
       />
     );
   };
-
-  // Get current year for copyright
-  const currentYear = new Date().getFullYear();
-  const npYear = currentYear - 57; // Convert to Nepali year approx
 
   return (
     <div className="login-page">
@@ -522,9 +518,7 @@ const LoginPage = () => {
       <div className="footer">
         <div className="footer-content">
           <p className="footer-tagline">{t.footerTagline}</p>
-          <p className="footer-copyright">
-            {language === 'np' ? `© ${npYear} एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।` : `© ${currentYear} NTC Complaint Tracking System. All rights reserved.`}
-          </p>
+          <p className="footer-copyright">{t.copyright}</p>
         </div>
       </div>
 
