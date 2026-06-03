@@ -1,4 +1,4 @@
-// src/components/Header.js
+// src/components/StaffHeader.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -15,12 +15,18 @@ try {
   govLogo = null;
 }
 
-const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
+const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRole = "Support Staff" }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
-  const [showAdminDropdown, setShowAdminDropdown] = useState(false);
+  const [showStaffDropdown, setShowStaffDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [notifications, setNotifications] = useState([
+    { id: 1, message: 'New complaint assigned to you', time: '5 min ago', read: false },
+    { id: 2, message: 'Meeting at 3:00 PM', time: '1 hour ago', read: false },
+    { id: 3, message: 'Your report is ready', time: '2 hours ago', read: true }
+  ]);
 
   // Handle scroll for header effects
   useEffect(() => {
@@ -41,7 +47,12 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
       logout: 'लगआउट',
       profile: 'प्रोफाइल',
       settings: 'सेटिङ्स',
-      adminPanel: 'प्रशासक प्यानल'
+      staffPanel: 'स्टाफ प्यानल',
+      notifications: 'सूचनाहरू',
+      markAllRead: 'सबै पढेको चिन्ह लगाउनुहोस्',
+      noNotifications: 'कुनै सूचना छैन',
+      welcome: 'स्वागत छ',
+      role: 'भूमिका'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -52,7 +63,12 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
       logout: 'Logout',
       profile: 'Profile',
       settings: 'Settings',
-      adminPanel: 'Admin Panel'
+      staffPanel: 'Staff Panel',
+      notifications: 'Notifications',
+      markAllRead: 'Mark all as read',
+      noNotifications: 'No notifications',
+      welcome: 'Welcome',
+      role: 'Role'
     }
   };
 
@@ -64,9 +80,17 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
-    navigate('/');
+    localStorage.removeItem('staffToken');
+    localStorage.removeItem('staffUser');
+    navigate('/staff-login');
+  };
+
+  const handleMarkAllRead = () => {
+    setNotifications(notifications.map(notif => ({ ...notif, read: true })));
+  };
+
+  const getUnreadCount = () => {
+    return notifications.filter(n => !n.read).length;
   };
 
   const LogoImage = ({ src, alt, fallback, className }) => {
@@ -165,35 +189,87 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
         </div>
       </div>
 
-      {/* HEADER 3 - Navigation Bar - Only Admin Dropdown */}
+      {/* HEADER 3 - Staff Controls Only (No Navigation Links) */}
       <div className={`header-3 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
         <div className="container-3">
-          <div className="admin-dropdown">
-            <button 
-              className="admin-btn"
-              onClick={() => setShowAdminDropdown(!showAdminDropdown)}
-            >
-              <span className="admin-icon">👨‍💼</span>
-              <span className="admin-name">{adminName}</span>
-              <span className="dropdown-arrow">▼</span>
-            </button>
-            {showAdminDropdown && (
-              <div className="admin-dropdown-menu">
-                <button className="dropdown-item" onClick={() => navigate('/admin-profile')}>
-                  <span>👤</span>
-                  <span>{t.profile}</span>
-                </button>
-                <button className="dropdown-item" onClick={() => navigate('/admin-settings')}>
-                  <span>⚙️</span>
-                  <span>{t.settings}</span>
-                </button>
-                <hr className="dropdown-divider" />
-                <button className="dropdown-item logout" onClick={handleLogout}>
-                  <span>🚪</span>
-                  <span>{t.logout}</span>
-                </button>
-              </div>
-            )}
+          <div className="staff-controls">
+            {/* Notifications Dropdown */}
+            <div className="notifications-dropdown">
+              <button 
+                className="notifications-btn"
+                onClick={() => setShowNotifications(!showNotifications)}
+              >
+                <span className="notif-icon">🔔</span>
+                {getUnreadCount() > 0 && (
+                  <span className="notif-badge">{getUnreadCount()}</span>
+                )}
+              </button>
+              {showNotifications && (
+                <div className="notifications-menu">
+                  <div className="notifications-header">
+                    <span>{t.notifications}</span>
+                    {getUnreadCount() > 0 && (
+                      <button className="mark-all-read" onClick={handleMarkAllRead}>
+                        {t.markAllRead}
+                      </button>
+                    )}
+                  </div>
+                  <div className="notifications-list">
+                    {notifications.length > 0 ? (
+                      notifications.map(notif => (
+                        <div key={notif.id} className={`notification-item ${!notif.read ? 'unread' : ''}`}>
+                          <div className="notification-message">{notif.message}</div>
+                          <div className="notification-time">{notif.time}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="no-notifications">{t.noNotifications}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Staff Dropdown */}
+            <div className="staff-dropdown">
+              <button 
+                className="staff-btn"
+                onClick={() => setShowStaffDropdown(!showStaffDropdown)}
+              >
+                <span className="staff-icon">👨‍💻</span>
+                <div className="staff-info">
+                  <span className="staff-name">{staffName}</span>
+                  <span className="staff-role">{staffRole}</span>
+                </div>
+                <span className="dropdown-arrow">▼</span>
+              </button>
+              {showStaffDropdown && (
+                <div className="staff-dropdown-menu">
+                  <div className="staff-welcome">
+                    <span className="welcome-icon">👋</span>
+                    <div>
+                      <div className="welcome-text">{t.welcome}</div>
+                      <div className="staff-fullname">{staffName}</div>
+                      <div className="staff-role-text">{staffRole}</div>
+                    </div>
+                  </div>
+                  <hr className="dropdown-divider" />
+                  <button className="dropdown-item" onClick={() => navigate('/staff-profile')}>
+                    <span>👤</span>
+                    <span>{t.profile}</span>
+                  </button>
+                  <button className="dropdown-item" onClick={() => navigate('/staff-settings')}>
+                    <span>⚙️</span>
+                    <span>{t.settings}</span>
+                  </button>
+                  <hr className="dropdown-divider" />
+                  <button className="dropdown-item logout" onClick={handleLogout}>
+                    <span>🚪</span>
+                    <span>{t.logout}</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -446,13 +522,13 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
           margin-top: 3px; 
         }
 
-        /* HEADER 3 - Navigation Bar (Only Admin Dropdown) */
+        /* HEADER 3 - Staff Controls Only */
         .header-3 {
           position: fixed;
           top: 119px;
           left: 0;
           width: 100%;
-          background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+          background: linear-gradient(135deg, #0288d1 0%, #0277bd 100%);
           color: white;
           padding: 12px 0;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -474,40 +550,167 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
           align-items: center;
         }
 
-        /* Admin Dropdown */
-        .admin-dropdown {
+        /* Staff Controls */
+        .staff-controls {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+        }
+
+        /* Notifications Dropdown */
+        .notifications-dropdown {
           position: relative;
         }
 
-        .admin-btn {
+        .notifications-btn {
+          position: relative;
           background: rgba(255,255,255,0.15);
           border: 1px solid rgba(255,255,255,0.3);
-          padding: 8px 20px;
+          padding: 8px 12px;
           border-radius: 40px;
           cursor: pointer;
           color: white;
-          font-size: 0.9rem;
-          font-weight: 600;
+          font-size: 1.1rem;
           transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          gap: 8px;
         }
 
-        .admin-btn:hover {
+        .notifications-btn:hover {
           background: rgba(255,255,255,0.25);
           transform: translateY(-1px);
         }
 
-        .admin-icon {
+        .notif-badge {
+          position: absolute;
+          top: -5px;
+          right: -5px;
+          background: #ff4757;
+          color: white;
+          font-size: 0.65rem;
+          font-weight: bold;
+          padding: 2px 6px;
+          border-radius: 20px;
+          min-width: 18px;
+        }
+
+        .notifications-menu {
+          position: absolute;
+          top: 45px;
+          right: 0;
+          width: 320px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          overflow: hidden;
+          z-index: 1050;
+        }
+
+        .notifications-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 16px;
+          background: #f8f9fa;
+          border-bottom: 1px solid #e0e0e0;
+          font-weight: 600;
+          color: #333;
+        }
+
+        .mark-all-read {
+          background: none;
+          border: none;
+          color: #1565c0;
+          font-size: 0.7rem;
+          cursor: pointer;
+          padding: 4px 8px;
+          border-radius: 4px;
+        }
+
+        .mark-all-read:hover {
+          background: #e3f2fd;
+        }
+
+        .notifications-list {
+          max-height: 400px;
+          overflow-y: auto;
+        }
+
+        .notification-item {
+          padding: 12px 16px;
+          border-bottom: 1px solid #f0f0f0;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+
+        .notification-item:hover {
+          background: #f8f9fa;
+        }
+
+        .notification-item.unread {
+          background: #e3f2fd;
+        }
+
+        .notification-message {
+          font-size: 0.85rem;
+          color: #333;
+          margin-bottom: 4px;
+        }
+
+        .notification-time {
+          font-size: 0.7rem;
+          color: #999;
+        }
+
+        .no-notifications {
+          padding: 40px;
+          text-align: center;
+          color: #999;
+        }
+
+        /* Staff Dropdown */
+        .staff-dropdown {
+          position: relative;
+        }
+
+        .staff-btn {
+          background: rgba(255,255,255,0.15);
+          border: 1px solid rgba(255,255,255,0.3);
+          padding: 8px 16px;
+          border-radius: 40px;
+          cursor: pointer;
+          color: white;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .staff-btn:hover {
+          background: rgba(255,255,255,0.25);
+          transform: translateY(-1px);
+        }
+
+        .staff-icon {
           font-size: 1rem;
         }
 
-        .admin-name {
-          font-size: 0.85rem;
+        .staff-info {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 2px;
         }
 
-        .admin-dropdown-menu {
+        .staff-name {
+          font-size: 0.85rem;
+          font-weight: 600;
+        }
+
+        .staff-role {
+          font-size: 0.65rem;
+          opacity: 0.8;
+        }
+
+        .staff-dropdown-menu {
           position: absolute;
           top: 45px;
           right: 0;
@@ -516,10 +719,44 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
           box-shadow: 0 4px 20px rgba(0,0,0,0.15);
           overflow: hidden;
           z-index: 1050;
-          min-width: 180px;
+          min-width: 220px;
         }
 
-        .admin-dropdown-menu .dropdown-item {
+        .staff-welcome {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          background: linear-gradient(135deg, #e3f2fd, #bbdef5);
+        }
+
+        .welcome-icon {
+          font-size: 2rem;
+        }
+
+        .welcome-text {
+          font-size: 0.7rem;
+          color: #666;
+        }
+
+        .staff-fullname {
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #0d47a1;
+        }
+
+        .staff-role-text {
+          font-size: 0.7rem;
+          color: #666;
+        }
+
+        .dropdown-divider {
+          margin: 5px 0;
+          border: none;
+          border-top: 1px solid #e0e0e0;
+        }
+
+        .dropdown-item {
           display: flex;
           align-items: center;
           gap: 12px;
@@ -534,22 +771,16 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
           color: #333;
         }
 
-        .admin-dropdown-menu .dropdown-item:hover {
+        .dropdown-item:hover {
           background: #f0f2f5;
         }
 
-        .admin-dropdown-menu .dropdown-item.logout {
+        .dropdown-item.logout {
           color: #dc3545;
         }
 
-        .admin-dropdown-menu .dropdown-item.logout:hover {
+        .dropdown-item.logout:hover {
           background: #fee;
-        }
-
-        .dropdown-divider {
-          margin: 5px 0;
-          border: none;
-          border-top: 1px solid #e0e0e0;
         }
 
         /* Responsive */
@@ -558,11 +789,6 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
             flex-direction: column;
             text-align: center;
             padding: 0 20px;
-          }
-          
-          .container-3 {
-            align-items: center;
-            justify-content: center;
           }
           
           .header-left, .header-right, .logo-left, .logo-right {
@@ -580,10 +806,30 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
           .dept-text-center {
             flex: 1;
           }
+          
+          .container-3 {
+            justify-content: center;
+          }
+          
+          .staff-info {
+            display: none;
+          }
+          
+          .notifications-menu {
+            width: calc(100vw - 40px);
+            right: -80px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .staff-controls {
+            width: 100%;
+            justify-content: center;
+          }
         }
       `}</style>
     </>
   );
 };
 
-export default Header;
+export default StaffHeader;

@@ -1,6 +1,7 @@
 // src/pages/LoginPage.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 // Try to import local images with fallback
 let ntcLogo, govLogo;
@@ -22,10 +23,11 @@ const LoginPage = () => {
   const [language, setLanguage] = useState('np');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [userType, setUserType] = useState('admin'); // 'admin' or 'staff'
 
   // Login form state
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: '',
     rememberMe: false
   });
@@ -53,6 +55,14 @@ const LoginPage = () => {
     if (token && user && role === 'admin') {
       navigate('/admin-dashboard');
     }
+    
+    const staffToken = localStorage.getItem('staffToken');
+    const staffUser = localStorage.getItem('staffUser');
+    const staffRole = localStorage.getItem('staffRole');
+    
+    if (staffToken && staffUser && staffRole === 'staff') {
+      navigate('/staff-dashboard');
+    }
   }, [navigate]);
 
   const content = {
@@ -66,26 +76,32 @@ const LoginPage = () => {
       serviceSub: 'गुनासो ट्र्याकिङ प्रणाली',
       home: 'गृह पृष्ठ',
       faqs: 'बारम्बार सोधिने प्रश्नहरू',
-      login: 'प्रशासक लगइन',
+      login: 'लगइन',
+      adminLogin: 'प्रशासक लगइन',
+      staffLogin: 'स्टाफ लगइन',
       welcomeBack: 'पुन: स्वागत छ',
-      loginToAccount: 'प्रशासक खातामा लगइन गर्नुहोस्',
-      username: 'प्रयोगकर्ता नाम / इमेल',
-      enterUsername: 'आफ्नो प्रयोगकर्ता नाम वा इमेल प्रविष्ट गर्नुहोस्',
+      loginToAccount: 'आफ्नो खातामा लगइन गर्नुहोस्',
+      email: 'इमेल ठेगाना',
+      enterEmail: 'आफ्नो इमेल ठेगाना प्रविष्ट गर्नुहोस्',
       password: 'पासवर्ड',
       enterPassword: 'आफ्नो पासवर्ड प्रविष्ट गर्नुहोस्',
       rememberMe: 'मलाई सम्झनुहोस्',
       forgotPassword: 'पासवर्ड बिर्सनुभयो?',
-      loginBtn: 'प्रशासक लगइन',
+      loginBtn: 'लगइन गर्नुहोस्',
       loggingIn: 'लगइन हुँदैछ...',
       backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
       demoCredentials: 'डेमो प्रमाणपत्रहरू:',
-      adminUser: 'प्रशासक: admin@ntc',
+      adminUser: 'प्रशासक: admin@ntc.gov.np',
       adminPass: 'पासवर्ड: admin123',
+      staffUser: 'स्टाफ: staff@ntc.gov.np',
+      staffPass: 'पासवर्ड: staff123',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
-      loginSuccess: '✅ लगइन सफल! प्रशासक ड्यासबोर्डमा जाँदै...',
-      loginError: '❌ अमान्य प्रयोगकर्ता नाम वा पासवर्ड।',
-      requiredFields: 'कृपया प्रयोगकर्ता नाम र पासवर्ड भर्नुहोस्।'
+      loginSuccessAdmin: '✅ लगइन सफल! प्रशासक ड्यासबोर्डमा जाँदै...',
+      loginSuccessStaff: '✅ लगइन सफल! स्टाफ ड्यासबोर्डमा जाँदै...',
+      loginError: '❌ अमान्य इमेल वा पासवर्ड।',
+      requiredFields: 'कृपया इमेल र पासवर्ड भर्नुहोस्।',
+      selectUserType: 'प्रयोगकर्ता प्रकार चयन गर्नुहोस्'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -97,26 +113,32 @@ const LoginPage = () => {
       serviceSub: 'Complaint Tracking System',
       home: 'Home',
       faqs: 'FAQs',
-      login: 'Admin Login',
+      login: 'Login',
+      adminLogin: 'Admin Login',
+      staffLogin: 'Staff Login',
       welcomeBack: 'Welcome Back',
-      loginToAccount: 'Login to Admin Account',
-      username: 'Username / Email',
-      enterUsername: 'Enter your username or email',
+      loginToAccount: 'Login to Your Account',
+      email: 'Email Address',
+      enterEmail: 'Enter your email address',
       password: 'Password',
       enterPassword: 'Enter your password',
       rememberMe: 'Remember me',
       forgotPassword: 'Forgot Password?',
-      loginBtn: 'Admin Login',
+      loginBtn: 'Login',
       loggingIn: 'Logging in...',
       backToHome: 'Back to Home',
       demoCredentials: 'Demo Credentials:',
-      adminUser: 'Admin: admin@ntc',
+      adminUser: 'Admin: admin@ntc.gov.np',
       adminPass: 'Password: admin123',
+      staffUser: 'Staff: staff@ntc.gov.np',
+      staffPass: 'Password: staff123',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
-      loginSuccess: '✅ Login successful! Redirecting to Admin Dashboard...',
-      loginError: '❌ Invalid username or password.',
-      requiredFields: 'Please enter username and password.'
+      loginSuccessAdmin: '✅ Login successful! Redirecting to Admin Dashboard...',
+      loginSuccessStaff: '✅ Login successful! Redirecting to Staff Dashboard...',
+      loginError: '❌ Invalid email or password.',
+      requiredFields: 'Please enter email and password.',
+      selectUserType: 'Select User Type'
     }
   };
 
@@ -131,10 +153,20 @@ const LoginPage = () => {
     setError('');
   };
 
+  const handleUserTypeChange = (type) => {
+    setUserType(type);
+    setError('');
+    setFormData({
+      email: '',
+      password: '',
+      rememberMe: false
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.username || !formData.password) {
+    if (!formData.email || !formData.password) {
       setError(t.requiredFields);
       return;
     }
@@ -142,39 +174,106 @@ const LoginPage = () => {
     setIsLoading(true);
     setError('');
 
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // Demo authentication - Only Admin login allowed
-    const username = formData.username.toLowerCase();
-    const password = formData.password;
-
-    // Admin login credentials
-    if ((username === 'admin@ntc' || username === 'admin') && password === 'admin123') {
-      // Store admin session
-      localStorage.setItem('adminToken', 'dummy-admin-token-' + Date.now());
-      localStorage.setItem('adminUser', JSON.stringify({
-        id: 1,
-        name: 'Admin User',
-        email: 'admin@ntc.com',
-        role: 'admin',
-        loginTime: new Date().toISOString()
-      }));
-      localStorage.setItem('userRole', 'admin');
-      localStorage.setItem('userName', 'Admin User');
-      localStorage.setItem('isLoggedIn', 'true');
+    try {
+      // For demonstration, using mock authentication
+      // In production, replace with actual API call:
+      // const response = await axios.post('http://localhost:5000/api/auth/login', {
+      //   email: formData.email,
+      //   password: formData.password,
+      //   userType: userType
+      // });
       
-      // Show success message
-      alert(t.loginSuccess);
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      let isValid = false;
+      let userData = null;
+
+      // Demo authentication based on user type
+      if (userType === 'admin') {
+        // Admin credentials
+        if (formData.email === 'admin@ntc.gov.np' && formData.password === 'admin123') {
+          isValid = true;
+          userData = {
+            id: 1,
+            name: 'Admin User',
+            email: formData.email,
+            role: 'admin',
+            department: 'Administration',
+            loginTime: new Date().toISOString()
+          };
+          
+          // Store admin session
+          localStorage.setItem('adminToken', 'dummy-admin-token-' + Date.now());
+          localStorage.setItem('adminUser', JSON.stringify(userData));
+          localStorage.setItem('userRole', 'admin');
+          localStorage.setItem('userName', 'Admin User');
+          localStorage.setItem('userEmail', formData.email);
+          localStorage.setItem('isLoggedIn', 'true');
+          
+          if (formData.rememberMe) {
+            localStorage.setItem('rememberedEmail', formData.email);
+          } else {
+            localStorage.removeItem('rememberedEmail');
+          }
+          
+          alert(t.loginSuccessAdmin);
+          navigate('/admin-dashboard');
+        }
+      } else if (userType === 'staff') {
+        // Staff credentials
+        if (formData.email === 'staff@ntc.gov.np' && formData.password === 'staff123') {
+          isValid = true;
+          userData = {
+            id: 2,
+            name: 'Ram Bahadur',
+            email: formData.email,
+            role: 'staff',
+            position: 'Technical Support',
+            department: 'Customer Support',
+            joinDate: '2023-01-15',
+            loginTime: new Date().toISOString()
+          };
+          
+          // Store staff session
+          localStorage.setItem('staffToken', 'dummy-staff-token-' + Date.now());
+          localStorage.setItem('staffUser', JSON.stringify(userData));
+          localStorage.setItem('staffRole', 'staff');
+          localStorage.setItem('userRole', 'staff');
+          localStorage.setItem('userName', 'Ram Bahadur');
+          localStorage.setItem('userEmail', formData.email);
+          localStorage.setItem('isLoggedIn', 'true');
+          
+          if (formData.rememberMe) {
+            localStorage.setItem('rememberedEmail', formData.email);
+          } else {
+            localStorage.removeItem('rememberedEmail');
+          }
+          
+          alert(t.loginSuccessStaff);
+          navigate('/staff-dashboard');
+        }
+      }
       
-      // Redirect to admin dashboard
-      navigate('/admin-dashboard');
-    } 
-    else {
+      if (!isValid) {
+        setError(t.loginError);
+        setIsLoading(false);
+      }
+      
+    } catch (error) {
+      console.error('Login error:', error);
       setError(t.loginError);
       setIsLoading(false);
     }
   };
+
+  // Load remembered email on component mount
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem('rememberedEmail');
+    if (rememberedEmail) {
+      setFormData(prev => ({ ...prev, email: rememberedEmail, rememberMe: true }));
+    }
+  }, []);
 
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
@@ -283,8 +382,26 @@ const LoginPage = () => {
           <div className="login-card">
             <div className="login-header">
               <div className="login-icon">🔐</div>
-              <h2>{t.welcomeBack}</h2>
+              <h2>{userType === 'admin' ? t.adminLogin : t.staffLogin}</h2>
               <p>{t.loginToAccount}</p>
+            </div>
+
+            {/* User Type Toggle */}
+            <div className="user-type-toggle">
+              <button
+                className={`toggle-btn ${userType === 'admin' ? 'active' : ''}`}
+                onClick={() => handleUserTypeChange('admin')}
+              >
+                <span className="toggle-icon">👨‍💼</span>
+                <span>{t.adminLogin}</span>
+              </button>
+              <button
+                className={`toggle-btn ${userType === 'staff' ? 'active' : ''}`}
+                onClick={() => handleUserTypeChange('staff')}
+              >
+                <span className="toggle-icon">👨‍💻</span>
+                <span>{t.staffLogin}</span>
+              </button>
             </div>
 
             {error && (
@@ -296,16 +413,16 @@ const LoginPage = () => {
 
             <form onSubmit={handleSubmit} className="login-form">
               <div className="form-group">
-                <label>{t.username}</label>
+                <label>{t.email}</label>
                 <div className="input-wrapper">
-                  <span className="input-icon">👤</span>
+                  <span className="input-icon">📧</span>
                   <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
+                    type="email"
+                    name="email"
+                    value={formData.email}
                     onChange={handleInputChange}
-                    placeholder={t.enterUsername}
-                    autoComplete="username"
+                    placeholder={t.enterEmail}
+                    autoComplete="email"
                     disabled={isLoading}
                   />
                 </div>
@@ -366,8 +483,16 @@ const LoginPage = () => {
             <div className="demo-credentials">
               <div className="demo-title">{t.demoCredentials}</div>
               <div className="demo-info">
-                <code>{t.adminUser}</code>
-                <code>{t.adminPass}</code>
+                <div className="demo-card">
+                  <div className="demo-role">👨‍💼 {t.adminLogin}</div>
+                  <code>admin@ntc.gov.np</code>
+                  <code>admin123</code>
+                </div>
+                <div className="demo-card">
+                  <div className="demo-role">👨‍💻 {t.staffLogin}</div>
+                  <code>staff@ntc.gov.np</code>
+                  <code>staff123</code>
+                </div>
               </div>
             </div>
 
@@ -589,7 +714,7 @@ const LoginPage = () => {
         }
 
         .login-container {
-          max-width: 500px;
+          max-width: 550px;
           margin: 0 auto;
           padding: 40px 24px;
         }
@@ -619,6 +744,43 @@ const LoginPage = () => {
 
         .login-header p {
           color: #6c8196;
+        }
+
+        /* User Type Toggle */
+        .user-type-toggle {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 32px;
+          background: #f1f5f9;
+          padding: 6px;
+          border-radius: 60px;
+        }
+
+        .toggle-btn {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px 20px;
+          background: transparent;
+          border: none;
+          border-radius: 50px;
+          cursor: pointer;
+          font-size: 0.9rem;
+          font-weight: 600;
+          transition: all 0.3s ease;
+          color: #64748b;
+        }
+
+        .toggle-btn.active {
+          background: linear-gradient(135deg, #1565c0, #0d47a1);
+          color: white;
+          box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3);
+        }
+
+        .toggle-icon {
+          font-size: 1.1rem;
         }
 
         .error-message {
@@ -779,17 +941,33 @@ const LoginPage = () => {
           display: flex;
           justify-content: center;
           gap: 20px;
-          margin-bottom: 8px;
           flex-wrap: wrap;
         }
 
-        .demo-info code {
-          background: #f5f5f5;
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 0.7rem;
+        .demo-card {
+          flex: 1;
+          background: #f8fafc;
+          padding: 12px;
+          border-radius: 12px;
+          text-align: center;
+        }
+
+        .demo-role {
+          font-size: 0.75rem;
+          font-weight: 600;
           color: #1565c0;
+          margin-bottom: 8px;
+        }
+
+        .demo-card code {
+          display: block;
+          background: white;
+          padding: 4px 8px;
+          border-radius: 8px;
+          font-size: 0.7rem;
+          color: #0d47a1;
           font-family: monospace;
+          margin-bottom: 4px;
         }
 
         .back-to-home { margin-top: 24px; text-align: center; }
@@ -822,7 +1000,7 @@ const LoginPage = () => {
           .main-content { padding-top: 220px; }
           .login-card { padding: 32px 24px; }
           .login-header h2 { font-size: 1.5rem; }
-          .demo-info { flex-direction: column; align-items: center; gap: 8px; }
+          .demo-info { flex-direction: column; gap: 12px; }
           .container-1, .container-2 { flex-direction: column; text-align: center; padding: 0 20px; }
           .header-left, .header-right, .logo-left, .logo-right { justify-content: center; }
           .contact-info-group { flex-direction: column; }
@@ -834,6 +1012,8 @@ const LoginPage = () => {
           .main-content { padding-top: 250px; }
           .login-card { padding: 24px 20px; }
           .form-options { flex-direction: column; gap: 12px; align-items: flex-start; }
+          .user-type-toggle { flex-direction: column; border-radius: 16px; }
+          .toggle-btn { border-radius: 12px; }
         }
       `}</style>
     </div>

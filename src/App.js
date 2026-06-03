@@ -28,6 +28,7 @@ import AdminSettingsGeneral from './pages/AdminSettingsGeneral';
 import AdminSettingsSecurity from './pages/AdminSettingsSecurity';
 import AdminDocumentation from './pages/AdminDocumentation';
 import AdminContact from './pages/AdminContact';
+import StaffDashboard from './pages/StaffDashboard';
 
 function App() {
   return (
@@ -41,7 +42,7 @@ function App() {
           <Route path="/complaint-regarding" element={<ComplaintRegarding />} />
           <Route path="/policy" element={<Policy />} />
           <Route path="/faqs" element={<FAQS />} />
-          <Route path="/admin-login" element={<LoginPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-otp" element={<Verifyotp />} />
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -59,6 +60,7 @@ function App() {
           <Route path="/admin-settings/security" element={<AdminSettingsSecurity />} />
           <Route path="/admin-documentation" element={<AdminDocumentation />} />
           <Route path="/admin-contact" element={<AdminContact />} />
+          <Route path="/staff-dashboard" element={<StaffDashboard />} />
           
         </Routes>
       </div>
