@@ -29,7 +29,8 @@ import AdminSettingsSecurity from './pages/AdminSettingsSecurity';
 import AdminDocumentation from './pages/AdminDocumentation';
 import AdminContact from './pages/AdminContact';
 import StaffDashboard from './pages/StaffDashboard';
-
+import StaffComplaintsAssigned from './pages/StaffComplaintsAssigned';
+import StaffComplaintSolve from './pages/StaffComplaintSolve';
 function App() {
   return (
     <Router>
@@ -61,8 +62,9 @@ function App() {
           <Route path="/admin-documentation" element={<AdminDocumentation />} />
           <Route path="/admin-contact" element={<AdminContact />} />
           <Route path="/staff-dashboard" element={<StaffDashboard />} />
-          
-        </Routes>
+          <Route path="/staff/complaints/assigned" element={<StaffComplaintsAssigned />} />
+          <Route path="/staff/complaints/solve/:id" element={<StaffComplaintSolve />} />
+                  </Routes>
       </div>
     </Router>
   );

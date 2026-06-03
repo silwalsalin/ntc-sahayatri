@@ -304,10 +304,7 @@ const StaffSidebar = ({ language, staffName = "Staff User", staffRole = "Support
               <span className="staff-role">{staffRole}</span>
             </div>
           </div>
-          <button className="logout-button" onClick={handleLogout}>
-            <span className="logout-icon">🚪</span>
-            <span className="logout-text">{language === 'np' ? 'लगआउट' : 'Logout'}</span>
-          </button>
+         
         </div>
       </div>
 
@@ -364,7 +361,6 @@ const StaffSidebar = ({ language, staffName = "Staff User", staffRole = "Support
 
         /* Header */
         .sidebar-header {
-          padding: 20px 16px;
           border-bottom: 1px solid #f0f0f0;
         }
 
