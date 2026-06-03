@@ -7,8 +7,8 @@ import Sidebar from '../components/Sidebar';
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [adminName, setAdminName] = useState('Admin');
   const [stats, setStats] = useState({
     totalComplaints: 1247,
     pendingComplaints: 342,
@@ -21,45 +21,33 @@ const AdminDashboard = () => {
   });
 
   const [recentComplaints, setRecentComplaints] = useState([
-    { id: 1, ticketId: 'NTC-2024-001', name: 'रमेश केसी', enName: 'Ramesh KC', category: 'इन्टरनेट', enCategory: 'Internet', status: 'pending', date: '२०८०-०१-१५', enDate: '2024-01-15', priority: 'high' },
-    { id: 2, ticketId: 'NTC-2024-002', name: 'सीता शर्मा', enName: 'Sita Sharma', category: 'रिचार्ज', enCategory: 'Recharge', status: 'in-progress', date: '२०८०-०१-१४', enDate: '2024-01-14', priority: 'medium' },
-    { id: 3, ticketId: 'NTC-2024-003', name: 'हरि प्रसाद', enName: 'Hari Prasad', category: 'सक्रियता', enCategory: 'Activation', status: 'resolved', date: '२०८०-०१-१३', enDate: '2024-01-13', priority: 'low' },
-    { id: 4, ticketId: 'NTC-2024-004', name: 'गीता अधिकारी', enName: 'Gita Adhikari', category: 'बिलिङ', enCategory: 'Billing', status: 'pending', date: '२०८०-०१-१२', enDate: '2024-01-12', priority: 'high' },
-    { id: 5, ticketId: 'NTC-2024-005', name: 'विकास न्यौपाने', enName: 'Bikas Neupane', category: 'सिग्नल', enCategory: 'Signal', status: 'in-progress', date: '२०८०-०१-११', enDate: '2024-01-11', priority: 'medium' }
+    { id: 1, ticketId: 'NTC-2024-001', name: 'रमेश केसी', enName: 'Ramesh KC', category: 'इन्टरनेट', enCategory: 'Internet', status: 'pending', date: '2024-01-15', priority: 'high' },
+    { id: 2, ticketId: 'NTC-2024-002', name: 'सीता शर्मा', enName: 'Sita Sharma', category: 'रिचार्ज', enCategory: 'Recharge', status: 'in-progress', date: '2024-01-14', priority: 'medium' },
+    { id: 3, ticketId: 'NTC-2024-003', name: 'हरि प्रसाद', enName: 'Hari Prasad', category: 'सक्रियता', enCategory: 'Activation', status: 'resolved', date: '2024-01-13', priority: 'low' },
+    { id: 4, ticketId: 'NTC-2024-004', name: 'गीता अधिकारी', enName: 'Gita Adhikari', category: 'बिलिङ', enCategory: 'Billing', status: 'pending', date: '2024-01-12', priority: 'high' },
+    { id: 5, ticketId: 'NTC-2024-005', name: 'विकास न्यौपाने', enName: 'Bikas Neupane', category: 'सिग्नल', enCategory: 'Signal', status: 'in-progress', date: '2024-01-11', priority: 'medium' }
   ]);
 
   const [chartData] = useState({
-    labels: { 
-      np: ['जनवरी', 'फेब्रुअरी', 'मार्च', 'अप्रिल', 'मे', 'जुन', 'जुलाई', 'अगस्ट', 'सेप्टेम्बर', 'अक्टोबर', 'नोभेम्बर', 'डिसेम्बर'], 
-      en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] 
-    },
-    datasets: [65, 78, 82, 74, 88, 92, 95, 89, 91, 87, 93, 98]
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    datasets: [65, 78, 82, 74, 88, 92]
   });
 
   // Check authentication
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userRole = localStorage.getItem('userRole');
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    const user = localStorage.getItem('user');
-    
-    if (!token || !isLoggedIn || userRole !== 'admin') {
-      window.location.href = '/login';
+    const token = localStorage.getItem('adminToken');
+    const user = localStorage.getItem('adminUser');
+    if (!token || !user) {
+      navigate('/admin-login');
     } else {
-      try {
-        const userData = user ? JSON.parse(user) : {};
-        setAdminName(userData.fullName || userData.name || 'Admin');
-      } catch (e) {
-        setAdminName('Admin');
-      }
       setTimeout(() => setLoading(false), 500);
     }
-  }, []);
+  }, [navigate]);
 
   const content = {
     np: {
       welcomeBack: 'स्वागत छ',
-      dashboard: 'प्रशासक ड्यासबोर्ड',
+      dashboard: 'ड्यासबोर्ड',
       totalComplaints: 'कुल गुनासो',
       pendingComplaints: 'विचाराधीन',
       inProgressComplaints: 'प्रगतिमा',
@@ -77,25 +65,18 @@ const AdminDashboard = () => {
       date: 'मिति',
       priority: 'प्राथमिकता',
       actions: 'कार्यहरू',
-      viewDetails: 'विवरण हेर्नुहोस्',
+      viewDetails: 'विवरण',
       quickActions: 'द्रुत कार्यहरू',
-      addComplaint: 'नयाँ गुनासो थप्नुहोस्',
-      manageUsers: 'प्रयोगकर्ता व्यवस्थापन',
-      generateReport: 'रिपोर्ट बनाउनुहोस्',
-      viewAnalytics: 'विश्लेषण हेर्नुहोस्',
-      monthlyTrend: 'मासिक गुनासो प्रवृत्ति',
-      loading: 'लोड हुँदैछ...',
-      fromLastMonth: 'अघिल्लो महिना भन्दा',
-      high: 'उच्च',
-      medium: 'मध्यम',
-      low: 'न्यून',
-      pending: 'विचाराधीन',
-      inProgress: 'प्रगतिमा',
-      resolved: 'समाधान'
+      addComplaint: 'नयाँ गुनासो',
+      manageUsers: 'प्रयोगकर्ता',
+      generateReport: 'रिपोर्ट',
+      viewAnalytics: 'विश्लेषण',
+      monthlyTrend: 'मासिक प्रवृत्ति',
+      loading: 'लोड हुँदैछ...'
     },
     en: {
       welcomeBack: 'Welcome Back',
-      dashboard: 'Admin Dashboard',
+      dashboard: 'Dashboard',
       totalComplaints: 'Total Complaints',
       pendingComplaints: 'Pending',
       inProgressComplaints: 'In Progress',
@@ -113,81 +94,48 @@ const AdminDashboard = () => {
       date: 'Date',
       priority: 'Priority',
       actions: 'Actions',
-      viewDetails: 'View Details',
+      viewDetails: 'View',
       quickActions: 'Quick Actions',
-      addComplaint: 'Add New Complaint',
-      manageUsers: 'Manage Users',
-      generateReport: 'Generate Report',
-      viewAnalytics: 'View Analytics',
-      monthlyTrend: 'Monthly Complaint Trend',
-      loading: 'Loading...',
-      fromLastMonth: 'from last month',
-      high: 'High',
-      medium: 'Medium',
-      low: 'Low',
-      pending: 'Pending',
-      inProgress: 'In Progress',
-      resolved: 'Resolved'
+      addComplaint: 'Add Complaint',
+      manageUsers: 'Users',
+      generateReport: 'Report',
+      viewAnalytics: 'Analytics',
+      monthlyTrend: 'Monthly Trend',
+      loading: 'Loading...'
     }
   };
 
   const t = content[language];
+
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   
   const getStatusClass = (status) => {
-    const s = (status || '').toLowerCase();
-    if (s === 'pending') return 'status-pending';
-    if (s === 'in-progress') return 'status-progress';
-    if (s === 'resolved') return 'status-resolved';
-    return 'status-pending';
+    const classes = { pending: 'status-pending', 'in-progress': 'status-progress', resolved: 'status-resolved' };
+    return classes[status] || 'status-pending';
   };
 
   const getStatusText = (status) => {
-    const s = (status || '').toLowerCase();
-    if (language === 'np') {
-      if (s === 'pending') return 'विचाराधीन';
-      if (s === 'in-progress') return 'प्रगतिमा';
-      if (s === 'resolved') return 'समाधान';
-    } else {
-      if (s === 'pending') return 'Pending';
-      if (s === 'in-progress') return 'In Progress';
-      if (s === 'resolved') return 'Resolved';
-    }
-    return status || 'Pending';
+    const texts = {
+      np: { pending: 'विचाराधीन', 'in-progress': 'प्रगतिमा', resolved: 'समाधान' },
+      en: { pending: 'Pending', 'in-progress': 'In Progress', resolved: 'Resolved' }
+    };
+    return texts[language][status] || status;
   };
 
   const getPriorityClass = (priority) => {
-    const p = (priority || '').toLowerCase();
-    if (p === 'high') return 'priority-high';
-    if (p === 'medium') return 'priority-medium';
-    if (p === 'low') return 'priority-low';
-    return 'priority-medium';
+    const classes = { high: 'priority-high', medium: 'priority-medium', low: 'priority-low' };
+    return classes[priority] || 'priority-medium';
   };
 
   const getPriorityText = (priority) => {
-    const p = (priority || '').toLowerCase();
-    if (language === 'np') {
-      if (p === 'high') return 'उच्च';
-      if (p === 'medium') return 'मध्यम';
-      if (p === 'low') return 'न्यून';
-    } else {
-      if (p === 'high') return 'High';
-      if (p === 'medium') return 'Medium';
-      if (p === 'low') return 'Low';
-    }
-    return priority || 'Medium';
+    const texts = {
+      np: { high: 'उच्च', medium: 'मध्यम', low: 'न्यून' },
+      en: { high: 'High', medium: 'Medium', low: 'Low' }
+    };
+    return texts[language][priority] || priority;
   };
 
   const getCategoryText = (category, enCategory) => language === 'np' ? category : enCategory;
-  
-  const getDate = (npDate, enDate) => language === 'np' ? npDate : enDate;
-  
-  const getChartLabels = () => {
-    return chartData.labels[language].slice(0, 6);
-  };
-  
-  const getChartData = () => {
-    return chartData.datasets.slice(0, 6);
-  };
 
   if (loading) {
     return (
@@ -200,117 +148,135 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-dashboard">
-      <Header language={language} setLanguage={setLanguage} adminName={adminName} userRole="admin" />
+      <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
-      <div className="dashboard-container">
-        <div className="sidebar-container">
-          <Sidebar language={language} userRole="admin" />
+      <div className="dashboard-layout">
+        <div className={`sidebar-wrapper ${sidebarOpen ? 'open' : 'closed'}`}>
+          <Sidebar language={language} />
         </div>
         
-        <div className="main-container">
-          <div className="dashboard-header">
-            <div className="welcome-section">
-              <h1>{t.welcomeBack}, <span className="admin-name">{adminName}</span></h1>
-              <p>{t.dashboard}</p>
+        <div className={`main-wrapper ${sidebarOpen ? 'with-sidebar' : 'full-width'}`}>
+          {/* Welcome Section */}
+          <div className="welcome-section">
+            <div className="welcome-content">
+              <div className="welcome-icon">👋</div>
+              <div className="welcome-text">
+                <h1>{t.welcomeBack}, <span className="admin-name">Admin</span></h1>
+                <p>{t.dashboard}</p>
+              </div>
             </div>
             <div className="date-display">
-              📅 {new Date().toLocaleDateString(language === 'np' ? 'ne-NP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              <span className="date-icon">📅</span>
+              <span className="date">{new Date().toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</span>
             </div>
           </div>
 
-          {/* Stats Cards - Removed trend lines */}
-          <div className="stats-grid">
+          {/* Stats Cards - Minimalist */}
+          <div className="stats-container">
             <div className="stat-card">
-              <div className="stat-icon">📋</div>
-              <div className="stat-info">
-                <div className="stat-value">{stats.totalComplaints.toLocaleString()}</div>
-                <div className="stat-label">{t.totalComplaints}</div>
+              <div className="stat-header">
+                <span className="stat-icon">📊</span>
+                <span className="stat-title">{t.totalComplaints}</span>
               </div>
+              <div className="stat-value">{stats.totalComplaints.toLocaleString()}</div>
+              <div className="stat-change positive">+12% from last month</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">⏳</div>
-              <div className="stat-info">
-                <div className="stat-value">{stats.pendingComplaints.toLocaleString()}</div>
-                <div className="stat-label">{t.pendingComplaints}</div>
+              <div className="stat-header">
+                <span className="stat-icon">⏳</span>
+                <span className="stat-title">{t.pendingComplaints}</span>
               </div>
+              <div className="stat-value">{stats.pendingComplaints.toLocaleString()}</div>
+              <div className="stat-change negative">+5% from last month</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">🔄</div>
-              <div className="stat-info">
-                <div className="stat-value">{stats.inProgressComplaints.toLocaleString()}</div>
-                <div className="stat-label">{t.inProgressComplaints}</div>
+              <div className="stat-header">
+                <span className="stat-icon">🔄</span>
+                <span className="stat-title">{t.inProgressComplaints}</span>
               </div>
+              <div className="stat-value">{stats.inProgressComplaints.toLocaleString()}</div>
+              <div className="stat-change positive">-3% from last month</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">✅</div>
-              <div className="stat-info">
-                <div className="stat-value">{stats.resolvedComplaints.toLocaleString()}</div>
-                <div className="stat-label">{t.resolvedComplaints}</div>
+              <div className="stat-header">
+                <span className="stat-icon">✅</span>
+                <span className="stat-title">{t.resolvedComplaints}</span>
               </div>
+              <div className="stat-value">{stats.resolvedComplaints.toLocaleString()}</div>
+              <div className="stat-change positive">+8% from last month</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">👥</div>
-              <div className="stat-info">
-                <div className="stat-value">{stats.totalUsers.toLocaleString()}</div>
-                <div className="stat-label">{t.totalUsers}</div>
+              <div className="stat-header">
+                <span className="stat-icon">👥</span>
+                <span className="stat-title">{t.totalUsers}</span>
               </div>
+              <div className="stat-value">{stats.totalUsers.toLocaleString()}</div>
+              <div className="stat-change positive">+15% from last month</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">✨</div>
-              <div className="stat-info">
-                <div className="stat-value">+{stats.newUsersToday}</div>
-                <div className="stat-label">{t.newUsersToday}</div>
+              <div className="stat-header">
+                <span className="stat-icon">✨</span>
+                <span className="stat-title">{t.newUsersToday}</span>
               </div>
+              <div className="stat-value">+{stats.newUsersToday}</div>
+              <div className="stat-change positive">+2 from yesterday</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">🟢</div>
-              <div className="stat-info">
-                <div className="stat-value">{stats.activeUsers.toLocaleString()}</div>
-                <div className="stat-label">{t.activeUsers}</div>
+              <div className="stat-header">
+                <span className="stat-icon">🟢</span>
+                <span className="stat-title">{t.activeUsers}</span>
               </div>
+              <div className="stat-value">{stats.activeUsers.toLocaleString()}</div>
+              <div className="stat-change positive">+7% from last month</div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">⭐</div>
-              <div className="stat-info">
-                <div className="stat-value">{stats.satisfactionRate}%</div>
-                <div className="stat-label">{t.satisfactionRate}</div>
+              <div className="stat-header">
+                <span className="stat-icon">⭐</span>
+                <span className="stat-title">{t.satisfactionRate}</span>
               </div>
+              <div className="stat-value">{stats.satisfactionRate}%</div>
+              <div className="stat-change positive">+4% from last month</div>
             </div>
           </div>
 
-          {/* Chart Section */}
+          {/* Chart Section - Clean */}
           <div className="chart-card">
             <div className="card-title">
               <h3>{t.monthlyTrend}</h3>
+              <button className="toggle-sidebar-btn" onClick={toggleSidebar}>
+                {sidebarOpen ? 'Hide Menu' : 'Show Menu'}
+              </button>
             </div>
-            <div className="chart-wrapper">
-              {getChartData().map((value, idx) => {
-                const maxValue = Math.max(...getChartData(), 1);
-                return (
-                  <div key={idx} className="chart-item">
-                    <div className="chart-label">{getChartLabels()[idx]}</div>
-                    <div className="chart-track">
-                      <div 
-                        className="chart-bar" 
-                        style={{ 
-                          height: `${(value / maxValue) * 100}%`,
-                          backgroundColor: `hsl(${210 + idx * 25}, 65%, 55%)`
-                        }}
-                      >
-                        <span className="chart-value">{value}</span>
-                      </div>
+            <div className="chart-container">
+              {chartData.datasets.map((value, idx) => (
+                <div key={idx} className="chart-item">
+                  <div className="chart-label">{chartData.labels[idx]}</div>
+                  <div className="chart-bar-container">
+                    <div 
+                      className="chart-bar" 
+                      style={{ 
+                        height: `${(value / Math.max(...chartData.datasets)) * 100}%`,
+                        background: `linear-gradient(180deg, #3b82f6, #60a5fa)`
+                      }}
+                    >
+                      <span className="chart-value">{value}</span>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Recent Complaints */}
+          {/* Recent Complaints Table */}
           <div className="table-card">
             <div className="card-title">
               <h3>{t.recentComplaints}</h3>
-              <button className="view-all-btn" onClick={() => navigate('/admin-complaints')}>
+              <button className="view-link" onClick={() => navigate('/admin-complaints')}>
                 {t.viewAll} →
               </button>
             </div>
@@ -324,7 +290,7 @@ const AdminDashboard = () => {
                     <th>{t.status}</th>
                     <th>{t.date}</th>
                     <th>{t.priority}</th>
-                    <th>{t.actions}</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -333,17 +299,10 @@ const AdminDashboard = () => {
                       <td className="ticket-id">{complaint.ticketId}</td>
                       <td>{language === 'np' ? complaint.name : complaint.enName}</td>
                       <td>{getCategoryText(complaint.category, complaint.enCategory)}</td>
-                      <td><span className={`status-badge ${getStatusClass(complaint.status)}`}>{getStatusText(complaint.status)}</span></td>
-                      <td>{getDate(complaint.date, complaint.enDate)}</td>
-                      <td><span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>{getPriorityText(complaint.priority)}</span></td>
-                      <td>
-                        <button 
-                          className="view-details-btn" 
-                          onClick={() => navigate(`/admin-complaints/${complaint.id}`)}
-                        >
-                          👁️ {t.viewDetails}
-                        </button>
-                      </td>
+                      <td><span className={`badge ${getStatusClass(complaint.status)}`}>{getStatusText(complaint.status)}</span></td>
+                      <td>{complaint.date}</td>
+                      <td><span className={`badge-priority ${getPriorityClass(complaint.priority)}`}>{getPriorityText(complaint.priority)}</span></td>
+                      <td><button className="view-btn" onClick={() => navigate(`/admin-complaints/${complaint.id}`)}>View</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -356,17 +315,17 @@ const AdminDashboard = () => {
             <div className="card-title">
               <h3>{t.quickActions}</h3>
             </div>
-            <div className="actions-grid">
-              <button className="action-button" onClick={() => navigate('/admin-complaints/add')}>
+            <div className="actions-container">
+              <button className="action-btn-minimal" onClick={() => navigate('/admin-complaints/add')}>
                 <span>➕</span> {t.addComplaint}
               </button>
-              <button className="action-button" onClick={() => navigate('/admin-users')}>
+              <button className="action-btn-minimal" onClick={() => navigate('/admin-users')}>
                 <span>👥</span> {t.manageUsers}
               </button>
-              <button className="action-button" onClick={() => navigate('/admin-reports/complaints')}>
+              <button className="action-btn-minimal" onClick={() => navigate('/admin-reports/complaints')}>
                 <span>📊</span> {t.generateReport}
               </button>
-              <button className="action-button" onClick={() => navigate('/admin-analytics')}>
+              <button className="action-btn-minimal" onClick={() => navigate('/admin-analytics')}>
                 <span>📈</span> {t.viewAnalytics}
               </button>
             </div>
@@ -382,12 +341,12 @@ const AdminDashboard = () => {
         }
 
         .admin-dashboard {
-          font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
-          background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
+          font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+          background: #f8fafc;
           min-height: 100vh;
         }
 
-        /* Loading State */
+        /* Loading */
         .loading-container {
           display: flex;
           flex-direction: column;
@@ -410,58 +369,79 @@ const AdminDashboard = () => {
           to { transform: rotate(360deg); }
         }
 
-        /* Dashboard Container */
-        .dashboard-container {
+        /* Layout */
+        .dashboard-layout {
           display: flex;
-          margin-top: 160px;
-          min-height: calc(100vh - 160px);
+          min-height: calc(100vh - 195px);
+          margin-top: 195px;
         }
 
-        /* Sidebar Container */
-        .sidebar-container {
+        .sidebar-wrapper {
           position: fixed;
-          top: 160px;
+          top: 195px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 160px);
+          height: calc(100vh - 195px);
+          transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          z-index: 40;
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 40;
-          overflow-y: auto;
         }
 
-        /* Main Container */
-        .main-container {
+        .sidebar-wrapper.closed {
+          left: -260px;
+        }
+
+        .main-wrapper {
           flex: 1;
-          padding: 24px 32px;
+          transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          padding: 32px 40px;
           margin-left: 260px;
+          max-width: calc(100% - 260px);
         }
 
-        /* Dashboard Header */
-        .dashboard-header {
+        .main-wrapper.full-width {
+          margin-left: 0;
+          max-width: 100%;
+        }
+
+        /* Welcome Section */
+        .welcome-section {
           display: flex;
-          align-items: center;
           justify-content: space-between;
-          gap: 20px;
+          align-items: center;
           margin-bottom: 32px;
           padding-bottom: 20px;
           border-bottom: 2px solid #e2e8f0;
         }
 
-        .welcome-section h1 {
-          font-size: 1.6rem;
+        .welcome-content {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .welcome-icon {
+          font-size: 2.5rem;
+        }
+
+        .welcome-text h1 {
+          font-size: 1.8rem;
           font-weight: 600;
           color: #0f172a;
           margin-bottom: 4px;
         }
 
         .admin-name {
-          color: #3b82f6;
+          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
-        .welcome-section p {
+        .welcome-text p {
           color: #64748b;
-          font-size: 0.85rem;
+          font-size: 0.9rem;
         }
 
         .date-display {
@@ -476,8 +456,12 @@ const AdminDashboard = () => {
           color: #475569;
         }
 
-        /* Stats Grid */
-        .stats-grid {
+        .date-icon {
+          font-size: 1rem;
+        }
+
+        /* Stats Container */
+        .stats-container {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 20px;
@@ -486,41 +470,54 @@ const AdminDashboard = () => {
 
         .stat-card {
           background: white;
-          border-radius: 16px;
           padding: 20px;
-          display: flex;
-          align-items: center;
-          gap: 16px;
+          border-radius: 16px;
           border: 1px solid #e2e8f0;
-          transition: all 0.2s;
+          transition: all 0.3s ease;
         }
 
         .stat-card:hover {
-          background: #f8fafc;
-          border-color: #cbd5e1;
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+          border-color: #cbd5e1;
+        }
+
+        .stat-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
         }
 
         .stat-icon {
-          font-size: 2rem;
+          font-size: 1.25rem;
         }
 
-        .stat-info {
-          flex: 1;
+        .stat-title {
+          font-size: 0.8rem;
+          font-weight: 500;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .stat-value {
-          font-size: 1.6rem;
+          font-size: 2rem;
           font-weight: 700;
           color: #0f172a;
-          line-height: 1.2;
+          margin-bottom: 8px;
         }
 
-        .stat-label {
-          font-size: 0.75rem;
-          color: #64748b;
-          margin-top: 4px;
+        .stat-change {
+          font-size: 0.7rem;
+        }
+
+        .stat-change.positive {
+          color: #10b981;
+        }
+
+        .stat-change.negative {
+          color: #ef4444;
         }
 
         /* Chart Card */
@@ -540,26 +537,27 @@ const AdminDashboard = () => {
         }
 
         .card-title h3 {
-          font-size: 1rem;
+          font-size: 1.1rem;
           font-weight: 600;
           color: #0f172a;
         }
 
-        .view-all-btn {
+        .toggle-sidebar-btn, .view-link {
           background: none;
           border: none;
           color: #3b82f6;
           cursor: pointer;
-          font-size: 0.8rem;
+          font-size: 0.85rem;
+          font-weight: 500;
           transition: color 0.2s;
         }
 
-        .view-all-btn:hover {
+        .toggle-sidebar-btn:hover, .view-link:hover {
           color: #2563eb;
         }
 
-        /* Chart Area */
-        .chart-wrapper {
+        /* Chart */
+        .chart-container {
           display: flex;
           align-items: flex-end;
           justify-content: space-around;
@@ -577,12 +575,12 @@ const AdminDashboard = () => {
         }
 
         .chart-label {
-          font-size: 0.7rem;
+          font-size: 0.75rem;
           color: #64748b;
           font-weight: 500;
         }
 
-        .chart-track {
+        .chart-bar-container {
           flex: 1;
           width: 100%;
           display: flex;
@@ -591,11 +589,15 @@ const AdminDashboard = () => {
         }
 
         .chart-bar {
-          width: 45px;
+          width: 50px;
           border-radius: 8px 8px 0 0;
           position: relative;
-          min-height: 30px;
-          transition: height 0.3s;
+          transition: height 0.5s ease;
+          cursor: pointer;
+        }
+
+        .chart-bar:hover {
+          opacity: 0.8;
         }
 
         .chart-value {
@@ -629,17 +631,16 @@ const AdminDashboard = () => {
         .data-table th {
           color: #64748b;
           font-weight: 500;
-          font-size: 0.75rem;
-          background: #f8fafc;
+          font-size: 0.8rem;
         }
 
         .data-table td {
           color: #334155;
-          font-size: 0.8rem;
+          font-size: 0.85rem;
         }
 
         .data-table tr:hover {
-          background: #fafcff;
+          background: #f8fafc;
         }
 
         .ticket-id {
@@ -648,11 +649,11 @@ const AdminDashboard = () => {
           color: #3b82f6;
         }
 
-        .status-badge, .priority-badge {
+        .badge, .badge-priority {
           display: inline-block;
-          padding: 4px 10px;
+          padding: 4px 12px;
           border-radius: 20px;
-          font-size: 0.65rem;
+          font-size: 0.7rem;
           font-weight: 500;
         }
 
@@ -664,117 +665,92 @@ const AdminDashboard = () => {
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #e0e7ff; color: #4f46e5; }
 
-        .view-details-btn {
+        .view-btn {
           background: #f1f5f9;
           border: none;
           padding: 5px 12px;
           border-radius: 8px;
           font-size: 0.7rem;
           cursor: pointer;
+          transition: all 0.2s;
           color: #475569;
           font-weight: 500;
-          transition: all 0.2s;
         }
 
-        .view-details-btn:hover {
+        .view-btn:hover {
           background: #e2e8f0;
           color: #1e293b;
         }
 
-        /* Actions Grid */
-        .actions-grid {
+        /* Actions */
+        .actions-container {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
+          gap: 12px;
         }
 
-        .action-button {
+        .action-btn-minimal {
           background: #f8fafc;
           border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 14px 16px;
+          border-radius: 10px;
+          padding: 12px 16px;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 10px;
           cursor: pointer;
+          transition: all 0.2s;
           font-size: 0.85rem;
           font-weight: 500;
           color: #334155;
-          transition: all 0.2s;
         }
 
-        .action-button:hover {
+        .action-btn-minimal:hover {
           background: #f1f5f9;
           border-color: #3b82f6;
           color: #3b82f6;
-          transform: translateY(-2px);
+          transform: translateY(-1px);
         }
 
-        .action-button span {
+        .action-btn-minimal span {
           font-size: 1.1rem;
         }
 
         /* Responsive */
         @media (max-width: 1200px) {
-          .stats-grid {
+          .stats-container {
             grid-template-columns: repeat(2, 1fr);
           }
-          .actions-grid {
+          .actions-container {
             grid-template-columns: repeat(2, 1fr);
           }
         }
 
         @media (max-width: 768px) {
-          .dashboard-container {
-            margin-top: 200px;
+          .dashboard-layout { 
+            margin-top: 280px; 
           }
-          .sidebar-container {
-            top: 200px;
-            height: calc(100vh - 200px);
+          .sidebar-wrapper { 
+            top: 280px; 
+            height: calc(100vh - 280px); 
           }
-          .main-container {
-            padding: 16px;
+          .main-wrapper { 
+            padding: 20px; 
             margin-left: 0;
+            max-width: 100%;
           }
-          .dashboard-header {
-            flex-direction: column;
+          .welcome-section { 
+            flex-direction: column; 
             align-items: flex-start;
+            gap: 16px;
           }
-          .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-          }
-          .stat-card {
-            padding: 16px;
-          }
-          .stat-value {
-            font-size: 1.3rem;
-          }
-          .actions-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-          .chart-wrapper {
-            height: 180px;
-          }
-          .chart-bar {
-            width: 30px;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .stats-grid {
+          .stats-container { 
             grid-template-columns: 1fr;
           }
-          .actions-grid {
+          .actions-container { 
             grid-template-columns: 1fr;
           }
-          .data-table th, 
-          .data-table td {
-            padding: 8px 4px;
-            font-size: 0.7rem;
-          }
-          .chart-wrapper {
+          .chart-container {
             flex-direction: column;
             height: auto;
           }
@@ -783,12 +759,12 @@ const AdminDashboard = () => {
             width: 100%;
             justify-content: space-between;
           }
-          .chart-track {
+          .chart-bar-container {
             width: 60%;
           }
           .chart-bar {
             width: 100%;
-            height: 30px !important;
+            height: 35px !important;
             border-radius: 8px;
           }
           .chart-value {

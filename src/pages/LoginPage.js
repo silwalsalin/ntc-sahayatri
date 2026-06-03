@@ -1,6 +1,6 @@
 // src/pages/LoginPage.js
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 // Try to import local images with fallback
 let ntcLogo, govLogo;
@@ -16,13 +16,16 @@ try {
 }
 
 const LoginPage = () => {
+  const navigate = useNavigate();
+  
   // Language state
   const [language, setLanguage] = useState('np');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
 
   // Login form state
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: '',
     rememberMe: false
   });
@@ -31,46 +34,26 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [backendStatus, setBackendStatus] = useState('checking');
+
+  // Handle scroll for header effects
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Check if already logged in
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userRole = localStorage.getItem('userRole');
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
+    const token = localStorage.getItem('adminToken');
+    const user = localStorage.getItem('adminUser');
+    const role = localStorage.getItem('userRole');
     
-    if (token && isLoggedIn === 'true' && userRole === 'admin') {
-      // Redirect to admin dashboard
-      window.location.href = '/admin-dashboard';
+    if (token && user && role === 'admin') {
+      navigate('/admin-dashboard');
     }
-    
-    checkBackendHealth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Load remembered email
-  useEffect(() => {
-    const rememberedEmail = localStorage.getItem('rememberedEmail');
-    if (rememberedEmail) {
-      setFormData(prev => ({ ...prev, email: rememberedEmail, rememberMe: true }));
-    }
-  }, []);
-
-  const checkBackendHealth = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/api/health', {
-        timeout: 5000
-      });
-      if (response.data && (response.data.status === 'UP' || response.data.status === 'OK')) {
-        setBackendStatus('connected');
-      } else {
-        setBackendStatus('disconnected');
-      }
-    } catch (error) {
-      console.error('Backend not reachable:', error);
-      setBackendStatus('disconnected');
-    }
-  };
+  }, [navigate]);
 
   const content = {
     np: {
@@ -83,30 +66,26 @@ const LoginPage = () => {
       serviceSub: 'गुनासो ट्र्याकिङ प्रणाली',
       home: 'गृह पृष्ठ',
       faqs: 'बारम्बार सोधिने प्रश्नहरू',
-      login: 'लगइन',
-      adminLogin: 'प्रशासक लगइन',
+      login: 'प्रशासक लगइन',
       welcomeBack: 'पुन: स्वागत छ',
       loginToAccount: 'प्रशासक खातामा लगइन गर्नुहोस्',
-      email: 'इमेल ठेगाना',
-      enterEmail: 'आफ्नो इमेल ठेगाना प्रविष्ट गर्नुहोस्',
+      username: 'प्रयोगकर्ता नाम / इमेल',
+      enterUsername: 'आफ्नो प्रयोगकर्ता नाम वा इमेल प्रविष्ट गर्नुहोस्',
       password: 'पासवर्ड',
       enterPassword: 'आफ्नो पासवर्ड प्रविष्ट गर्नुहोस्',
       rememberMe: 'मलाई सम्झनुहोस्',
       forgotPassword: 'पासवर्ड बिर्सनुभयो?',
       loginBtn: 'प्रशासक लगइन',
       loggingIn: 'लगइन हुँदैछ...',
-      loading: 'लोड हुँदैछ...',
       backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
-      footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
-      copyright: 'एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
-      loginSuccess: '✅ लगइन सफल! ड्यासबोर्डमा जाँदै...',
-      loginError: '❌ अमान्य इमेल वा पासवर्ड। कृपया पुन: प्रयास गर्नुहोस्।',
-      requiredFields: 'कृपया इमेल र पासवर्ड भर्नुहोस्।',
-      backendError: '⚠️ ब्याकेन्ड सर्भर जडान भएन। कृपया पछि प्रयास गर्नुहोस्।',
-      backendOffline: 'ब्याकेन्ड अफलाइन',
       demoCredentials: 'डेमो प्रमाणपत्रहरू:',
-      adminEmail: 'प्रशासक: admin@ntc.com',
-      adminPass: 'पासवर्ड: admin123'
+      adminUser: 'प्रशासक: admin@ntc',
+      adminPass: 'पासवर्ड: admin123',
+      footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
+      copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
+      loginSuccess: '✅ लगइन सफल! प्रशासक ड्यासबोर्डमा जाँदै...',
+      loginError: '❌ अमान्य प्रयोगकर्ता नाम वा पासवर्ड।',
+      requiredFields: 'कृपया प्रयोगकर्ता नाम र पासवर्ड भर्नुहोस्।'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -118,30 +97,26 @@ const LoginPage = () => {
       serviceSub: 'Complaint Tracking System',
       home: 'Home',
       faqs: 'FAQs',
-      login: 'Login',
-      adminLogin: 'Admin Login',
+      login: 'Admin Login',
       welcomeBack: 'Welcome Back',
       loginToAccount: 'Login to Admin Account',
-      email: 'Email Address',
-      enterEmail: 'Enter your email address',
+      username: 'Username / Email',
+      enterUsername: 'Enter your username or email',
       password: 'Password',
       enterPassword: 'Enter your password',
       rememberMe: 'Remember me',
       forgotPassword: 'Forgot Password?',
       loginBtn: 'Admin Login',
       loggingIn: 'Logging in...',
-      loading: 'Loading...',
       backToHome: 'Back to Home',
-      footerTagline: 'NTC Sahayatri - Always at Your Service',
-      copyright: 'NTC Complaint Tracking System. All rights reserved.',
-      loginSuccess: '✅ Login successful! Redirecting to Dashboard...',
-      loginError: '❌ Invalid email or password. Please try again.',
-      requiredFields: 'Please enter email and password.',
-      backendError: '⚠️ Backend server not connected. Please try again later.',
-      backendOffline: 'Backend Offline',
       demoCredentials: 'Demo Credentials:',
-      adminEmail: 'Admin: admin@ntc.com',
-      adminPass: 'Password: admin123'
+      adminUser: 'Admin: admin@ntc',
+      adminPass: 'Password: admin123',
+      footerTagline: 'NTC Sahayatri - Always at Your Service',
+      copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
+      loginSuccess: '✅ Login successful! Redirecting to Admin Dashboard...',
+      loginError: '❌ Invalid username or password.',
+      requiredFields: 'Please enter username and password.'
     }
   };
 
@@ -153,84 +128,50 @@ const LoginPage = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
-    if (error) setError('');
+    setError('');
   };
 
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.email || !formData.password) {
+    if (!formData.username || !formData.password) {
       setError(t.requiredFields);
-      return;
-    }
-
-    if (backendStatus !== 'connected') {
-      setError(t.backendError);
       return;
     }
 
     setIsLoading(true);
     setError('');
 
-    try {
-      const endpoint = 'http://localhost:5000/api/admin/login';
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Demo authentication - Only Admin login allowed
+    const username = formData.username.toLowerCase();
+    const password = formData.password;
+
+    // Admin login credentials
+    if ((username === 'admin@ntc' || username === 'admin') && password === 'admin123') {
+      // Store admin session
+      localStorage.setItem('adminToken', 'dummy-admin-token-' + Date.now());
+      localStorage.setItem('adminUser', JSON.stringify({
+        id: 1,
+        name: 'Admin User',
+        email: 'admin@ntc.com',
+        role: 'admin',
+        loginTime: new Date().toISOString()
+      }));
+      localStorage.setItem('userRole', 'admin');
+      localStorage.setItem('userName', 'Admin User');
+      localStorage.setItem('isLoggedIn', 'true');
       
-      const loginData = {
-        email: formData.email,
-        password: formData.password
-      };
-
-      console.log('Attempting admin login with email:', formData.email);
-
-      const response = await axios.post(endpoint, loginData, {
-        timeout: 10000,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('Login response:', response.data);
-
-      if (response.data && response.data.success) {
-        const { token, user } = response.data;
-        
-        // Store auth data
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        localStorage.setItem('userRole', user.role);
-        localStorage.setItem('userName', user.fullName || user.name || 'Administrator');
-        localStorage.setItem('userEmail', user.email);
-        localStorage.setItem('isLoggedIn', 'true');
-        
-        if (formData.rememberMe) {
-          localStorage.setItem('rememberedEmail', formData.email);
-        } else {
-          localStorage.removeItem('rememberedEmail');
-        }
-        
-        // Show success message
-        const successMsg = language === 'np' ? '✅ लगइन सफल! ड्यासबोर्डमा जाँदै...' : '✅ Login successful! Redirecting to Dashboard...';
-        alert(successMsg);
-        
-        // Redirect to admin dashboard
-        window.location.href = '/admin-dashboard';
-      } else {
-        setError(response.data?.message || t.loginError);
-      }
+      // Show success message
+      alert(t.loginSuccess);
       
-    } catch (error) {
-      console.error('Login error:', error);
-      if (error.response) {
-        // Server responded with error status
-        setError(error.response.data?.message || t.loginError);
-      } else if (error.request) {
-        // Request was made but no response
-        setError(t.backendError);
-      } else {
-        // Something else happened
-        setError(t.loginError);
-      }
-    } finally {
+      // Redirect to admin dashboard
+      navigate('/admin-dashboard');
+    } 
+    else {
+      setError(t.loginError);
       setIsLoading(false);
     }
   };
@@ -240,7 +181,6 @@ const LoginPage = () => {
     setShowLanguageDropdown(false);
   };
 
-  // LogoImage component
   const LogoImage = ({ src, alt, fallback, className }) => {
     const [imgError, setImgError] = useState(false);
     
@@ -260,15 +200,8 @@ const LoginPage = () => {
 
   return (
     <div className="login-page">
-      {/* Backend Status Indicator */}
-      {backendStatus === 'disconnected' && (
-        <div className="backend-warning">
-          ⚠️ {t.backendOffline} - {t.backendError}
-        </div>
-      )}
-
       {/* HEADER 1 - Top Bar */}
-      <div className="header-1">
+      <div className={`header-1 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
         <div className="container-1">
           <div className="header-left">
             <div className="we-are-here">
@@ -290,7 +223,6 @@ const LoginPage = () => {
               <button 
                 className="language-selector"
                 onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-                type="button"
               >
                 <span className="lang-icon">🌐</span>
                 <span className="lang-text">{language === 'np' ? 'नेपाली' : 'English'}</span>
@@ -301,7 +233,6 @@ const LoginPage = () => {
                   <button 
                     className={`dropdown-item ${language === 'np' ? 'active' : ''}`}
                     onClick={() => handleLanguageChange('np')}
-                    type="button"
                   >
                     <span className="lang-flag">🇳🇵</span>
                     <span>नेपाली</span>
@@ -309,7 +240,6 @@ const LoginPage = () => {
                   <button 
                     className={`dropdown-item ${language === 'en' ? 'active' : ''}`}
                     onClick={() => handleLanguageChange('en')}
-                    type="button"
                   >
                     <span className="lang-flag">🇬🇧</span>
                     <span>English</span>
@@ -322,7 +252,7 @@ const LoginPage = () => {
       </div>
 
       {/* HEADER 2 - Department Level with Logos */}
-      <div className="header-2">
+      <div className={`header-2 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
         <div className="container-2">
           <div className="logo-left">
             <LogoImage 
@@ -364,31 +294,29 @@ const LoginPage = () => {
               </div>
             )}
 
-            <form onSubmit={handleLogin} className="login-form" noValidate>
+            <form onSubmit={handleSubmit} className="login-form">
               <div className="form-group">
-                <label htmlFor="email">{t.email}</label>
+                <label>{t.username}</label>
                 <div className="input-wrapper">
-                  <span className="input-icon">📧</span>
+                  <span className="input-icon">👤</span>
                   <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
+                    type="text"
+                    name="username"
+                    value={formData.username}
                     onChange={handleInputChange}
-                    placeholder={t.enterEmail}
-                    autoComplete="email"
+                    placeholder={t.enterUsername}
+                    autoComplete="username"
                     disabled={isLoading}
                   />
                 </div>
               </div>
 
               <div className="form-group">
-                <label htmlFor="password">{t.password}</label>
+                <label>{t.password}</label>
                 <div className="input-wrapper">
                   <span className="input-icon">🔒</span>
                   <input
                     type={showPassword ? "text" : "password"}
-                    id="password"
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
@@ -401,7 +329,6 @@ const LoginPage = () => {
                     className="password-toggle"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? "👁️" : "👁️‍🗨️"}
                   </button>
@@ -422,11 +349,7 @@ const LoginPage = () => {
                 <a href="/forgot-password" className="forgot-password">{t.forgotPassword}</a>
               </div>
 
-              <button 
-                type="submit" 
-                className="btn-login" 
-                disabled={isLoading || backendStatus !== 'connected'}
-              >
+              <button type="submit" className="btn-login" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <span className="spinner">⏳</span> {t.loggingIn}
@@ -443,18 +366,13 @@ const LoginPage = () => {
             <div className="demo-credentials">
               <div className="demo-title">{t.demoCredentials}</div>
               <div className="demo-info">
-                <code>📧 {t.adminEmail}</code>
-                <code>🔑 {t.adminPass}</code>
+                <code>{t.adminUser}</code>
+                <code>{t.adminPass}</code>
               </div>
             </div>
 
             <div className="back-to-home">
-              <button 
-                type="button"
-                onClick={() => window.location.href = '/'} 
-                className="btn-back" 
-                disabled={isLoading}
-              >
+              <button onClick={() => navigate('/')} className="btn-back" disabled={isLoading}>
                 ← {t.backToHome}
               </button>
             </div>
@@ -463,12 +381,14 @@ const LoginPage = () => {
       </div>
 
       {/* Footer */}
-      <div className="footer">
+      <footer className="footer">
         <div className="footer-content">
-          <p className="footer-tagline">{t.footerTagline}</p>
-          <p className="footer-copyright">{t.copyright}</p>
+          <div className="footer-copyright">
+            <p>{t.footerTagline}</p>
+            <p className="copyright-text">{t.copyright}</p>
+          </div>
         </div>
-      </div>
+      </footer>
 
       <style jsx>{`
         * {
@@ -482,21 +402,6 @@ const LoginPage = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
           min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .backend-warning {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          background: #ff9800;
-          color: white;
-          padding: 8px;
-          text-align: center;
-          z-index: 1050;
-          font-size: 0.8rem;
         }
 
         /* HEADER 1 - Top Bar */
@@ -510,6 +415,11 @@ const LoginPage = () => {
           padding: 10px 0;
           z-index: 1040;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+          transition: all 0.3s ease;
+        }
+
+        .header-1.header-scrolled {
+          padding: 6px 0;
         }
 
         .container-1 {
@@ -556,6 +466,7 @@ const LoginPage = () => {
           display: flex;
           align-items: center;
           gap: 15px;
+          flex-wrap: wrap;
         }
 
         .contact-info-item {
@@ -636,7 +547,14 @@ const LoginPage = () => {
           z-index: 1030;
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
+          transition: all 0.3s ease;
         }
+
+        .header-2.header-scrolled {
+          padding: 8px 0;
+          top: 45px;
+        }
+
         .container-2 {
           max-width: 1400px;
           margin: 0 auto;
@@ -666,7 +584,6 @@ const LoginPage = () => {
 
         /* Main Content */
         .main-content {
-          flex: 1;
           padding-top: 155px;
           min-height: calc(100vh - 200px);
         }
@@ -846,28 +763,29 @@ const LoginPage = () => {
         }
 
         .demo-credentials {
-          margin-top: 24px;
-          padding-top: 20px;
+          margin-top: 32px;
+          padding-top: 24px;
           border-top: 1px solid #e0e0e0;
-          text-align: center;
         }
 
         .demo-title {
-          font-size: 0.75rem;
+          font-size: 0.8rem;
           color: #888;
-          margin-bottom: 8px;
+          margin-bottom: 12px;
+          text-align: center;
         }
 
         .demo-info {
           display: flex;
           justify-content: center;
-          gap: 16px;
+          gap: 20px;
+          margin-bottom: 8px;
           flex-wrap: wrap;
         }
 
         .demo-info code {
           background: #f5f5f5;
-          padding: 6px 12px;
+          padding: 4px 12px;
           border-radius: 20px;
           font-size: 0.7rem;
           color: #1565c0;
@@ -889,41 +807,27 @@ const LoginPage = () => {
         .btn-back:hover:not(:disabled) { background: #1565c0; color: white; transform: translateY(-2px); }
         .btn-back:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* Footer */
         .footer {
-          background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
+          background: #0d2b5e;
           color: white;
-          text-align: center;
-          padding: 20px;
+          padding: 20px 24px;
           margin-top: 40px;
+          text-align: center;
         }
-
-        .footer-content {
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-
-        .footer-tagline {
-          font-size: 0.85rem;
-          margin-bottom: 8px;
-          opacity: 0.9;
-        }
-
-        .footer-copyright {
-          font-size: 0.7rem;
-          opacity: 0.7;
-        }
+        .footer-content { max-width: 1200px; margin: 0 auto; }
+        .footer-copyright { text-align: center; font-size: 0.7rem; opacity: 0.7; }
+        .copyright-text { margin-top: 5px; font-size: 0.65rem; }
 
         @media (max-width: 768px) {
           .main-content { padding-top: 220px; }
           .login-card { padding: 32px 24px; }
           .login-header h2 { font-size: 1.5rem; }
+          .demo-info { flex-direction: column; align-items: center; gap: 8px; }
           .container-1, .container-2 { flex-direction: column; text-align: center; padding: 0 20px; }
           .header-left, .header-right, .logo-left, .logo-right { justify-content: center; }
           .contact-info-group { flex-direction: column; }
           .logo-left, .logo-right { display: none; }
           .dept-text-center { flex: 1; }
-          .demo-info { flex-direction: column; align-items: center; gap: 8px; }
         }
 
         @media (max-width: 480px) {

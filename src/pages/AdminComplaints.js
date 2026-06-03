@@ -9,11 +9,14 @@ const AdminComplaints = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
   const [loading, setLoading] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [newStatus, setNewStatus] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   
@@ -24,40 +27,13 @@ const AdminComplaints = () => {
   // Fetch complaints from backend
   const fetchComplaints = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/complaints');
+      const token = localStorage.getItem('adminToken');
+      const response = await axios.get('http://localhost:5000/api/complaints', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
       if (response.data.success && Array.isArray(response.data.data)) {
-        // Transform backend data to match component format
-        const transformedComplaints = response.data.data.map(complaint => ({
-          id: complaint.id,
-          ticketId: complaint.complaintNumber || `NTC-${complaint.id}`,
-          name: complaint.name || 'N/A',
-          enName: complaint.nameEn || complaint.name || 'N/A',
-          email: complaint.email || 'N/A',
-          phone: complaint.phone || 'N/A',
-          category: complaint.category || complaint.natureOfComplaint || 'general',
-          category_np: complaint.categoryNp || complaint.natureOfComplaint || 'सामान्य',
-          category_en: complaint.category || complaint.natureOfComplaint || 'General',
-          subCategory: complaint.subject || 'general',
-          description: complaint.complaint || complaint.description || 'N/A',
-          enDescription: complaint.complaintEn || complaint.complaint || complaint.description || 'N/A',
-          status: mapStatus(complaint.status),
-          date: complaint.date || formatNepaliDate(complaint.submittedDate),
-          enDate: complaint.enDate || formatEnglishDate(complaint.submittedDate),
-          channel: complaint.channel || 'वेबसाइट पोर्टल',
-          enChannel: complaint.enChannel || 'Website Portal',
-          priority: mapPriority(complaint.priority),
-          assignedTo: complaint.assignedTo || (language === 'np' ? 'प्रशासक' : 'Administrator'),
-          enAssignedTo: complaint.enAssignedTo || 'Administrator',
-          resolvedDate: complaint.resolvedDate ? formatNepaliDate(complaint.resolvedDate) : null,
-          enResolvedDate: complaint.resolvedDate ? formatEnglishDate(complaint.resolvedDate) : null,
-          submittedDate: complaint.submittedDate,
-          referenceNumber: complaint.referenceNumber,
-          landmark: complaint.landmark,
-          address: complaint.address,
-          preferredContact: complaint.preferredContact,
-          // Add raw status for debugging
-          rawStatus: complaint.status
-        }));
+        const transformedComplaints = response.data.data.map(complaint => transformComplaintData(complaint));
         setComplaints(transformedComplaints);
         setBackendStatus('connected');
       } else {
@@ -70,16 +46,59 @@ const AdminComplaints = () => {
       setComplaints(getSampleComplaints());
       setBackendStatus('disconnected');
     } finally {
-      setTimeout(() => setLoading(false), 500);
+      setLoading(false);
     }
   };
 
-  // Map status from backend to component status - Improved mapping
+  // Transform complaint data from backend
+  const transformComplaintData = (complaint) => ({
+    id: complaint.id,
+    ticketId: complaint.complaintNumber || `NTC-${complaint.id}`,
+    name: complaint.name || 'N/A',
+    enName: complaint.nameEn || complaint.name || 'N/A',
+    email: complaint.email || 'N/A',
+    phone: complaint.phone || 'N/A',
+    category: complaint.category || complaint.natureOfComplaint || 'general',
+    category_np: complaint.categoryNp || getCategoryNepali(complaint.category) || 'सामान्य',
+    category_en: complaint.category || complaint.natureOfComplaint || 'General',
+    subCategory: complaint.subject || 'general',
+    description: complaint.complaint || complaint.description || 'N/A',
+    enDescription: complaint.complaintEn || complaint.complaint || complaint.description || 'N/A',
+    status: mapStatus(complaint.status),
+    date: complaint.date || formatNepaliDate(complaint.submittedDate),
+    enDate: complaint.enDate || formatEnglishDate(complaint.submittedDate),
+    channel: complaint.channel || 'वेबसाइट पोर्टल',
+    enChannel: complaint.enChannel || 'Website Portal',
+    priority: mapPriority(complaint.priority),
+    assignedTo: complaint.assignedTo || (language === 'np' ? 'प्रशासक' : 'Administrator'),
+    enAssignedTo: complaint.enAssignedTo || 'Administrator',
+    resolvedDate: complaint.resolvedDate ? formatNepaliDate(complaint.resolvedDate) : null,
+    enResolvedDate: complaint.resolvedDate ? formatEnglishDate(complaint.resolvedDate) : null,
+    submittedDate: complaint.submittedDate,
+    referenceNumber: complaint.referenceNumber,
+    landmark: complaint.landmark,
+    address: complaint.address,
+    preferredContact: complaint.preferredContact,
+    rawStatus: complaint.status
+  });
+
+  // Helper function for category Nepali translation
+  const getCategoryNepali = (category) => {
+    const categories = {
+      'internet': 'इन्टरनेट',
+      'recharge': 'रिचार्ज',
+      'activation': 'सक्रियता',
+      'billing': 'बिलिङ',
+      'general': 'सामान्य'
+    };
+    return categories[category] || 'सामान्य';
+  };
+
+  // Map status from backend to component status
   const mapStatus = (status) => {
     if (!status) return 'pending';
     
     const statusMap = {
-      // English statuses
       'Pending': 'pending',
       'pending': 'pending',
       'In Progress': 'in-progress',
@@ -94,7 +113,6 @@ const AdminComplaints = () => {
       'Under Review': 'review',
       'under review': 'review',
       'review': 'review',
-      // Nepali statuses
       'विचाराधीन': 'pending',
       'प्रगतिमा': 'in-progress',
       'समाधान भयो': 'resolved',
@@ -107,23 +125,21 @@ const AdminComplaints = () => {
     return statusMap[status] || 'pending';
   };
 
-  // Map priority from backend to component priority - Improved mapping
+  // Map priority from backend to component priority
   const mapPriority = (priority) => {
     if (!priority) return 'medium';
     
     const priorityMap = {
-      // English priorities
       'High': 'high',
       'high': 'high',
-      'Medium': 'medium',
-      'medium': 'medium',
-      'Low': 'low',
-      'low': 'low',
       'Urgent': 'high',
       'urgent': 'high',
       'Critical': 'high',
       'critical': 'high',
-      // Nepali priorities
+      'Medium': 'medium',
+      'medium': 'medium',
+      'Low': 'low',
+      'low': 'low',
       'उच्च': 'high',
       'मध्यम': 'medium',
       'न्यून': 'low'
@@ -159,6 +175,49 @@ const AdminComplaints = () => {
     }
   };
 
+  // Update complaint status
+  const updateComplaintStatus = async (complaintId, newStatusValue) => {
+    setUpdatingStatus(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const statusMap = {
+        'pending': 'Pending',
+        'in-progress': 'In Progress',
+        'resolved': 'Resolved',
+        'review': 'Under Review'
+      };
+      
+      const response = await axios.put(
+        `http://localhost:5000/api/complaints/${complaintId}/status`,
+        { status: statusMap[newStatusValue] },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        // Update local state
+        setComplaints(prevComplaints =>
+          prevComplaints.map(complaint =>
+            complaint.id === complaintId
+              ? { ...complaint, status: newStatusValue }
+              : complaint
+          )
+        );
+        alert(language === 'np' ? 'स्थिति सफलतापूर्वक अपडेट गरियो' : 'Status updated successfully');
+        setShowStatusModal(false);
+        setSelectedComplaint(null);
+      } else {
+        throw new Error(response.data.message || 'Failed to update status');
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert(language === 'np' 
+        ? 'स्थिति अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
+        : 'Failed to update status. Please try again.');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   // Get sample complaints as fallback
   const getSampleComplaints = () => {
     return [
@@ -173,8 +232,8 @@ const AdminComplaints = () => {
         category_np: 'इन्टरनेट',
         category_en: 'Internet',
         subCategory: 'connection',
-        description: 'फाइबर जडान २ दिनदेखि बन्द छ',
-        enDescription: 'Fiber connection down since 2 days',
+        description: 'फाइबर जडान २ दिनदेखि बन्द छ। इन्टरनेट सेवा नभएकोले धेरै समस्या भएको छ।',
+        enDescription: 'Fiber connection has been down for 2 days. Having many problems due to no internet service.',
         status: 'in-progress',
         date: '२०८०-०१-१५',
         enDate: '2024-01-15',
@@ -184,6 +243,7 @@ const AdminComplaints = () => {
         assignedTo: 'प्राविधिक टोली',
         enAssignedTo: 'Technical Team',
         resolvedDate: null,
+        enResolvedDate: null,
         rawStatus: 'in-progress'
       },
       { 
@@ -197,8 +257,8 @@ const AdminComplaints = () => {
         category_np: 'रिचार्ज',
         category_en: 'Recharge',
         subCategory: 'not-credited',
-        description: 'रु. ५०० रिचार्ज गरे पनि ब्यालेन्स अपडेट भएन',
-        enDescription: 'Recharged Rs. 500 but balance not updated',
+        description: 'रु. ५०० रिचार्ज गरे पनि ब्यालेन्स अपडेट भएन। कृपया समस्या समाधान गरिदिनुहोस्।',
+        enDescription: 'Recharged Rs. 500 but balance not updated. Please resolve the issue.',
         status: 'resolved',
         date: '२०८०-०१-२०',
         enDate: '2024-01-20',
@@ -208,6 +268,7 @@ const AdminComplaints = () => {
         assignedTo: 'बिलिङ टोली',
         enAssignedTo: 'Billing Team',
         resolvedDate: '२०८०-०१-२२',
+        enResolvedDate: '2024-01-22',
         rawStatus: 'resolved'
       },
       { 
@@ -221,8 +282,8 @@ const AdminComplaints = () => {
         category_np: 'सक्रियता',
         category_en: 'Activation',
         subCategory: 'sim-activation',
-        description: 'नयाँ सिम सक्रिय भएन',
-        enDescription: 'New SIM not activated',
+        description: 'नयाँ सिम खरिद गरेको २४ घण्टा भयो तर सक्रिय भएको छैन।',
+        enDescription: 'Purchased new SIM 24 hours ago but not activated yet.',
         status: 'pending',
         date: '२०८०-०२-०१',
         enDate: '2024-02-01',
@@ -232,7 +293,33 @@ const AdminComplaints = () => {
         assignedTo: 'ग्राहक सेवा',
         enAssignedTo: 'Customer Service',
         resolvedDate: null,
+        enResolvedDate: null,
         rawStatus: 'pending'
+      },
+      { 
+        id: 4, 
+        ticketId: 'NTC-2024-004', 
+        name: 'विनोद न्यौपाने', 
+        enName: 'Binod Neupane',
+        email: 'binod@example.com',
+        phone: '9812345680',
+        category: 'billing',
+        category_np: 'बिलिङ',
+        category_en: 'Billing',
+        subCategory: 'wrong-charge',
+        description: 'गत महिनाको बिलमा गलत चार्ज देखाइएको छ।',
+        enDescription: 'Wrong charge shown in last month\'s bill.',
+        status: 'review',
+        date: '२०८०-०२-१०',
+        enDate: '2024-02-10',
+        channel: 'इमेल',
+        enChannel: 'Email',
+        priority: 'medium',
+        assignedTo: 'बिलिङ टोली',
+        enAssignedTo: 'Billing Team',
+        resolvedDate: null,
+        enResolvedDate: null,
+        rawStatus: 'review'
       }
     ];
   };
@@ -293,7 +380,12 @@ const AdminComplaints = () => {
       inProgressCount: 'प्रगतिमा',
       resolvedCount: 'समाधान',
       loading: 'लोड हुँदै...',
-      refresh: 'रिफ्रेस'
+      refresh: 'रिफ्रेस',
+      updateStatusTitle: 'स्थिति अपडेट गर्नुहोस्',
+      selectNewStatus: 'नयाँ स्थिति चयन गर्नुहोस्',
+      cancel: 'रद्द गर्नुहोस्',
+      update: 'अपडेट गर्नुहोस्',
+      updating: 'अपडेट हुँदै...'
     },
     en: {
       complaintsManagement: 'Complaints Management',
@@ -339,7 +431,12 @@ const AdminComplaints = () => {
       inProgressCount: 'In Progress',
       resolvedCount: 'Resolved',
       loading: 'Loading...',
-      refresh: 'Refresh'
+      refresh: 'Refresh',
+      updateStatusTitle: 'Update Status',
+      selectNewStatus: 'Select New Status',
+      cancel: 'Cancel',
+      update: 'Update',
+      updating: 'Updating...'
     }
   };
 
@@ -447,6 +544,27 @@ const AdminComplaints = () => {
   const closeModal = () => {
     setShowModal(false);
     setSelectedComplaint(null);
+  };
+
+  const openStatusModal = (complaint) => {
+    setSelectedComplaint(complaint);
+    setNewStatus(complaint.status);
+    setShowStatusModal(true);
+    setShowModal(false);
+  };
+
+  const closeStatusModal = () => {
+    setShowStatusModal(false);
+    setSelectedComplaint(null);
+    setNewStatus('');
+  };
+
+  const handleStatusUpdate = () => {
+    if (selectedComplaint && newStatus !== selectedComplaint.status) {
+      updateComplaintStatus(selectedComplaint.id, newStatus);
+    } else {
+      closeStatusModal();
+    }
   };
 
   // Refresh data
@@ -593,9 +711,14 @@ const AdminComplaints = () => {
                         </span>
                       </td>
                       <td>
-                        <button className="view-btn" onClick={() => openModal(complaint)}>
-                          👁️ {t.viewDetails}
-                        </button>
+                        <div className="action-buttons">
+                          <button className="view-btn" onClick={() => openModal(complaint)}>
+                            👁️ {t.viewDetails}
+                          </button>
+                          <button className="update-status-btn" onClick={() => openStatusModal(complaint)}>
+                            🔄 {t.updateStatus}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -704,7 +827,57 @@ const AdminComplaints = () => {
               </div>
             </div>
             <div className="modal-footer">
+              <button className="btn-update-status" onClick={() => openStatusModal(selectedComplaint)}>
+                🔄 {t.updateStatus}
+              </button>
               <button className="btn-close" onClick={closeModal}>{t.close}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Status Modal */}
+      {showStatusModal && selectedComplaint && (
+        <div className="modal-overlay" onClick={closeStatusModal}>
+          <div className="modal-content status-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>🔄 {t.updateStatusTitle}</h2>
+              <button className="modal-close" onClick={closeStatusModal}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="detail-row">
+                <label>{t.ticketId}:</label>
+                <span>{selectedComplaint.ticketId}</span>
+              </div>
+              <div className="detail-row">
+                <label>{t.complainant}:</label>
+                <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
+              </div>
+              <div className="detail-row">
+                <label>{t.selectNewStatus}:</label>
+                <select 
+                  value={newStatus} 
+                  onChange={(e) => setNewStatus(e.target.value)}
+                  className="status-select"
+                >
+                  <option value="pending">{t.pending}</option>
+                  <option value="in-progress">{t.inProgress}</option>
+                  <option value="review">{t.underReview}</option>
+                  <option value="resolved">{t.resolved}</option>
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={closeStatusModal}>
+                {t.cancel}
+              </button>
+              <button 
+                className="btn-update" 
+                onClick={handleStatusUpdate}
+                disabled={updatingStatus || newStatus === selectedComplaint.status}
+              >
+                {updatingStatus ? t.updating : t.update}
+              </button>
             </div>
           </div>
         </div>
@@ -773,6 +946,7 @@ const AdminComplaints = () => {
           background: white;
           border-right: 1px solid #e2e8f0;
           z-index: 40;
+          overflow-y: auto;
         }
 
         .main-container {
@@ -996,11 +1170,13 @@ const AdminComplaints = () => {
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #e0e7ff; color: #4f46e5; }
 
-        .view-btn {
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
-          color: white;
-          border: none;
-          padding: 6px 14px;
+        .action-buttons {
+          display: flex;
+          gap: 8px;
+        }
+
+        .view-btn, .update-status-btn {
+          padding: 6px 12px;
           border-radius: 8px;
           font-size: 0.7rem;
           cursor: pointer;
@@ -1008,11 +1184,22 @@ const AdminComplaints = () => {
           display: inline-flex;
           align-items: center;
           gap: 4px;
+          border: none;
         }
 
-        .view-btn:hover {
+        .view-btn {
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
+          color: white;
+        }
+
+        .update-status-btn {
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: white;
+        }
+
+        .view-btn:hover, .update-status-btn:hover {
           transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         .no-data {
@@ -1093,6 +1280,10 @@ const AdminComplaints = () => {
           box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
 
+        .status-modal {
+          max-width: 500px;
+        }
+
         .modal-header {
           display: flex;
           justify-content: space-between;
@@ -1156,6 +1347,21 @@ const AdminComplaints = () => {
           margin-bottom: 8px;
         }
 
+        .status-select {
+          flex: 1;
+          padding: 8px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          background: white;
+          cursor: pointer;
+        }
+
+        .status-select:focus {
+          outline: none;
+          border-color: #3b82f6;
+        }
+
         .modal-footer {
           padding: 16px 24px;
           border-top: 1px solid #e2e8f0;
@@ -1163,22 +1369,52 @@ const AdminComplaints = () => {
           position: sticky;
           bottom: 0;
           background: white;
+          display: flex;
+          gap: 12px;
+          justify-content: flex-end;
         }
 
-        .btn-close {
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
-          color: white;
-          border: none;
+        .btn-close, .btn-update-status, .btn-cancel, .btn-update {
           padding: 10px 24px;
           border-radius: 10px;
           cursor: pointer;
           font-weight: 500;
           transition: all 0.2s;
+          border: none;
         }
 
-        .btn-close:hover {
+        .btn-close {
+          background: #e2e8f0;
+          color: #475569;
+        }
+
+        .btn-update-status {
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: white;
+        }
+
+        .btn-cancel {
+          background: #e2e8f0;
+          color: #475569;
+        }
+
+        .btn-update {
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
+          color: white;
+        }
+
+        .btn-update:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .btn-close:hover, .btn-cancel:hover {
+          background: #cbd5e1;
+        }
+
+        .btn-update-status:hover, .btn-update:hover {
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
         /* Responsive */
@@ -1191,10 +1427,14 @@ const AdminComplaints = () => {
         @media (max-width: 768px) {
           .complaints-container {
             margin-top: 280px;
+            flex-direction: column;
           }
           .sidebar-container {
-            top: 280px;
-            height: calc(100vh - 280px);
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
           }
           .main-container {
             padding: 16px;
@@ -1218,6 +1458,9 @@ const AdminComplaints = () => {
             align-items: flex-start;
             gap: 12px;
           }
+          .action-buttons {
+            flex-direction: column;
+          }
         }
 
         @media (max-width: 480px) {
@@ -1232,6 +1475,12 @@ const AdminComplaints = () => {
           .detail-row label {
             width: 100%;
             margin-bottom: 4px;
+          }
+          .modal-footer {
+            flex-direction: column;
+          }
+          .modal-footer button {
+            width: 100%;
           }
         }
       `}</style>

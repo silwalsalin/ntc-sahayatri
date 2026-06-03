@@ -89,6 +89,7 @@ const Sidebar = ({ language }) => {
       label: t.users,
       children: [
         { id: 'all-users', icon: '👤', label: t.allUsers, path: '/admin-users' },
+        { id: 'add-user', icon: '➕', label: t.addUser, path: '/admin-users/add' }
       ]
     },
     {
@@ -191,7 +192,7 @@ const Sidebar = ({ language }) => {
           <span className="logo-icon">📡</span>
           <div className="logo-text">
             <span className="logo-title">NTC Sahayatri</span>
-            <span className="logo-subtitle">Admin Panel</span>
+            <span className="logo-subtitle">Admin</span>
           </div>
         </div>
       </div>
@@ -259,7 +260,7 @@ const Sidebar = ({ language }) => {
         <div className="admin-info">
           <div className="admin-avatar">👨‍💼</div>
           <div className="admin-details">
-            <span className="admin-name">Admin User</span>
+            <span className="admin-name">Admin</span>
             <span className="admin-role">Administrator</span>
           </div>
         </div>
@@ -514,6 +515,25 @@ const Sidebar = ({ language }) => {
         .admin-role {
           font-size: 0.65rem;
           color: #6b7280;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+          .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 260px;
+            height: 100vh;
+            z-index: 1000;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+          }
+          
+          .sidebar.mobile-open {
+            transform: translateX(0);
+          }
         }
       `}</style>
     </div>
