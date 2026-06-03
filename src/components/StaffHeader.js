@@ -82,7 +82,7 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
   const handleLogout = () => {
     localStorage.removeItem('staffToken');
     localStorage.removeItem('staffUser');
-    navigate('/staff-login');
+    navigate('/');
   };
 
   const handleMarkAllRead = () => {

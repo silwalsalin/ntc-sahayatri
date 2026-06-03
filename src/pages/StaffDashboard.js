@@ -39,7 +39,7 @@ const StaffDashboard = () => {
     const user = localStorage.getItem('staffUser');
     
     if (!token || !user) {
-      navigate('/login');
+      navigate('/staff-login');
     } else {
       fetchDashboardData();
     }
