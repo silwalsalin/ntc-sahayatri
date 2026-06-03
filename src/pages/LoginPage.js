@@ -1,6 +1,5 @@
 // src/pages/LoginPage.js
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 // Try to import local images with fallback
@@ -17,8 +16,6 @@ try {
 }
 
 const LoginPage = () => {
-  const navigate = useNavigate();
-  
   // Language state
   const [language, setLanguage] = useState('np');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
@@ -29,9 +26,6 @@ const LoginPage = () => {
     password: '',
     rememberMe: false
   });
-
-  // User type selection (admin or staff)
-  const [userType, setUserType] = useState('admin');
 
   // Error and loading state
   const [error, setError] = useState('');
@@ -45,17 +39,22 @@ const LoginPage = () => {
     const userRole = localStorage.getItem('userRole');
     const isLoggedIn = localStorage.getItem('isLoggedIn');
     
-    if (token && isLoggedIn === 'true') {
-      // Redirect based on user role
-      if (userRole === 'admin') {
-        navigate('/admin-dashboard', { replace: true });
-      } else if (userRole === 'staff') {
-        navigate('/staff-dashboard', { replace: true });
-      }
+    if (token && isLoggedIn === 'true' && userRole === 'admin') {
+      // Redirect to admin dashboard
+      window.location.href = '/admin-dashboard';
     }
     
     checkBackendHealth();
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load remembered email
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem('rememberedEmail');
+    if (rememberedEmail) {
+      setFormData(prev => ({ ...prev, email: rememberedEmail, rememberMe: true }));
+    }
+  }, []);
 
   const checkBackendHealth = async () => {
     try {
@@ -86,17 +85,17 @@ const LoginPage = () => {
       faqs: 'बारम्बार सोधिने प्रश्नहरू',
       login: 'लगइन',
       adminLogin: 'प्रशासक लगइन',
-      staffLogin: 'कर्मचारी लगइन',
       welcomeBack: 'पुन: स्वागत छ',
-      loginToAccount: 'आफ्नो खातामा लगइन गर्नुहोस्',
+      loginToAccount: 'प्रशासक खातामा लगइन गर्नुहोस्',
       email: 'इमेल ठेगाना',
       enterEmail: 'आफ्नो इमेल ठेगाना प्रविष्ट गर्नुहोस्',
       password: 'पासवर्ड',
       enterPassword: 'आफ्नो पासवर्ड प्रविष्ट गर्नुहोस्',
       rememberMe: 'मलाई सम्झनुहोस्',
       forgotPassword: 'पासवर्ड बिर्सनुभयो?',
-      loginBtn: 'लगइन गर्नुहोस्',
+      loginBtn: 'प्रशासक लगइन',
       loggingIn: 'लगइन हुँदैछ...',
+      loading: 'लोड हुँदैछ...',
       backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
       copyright: 'एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
@@ -107,12 +106,7 @@ const LoginPage = () => {
       backendOffline: 'ब्याकेन्ड अफलाइन',
       demoCredentials: 'डेमो प्रमाणपत्रहरू:',
       adminEmail: 'प्रशासक: admin@ntc.com',
-      adminPass: 'पासवर्ड: admin123',
-      staffEmail: 'कर्मचारी: staff@ntc.com',
-      staffPass: 'पासवर्ड: staff123',
-      selectUserType: 'प्रयोगकर्ता प्रकार चयन गर्नुहोस्',
-      admin: 'प्रशासक',
-      staff: 'कर्मचारी'
+      adminPass: 'पासवर्ड: admin123'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -126,17 +120,17 @@ const LoginPage = () => {
       faqs: 'FAQs',
       login: 'Login',
       adminLogin: 'Admin Login',
-      staffLogin: 'Staff Login',
       welcomeBack: 'Welcome Back',
-      loginToAccount: 'Login to Your Account',
+      loginToAccount: 'Login to Admin Account',
       email: 'Email Address',
       enterEmail: 'Enter your email address',
       password: 'Password',
       enterPassword: 'Enter your password',
       rememberMe: 'Remember me',
       forgotPassword: 'Forgot Password?',
-      loginBtn: 'Login',
+      loginBtn: 'Admin Login',
       loggingIn: 'Logging in...',
+      loading: 'Loading...',
       backToHome: 'Back to Home',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
       copyright: 'NTC Complaint Tracking System. All rights reserved.',
@@ -147,12 +141,7 @@ const LoginPage = () => {
       backendOffline: 'Backend Offline',
       demoCredentials: 'Demo Credentials:',
       adminEmail: 'Admin: admin@ntc.com',
-      adminPass: 'Password: admin123',
-      staffEmail: 'Staff: staff@ntc.com',
-      staffPass: 'Password: staff123',
-      selectUserType: 'Select User Type',
-      admin: 'Admin',
-      staff: 'Staff'
+      adminPass: 'Password: admin123'
     }
   };
 
@@ -184,14 +173,14 @@ const LoginPage = () => {
     setError('');
 
     try {
-      const endpoint = userType === 'admin' 
-        ? 'http://localhost:5000/api/admin/login'
-        : 'http://localhost:5000/api/staff/login';
+      const endpoint = 'http://localhost:5000/api/admin/login';
       
       const loginData = {
         email: formData.email,
         password: formData.password
       };
+
+      console.log('Attempting admin login with email:', formData.email);
 
       const response = await axios.post(endpoint, loginData, {
         timeout: 10000,
@@ -200,6 +189,8 @@ const LoginPage = () => {
         }
       });
 
+      console.log('Login response:', response.data);
+
       if (response.data && response.data.success) {
         const { token, user } = response.data;
         
@@ -207,30 +198,22 @@ const LoginPage = () => {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('userRole', user.role);
-        localStorage.setItem('userName', user.fullName || user.name || (user.role === 'admin' ? 'Administrator' : 'Staff User'));
+        localStorage.setItem('userName', user.fullName || user.name || 'Administrator');
         localStorage.setItem('userEmail', user.email);
         localStorage.setItem('isLoggedIn', 'true');
         
         if (formData.rememberMe) {
           localStorage.setItem('rememberedEmail', formData.email);
-          localStorage.setItem('rememberedUserType', userType);
         } else {
           localStorage.removeItem('rememberedEmail');
-          localStorage.removeItem('rememberedUserType');
         }
         
         // Show success message
         const successMsg = language === 'np' ? '✅ लगइन सफल! ड्यासबोर्डमा जाँदै...' : '✅ Login successful! Redirecting to Dashboard...';
         alert(successMsg);
         
-        // Redirect based on user role
-        if (user.role === 'admin') {
-          navigate('/admin-dashboard', { replace: true });
-        } else if (user.role === 'staff') {
-          navigate('/staff-dashboard', { replace: true });
-        } else {
-          navigate('/dashboard', { replace: true });
-        }
+        // Redirect to admin dashboard
+        window.location.href = '/admin-dashboard';
       } else {
         setError(response.data?.message || t.loginError);
       }
@@ -252,23 +235,12 @@ const LoginPage = () => {
     }
   };
 
-  // Load remembered email and user type
-  useEffect(() => {
-    const rememberedEmail = localStorage.getItem('rememberedEmail');
-    const rememberedUserType = localStorage.getItem('rememberedUserType');
-    if (rememberedEmail) {
-      setFormData(prev => ({ ...prev, email: rememberedEmail, rememberMe: true }));
-    }
-    if (rememberedUserType) {
-      setUserType(rememberedUserType);
-    }
-  }, []);
-
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
     setShowLanguageDropdown(false);
   };
 
+  // LogoImage component
   const LogoImage = ({ src, alt, fallback, className }) => {
     const [imgError, setImgError] = useState(false);
     
@@ -318,6 +290,7 @@ const LoginPage = () => {
               <button 
                 className="language-selector"
                 onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+                type="button"
               >
                 <span className="lang-icon">🌐</span>
                 <span className="lang-text">{language === 'np' ? 'नेपाली' : 'English'}</span>
@@ -328,6 +301,7 @@ const LoginPage = () => {
                   <button 
                     className={`dropdown-item ${language === 'np' ? 'active' : ''}`}
                     onClick={() => handleLanguageChange('np')}
+                    type="button"
                   >
                     <span className="lang-flag">🇳🇵</span>
                     <span>नेपाली</span>
@@ -335,6 +309,7 @@ const LoginPage = () => {
                   <button 
                     className={`dropdown-item ${language === 'en' ? 'active' : ''}`}
                     onClick={() => handleLanguageChange('en')}
+                    type="button"
                   >
                     <span className="lang-flag">🇬🇧</span>
                     <span>English</span>
@@ -380,24 +355,6 @@ const LoginPage = () => {
               <div className="login-icon">🔐</div>
               <h2>{t.welcomeBack}</h2>
               <p>{t.loginToAccount}</p>
-            </div>
-
-            {/* User Type Toggle */}
-            <div className="user-type-toggle">
-              <button
-                type="button"
-                className={`toggle-btn ${userType === 'admin' ? 'active' : ''}`}
-                onClick={() => setUserType('admin')}
-              >
-                👑 {t.adminLogin}
-              </button>
-              <button
-                type="button"
-                className={`toggle-btn ${userType === 'staff' ? 'active' : ''}`}
-                onClick={() => setUserType('staff')}
-              >
-                👤 {t.staffLogin}
-              </button>
             </div>
 
             {error && (
@@ -482,28 +439,19 @@ const LoginPage = () => {
               </button>
             </form>
 
-            {/* Demo Credentials - Dynamic based on user type */}
+            {/* Demo Credentials */}
             <div className="demo-credentials">
               <div className="demo-title">{t.demoCredentials}</div>
               <div className="demo-info">
-                {userType === 'admin' ? (
-                  <>
-                    <code>📧 {t.adminEmail}</code>
-                    <code>🔑 {t.adminPass}</code>
-                  </>
-                ) : (
-                  <>
-                    <code>📧 {t.staffEmail}</code>
-                    <code>🔑 {t.staffPass}</code>
-                  </>
-                )}
+                <code>📧 {t.adminEmail}</code>
+                <code>🔑 {t.adminPass}</code>
               </div>
             </div>
 
             <div className="back-to-home">
               <button 
                 type="button"
-                onClick={() => navigate('/')} 
+                onClick={() => window.location.href = '/'} 
                 className="btn-back" 
                 disabled={isLoading}
               >
@@ -756,39 +704,6 @@ const LoginPage = () => {
           color: #6c8196;
         }
 
-        /* User Type Toggle */
-        .user-type-toggle {
-          display: flex;
-          gap: 12px;
-          margin-bottom: 28px;
-          background: #f1f5f9;
-          padding: 6px;
-          border-radius: 60px;
-        }
-
-        .toggle-btn {
-          flex: 1;
-          padding: 12px 20px;
-          border: none;
-          background: transparent;
-          border-radius: 50px;
-          font-size: 0.9rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          color: #64748b;
-        }
-
-        .toggle-btn.active {
-          background: linear-gradient(135deg, #1565c0, #0d47a1);
-          color: white;
-          box-shadow: 0 2px 8px rgba(21, 101, 192, 0.3);
-        }
-
-        .toggle-btn:last-child.active {
-          background: linear-gradient(135deg, #10b981, #059669);
-        }
-
         .error-message {
           background: #ffebee;
           border-left: 4px solid #f44336;
@@ -1009,8 +924,6 @@ const LoginPage = () => {
           .logo-left, .logo-right { display: none; }
           .dept-text-center { flex: 1; }
           .demo-info { flex-direction: column; align-items: center; gap: 8px; }
-          .user-type-toggle { flex-direction: column; border-radius: 16px; }
-          .toggle-btn { border-radius: 12px; }
         }
 
         @media (max-width: 480px) {

@@ -8,6 +8,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
   const [loading, setLoading] = useState(true);
+  const [adminName, setAdminName] = useState('Admin');
   const [stats, setStats] = useState({
     totalComplaints: 1247,
     pendingComplaints: 342,
@@ -37,14 +38,23 @@ const AdminDashboard = () => {
 
   // Check authentication
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    const user = localStorage.getItem('adminUser');
-    if (!token || !user) {
-      navigate('/admin-login');
+    const token = localStorage.getItem('token');
+    const userRole = localStorage.getItem('userRole');
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
+    const user = localStorage.getItem('user');
+    
+    if (!token || !isLoggedIn || userRole !== 'admin') {
+      window.location.href = '/login';
     } else {
+      try {
+        const userData = user ? JSON.parse(user) : {};
+        setAdminName(userData.fullName || userData.name || 'Admin');
+      } catch (e) {
+        setAdminName('Admin');
+      }
       setTimeout(() => setLoading(false), 500);
     }
-  }, [navigate]);
+  }, []);
 
   const content = {
     np: {
@@ -76,8 +86,6 @@ const AdminDashboard = () => {
       monthlyTrend: 'मासिक गुनासो प्रवृत्ति',
       loading: 'लोड हुँदैछ...',
       fromLastMonth: 'अघिल्लो महिना भन्दा',
-      increase: 'वृद्धि',
-      decrease: 'कमी',
       high: 'उच्च',
       medium: 'मध्यम',
       low: 'न्यून',
@@ -114,8 +122,6 @@ const AdminDashboard = () => {
       monthlyTrend: 'Monthly Complaint Trend',
       loading: 'Loading...',
       fromLastMonth: 'from last month',
-      increase: 'increase',
-      decrease: 'decrease',
       high: 'High',
       medium: 'Medium',
       low: 'Low',
@@ -128,29 +134,47 @@ const AdminDashboard = () => {
   const t = content[language];
   
   const getStatusClass = (status) => {
-    const classes = { pending: 'status-pending', 'in-progress': 'status-progress', resolved: 'status-resolved' };
-    return classes[status] || 'status-pending';
+    const s = (status || '').toLowerCase();
+    if (s === 'pending') return 'status-pending';
+    if (s === 'in-progress') return 'status-progress';
+    if (s === 'resolved') return 'status-resolved';
+    return 'status-pending';
   };
 
   const getStatusText = (status) => {
-    const texts = {
-      np: { pending: 'विचाराधीन', 'in-progress': 'प्रगतिमा', resolved: 'समाधान' },
-      en: { pending: 'Pending', 'in-progress': 'In Progress', resolved: 'Resolved' }
-    };
-    return texts[language][status] || status;
+    const s = (status || '').toLowerCase();
+    if (language === 'np') {
+      if (s === 'pending') return 'विचाराधीन';
+      if (s === 'in-progress') return 'प्रगतिमा';
+      if (s === 'resolved') return 'समाधान';
+    } else {
+      if (s === 'pending') return 'Pending';
+      if (s === 'in-progress') return 'In Progress';
+      if (s === 'resolved') return 'Resolved';
+    }
+    return status || 'Pending';
   };
 
   const getPriorityClass = (priority) => {
-    const classes = { high: 'priority-high', medium: 'priority-medium', low: 'priority-low' };
-    return classes[priority] || 'priority-medium';
+    const p = (priority || '').toLowerCase();
+    if (p === 'high') return 'priority-high';
+    if (p === 'medium') return 'priority-medium';
+    if (p === 'low') return 'priority-low';
+    return 'priority-medium';
   };
 
   const getPriorityText = (priority) => {
-    const texts = {
-      np: { high: 'उच्च', medium: 'मध्यम', low: 'न्यून' },
-      en: { high: 'High', medium: 'Medium', low: 'Low' }
-    };
-    return texts[language][priority] || priority;
+    const p = (priority || '').toLowerCase();
+    if (language === 'np') {
+      if (p === 'high') return 'उच्च';
+      if (p === 'medium') return 'मध्यम';
+      if (p === 'low') return 'न्यून';
+    } else {
+      if (p === 'high') return 'High';
+      if (p === 'medium') return 'Medium';
+      if (p === 'low') return 'Low';
+    }
+    return priority || 'Medium';
   };
 
   const getCategoryText = (category, enCategory) => language === 'np' ? category : enCategory;
@@ -158,28 +182,11 @@ const AdminDashboard = () => {
   const getDate = (npDate, enDate) => language === 'np' ? npDate : enDate;
   
   const getChartLabels = () => {
-    const currentMonth = new Date().getMonth();
-    const labels = chartData.labels[language];
-    if (language === 'np') {
-      return labels.slice(0, 6);
-    }
-    return labels.slice(0, 6);
+    return chartData.labels[language].slice(0, 6);
   };
   
   const getChartData = () => {
     return chartData.datasets.slice(0, 6);
-  };
-
-  // Get trend data
-  const getTrend = (current, previous, isIncreaseGood = true) => {
-    const change = ((current - previous) / previous * 100).toFixed(1);
-    const isPositive = change > 0;
-    if (isPositive) {
-      return { text: `↑ ${Math.abs(change)}% ${t.fromLastMonth}`, class: 'positive' };
-    } else if (change < 0) {
-      return { text: `↓ ${Math.abs(change)}% ${t.fromLastMonth}`, class: 'positive' };
-    }
-    return { text: `0% ${t.fromLastMonth}`, class: 'neutral' };
   };
 
   if (loading) {
@@ -193,17 +200,17 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-dashboard">
-      <Header language={language} setLanguage={setLanguage} adminName="Admin" />
+      <Header language={language} setLanguage={setLanguage} adminName={adminName} userRole="admin" />
       
       <div className="dashboard-container">
         <div className="sidebar-container">
-          <Sidebar language={language} />
+          <Sidebar language={language} userRole="admin" />
         </div>
         
         <div className="main-container">
           <div className="dashboard-header">
             <div className="welcome-section">
-              <h1>{t.welcomeBack}, <span className="admin-name">Admin</span></h1>
+              <h1>{t.welcomeBack}, <span className="admin-name">{adminName}</span></h1>
               <p>{t.dashboard}</p>
             </div>
             <div className="date-display">
@@ -211,14 +218,13 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
+          {/* Stats Cards - Removed trend lines */}
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-icon">📋</div>
               <div className="stat-info">
                 <div className="stat-value">{stats.totalComplaints.toLocaleString()}</div>
                 <div className="stat-label">{t.totalComplaints}</div>
-                <div className="stat-trend positive">↑ 12% {t.fromLastMonth}</div>
               </div>
             </div>
             <div className="stat-card">
@@ -226,7 +232,6 @@ const AdminDashboard = () => {
               <div className="stat-info">
                 <div className="stat-value">{stats.pendingComplaints.toLocaleString()}</div>
                 <div className="stat-label">{t.pendingComplaints}</div>
-                <div className="stat-trend negative">↑ 5% {t.fromLastMonth}</div>
               </div>
             </div>
             <div className="stat-card">
@@ -234,7 +239,6 @@ const AdminDashboard = () => {
               <div className="stat-info">
                 <div className="stat-value">{stats.inProgressComplaints.toLocaleString()}</div>
                 <div className="stat-label">{t.inProgressComplaints}</div>
-                <div className="stat-trend positive">↓ 3% {t.fromLastMonth}</div>
               </div>
             </div>
             <div className="stat-card">
@@ -242,7 +246,6 @@ const AdminDashboard = () => {
               <div className="stat-info">
                 <div className="stat-value">{stats.resolvedComplaints.toLocaleString()}</div>
                 <div className="stat-label">{t.resolvedComplaints}</div>
-                <div className="stat-trend positive">↑ 8% {t.fromLastMonth}</div>
               </div>
             </div>
             <div className="stat-card">
@@ -250,7 +253,6 @@ const AdminDashboard = () => {
               <div className="stat-info">
                 <div className="stat-value">{stats.totalUsers.toLocaleString()}</div>
                 <div className="stat-label">{t.totalUsers}</div>
-                <div className="stat-trend positive">↑ 15% {t.fromLastMonth}</div>
               </div>
             </div>
             <div className="stat-card">
@@ -258,7 +260,6 @@ const AdminDashboard = () => {
               <div className="stat-info">
                 <div className="stat-value">+{stats.newUsersToday}</div>
                 <div className="stat-label">{t.newUsersToday}</div>
-                <div className="stat-trend positive">↑ 2 {t.fromLastMonth}</div>
               </div>
             </div>
             <div className="stat-card">
@@ -266,7 +267,6 @@ const AdminDashboard = () => {
               <div className="stat-info">
                 <div className="stat-value">{stats.activeUsers.toLocaleString()}</div>
                 <div className="stat-label">{t.activeUsers}</div>
-                <div className="stat-trend positive">↑ 7% {t.fromLastMonth}</div>
               </div>
             </div>
             <div className="stat-card">
@@ -274,7 +274,6 @@ const AdminDashboard = () => {
               <div className="stat-info">
                 <div className="stat-value">{stats.satisfactionRate}%</div>
                 <div className="stat-label">{t.satisfactionRate}</div>
-                <div className="stat-trend positive">↑ 4% {t.fromLastMonth}</div>
               </div>
             </div>
           </div>
@@ -285,22 +284,25 @@ const AdminDashboard = () => {
               <h3>{t.monthlyTrend}</h3>
             </div>
             <div className="chart-wrapper">
-              {getChartData().map((value, idx) => (
-                <div key={idx} className="chart-item">
-                  <div className="chart-label">{getChartLabels()[idx]}</div>
-                  <div className="chart-track">
-                    <div 
-                      className="chart-bar" 
-                      style={{ 
-                        height: `${(value / Math.max(...getChartData())) * 100}%`,
-                        backgroundColor: `hsl(${210 + idx * 25}, 65%, 55%)`
-                      }}
-                    >
-                      <span className="chart-value">{value}</span>
+              {getChartData().map((value, idx) => {
+                const maxValue = Math.max(...getChartData(), 1);
+                return (
+                  <div key={idx} className="chart-item">
+                    <div className="chart-label">{getChartLabels()[idx]}</div>
+                    <div className="chart-track">
+                      <div 
+                        className="chart-bar" 
+                        style={{ 
+                          height: `${(value / maxValue) * 100}%`,
+                          backgroundColor: `hsl(${210 + idx * 25}, 65%, 55%)`
+                        }}
+                      >
+                        <span className="chart-value">{value}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -334,7 +336,14 @@ const AdminDashboard = () => {
                       <td><span className={`status-badge ${getStatusClass(complaint.status)}`}>{getStatusText(complaint.status)}</span></td>
                       <td>{getDate(complaint.date, complaint.enDate)}</td>
                       <td><span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>{getPriorityText(complaint.priority)}</span></td>
-                      <td><button className="view-details-btn" onClick={() => navigate(`/admin-complaints/${complaint.id}`)}>👁️ {t.viewDetails}</button></td>
+                      <td>
+                        <button 
+                          className="view-details-btn" 
+                          onClick={() => navigate(`/admin-complaints/${complaint.id}`)}
+                        >
+                          👁️ {t.viewDetails}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -404,20 +413,21 @@ const AdminDashboard = () => {
         /* Dashboard Container */
         .dashboard-container {
           display: flex;
-          margin-top: 195px;
-          min-height: calc(100vh - 195px);
+          margin-top: 160px;
+          min-height: calc(100vh - 160px);
         }
 
-        /* Sidebar Container - Always Visible */
+        /* Sidebar Container */
         .sidebar-container {
           position: fixed;
-          top: 195px;
+          top: 160px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 195px);
+          height: calc(100vh - 160px);
           background: white;
           border-right: 1px solid #e2e8f0;
           z-index: 40;
+          overflow-y: auto;
         }
 
         /* Main Container */
@@ -511,19 +521,6 @@ const AdminDashboard = () => {
           font-size: 0.75rem;
           color: #64748b;
           margin-top: 4px;
-        }
-
-        .stat-trend {
-          font-size: 0.65rem;
-          margin-top: 6px;
-        }
-
-        .stat-trend.positive {
-          color: #10b981;
-        }
-
-        .stat-trend.negative {
-          color: #ef4444;
         }
 
         /* Chart Card */
@@ -632,16 +629,17 @@ const AdminDashboard = () => {
         .data-table th {
           color: #64748b;
           font-weight: 500;
-          font-size: 0.8rem;
+          font-size: 0.75rem;
+          background: #f8fafc;
         }
 
         .data-table td {
           color: #334155;
-          font-size: 0.85rem;
+          font-size: 0.8rem;
         }
 
         .data-table tr:hover {
-          background: #f8fafc;
+          background: #fafcff;
         }
 
         .ticket-id {
@@ -652,9 +650,9 @@ const AdminDashboard = () => {
 
         .status-badge, .priority-badge {
           display: inline-block;
-          padding: 4px 12px;
+          padding: 4px 10px;
           border-radius: 20px;
-          font-size: 0.7rem;
+          font-size: 0.65rem;
           font-weight: 500;
         }
 
@@ -729,16 +727,11 @@ const AdminDashboard = () => {
 
         @media (max-width: 768px) {
           .dashboard-container {
-            margin-top: 280px;
+            margin-top: 200px;
           }
           .sidebar-container {
-            top: 280px;
-            height: calc(100vh - 280px);
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
-          }
-          .sidebar-container.open {
-            transform: translateX(0);
+            top: 200px;
+            height: calc(100vh - 200px);
           }
           .main-container {
             padding: 16px;
@@ -760,6 +753,12 @@ const AdminDashboard = () => {
           }
           .actions-grid {
             grid-template-columns: repeat(2, 1fr);
+          }
+          .chart-wrapper {
+            height: 180px;
+          }
+          .chart-bar {
+            width: 30px;
           }
         }
 
