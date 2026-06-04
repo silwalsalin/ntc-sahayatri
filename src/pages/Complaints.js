@@ -1,9 +1,9 @@
 // src/pages/Complaints.js
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Try to import local images with fallback
-let ntcLogo, govLogo, heroImage;
+let ntcLogo, govLogo;
 try {
   ntcLogo = require('../img/ntc-logo.png');
 } catch (e) {
@@ -14,106 +14,48 @@ try {
 } catch (e) {
   govLogo = null;
 }
-try {
-  heroImage = require('../img/image.png');
-} catch (e) {
-  heroImage = null;
-}
 
 const Complaints = () => {
   const navigate = useNavigate();
   
-  // Language state
-  const [language, setLanguage] = useState('np');
+  // Language state with persistence
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   
   // Filter and search state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-  // Content object - MOVED BEFORE it's used
-  const content = {
-    np: {
-      weAreHere: 'हामी तपाईंको लागि यहाँ छौं',
-      contactNumber: 'सम्पर्क नम्बर: ०१-४९६०००८',
-      emailAddress: 'coo@ntc.net.np',
-      departmentName: 'नेपाल दूरसञ्चार प्राधिकरण',
-      departmentAddress: 'भद्रकाली प्लाजा, काठमाडौं',
-      serviceName: 'एनटीसी सहयात्री',
-      serviceSub: 'गुनासो ट्र्याकिङ प्रणाली',
-      home: 'गृह पृष्ठ',
-      faqs: 'बारम्बार सोधिने प्रश्नहरू',
-      login: 'लगइन',
-      complaints: 'गुनासोहरू',
-      allComplaints: 'सबै गुनासोहरू',
-      searchPlaceholder: 'टिकेट नम्बर, नाम वा फोन नम्बरले खोज्नुहोस्...',
-      filterByStatus: 'स्थिति अनुसार फिल्टर',
-      filterByCategory: 'प्रकार अनुसार फिल्टर',
-      ticketId: 'टिकेट नम्बर',
-      complainantName: 'उजुरीकर्ता',
-      category: 'प्रकार',
-      date: 'मिति',
-      status: 'स्थिति',
-      priority: 'प्राथमिकता',
-      actions: 'कार्यहरू',
-      viewDetails: 'विवरण हेर्नुहोस्',
-      noComplaintsFound: 'कुनै गुनासो फेला परेन',
-      tryAdjustingFilters: 'कृपया फिल्टर समायोजन गर्नुहोस्',
-      complaintDetails: 'गुनासोको विवरण',
-      description: 'विवरण',
-      channel: 'च्यानल',
-      email: 'इमेल',
-      phone: 'फोन',
-      registeredDate: 'दर्ता मिति',
-      resolvedDate: 'समाधान मिति',
-      close: 'बन्द गर्नुहोस्',
-      footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
-      copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।'
-    },
-    en: {
-      weAreHere: 'We are here for you',
-      contactNumber: '01-4960008',
-      emailAddress: 'coo@ntc.net.np',
-      departmentName: 'Nepal Telecommunications Authority',
-      departmentAddress: 'Bhadrakali Plaza, Kathmandu',
-      serviceName: 'NTC Sahayatri',
-      serviceSub: 'Complaint Tracking System',
-      home: 'Home',
-      faqs: 'FAQs',
-      login: 'Login',
-      complaints: 'Complaints',
-      allComplaints: 'All Complaints',
-      searchPlaceholder: 'Search by ticket number, name or phone...',
-      filterByStatus: 'Filter by Status',
-      filterByCategory: 'Filter by Category',
-      ticketId: 'Ticket ID',
-      complainantName: 'Complainant',
-      category: 'Category',
-      date: 'Date',
-      status: 'Status',
-      priority: 'Priority',
-      actions: 'Actions',
-      viewDetails: 'View Details',
-      noComplaintsFound: 'No complaints found',
-      tryAdjustingFilters: 'Please try adjusting your filters',
-      complaintDetails: 'Complaint Details',
-      description: 'Description',
-      channel: 'Channel',
-      email: 'Email',
-      phone: 'Phone',
-      registeredDate: 'Registered Date',
-      resolvedDate: 'Resolved Date',
-      close: 'Close',
-      footerTagline: 'NTC Sahayatri - Always at Your Service',
-      copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.'
-    }
-  };
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
 
-  // Sample complaints data
-  const [complaints] = useState([
+  // Show toast notification
+  const showToast = useCallback((message, type = 'success', duration = 3000) => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: '' });
+    }, duration);
+  }, []);
+
+  // Copy to clipboard
+  const copyToClipboard = useCallback((text, successMessage) => {
+    navigator.clipboard.writeText(text);
+    showToast(successMessage, 'success', 2000);
+  }, [showToast]);
+
+  // Sample complaints data with enhanced information
+  const complaintsData = useMemo(() => [
     {
       id: 1,
       ticketId: 'NTC-२०८०-००१',
@@ -124,8 +66,8 @@ const Complaints = () => {
       phone: '9841000001',
       category: 'internet',
       subCategory: 'connection',
-      description: 'फाइबर जडान २ दिनदेखि बन्द छ',
-      enDescription: 'Fiber connection down since 2 days',
+      description: 'फाइबर जडान २ दिनदेखि बन्द छ। इन्टरनेट सेवा प्रभावित भएको छ।',
+      enDescription: 'Fiber connection down since 2 days. Internet service is affected.',
       status: 'in-progress',
       statusText: 'प्रगतिमा',
       enStatusText: 'In Progress',
@@ -134,7 +76,13 @@ const Complaints = () => {
       channel: 'वेबसाइट पोर्टल',
       enChannel: 'Website Portal',
       priority: 'high',
-      resolvedDate: null
+      priorityText: 'उच्च',
+      enPriorityText: 'High',
+      resolvedDate: null,
+      assignedTo: 'प्राविधिक टोली',
+      enAssignedTo: 'Technical Team',
+      location: 'काठमाडौं',
+      enLocation: 'Kathmandu'
     },
     {
       id: 2,
@@ -146,8 +94,8 @@ const Complaints = () => {
       phone: '9812345678',
       category: 'recharge',
       subCategory: 'not-credited',
-      description: 'रु. ५०० रिचार्ज गरे पनि ब्यालेन्स अपडेट भएन',
-      enDescription: 'Recharged Rs. 500 but balance not updated',
+      description: 'रु. ५०० रिचार्ज गरे पनि ब्यालेन्स अपडेट भएन। ट्रान्जेक्सन ID: NTC123456',
+      enDescription: 'Recharged Rs. 500 but balance not updated. Transaction ID: NTC123456',
       status: 'resolved',
       statusText: 'समाधान भयो',
       enStatusText: 'Resolved',
@@ -156,7 +104,14 @@ const Complaints = () => {
       channel: 'व्हाट्सएप',
       enChannel: 'WhatsApp',
       priority: 'medium',
-      resolvedDate: '२०८०-०१-२२'
+      priorityText: 'मध्यम',
+      enPriorityText: 'Medium',
+      resolvedDate: '२०८०-०१-२२',
+      enResolvedDate: '2024-01-22',
+      resolution: 'रिचार्ज सफल भयो। ब्यालेन्स जम्मा गरियो।',
+      enResolution: 'Recharge successful. Balance credited.',
+      location: 'ललितपुर',
+      enLocation: 'Lalitpur'
     },
     {
       id: 3,
@@ -168,8 +123,8 @@ const Complaints = () => {
       phone: '9823456789',
       category: 'activation',
       subCategory: 'sim-deactivation',
-      description: 'सिम डिएक्टिभेसन अनुरोध प्रक्रिया भएन',
-      enDescription: 'SIM deactivation request not processed',
+      description: 'सिम डिएक्टिभेसन अनुरोध प्रक्रिया भएन। २४ घण्टा भयो तर सिम अझै सक्रिय छ।',
+      enDescription: 'SIM deactivation request not processed. 24 hours passed but SIM still active.',
       status: 'pending',
       statusText: 'विचाराधीन',
       enStatusText: 'Pending',
@@ -178,20 +133,24 @@ const Complaints = () => {
       channel: 'कल सेन्टर',
       enChannel: 'Call Center',
       priority: 'low',
-      resolvedDate: null
+      priorityText: 'न्यून',
+      enPriorityText: 'Low',
+      resolvedDate: null,
+      location: 'भक्तपुर',
+      enLocation: 'Bhaktapur'
     },
     {
       id: 4,
       ticketId: 'NTC-२०८०-००४',
       enTicketId: 'NTC-2080-004',
       name: 'विकास न्यौपाने',
-      enName: 'Bikas NyauPane',
+      enName: 'Bikas Neupane',
       email: 'bikas@example.com',
       phone: '9841567890',
       category: 'signal',
       subCategory: 'weak-signal',
-      description: 'नेटवर्क सिग्नल समस्या - कल ड्रप भइरहेको छ',
-      enDescription: 'Network signal issue - call drops frequently',
+      description: 'नेटवर्क सिग्नल समस्या - कल ड्रप भइरहेको छ। घर भित्र सिग्नल पुग्दैन।',
+      enDescription: 'Network signal issue - call drops frequently. No signal inside home.',
       status: 'review',
       statusText: 'समीक्षामा',
       enStatusText: 'Under Review',
@@ -200,7 +159,13 @@ const Complaints = () => {
       channel: 'वेबसाइट पोर्टल',
       enChannel: 'Website Portal',
       priority: 'high',
-      resolvedDate: null
+      priorityText: 'उच्च',
+      enPriorityText: 'High',
+      resolvedDate: null,
+      assignedTo: 'नेटवर्क टोली',
+      enAssignedTo: 'Network Team',
+      location: 'पोखरा',
+      enLocation: 'Pokhara'
     },
     {
       id: 5,
@@ -212,8 +177,8 @@ const Complaints = () => {
       phone: '9841234567',
       category: 'billing',
       subCategory: 'wrong-charge',
-      description: 'गत महिनाको बिलमा गलत चार्ज',
-      enDescription: 'Wrong charge in last month bill',
+      description: 'गत महिनाको बिलमा गलत चार्ज। बिल रकम रु. २५०० को सट्टा रु. ३५०० चार्ज भएको।',
+      enDescription: 'Wrong charge in last month bill. Charged Rs. 3500 instead of Rs. 2500.',
       status: 'resolved',
       statusText: 'समाधान भयो',
       enStatusText: 'Resolved',
@@ -222,7 +187,14 @@ const Complaints = () => {
       channel: 'इमेल',
       enChannel: 'Email',
       priority: 'medium',
-      resolvedDate: '२०८०-०१-१५'
+      priorityText: 'मध्यम',
+      enPriorityText: 'Medium',
+      resolvedDate: '२०८०-०१-१५',
+      enResolvedDate: '2024-01-15',
+      resolution: 'बिल समायोजन गरियो। रु. १००० रिफण्ड भयो।',
+      enResolution: 'Bill adjusted. Rs. 1000 refunded.',
+      location: 'विराटनगर',
+      enLocation: 'Biratnagar'
     },
     {
       id: 6,
@@ -234,8 +206,8 @@ const Complaints = () => {
       phone: '9812345670',
       category: 'technical',
       subCategory: 'app-issue',
-      description: 'एनटीसी एप काम गर्दैन',
-      enDescription: 'NTC App is not working',
+      description: 'एनटीसी एप काम गर्दैन। लगइन गर्दा समस्या देखाउँछ।',
+      enDescription: 'NTC App is not working. Shows error on login.',
       status: 'in-progress',
       statusText: 'प्रगतिमा',
       enStatusText: 'In Progress',
@@ -244,7 +216,13 @@ const Complaints = () => {
       channel: 'फेसबुक',
       enChannel: 'Facebook',
       priority: 'medium',
-      resolvedDate: null
+      priorityText: 'मध्यम',
+      enPriorityText: 'Medium',
+      resolvedDate: null,
+      assignedTo: 'एप टोली',
+      enAssignedTo: 'App Team',
+      location: 'हेटौंडा',
+      enLocation: 'Hetauda'
     },
     {
       id: 7,
@@ -256,8 +234,8 @@ const Complaints = () => {
       phone: '9845678901',
       category: 'network',
       subCategory: 'no-coverage',
-      description: 'घरमा नेटवर्क नै छैन',
-      enDescription: 'No network coverage at home',
+      description: 'घरमा नेटवर्क नै छैन। आसपासको क्षेत्रमा पनि कभरेज छैन।',
+      enDescription: 'No network coverage at home. No coverage in surrounding area.',
       status: 'pending',
       statusText: 'विचाराधीन',
       enStatusText: 'Pending',
@@ -266,7 +244,11 @@ const Complaints = () => {
       channel: 'फोन',
       enChannel: 'Phone',
       priority: 'high',
-      resolvedDate: null
+      priorityText: 'उच्च',
+      enPriorityText: 'High',
+      resolvedDate: null,
+      location: 'दाङ',
+      enLocation: 'Dang'
     },
     {
       id: 8,
@@ -278,8 +260,8 @@ const Complaints = () => {
       phone: '9847890123',
       category: 'internet',
       subCategory: 'slow-speed',
-      description: 'इन्टरनेट स्पीड धेरै सुस्त छ',
-      enDescription: 'Internet speed is very slow',
+      description: 'इन्टरनेट स्पीड धेरै सुस्त छ। प्याकेज अनुसारको स्पीड आउँदैन।',
+      enDescription: 'Internet speed is very slow. Not getting promised speed.',
       status: 'review',
       statusText: 'समीक्षामा',
       enStatusText: 'Under Review',
@@ -288,9 +270,13 @@ const Complaints = () => {
       channel: 'वेबसाइट पोर्टल',
       enChannel: 'Website Portal',
       priority: 'low',
-      resolvedDate: null
+      priorityText: 'न्यून',
+      enPriorityText: 'Low',
+      resolvedDate: null,
+      location: 'बुटवल',
+      enLocation: 'Butwal'
     }
-  ]);
+  ], []);
 
   // Category options for filter
   const categories = {
@@ -334,64 +320,181 @@ const Complaints = () => {
     }
   };
 
+  // Priority options for filter
+  const priorities = {
+    np: {
+      all: 'सबै प्राथमिकता',
+      high: 'उच्च',
+      medium: 'मध्यम',
+      low: 'न्यून'
+    },
+    en: {
+      all: 'All Priority',
+      high: 'High',
+      medium: 'Medium',
+      low: 'Low'
+    }
+  };
+
+  const content = {
+    np: {
+      weAreHere: 'हामी तपाईंको लागि यहाँ छौं',
+      contactNumber: 'सम्पर्क नम्बर: ०१-४९६०००८',
+      emailAddress: 'coo@ntc.net.np',
+      departmentName: 'नेपाल दूरसञ्चार प्राधिकरण',
+      departmentAddress: 'भद्रकाली प्लाजा, काठमाडौं',
+      serviceName: 'एनटीसी सहयात्री',
+      serviceSub: 'गुनासो ट्र्याकिङ प्रणाली',
+      home: 'गृह पृष्ठ',
+      faqs: 'बारम्बार सोधिने प्रश्नहरू',
+      login: 'लगइन',
+      complaints: 'गुनासोहरू',
+      allComplaints: 'सबै गुनासोहरू',
+      searchPlaceholder: 'टिकेट नम्बर, नाम वा फोन नम्बरले खोज्नुहोस्...',
+      filterByStatus: 'स्थिति अनुसार फिल्टर',
+      filterByCategory: 'प्रकार अनुसार फिल्टर',
+      filterByPriority: 'प्राथमिकता अनुसार फिल्टर',
+      ticketId: 'टिकेट नम्बर',
+      complainantName: 'उजुरीकर्ता',
+      category: 'प्रकार',
+      date: 'मिति',
+      status: 'स्थिति',
+      priority: 'प्राथमिकता',
+      actions: 'कार्यहरू',
+      viewDetails: 'विवरण हेर्नुहोस्',
+      noComplaintsFound: 'कुनै गुनासो फेला परेन',
+      tryAdjustingFilters: 'कृपया फिल्टर समायोजन गर्नुहोस्',
+      complaintDetails: 'गुनासोको विवरण',
+      description: 'विवरण',
+      channel: 'च्यानल',
+      email: 'इमेल',
+      phone: 'फोन',
+      registeredDate: 'दर्ता मिति',
+      resolvedDate: 'समाधान मिति',
+      resolution: 'समाधान विवरण',
+      assignedTo: 'जिम्मेवार व्यक्ति',
+      location: 'स्थान',
+      close: 'बन्द गर्नुहोस्',
+      footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
+      copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
+      clearFilters: 'फिल्टर सफा गर्नुहोस्',
+      totalComplaints: 'कुल गुनासो',
+      showing: 'देखाउँदै',
+      of: 'को',
+      copyTicketId: 'टिकेट नम्बर प्रतिलिपि गर्नुहोस्',
+      copied: 'प्रतिलिपि गरियो!',
+      previous: 'अघिल्लो',
+      next: 'अर्को'
+    },
+    en: {
+      weAreHere: 'We are here for you',
+      contactNumber: '01-4960008',
+      emailAddress: 'coo@ntc.net.np',
+      departmentName: 'Nepal Telecommunications Authority',
+      departmentAddress: 'Bhadrakali Plaza, Kathmandu',
+      serviceName: 'NTC Sahayatri',
+      serviceSub: 'Complaint Tracking System',
+      home: 'Home',
+      faqs: 'FAQs',
+      login: 'Login',
+      complaints: 'Complaints',
+      allComplaints: 'All Complaints',
+      searchPlaceholder: 'Search by ticket number, name or phone...',
+      filterByStatus: 'Filter by Status',
+      filterByCategory: 'Filter by Category',
+      filterByPriority: 'Filter by Priority',
+      ticketId: 'Ticket ID',
+      complainantName: 'Complainant',
+      category: 'Category',
+      date: 'Date',
+      status: 'Status',
+      priority: 'Priority',
+      actions: 'Actions',
+      viewDetails: 'View Details',
+      noComplaintsFound: 'No complaints found',
+      tryAdjustingFilters: 'Please try adjusting your filters',
+      complaintDetails: 'Complaint Details',
+      description: 'Description',
+      channel: 'Channel',
+      email: 'Email',
+      phone: 'Phone',
+      registeredDate: 'Registered Date',
+      resolvedDate: 'Resolved Date',
+      resolution: 'Resolution',
+      assignedTo: 'Assigned To',
+      location: 'Location',
+      close: 'Close',
+      footerTagline: 'NTC Sahayatri - Always at Your Service',
+      copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
+      clearFilters: 'Clear Filters',
+      totalComplaints: 'Total Complaints',
+      showing: 'Showing',
+      of: 'of',
+      copyTicketId: 'Copy Ticket ID',
+      copied: 'Copied!',
+      previous: 'Previous',
+      next: 'Next'
+    }
+  };
+
   const t = content[language];
   const categoriesObj = categories[language];
   const statusesObj = statuses[language];
+  const prioritiesObj = priorities[language];
 
-  // Filter complaints
-  const filteredComplaints = complaints.filter(complaint => {
-    // Search filter
-    const searchMatch = searchTerm === '' || 
-      complaint.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      complaint.enName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      complaint.ticketId.includes(searchTerm) ||
-      complaint.enTicketId.includes(searchTerm) ||
-      complaint.phone.includes(searchTerm);
-    
-    // Status filter
-    const statusMatch = statusFilter === 'all' || complaint.status === statusFilter;
-    
-    // Category filter
-    const categoryMatch = categoryFilter === 'all' || complaint.category === categoryFilter;
-    
-    return searchMatch && statusMatch && categoryMatch;
-  });
+  // Filter complaints with all filters
+  const filteredComplaints = useMemo(() => {
+    return complaintsData.filter(complaint => {
+      // Search filter
+      const searchMatch = searchTerm === '' || 
+        complaint.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        complaint.enName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        complaint.ticketId.includes(searchTerm) ||
+        complaint.enTicketId.includes(searchTerm) ||
+        complaint.phone.includes(searchTerm);
+      
+      // Status filter
+      const statusMatch = statusFilter === 'all' || complaint.status === statusFilter;
+      
+      // Category filter
+      const categoryMatch = categoryFilter === 'all' || complaint.category === categoryFilter;
+      
+      // Priority filter
+      const priorityMatch = priorityFilter === 'all' || complaint.priority === priorityFilter;
+      
+      return searchMatch && statusMatch && categoryMatch && priorityMatch;
+    });
+  }, [complaintsData, searchTerm, statusFilter, categoryFilter, priorityFilter]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
+  const paginatedComplaints = filteredComplaints.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, categoryFilter, priorityFilter]);
 
   const getStatusClass = (status) => {
-    switch(status) {
-      case 'in-progress': return 'status-progress';
-      case 'resolved': return 'status-resolved';
-      case 'pending': return 'status-pending';
-      case 'review': return 'status-review';
-      default: return 'status-pending';
-    }
+    const classes = {
+      'in-progress': 'status-progress',
+      'resolved': 'status-resolved',
+      'pending': 'status-pending',
+      'review': 'status-review'
+    };
+    return classes[status] || 'status-pending';
   };
 
   const getPriorityClass = (priority) => {
-    switch(priority) {
-      case 'high': return 'priority-high';
-      case 'medium': return 'priority-medium';
-      case 'low': return 'priority-low';
-      default: return 'priority-medium';
-    }
-  };
-
-  const getPriorityText = (priority) => {
-    if (language === 'np') {
-      switch(priority) {
-        case 'high': return 'उच्च';
-        case 'medium': return 'मध्यम';
-        case 'low': return 'न्यून';
-        default: return 'मध्यम';
-      }
-    } else {
-      switch(priority) {
-        case 'high': return 'High';
-        case 'medium': return 'Medium';
-        case 'low': return 'Low';
-        default: return 'Medium';
-      }
-    }
+    const classes = {
+      'high': 'priority-high',
+      'medium': 'priority-medium',
+      'low': 'priority-low'
+    };
+    return classes[priority] || 'priority-medium';
   };
 
   const getCategoryText = (category) => {
@@ -402,19 +505,51 @@ const Complaints = () => {
     return language === 'np' ? complaint.statusText : complaint.enStatusText;
   };
 
+  const getPriorityText = (complaint) => {
+    return language === 'np' ? complaint.priorityText : complaint.enPriorityText;
+  };
+
+  const getDate = (complaint, type = 'date') => {
+    if (type === 'date') {
+      return language === 'np' ? complaint.date : complaint.enDate;
+    } else if (type === 'resolved' && complaint.resolvedDate) {
+      return language === 'np' ? complaint.resolvedDate : (complaint.enResolvedDate || complaint.resolvedDate);
+    }
+    return '-';
+  };
+
+  const getLocation = (complaint) => {
+    return language === 'np' ? complaint.location : (complaint.enLocation || complaint.location);
+  };
+
+  const getAssignedTo = (complaint) => {
+    return language === 'np' ? complaint.assignedTo : (complaint.enAssignedTo || complaint.assignedTo);
+  };
+
   const openModal = (complaint) => {
     setSelectedComplaint(complaint);
     setShowModal(true);
+    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSelectedComplaint(null);
+    document.body.style.overflow = 'unset';
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setCategoryFilter('all');
+    setPriorityFilter('all');
+    showToast(t.clearFilters, 'info', 2000);
   };
 
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
     setShowLanguageDropdown(false);
+    showToast(lang === 'np' ? 'भाषा नेपालीमा परिवर्तन गरियो' : 'Language changed to English', 'info', 2000);
   };
 
   const LogoImage = ({ src, alt, fallback, className }) => {
@@ -434,8 +569,33 @@ const Complaints = () => {
     );
   };
 
+  // Statistics calculations
+  const statistics = {
+    total: complaintsData.length,
+    pending: complaintsData.filter(c => c.status === 'pending').length,
+    inProgress: complaintsData.filter(c => c.status === 'in-progress').length,
+    review: complaintsData.filter(c => c.status === 'review').length,
+    resolved: complaintsData.filter(c => c.status === 'resolved').length
+  };
+
+  // Helper function to add data-label attributes for mobile
+  const getTableDataProps = (label) => {
+    return { 'data-label': label };
+  };
+
   return (
     <div className="complaints-page">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
       {/* HEADER 1 - Top Bar */}
       <div className="header-1">
         <div className="container-1">
@@ -449,10 +609,24 @@ const Complaints = () => {
               <div className="contact-info-item">
                 <span className="contact-icon">📞</span>
                 <span className="contact-text">{t.contactNumber}</span>
+                <button 
+                  className="copy-btn-mini"
+                  onClick={() => copyToClipboard('01-4960008', t.copied)}
+                  title="Copy Phone"
+                >
+                  📋
+                </button>
               </div>
               <div className="contact-info-item">
                 <span className="contact-icon">✉️</span>
                 <span className="contact-text">{t.emailAddress}</span>
+                <button 
+                  className="copy-btn-mini"
+                  onClick={() => copyToClipboard('coo@ntc.net.np', t.copied)}
+                  title="Copy Email"
+                >
+                  📋
+                </button>
               </div>
             </div>
             <div className="language-dropdown">
@@ -527,7 +701,7 @@ const Complaints = () => {
             </button>
           </div>
           <div className="login-btn-right">
-            <button className="login-btn" onClick={() => navigate('/admin')}>
+            <button className="login-btn" onClick={() => navigate('/admin-login')}>
               <span className="login-icon">🔐</span>
               <span className="login-text">{t.login}</span>
             </button>
@@ -543,7 +717,7 @@ const Complaints = () => {
             <p>{t.allComplaints}</p>
           </div>
 
-          {/* Filters */}
+          {/* Filters Section */}
           <div className="filters-section">
             <div className="search-box">
               <span className="search-icon">🔍</span>
@@ -553,6 +727,11 @@ const Complaints = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+              {searchTerm && (
+                <button className="clear-search" onClick={() => setSearchTerm('')}>
+                  ✕
+                </button>
+              )}
             </div>
             
             <div className="filter-group">
@@ -575,7 +754,28 @@ const Complaints = () => {
                   <option key={key} value={key}>{value}</option>
                 ))}
               </select>
+
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value)}
+                className="filter-select"
+              >
+                {Object.entries(prioritiesObj).map(([key, value]) => (
+                  <option key={key} value={key}>{value}</option>
+                ))}
+              </select>
+
+              {(statusFilter !== 'all' || categoryFilter !== 'all' || priorityFilter !== 'all' || searchTerm) && (
+                <button className="clear-filters-btn" onClick={clearFilters}>
+                  🧹 {t.clearFilters}
+                </button>
+              )}
             </div>
+          </div>
+
+          {/* Results Info */}
+          <div className="results-info">
+            <span>{t.showing} {paginatedComplaints.length} {t.of} {filteredComplaints.length} {t.complaints}</span>
           </div>
 
           {/* Complaints Table */}
@@ -593,24 +793,38 @@ const Complaints = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredComplaints.length > 0 ? (
-                  filteredComplaints.map((complaint) => (
+                {paginatedComplaints.length > 0 ? (
+                  paginatedComplaints.map((complaint) => (
                     <tr key={complaint.id}>
-                      <td className="ticket-id">{language === 'np' ? complaint.ticketId : complaint.enTicketId}</td>
-                      <td>{language === 'np' ? complaint.name : complaint.enName}</td>
-                      <td>{getCategoryText(complaint.category)}</td>
-                      <td>{language === 'np' ? complaint.date : complaint.enDate}</td>
-                      <td>
+                      <td className="ticket-id" {...getTableDataProps(t.ticketId)}>
+                        {language === 'np' ? complaint.ticketId : complaint.enTicketId}
+                        <button 
+                          className="copy-ticket-btn"
+                          onClick={() => copyToClipboard(language === 'np' ? complaint.ticketId : complaint.enTicketId, t.copied)}
+                          title={t.copyTicketId}
+                        >
+                          📋
+                        </button>
+                      </td>
+                      <td {...getTableDataProps(t.complainantName)}>
+                        <div className="complainant-info">
+                          <span className="complainant-name">{language === 'np' ? complaint.name : complaint.enName}</span>
+                          <span className="complainant-phone">📞 {complaint.phone}</span>
+                        </div>
+                      </td>
+                      <td {...getTableDataProps(t.category)}>{getCategoryText(complaint.category)}</td>
+                      <td {...getTableDataProps(t.date)}>{getDate(complaint, 'date')}</td>
+                      <td {...getTableDataProps(t.status)}>
                         <span className={`status-badge ${getStatusClass(complaint.status)}`}>
                           {getStatusText(complaint)}
                         </span>
                       </td>
-                      <td>
+                      <td {...getTableDataProps(t.priority)}>
                         <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
-                          {getPriorityText(complaint.priority)}
+                          {getPriorityText(complaint)}
                         </span>
                       </td>
-                      <td>
+                      <td {...getTableDataProps(t.actions)}>
                         <button 
                           className="view-btn"
                           onClick={() => openModal(complaint)}
@@ -635,29 +849,50 @@ const Complaints = () => {
             </table>
           </div>
 
-          {/* Statistics */}
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="pagination-btn"
+              >
+                ← {t.previous}
+              </button>
+              <span className="page-info">
+                {t.showing} {currentPage} {t.of} {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="pagination-btn"
+              >
+                {t.next} →
+              </button>
+            </div>
+          )}
+
+          {/* Statistics Bar */}
           <div className="statistics-bar">
             <div className="stat-item">
-              <span className="stat-label">{t.complaints}:</span>
-              <span className="stat-value">{filteredComplaints.length}</span>
+              <span className="stat-label">{t.totalComplaints}</span>
+              <span className="stat-value">{statistics.total}</span>
             </div>
             <div className="stat-item">
-              <span className="stat-label">{statusesObj.pending}:</span>
-              <span className="stat-value">
-                {complaints.filter(c => c.status === 'pending').length}
-              </span>
+              <span className="stat-label">{statusesObj.pending}</span>
+              <span className="stat-value pending">{statistics.pending}</span>
             </div>
             <div className="stat-item">
-              <span className="stat-label">{statusesObj['in-progress']}:</span>
-              <span className="stat-value">
-                {complaints.filter(c => c.status === 'in-progress').length}
-              </span>
+              <span className="stat-label">{statusesObj['in-progress']}</span>
+              <span className="stat-value progress">{statistics.inProgress}</span>
             </div>
             <div className="stat-item">
-              <span className="stat-label">{statusesObj.resolved}:</span>
-              <span className="stat-value">
-                {complaints.filter(c => c.status === 'resolved').length}
-              </span>
+              <span className="stat-label">{statusesObj.review}</span>
+              <span className="stat-value review">{statistics.review}</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">{statusesObj.resolved}</span>
+              <span className="stat-value resolved">{statistics.resolved}</span>
             </div>
           </div>
         </div>
@@ -674,7 +909,15 @@ const Complaints = () => {
             <div className="modal-body">
               <div className="detail-group">
                 <label>{t.ticketId}:</label>
-                <span>{language === 'np' ? selectedComplaint.ticketId : selectedComplaint.enTicketId}</span>
+                <span>
+                  {language === 'np' ? selectedComplaint.ticketId : selectedComplaint.enTicketId}
+                  <button 
+                    className="copy-detail-btn"
+                    onClick={() => copyToClipboard(language === 'np' ? selectedComplaint.ticketId : selectedComplaint.enTicketId, t.copied)}
+                  >
+                    📋
+                  </button>
+                </span>
               </div>
               <div className="detail-group">
                 <label>{t.complainantName}:</label>
@@ -689,6 +932,10 @@ const Complaints = () => {
                 <span>{selectedComplaint.phone}</span>
               </div>
               <div className="detail-group">
+                <label>{t.location}:</label>
+                <span>{getLocation(selectedComplaint)}</span>
+              </div>
+              <div className="detail-group">
                 <label>{t.category}:</label>
                 <span>{getCategoryText(selectedComplaint.category)}</span>
               </div>
@@ -701,27 +948,39 @@ const Complaints = () => {
               <div className="detail-group">
                 <label>{t.priority}:</label>
                 <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
-                  {getPriorityText(selectedComplaint.priority)}
+                  {getPriorityText(selectedComplaint)}
                 </span>
               </div>
               <div className="detail-group">
                 <label>{t.registeredDate}:</label>
-                <span>{language === 'np' ? selectedComplaint.date : selectedComplaint.enDate}</span>
+                <span>{getDate(selectedComplaint, 'date')}</span>
               </div>
               {selectedComplaint.resolvedDate && (
                 <div className="detail-group">
                   <label>{t.resolvedDate}:</label>
-                  <span>{language === 'np' ? selectedComplaint.resolvedDate : selectedComplaint.resolvedDate}</span>
+                  <span>{getDate(selectedComplaint, 'resolved')}</span>
                 </div>
               )}
               <div className="detail-group">
                 <label>{t.channel}:</label>
                 <span>{language === 'np' ? selectedComplaint.channel : selectedComplaint.enChannel}</span>
               </div>
+              {selectedComplaint.assignedTo && (
+                <div className="detail-group">
+                  <label>{t.assignedTo}:</label>
+                  <span>{getAssignedTo(selectedComplaint)}</span>
+                </div>
+              )}
               <div className="detail-group full-width">
                 <label>{t.description}:</label>
-                <p>{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
+                <p className="description-text">{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
               </div>
+              {selectedComplaint.resolution && (
+                <div className="detail-group full-width">
+                  <label>{t.resolution}:</label>
+                  <p className="resolution-text">{language === 'np' ? selectedComplaint.resolution : selectedComplaint.enResolution}</p>
+                </div>
+              )}
             </div>
             <div className="modal-footer">
               <button className="btn-close" onClick={closeModal}>{t.close}</button>
@@ -730,6 +989,7 @@ const Complaints = () => {
         </div>
       )}
 
+ 
 
       <style jsx>{`
         * {
@@ -743,6 +1003,47 @@ const Complaints = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
           min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 200px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 350px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+          transition: color 0.2s;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         /* HEADER 1 - Top Bar */
@@ -769,12 +1070,7 @@ const Complaints = () => {
           gap: 20px;
         }
 
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
+        .header-left { display: flex; align-items: center; gap: 16px; }
         .we-are-here {
           display: flex;
           align-items: center;
@@ -784,26 +1080,10 @@ const Complaints = () => {
           border-radius: 40px;
           font-weight: 500;
         }
+        .quote-text { font-size: 0.9rem; letter-spacing: 0.5px; font-weight: 600; }
 
-        .quote-text {
-          font-size: 0.9rem;
-          letter-spacing: 0.5px;
-          font-weight: 600;
-        }
-
-        .header-right {
-          display: flex;
-          align-items: center;
-          gap: 25px;
-          flex-wrap: wrap;
-        }
-
-        .contact-info-group {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-        }
-
+        .header-right { display: flex; align-items: center; gap: 25px; flex-wrap: wrap; }
+        .contact-info-group { display: flex; align-items: center; gap: 15px; }
         .contact-info-item {
           display: flex;
           align-items: center;
@@ -814,14 +1094,21 @@ const Complaints = () => {
           border-radius: 30px;
           transition: all 0.3s ease;
         }
-
-        .contact-info-item:hover {
-          background: rgba(255,255,255,0.25);
-          transform: translateY(-1px);
-        }
-
+        .contact-info-item:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px); }
         .contact-icon { font-size: 0.85rem; }
         .contact-text { font-size: 0.75rem; font-weight: 500; }
+
+        .copy-btn-mini {
+          background: rgba(255,255,255,0.2);
+          border: none;
+          cursor: pointer;
+          font-size: 0.7rem;
+          padding: 2px 5px;
+          border-radius: 20px;
+          transition: all 0.3s ease;
+          color: white;
+        }
+        .copy-btn-mini:hover { background: rgba(255,255,255,0.4); transform: scale(1.05); }
 
         /* Language Dropdown */
         .language-dropdown { position: relative; }
@@ -970,8 +1257,8 @@ const Complaints = () => {
 
         /* Main Content */
         .main-content {
+          flex: 1;
           padding-top: 195px;
-          min-height: calc(100vh - 195px);
         }
 
         .complaints-container {
@@ -1002,7 +1289,7 @@ const Complaints = () => {
           align-items: center;
           flex-wrap: wrap;
           gap: 20px;
-          margin-bottom: 32px;
+          margin-bottom: 20px;
           padding: 20px;
           background: white;
           border-radius: 16px;
@@ -1026,7 +1313,7 @@ const Complaints = () => {
 
         .search-box input {
           width: 100%;
-          padding: 12px 16px 12px 40px;
+          padding: 12px 40px 12px 40px;
           border: 1.5px solid #e0e0e0;
           border-radius: 40px;
           font-size: 0.9rem;
@@ -1039,9 +1326,24 @@ const Complaints = () => {
           box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
         }
 
+        .clear-search {
+          position: absolute;
+          right: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          font-size: 1rem;
+          cursor: pointer;
+          color: #999;
+          transition: color 0.2s;
+        }
+        .clear-search:hover { color: #333; }
+
         .filter-group {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .filter-select {
@@ -1057,6 +1359,32 @@ const Complaints = () => {
         .filter-select:focus {
           outline: none;
           border-color: #1565c0;
+        }
+
+        .clear-filters-btn {
+          padding: 10px 16px;
+          border-radius: 40px;
+          border: 1.5px solid #ef4444;
+          background: white;
+          color: #ef4444;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          font-size: 0.85rem;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .clear-filters-btn:hover {
+          background: #ef4444;
+          color: white;
+        }
+
+        .results-info {
+          text-align: right;
+          font-size: 0.8rem;
+          color: #888;
+          margin-bottom: 16px;
         }
 
         /* Table */
@@ -1093,7 +1421,30 @@ const Complaints = () => {
           font-family: monospace;
           font-weight: 600;
           color: #1565c0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
         }
+
+        .copy-ticket-btn {
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 0.8rem;
+          opacity: 0.6;
+          transition: opacity 0.3s;
+        }
+        .copy-ticket-btn:hover { opacity: 1; }
+
+        .complainant-info {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .complainant-name { font-weight: 500; }
+        .complainant-phone { font-size: 0.7rem; color: #6c8196; }
 
         .status-badge {
           display: inline-block;
@@ -1151,17 +1502,43 @@ const Complaints = () => {
           gap: 8px;
         }
 
-        .no-data-icon {
-          font-size: 3rem;
+        .no-data-icon { font-size: 3rem; }
+        .no-data p { font-size: 1rem; color: #666; }
+        .no-data small { color: #999; }
+
+        /* Pagination */
+        .pagination {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 16px;
+          margin-top: 24px;
         }
 
-        .no-data p {
-          font-size: 1rem;
+        .pagination-btn {
+          padding: 8px 20px;
+          border-radius: 40px;
+          border: 1.5px solid #1565c0;
+          background: white;
+          color: #1565c0;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+          background: #1565c0;
+          color: white;
+          transform: translateY(-1px);
+        }
+
+        .pagination-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .page-info {
+          font-size: 0.85rem;
           color: #666;
-        }
-
-        .no-data small {
-          color: #999;
         }
 
         /* Statistics Bar */
@@ -1195,6 +1572,11 @@ const Complaints = () => {
           color: #0d47a1;
         }
 
+        .stat-value.pending { color: #c62828; }
+        .stat-value.progress { color: #f57c00; }
+        .stat-value.review { color: #004085; }
+        .stat-value.resolved { color: #2e7d32; }
+
         /* Modal */
         .modal-overlay {
           position: fixed;
@@ -1215,7 +1597,7 @@ const Complaints = () => {
           border-radius: 24px;
           max-width: 600px;
           width: 90%;
-          max-height: 80vh;
+          max-height: 85vh;
           overflow-y: auto;
           box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
@@ -1226,11 +1608,18 @@ const Complaints = () => {
           align-items: center;
           padding: 20px 24px;
           border-bottom: 1px solid #e0e0e0;
+          background: linear-gradient(135deg, #1565c0, #0d47a1);
+          color: white;
+          border-radius: 24px 24px 0 0;
+          position: sticky;
+          top: 0;
+          z-index: 10;
         }
 
         .modal-header h2 {
           font-size: 1.3rem;
-          color: #0d47a1;
+          color: white;
+          margin: 0;
         }
 
         .modal-close {
@@ -1238,13 +1627,10 @@ const Complaints = () => {
           border: none;
           font-size: 1.5rem;
           cursor: pointer;
-          color: #999;
+          color: white;
           transition: color 0.3s;
         }
-
-        .modal-close:hover {
-          color: #333;
-        }
+        .modal-close:hover { color: #ddd; }
 
         .modal-body {
           padding: 24px;
@@ -1279,10 +1665,32 @@ const Complaints = () => {
           margin-bottom: 8px;
         }
 
+        .description-text, .resolution-text {
+          line-height: 1.6;
+          background: #f8fafc;
+          padding: 12px;
+          border-radius: 8px;
+        }
+
+        .copy-detail-btn {
+          background: none;
+          border: none;
+          cursor: pointer;
+          margin-left: 8px;
+          font-size: 0.8rem;
+          opacity: 0.6;
+          transition: opacity 0.2s;
+        }
+        .copy-detail-btn:hover { opacity: 1; }
+
         .modal-footer {
           padding: 16px 24px;
           border-top: 1px solid #e0e0e0;
           text-align: right;
+          position: sticky;
+          bottom: 0;
+          background: white;
+          border-radius: 0 0 24px 24px;
         }
 
         .btn-close {
@@ -1294,12 +1702,23 @@ const Complaints = () => {
           cursor: pointer;
           transition: all 0.3s ease;
         }
-
         .btn-close:hover {
           background: #0d47a1;
+          transform: translateY(-1px);
         }
 
-      
+        /* Footer */
+        .footer {
+          background: #0d2b5e;
+          color: white;
+          padding: 20px 24px;
+          margin-top: 40px;
+          text-align: center;
+        }
+        .footer-content { max-width: 1200px; margin: 0 auto; }
+        .footer-copyright { text-align: center; }
+        .footer-copyright p { font-size: 0.75rem; opacity: 0.8; margin: 3px 0; }
+        .copyright-text { font-size: 0.65rem; opacity: 0.6; }
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -1307,13 +1726,28 @@ const Complaints = () => {
           .filters-section { flex-direction: column; }
           .filter-group { width: 100%; flex-direction: column; }
           .filter-select { width: 100%; }
-          .complaints-table th,
-          .complaints-table td { padding: 10px; font-size: 0.8rem; }
-          .detail-group { flex-direction: column; }
-          .detail-group label { width: 100%; margin-bottom: 4px; }
-          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; }
+          .complaints-table th { display: none; }
+          .complaints-table tr { display: block; margin-bottom: 16px; border: 1px solid #e0e0e0; border-radius: 12px; }
+          .complaints-table td { display: block; text-align: right; position: relative; padding: 10px 12px; border-bottom: 1px solid #eee; }
+          .complaints-table td:last-child { border-bottom: none; }
+          .complaints-table td::before { content: attr(data-label); font-weight: 600; position: absolute; left: 12px; top: 10px; color: #0d47a1; }
+          .ticket-id { justify-content: flex-end; }
+          .complainant-info { align-items: flex-end; }
+          .statistics-bar { flex-wrap: wrap; }
+          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; padding: 0 20px; }
           .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
-          .contact-info-group { flex-direction: column; }
+          .contact-info-group { flex-direction: column; gap: 8px; }
+          .logo-left, .logo-right { display: none; }
+          .dept-text-center { flex: 1; }
+          .detail-group { flex-direction: column; }
+          .detail-group label { width: 100%; margin-bottom: 6px; }
+          .toast-notification { top: auto; bottom: 20px; right: 20px; left: 20px; max-width: calc(100% - 40px); }
+        }
+
+        @media (max-width: 480px) {
+          .main-content { padding-top: 350px; }
+          .complaints-header h1 { font-size: 1.5rem; }
+          .pagination { flex-wrap: wrap; }
         }
       `}</style>
     </div>

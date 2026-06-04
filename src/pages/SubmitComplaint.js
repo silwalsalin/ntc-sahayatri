@@ -147,7 +147,7 @@ const SubmitComplaint = () => {
       districts: {
         'western_ruku': { np: 'पश्चिमी रुकुम', en: 'Western Rukum', municipalities: ['मुसिकोट नगरपालिका', 'चौरजहारी नगरपालिका', 'आठबिसकोट नगरपालिका', 'बाँफिकोट गाउँपालिका', 'त्रिवेणी गाउँपालिका', 'सानीभेरी गाउँपालिका', 'पुथा उत्तरगंगा गाउँपालिका'] },
         'salyan': { np: 'सल्यान', en: 'Salyan', municipalities: ['शारदा नगरपालिका', 'बागचौर नगरपालिका', 'बनगाड कुपिण्डे नगरपालिका', 'कालिमाटी गाउँपालिका', 'त्रिवेणी गाउँपालिका', 'कपुरकोट गाउँपालिका', 'छत्रेश्वरी गाउँपालिका', 'दार्मा गाउँपालिका', 'सिद्धकुमाख गाउँपालिका'] },
-        'dolpa': { np: 'डोल्पा', en: 'Dolpa', municipalities: ['ठुली भेरी नगरपालिका', 'त्रिपुरासुन्दरी नगरपालिका', 'डोल्पो बुद्ध गाउँपालिका', 'शे फोक्सुण्डो गाउँपालिका', 'मुड्केचुला गाउँपालिका', 'जगदुल्ला गाउँपालिका', 'काइके गाउँपालिका', 'च्छर्का तांग्सोन गाउँपालिका'] },
+        'dolpa': { np: 'डोल्पा', en: 'Dolpa', municipalities: ['ठुली भेरी नगरपालिका', 'त्रिपुरासुन्दरी नगरपालिका', 'डोल्पो बुद्ध गाउँपालिका', 'शे फोक्सुण्डो गाउँपालिका', 'मुड्केचुला गाउँपालिका', 'जगदुल्ला गाउँपालिका', 'काइके गाउँपालिका', 'छर्का तांग्सोन गाउँपालिका'] },
         'jumla': { np: 'जुम्ला', en: 'Jumla', municipalities: ['चन्दननाथ नगरपालिका', 'कनकासुन्दरी गाउँपालिका', 'सिञ्जा गाउँपालिका', 'हिमा गाउँपालिका', 'तिला गाउँपालिका', 'गुठीचौर गाउँपालिका', 'तातोपानी गाउँपालिका', 'पातारासी गाउँपालिका'] },
         'mugu': { np: 'मुगु', en: 'Mugu', municipalities: ['गमगढी नगरपालिका', 'सोरु गाउँपालिका', 'मुगुम कार्मारोङ गाउँपालिका', 'छायानाथ रारा गाउँपालिका'] },
         'humla': { np: 'हुम्ला', en: 'Humla', municipalities: ['सिमकोट गाउँपालिका', 'नाम्खा गाउँपालिका', 'खार्पुनाथ गाउँपालिका', 'सर्कीगाड गाउँपालिका', 'चंखेली गाउँपालिका', 'अदानचुली गाउँपालिका', 'ताँजाकोट गाउँपालिका'] },
@@ -789,6 +789,8 @@ const SubmitComplaint = () => {
         </div>
       )}
 
+   
+
       <style jsx>{`
         * {
           margin: 0;
@@ -801,6 +803,8 @@ const SubmitComplaint = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
           min-height: 100vh;
+          display: flex;
+          flex-direction: column;
         }
 
         /* HEADER 1 - Top Bar */
@@ -1028,14 +1032,15 @@ const SubmitComplaint = () => {
 
         /* Main Content */
         .main-content {
-          padding-top: 195px;
-          min-height: calc(100vh - 255px);
+          flex: 1;
+          margin-top: 195px;
+          padding: 40px 0;
         }
 
         .submit-container {
           max-width: 1000px;
           margin: 0 auto;
-          padding: 40px 24px;
+          padding: 0 24px;
         }
 
         .submit-card {
@@ -1212,17 +1217,8 @@ const SubmitComplaint = () => {
           animation: slideUp 0.3s ease;
         }
 
-        .success-icon {
-          font-size: 4rem;
-          margin-bottom: 20px;
-        }
-
-        .success-modal h3 {
-          color: #0d47a1;
-          font-size: 1.5rem;
-          margin-bottom: 20px;
-        }
-
+        .success-icon { font-size: 4rem; margin-bottom: 20px; }
+        .success-modal h3 { color: #0d47a1; font-size: 1.5rem; margin-bottom: 20px; }
         .success-details {
           background: #f0f7ff;
           border-radius: 12px;
@@ -1230,30 +1226,10 @@ const SubmitComplaint = () => {
           margin-bottom: 20px;
           text-align: left;
         }
-
-        .success-details p {
-          margin: 10px 0;
-          font-size: 1rem;
-        }
-
-        .success-details strong {
-          color: #0d47a1;
-        }
-
-        .save-warning {
-          color: #ff9800;
-          font-size: 0.85rem;
-          margin-top: 10px;
-          padding-top: 10px;
-          border-top: 1px solid #ddd;
-        }
-
-        .modal-buttons {
-          display: flex;
-          gap: 15px;
-          justify-content: center;
-        }
-
+        .success-details p { margin: 10px 0; font-size: 1rem; }
+        .success-details strong { color: #0d47a1; }
+        .save-warning { color: #ff9800; font-size: 0.85rem; margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; }
+        .modal-buttons { display: flex; gap: 15px; justify-content: center; }
         .btn-close, .btn-track {
           padding: 12px 24px;
           border: none;
@@ -1262,25 +1238,21 @@ const SubmitComplaint = () => {
           cursor: pointer;
           transition: all 0.3s ease;
         }
+        .btn-close { background: #f0f0f0; color: #666; }
+        .btn-close:hover { background: #e0e0e0; }
+        .btn-track { background: linear-gradient(135deg, #1565c0, #0d47a1); color: white; }
+        .btn-track:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(21,101,192,0.3); }
 
-        .btn-close {
-          background: #f0f0f0;
-          color: #666;
-        }
-
-        .btn-close:hover {
-          background: #e0e0e0;
-        }
-
-        .btn-track {
-          background: linear-gradient(135deg, #1565c0, #0d47a1);
+        /* Footer */
+        .footer {
+          background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
           color: white;
+          text-align: center;
+          padding: 20px;
+          margin-top: auto;
         }
-
-        .btn-track:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 5px 15px rgba(21,101,192,0.3);
-        }
+        .footer-content p { margin: 5px 0; font-size: 0.85rem; }
+        .copyright { opacity: 0.7; font-size: 0.75rem; }
 
         @keyframes fadeIn {
           from { opacity: 0; }
@@ -1288,28 +1260,29 @@ const SubmitComplaint = () => {
         }
 
         @keyframes slideUp {
-          from {
-            transform: translateY(50px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
+          from { transform: translateY(50px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-          .main-content { padding-top: 330px; }
+          .main-content { margin-top: 330px; }
           .submit-card { padding: 28px 20px; }
           .submit-header h2 { font-size: 1.4rem; }
           .address-grid { grid-template-columns: 1fr; }
           .form-row { grid-template-columns: 1fr; gap: 16px; }
-          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; }
-          .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
-          .contact-info-group { flex-direction: column; }
+          .container-1, .container-2, .container-3 { padding: 0 20px; }
+          .contact-info-group { flex-direction: column; gap: 8px; }
           .success-modal { padding: 25px; margin: 20px; }
           .modal-buttons { flex-direction: column; }
+          .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
+          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; }
+        }
+
+        @media (max-width: 480px) {
+          .submit-card { padding: 20px 16px; }
+          .section-title { font-size: 1rem; }
+          .btn-submit { font-size: 0.95rem; padding: 14px; }
         }
       `}</style>
     </div>

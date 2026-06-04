@@ -1,10 +1,10 @@
 // src/pages/ComplaintRegarding.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import complaintService from '../services/complaintService';
 
 // Try to import local images with fallback
-let ntcLogo, govLogo, heroImage;
+let ntcLogo, govLogo;
 try {
   ntcLogo = require('../img/ntc-logo.png');
 } catch (e) {
@@ -15,11 +15,6 @@ try {
 } catch (e) {
   govLogo = null;
 }
-try {
-  heroImage = require('../img/image.png');
-} catch (e) {
-  heroImage = null;
-}
 
 const ComplaintRegarding = () => {
   const navigate = useNavigate();
@@ -28,8 +23,9 @@ const ComplaintRegarding = () => {
   const [language, setLanguage] = useState('np');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
-  // Loading state
+  // Loading states
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Success modal state
   const [showSuccess, setShowSuccess] = useState(false);
@@ -37,6 +33,21 @@ const ComplaintRegarding = () => {
   
   // Reference number for tracking
   const [referenceNumber, setReferenceNumber] = useState('');
+  
+  // Character count for description
+  const [descriptionCharCount, setDescriptionCharCount] = useState(0);
+  const maxDescriptionChars = 2000;
+  const minDescriptionChars = 20;
+  
+  // Form submission attempt flag
+  const [submissionAttempted, setSubmissionAttempted] = useState(false);
+  
+  // Toast notification state
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  
+  // Auto-save state
+  const [autoSaveStatus, setAutoSaveStatus] = useState('');
+  const autoSaveTimerRef = useRef(null);
 
   // State for complaint form
   const [formData, setFormData] = useState({
@@ -54,138 +65,225 @@ const ComplaintRegarding = () => {
 
   // File upload state
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState({});
   const [dragActive, setDragActive] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  
+  // File input ref
+  const fileInputRef = useRef(null);
+  
+  // Form ref for auto-save
+  const formRef = useRef(null);
 
-  // Generate reference number on component mount
+  // Load saved form data from localStorage on mount
   useEffect(() => {
+    loadSavedFormData();
     generateReferenceNumber();
+    
+    // Add beforeunload listener for unsaved changes
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
   }, []);
+
+  // Auto-save form data
+  useEffect(() => {
+    if (formData.complaintType || formData.name || formData.description) {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = setTimeout(() => {
+        saveFormData();
+      }, 3000);
+    }
+  }, [formData, selectedFiles]);
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = () => {
+    const savedData = localStorage.getItem('complaint_regarding_form');
+    if (!savedData) return false;
+    
+    const parsedData = JSON.parse(savedData);
+    const currentFormString = JSON.stringify({
+      formData,
+      selectedFiles: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
+    });
+    const savedFormString = JSON.stringify({
+      formData: parsedData.formData,
+      selectedFiles: parsedData.selectedFiles || []
+    });
+    
+    return currentFormString !== savedFormString;
+  };
+
+  // Save form data to localStorage
+  const saveFormData = () => {
+    const saveData = {
+      formData,
+      selectedFiles: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type, lastModified: f.lastModified })),
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('complaint_regarding_form', JSON.stringify(saveData));
+    setAutoSaveStatus('saved');
+    setTimeout(() => setAutoSaveStatus(''), 2000);
+  };
+
+  // Load saved form data from localStorage
+  const loadSavedFormData = () => {
+    const saved = localStorage.getItem('complaint_regarding_form');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const savedTime = new Date(parsed.timestamp);
+      const now = new Date();
+      const hoursDiff = (now - savedTime) / (1000 * 60 * 60);
+      
+      // Only load if less than 24 hours old
+      if (hoursDiff < 24) {
+        setFormData(parsed.formData);
+        setDescriptionCharCount(parsed.formData.description?.length || 0);
+        // Note: Actual file objects can't be restored, only metadata
+        showToast(
+          language === 'np' ? 'पहिलेको फारम डाटा पुनर्स्थापित गरियो' : 'Previous form data restored',
+          'info'
+        );
+      }
+    }
+  };
+
+  // Clear saved form data
+  const clearSavedFormData = () => {
+    localStorage.removeItem('complaint_regarding_form');
+  };
 
   const generateReferenceNumber = () => {
     const date = new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    const ref = `REF-${year}${month}${day}-${random}`;
+    const ref = `REF-${year}${month}${day}${hours}${minutes}${seconds}-${random}`;
     setReferenceNumber(ref);
   };
 
-  // Subject options based on complaint type with more detailed options
+  // Show toast notification with auto-dismiss
+  const showToast = useCallback((message, type = 'success', duration = 5000) => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast(prev => prev.show ? { show: false, message: '', type: '' } : prev);
+    }, duration);
+  }, []);
+
+  // Subject options based on complaint type with categories
   const getSubjectOptions = () => {
     const commonSubjects = {
       np: {
-        service: [
-          'इन्टरनेट जडान समस्या', 
-          'फोन कल ड्रप हुने', 
-          'ढिलो इन्टरनेट स्पीड', 
-          'सेवा नभएको', 
-          'सेवा विच्छेद',
-          'नयाँ जडानको लागि अनुरोध',
-          'सेवा स्थानान्तरण',
-          'सेवा स्तरको गुणस्तर'
-        ],
-        billing: [
-          'बढी बिल आएको', 
-          'बिल नआएको', 
-          'रिचार्ज नभएको', 
-          'पैसा कट्टी भएको', 
-          'डबल चार्ज',
-          'बिल विवरणमा त्रुटि',
-          'अटो रिचार्ज समस्या',
-          'प्याकेज बिलिङ त्रुटि'
-        ],
-        technical: [
-          'वेबसाइट काम नगर्ने', 
-          'एप क्र्याश हुने', 
-          'लगइन समस्या', 
-          'डाटा ढिलो', 
-          'सफ्टवेयर त्रुटि',
-          'पासवर्ड रिसेट समस्या',
-          'दुई-चरण प्रमाणीकरण समस्या',
-          'अपडेट पछि समस्या'
-        ],
-        network: [
-          'नेटवर्क नभएको', 
-          'सिग्नल कमजोर', 
-          'कभरेज समस्या', 
-          'रोमिङ समस्या', 
-          '४जी/५जी समस्या',
-          'नेटवर्क स्थिरता',
-          'डाटा स्पीड घट्नु',
-          'विदेशमा रोमिङ'
-        ],
-        other: [
-          'अन्य समस्या', 
-          'सुझाव', 
-          'गुनासो', 
-          'प्रश्न', 
-          'जानकारी',
-          'सेवा प्रतिक्रिया',
-          'कर्मचारी व्यवहार',
-          'शाखा सेवा'
-        ]
+        service: {
+          connectivity: ['इन्टरनेट जडान समस्या', 'ढिलो इन्टरनेट स्पीड', 'वाइफाइ जडान समस्या'],
+          call: ['फोन कल ड्रप हुने', 'कल जोडिन नसक्नु', 'भिडियो कल समस्या', 'अन्तर्राष्ट्रिय कल समस्या'],
+          messaging: ['एसएमएस नपठिएको', 'एमएमएस समस्या', 'बल्क एसएमएस समस्या'],
+          service: ['सेवा नभएको', 'सेवा विच्छेद', 'नयाँ जडानको लागि अनुरोध', 'सेवा स्थानान्तरण', 'सेवा स्तरको गुणस्तर']
+        },
+        billing: {
+          charges: ['बढी बिल आएको', 'पैसा कट्टी भएको', 'डबल चार्ज', 'अन्तर्राष्ट्रिय रोमिङ बिल'],
+          recharge: ['रिचार्ज नभएको', 'अटो रिचार्ज समस्या', 'प्रोमो प्याकेज सक्रिय नहुनु'],
+          package: ['प्याकेज बिलिङ त्रुटि', 'डाटा प्याकेज समस्या', 'भ्वाइस प्याकेज समस्या'],
+          invoice: ['बिल नआएको', 'बिल विवरणमा त्रुटि', 'डिजिटल बिल समस्या']
+        },
+        technical: {
+          website: ['वेबसाइट काम नगर्ने', 'पेज लोड नहुने', 'फारम सबमिट नहुने'],
+          app: ['एप क्र्याश हुने', 'एप डाउनलोड समस्या', 'एप अपडेट समस्या', 'एपमा लगइन समस्या'],
+          account: ['पासवर्ड रिसेट समस्या', 'दुई-चरण प्रमाणीकरण समस्या', 'खाता ब्लक भएको'],
+          system: ['सफ्टवेयर त्रुटि', 'डाटा ढिलो', 'नेटवर्क सेटिङ समस्या', 'अपडेट पछि समस्या']
+        },
+        network: {
+          coverage: ['नेटवर्क नभएको', 'सिग्नल कमजोर', 'कभरेज समस्या', 'टावर डाउन समस्या'],
+          speed: ['डाटा स्पीड घट्नु', '४जी/५जी समस्या', 'भीडभाडमा नेटवर्क नचल्नु'],
+          roaming: ['रोमिङ समस्या', 'विदेशमा रोमिङ', 'रोमिङ प्याकेज सक्रिय नहुनु'],
+          stability: ['नेटवर्क स्थिरता', 'बारम्बार नेटवर्क जाने-आउने', 'भोल्टेज समस्या']
+        },
+        other: {
+          feedback: ['सेवा प्रतिक्रिया', 'सुझाव', 'प्रशंसा'],
+          staff: ['कर्मचारी व्यवहार', 'शाखा सेवा', 'कल सेन्टर सेवा'],
+          general: ['अन्य समस्या', 'प्रश्न', 'जानकारी', 'नयाँ सेवाको अनुरोध'],
+          website: ['वेबसाइट सुझाव', 'पोर्टल समस्या', 'डिजिटल सेवा समस्या']
+        }
       },
       en: {
-        service: [
-          'Internet Connection Issue', 
-          'Call Drop Problem', 
-          'Slow Internet Speed', 
-          'Service Not Working', 
-          'Service Disruption',
-          'New Connection Request',
-          'Service Transfer',
-          'Service Quality Issue'
-        ],
-        billing: [
-          'Excessive Billing', 
-          'Bill Not Received', 
-          'Recharge Not Credited', 
-          'Wrong Deduction', 
-          'Double Charge',
-          'Bill Detail Error',
-          'Auto Recharge Issue',
-          'Package Billing Error'
-        ],
-        technical: [
-          'Website Not Working', 
-          'App Crashes', 
-          'Login Issue', 
-          'Data Delay', 
-          'Software Bug',
-          'Password Reset Issue',
-          'Two-Factor Authentication Issue',
-          'Post-Update Problem'
-        ],
-        network: [
-          'No Network', 
-          'Weak Signal', 
-          'Coverage Issue', 
-          'Roaming Problem', 
-          '4G/5G Issue',
-          'Network Stability',
-          'Data Speed Issue',
-          'International Roaming'
-        ],
-        other: [
-          'Other Issue', 
-          'Suggestion', 
-          'Complaint', 
-          'Inquiry', 
-          'Information',
-          'Service Feedback',
-          'Staff Behavior',
-          'Branch Service'
-        ]
+        service: {
+          connectivity: ['Internet Connection Issue', 'Slow Internet Speed', 'WiFi Connection Issue'],
+          call: ['Call Drop Problem', 'Call Not Connecting', 'Video Call Issue', 'International Call Issue'],
+          messaging: ['SMS Not Sending', 'MMS Issue', 'Bulk SMS Problem'],
+          service: ['Service Not Working', 'Service Disruption', 'New Connection Request', 'Service Transfer Request', 'Service Quality Issue']
+        },
+        billing: {
+          charges: ['Excessive Billing', 'Wrong Deduction', 'Double Charge', 'International Roaming Bill'],
+          recharge: ['Recharge Not Credited', 'Auto Recharge Issue', 'Promo Package Not Activating'],
+          package: ['Package Billing Error', 'Data Package Issue', 'Voice Package Issue'],
+          invoice: ['Bill Not Received', 'Bill Detail Error', 'Digital Bill Issue']
+        },
+        technical: {
+          website: ['Website Not Working', 'Page Not Loading', 'Form Not Submitting'],
+          app: ['App Crashes', 'App Download Issue', 'App Update Problem', 'App Login Issue'],
+          account: ['Password Reset Issue', 'Two-Factor Authentication Issue', 'Account Blocked'],
+          system: ['Software Bug', 'Data Delay', 'Network Settings Issue', 'Post-Update Problem']
+        },
+        network: {
+          coverage: ['No Network', 'Weak Signal', 'Coverage Issue', 'Tower Down Issue'],
+          speed: ['Data Speed Dropping', '4G/5G Issue', 'Network in Crowded Areas'],
+          roaming: ['Roaming Problem', 'International Roaming', 'Roaming Package Not Activating'],
+          stability: ['Network Stability', 'Frequent Network Drops', 'Voltage Issue']
+        },
+        other: {
+          feedback: ['Service Feedback', 'Suggestion', 'Appreciation'],
+          staff: ['Staff Behavior', 'Branch Service', 'Call Center Service'],
+          general: ['Other Issue', 'Inquiry', 'Information Request', 'New Service Request'],
+          website: ['Website Suggestion', 'Portal Issue', 'Digital Service Issue']
+        }
       }
     };
     
     const type = formData.complaintType || 'other';
     const lang = language === 'np' ? 'np' : 'en';
-    const options = commonSubjects[lang][type] || commonSubjects[lang].other;
+    const categories = commonSubjects[lang][type];
+    
+    // Flatten categories into array of options with category grouping
+    const options = [];
+    for (const [category, items] of Object.entries(categories)) {
+      options.push(...items.map(item => ({ value: item, category })));
+    }
     return options;
+  };
+
+  // Get category label for display
+  const getCategoryLabel = (category) => {
+    const labels = {
+      np: {
+        connectivity: 'कनेक्टिभिटी', call: 'कल', messaging: 'सन्देश', service: 'सेवा',
+        charges: 'शुल्क', recharge: 'रिचार्ज', package: 'प्याकेज', invoice: 'इनभ्वाइस',
+        website: 'वेबसाइट', app: 'एप', account: 'खाता', system: 'प्रणाली',
+        coverage: 'कभरेज', speed: 'स्पीड', roaming: 'रोमिङ', stability: 'स्थिरता',
+        feedback: 'प्रतिक्रिया', staff: 'कर्मचारी', general: 'सामान्य'
+      },
+      en: {
+        connectivity: 'Connectivity', call: 'Call', messaging: 'Messaging', service: 'Service',
+        charges: 'Charges', recharge: 'Recharge', package: 'Package', invoice: 'Invoice',
+        website: 'Website', app: 'App', account: 'Account', system: 'System',
+        coverage: 'Coverage', speed: 'Speed', roaming: 'Roaming', stability: 'Stability',
+        feedback: 'Feedback', staff: 'Staff', general: 'General'
+      }
+    };
+    return labels[language][category] || category;
   };
 
   const content = {
@@ -213,6 +311,7 @@ const ComplaintRegarding = () => {
       selectSubject: 'विषय चयन गर्नुहोस्',
       description: 'विवरण',
       enterDescription: 'गुनासोको विस्तृत विवरण लेख्नुहोस्',
+      remainingChars: 'बाँकी अक्षर',
       priority: 'प्राथमिकता',
       high: 'उच्च',
       medium: 'मध्यम',
@@ -227,7 +326,7 @@ const ComplaintRegarding = () => {
       address: 'ठेगाना',
       enterAddress: 'आफ्नो ठेगाना प्रविष्ट गर्नुहोस्',
       landmark: 'नजिकैको चिन्ह',
-      enterLandmark: 'नजिकैको प्रख्यात स्थान',
+      enterLandmark: 'नजिकैको प्रख्यात स्थान (जस्तै: गणेश मन्दिर, सरकारी कार्यालय)',
       preferredContact: 'सम्पर्कको माध्यम',
       contactPhone: 'फोन कल',
       contactEmail: 'इमेल',
@@ -235,6 +334,7 @@ const ComplaintRegarding = () => {
       attachments: 'संलग्नकहरू',
       dragDrop: 'फाइलहरू यहाँ तान्नुहोस् वा क्लिक गरेर अपलोड गर्नुहोस्',
       supportedFiles: 'समर्थित फाइलहरू: PDF, JPG, PNG, DOC (max 5MB)',
+      maxFiles: 'अधिकतम ५ फाइलहरू मात्र अपलोड गर्न सकिन्छ',
       submitComplaint: 'गुनासो पेश गर्नुहोस्',
       backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
@@ -244,7 +344,9 @@ const ComplaintRegarding = () => {
       selectComplaintTypeError: 'कृपया गुनासोको प्रकार चयन गर्नुहोस्',
       selectSubjectError: 'कृपया विषय चयन गर्नुहोस्',
       descriptionError: 'कृपया विवरण भर्नुहोस्',
+      descriptionMinError: 'कृपया कम्तीमा २० अक्षरको विवरण भर्नुहोस्',
       nameError: 'कृपया पुरा नाम भर्नुहोस्',
+      nameMinError: 'नाम कम्तीमा ३ अक्षरको हुनुपर्छ',
       phoneError: 'कृपया मोबाइल नम्बर भर्नुहोस्',
       phoneInvalidError: 'कृपया मान्य मोबाइल नम्बर प्रविष्ट गर्नुहोस् (९८XXXXXXXX वा ९७XXXXXXXX)',
       emailInvalidError: 'कृपया मान्य इमेल ठेगाना प्रविष्ट गर्नुहोस्',
@@ -256,10 +358,27 @@ const ComplaintRegarding = () => {
       close: 'बन्द गर्नुहोस्',
       fileTooLarge: 'फाइल ५MB भन्दा ठुलो छ',
       invalidFileType: 'अमान्य फाइल प्रकार। कृपया PDF, JPG, PNG, वा DOC मात्र अपलोड गर्नुहोस्',
+      maxFilesExceeded: 'अधिकतम ५ फाइलहरू मात्र अपलोड गर्न सकिन्छ',
       submitting: 'पेश गर्दै...',
       clearForm: 'फारम खाली गर्नुहोस्',
       estimatedTime: 'अनुमानित प्रतिक्रिया समय: २४-४८ घण्टा',
-      submitFailed: '❌ गुनासो पेश गर्न असफल। कृपया पछि प्रयास गर्नुहोस्।'
+      submitFailed: '❌ गुनासो पेश गर्न असफल। कृपया पछि प्रयास गर्नुहोस्।',
+      formErrors: 'कृपया फारममा भएका त्रुटिहरू सच्याउनुहोस्',
+      resetSuccess: 'फारम सफलतापूर्वक खाली गरियो',
+      fileRemoved: 'फाइल हटाइयो',
+      helpText: 'सहायता',
+      requiredFieldsInfo: 'तारांकित (*) चिन्ह लगाइएका फिल्डहरू अनिवार्य छन्',
+      autoSaved: 'स्वतः सुरक्षित',
+      typing: 'टाइप गर्दै...',
+      recommended: 'सिफारिस गरिएको',
+      preview: 'पूर्वावलोकन',
+      edit: 'सम्पादन',
+      copyReference: 'सन्दर्भ नम्बर प्रतिलिपि गर्नुहोस्',
+      copied: 'प्रतिलिपि गरियो!',
+      uploadProgress: 'अपलोड प्रगति',
+      processing: 'प्रक्रियामा छ...',
+      tryAgain: 'पुन: प्रयास गर्नुहोस्',
+      viewDetails: 'विवरण हेर्नुहोस्'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -285,6 +404,7 @@ const ComplaintRegarding = () => {
       selectSubject: 'Select a subject',
       description: 'Description',
       enterDescription: 'Write detailed description of your complaint',
+      remainingChars: 'characters remaining',
       priority: 'Priority',
       high: 'High',
       medium: 'Medium',
@@ -299,7 +419,7 @@ const ComplaintRegarding = () => {
       address: 'Address',
       enterAddress: 'Enter your address',
       landmark: 'Nearby Landmark',
-      enterLandmark: 'Nearby famous place',
+      enterLandmark: 'Nearby famous place (e.g., Ganesh Temple, Government Office)',
       preferredContact: 'Preferred Contact Method',
       contactPhone: 'Phone Call',
       contactEmail: 'Email',
@@ -307,6 +427,7 @@ const ComplaintRegarding = () => {
       attachments: 'Attachments',
       dragDrop: 'Drag & drop files here or click to upload',
       supportedFiles: 'Supported files: PDF, JPG, PNG, DOC (max 5MB)',
+      maxFiles: 'Maximum 5 files can be uploaded',
       submitComplaint: 'Submit Complaint',
       backToHome: 'Back to Home',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
@@ -316,7 +437,9 @@ const ComplaintRegarding = () => {
       selectComplaintTypeError: 'Please select complaint type',
       selectSubjectError: 'Please select subject',
       descriptionError: 'Please enter description',
+      descriptionMinError: 'Please enter at least 20 characters for description',
       nameError: 'Please enter your name',
+      nameMinError: 'Name must be at least 3 characters',
       phoneError: 'Please enter mobile number',
       phoneInvalidError: 'Please enter a valid mobile number (98XXXXXXXX or 97XXXXXXXX)',
       emailInvalidError: 'Please enter a valid email address',
@@ -328,22 +451,39 @@ const ComplaintRegarding = () => {
       close: 'Close',
       fileTooLarge: 'File is larger than 5MB',
       invalidFileType: 'Invalid file type. Please upload only PDF, JPG, PNG, or DOC files.',
+      maxFilesExceeded: 'Maximum 5 files can be uploaded',
       submitting: 'Submitting...',
       clearForm: 'Clear Form',
       estimatedTime: 'Estimated response time: 24-48 hours',
-      submitFailed: '❌ Failed to submit complaint. Please try again later.'
+      submitFailed: '❌ Failed to submit complaint. Please try again later.',
+      formErrors: 'Please fix the errors in the form',
+      resetSuccess: 'Form cleared successfully',
+      fileRemoved: 'File removed',
+      helpText: 'Help',
+      requiredFieldsInfo: 'Fields marked with (*) are required',
+      autoSaved: 'Auto saved',
+      typing: 'Typing...',
+      recommended: 'Recommended',
+      preview: 'Preview',
+      edit: 'Edit',
+      copyReference: 'Copy reference number',
+      copied: 'Copied!',
+      uploadProgress: 'Upload progress',
+      processing: 'Processing...',
+      tryAgain: 'Try again',
+      viewDetails: 'View details'
     }
   };
 
   const t = content[language];
 
-  // Validate phone number (Nepal format)
+  // Validate phone number (Nepal format with more options)
   const validatePhoneNumber = (phone) => {
-    const phoneRegex = /^[9][7-8][0-9]{8}$/;
+    const phoneRegex = /^(98|97|96)[0-9]{8}$/;
     return phoneRegex.test(phone);
   };
 
-  // Validate email
+  // Validate email with domain check
   const validateEmail = (email) => {
     if (!email) return true;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -366,10 +506,16 @@ const ComplaintRegarding = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
+    if (name === 'description') {
+      setDescriptionCharCount(value.length);
+    }
+    
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+    setAutoSaveStatus('typing');
   };
 
   const handleBlur = (field) => {
@@ -379,6 +525,12 @@ const ComplaintRegarding = () => {
   const handleFileChange = (e) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
+      
+      if (selectedFiles.length + files.length > 5) {
+        showToast(t.maxFilesExceeded, 'error');
+        return;
+      }
+      
       const validFiles = [];
       const newErrors = [];
       
@@ -386,16 +538,31 @@ const ComplaintRegarding = () => {
         const validation = validateFile(file);
         if (validation.valid) {
           validFiles.push(file);
+          // Simulate upload progress
+          setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
+          const interval = setInterval(() => {
+            setUploadProgress(prev => {
+              const current = prev[file.name] || 0;
+              if (current >= 100) {
+                clearInterval(interval);
+                return prev;
+              }
+              return { ...prev, [file.name]: Math.min(current + 10, 100) };
+            });
+          }, 200);
         } else {
           newErrors.push(validation.error);
         }
       });
       
       if (newErrors.length > 0) {
-        alert(newErrors.join('\n'));
+        showToast(newErrors.join('\n'), 'error');
       }
       
       setSelectedFiles(prev => [...prev, ...validFiles]);
+      if (validFiles.length > 0) {
+        showToast(`${validFiles.length} ${language === 'np' ? 'फाइल(हरू) चयन गरियो' : 'file(s) selected'}`, 'success');
+      }
     }
   };
 
@@ -415,6 +582,12 @@ const ComplaintRegarding = () => {
     setDragActive(false);
     if (e.dataTransfer.files) {
       const files = Array.from(e.dataTransfer.files);
+      
+      if (selectedFiles.length + files.length > 5) {
+        showToast(t.maxFilesExceeded, 'error');
+        return;
+      }
+      
       const validFiles = [];
       const newErrors = [];
       
@@ -428,19 +601,33 @@ const ComplaintRegarding = () => {
       });
       
       if (newErrors.length > 0) {
-        alert(newErrors.join('\n'));
+        showToast(newErrors.join('\n'), 'error');
       }
       
       setSelectedFiles(prev => [...prev, ...validFiles]);
+      if (validFiles.length > 0) {
+        showToast(`${validFiles.length} ${language === 'np' ? 'फाइल(हरू) चयन गरियो' : 'file(s) selected'}`, 'success');
+      }
     }
   };
 
   const removeFile = (index) => {
+    const file = selectedFiles[index];
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setUploadProgress(prev => {
+      const newProgress = { ...prev };
+      delete newProgress[file.name];
+      return newProgress;
+    });
+    showToast(t.fileRemoved, 'info');
   };
 
   const clearForm = () => {
-    if (window.confirm(t.clearForm === 'Clear Form' ? 'Are you sure you want to clear all form data?' : 'के तपाईं सबै फारम डाटा खाली गर्न चाहनुहुन्छ?')) {
+    const confirmMessage = language === 'np' 
+      ? 'के तपाईं सबै फारम डाटा खाली गर्न चाहनुहुन्छ? यो कार्य पूर्ववत गर्न सकिँदैन।' 
+      : 'Are you sure you want to clear all form data? This action cannot be undone.';
+    
+    if (window.confirm(confirmMessage)) {
       setFormData({
         complaintType: '',
         subject: '',
@@ -454,9 +641,13 @@ const ComplaintRegarding = () => {
         preferredContact: 'phone'
       });
       setSelectedFiles([]);
+      setUploadProgress({});
       setErrors({});
       setTouched({});
+      setDescriptionCharCount(0);
       generateReferenceNumber();
+      clearSavedFormData();
+      showToast(t.resetSuccess, 'success');
     }
   };
 
@@ -473,10 +664,14 @@ const ComplaintRegarding = () => {
     
     if (!formData.description.trim()) {
       newErrors.description = t.descriptionError;
+    } else if (formData.description.trim().length < minDescriptionChars) {
+      newErrors.description = t.descriptionMinError;
     }
     
     if (!formData.name.trim()) {
       newErrors.name = t.nameError;
+    } else if (formData.name.trim().length < 3) {
+      newErrors.name = t.nameMinError;
     }
     
     if (!formData.phone.trim()) {
@@ -495,6 +690,7 @@ const ComplaintRegarding = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmissionAttempted(true);
     
     if (!validateForm()) {
       const firstErrorField = Object.keys(errors)[0];
@@ -502,39 +698,44 @@ const ComplaintRegarding = () => {
         const element = document.querySelector(`[name="${firstErrorField}"]`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.focus();
+          element.classList.add('error-shake');
+          setTimeout(() => element.classList.remove('error-shake'), 500);
         }
       }
+      showToast(t.formErrors, 'error');
       return;
     }
 
     setIsSubmitting(true);
+    setIsLoading(true);
 
     try {
-      // Prepare data for backend - same structure as SubmitComplaint
+      // Prepare data for backend
       const complaintData = {
-        natureOfComplaint: formData.complaintType, // Map complaintType to natureOfComplaint
-        name: formData.name,
-        description: formData.description,
-        email: formData.email,
+        natureOfComplaint: formData.complaintType,
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        email: formData.email || null,
         phone: formData.phone,
-        // Additional fields for ComplaintRegarding
         subject: formData.subject,
         priority: formData.priority,
-        address: formData.address,
-        landmark: formData.landmark,
+        address: formData.address || null,
+        landmark: formData.landmark || null,
         preferredContact: formData.preferredContact,
         referenceNumber: referenceNumber,
-        complaintCategory: 'complaint_regarding' // To identify this type
+        complaintCategory: 'complaint_regarding',
+        submissionDate: new Date().toISOString(),
+        files: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
       };
       
-      // Submit to the same backend endpoint
       const response = await complaintService.submitComplaint(complaintData);
       
       if (response.success) {
         setSuccessData(response.data);
         setShowSuccess(true);
         
-        // Reset form
+        // Reset form and clear saved data
         setFormData({
           complaintType: '',
           subject: '',
@@ -548,24 +749,36 @@ const ComplaintRegarding = () => {
           preferredContact: 'phone'
         });
         setSelectedFiles([]);
+        setUploadProgress({});
         setErrors({});
         setTouched({});
+        setDescriptionCharCount(0);
+        setSubmissionAttempted(false);
+        clearSavedFormData();
         generateReferenceNumber();
+        
+        showToast(t.successMessage, 'success');
       } else {
         throw new Error(response.message || 'Submission failed');
       }
       
     } catch (error) {
       console.error('Submission error:', error);
-      alert(t.submitFailed);
+      showToast(t.submitFailed, 'error');
     } finally {
       setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
     setShowLanguageDropdown(false);
+  };
+
+  const copyReferenceNumber = () => {
+    navigator.clipboard.writeText(referenceNumber);
+    showToast(t.copied, 'success', 1500);
   };
 
   const LogoImage = ({ src, alt, fallback, className }) => {
@@ -585,8 +798,38 @@ const ComplaintRegarding = () => {
     );
   };
 
+  // Get subject option groups
+  const getSubjectGroups = () => {
+    const options = getSubjectOptions();
+    const groups = {};
+    options.forEach(opt => {
+      if (!groups[opt.category]) groups[opt.category] = [];
+      groups[opt.category].push(opt.value);
+    });
+    return groups;
+  };
+
   return (
     <div className="complaint-regarding-page">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
+      {/* Auto-save indicator */}
+      {autoSaveStatus && (
+        <div className="auto-save-indicator">
+          {autoSaveStatus === 'saved' && <span>💾 {t.autoSaved}</span>}
+          {autoSaveStatus === 'typing' && <span>✏️ {t.typing}</span>}
+        </div>
+      )}
+
       {/* HEADER 1 - Top Bar */}
       <div className="header-1">
         <div className="container-1">
@@ -694,80 +937,52 @@ const ComplaintRegarding = () => {
               <div className="header-icon">📋</div>
               <h2>{t.complaintRegarding}</h2>
               <p>{t.complaintInfo}</p>
-              <div className="reference-box">
+              <div className="reference-box" onClick={copyReferenceNumber}>
                 <span className="reference-label">{t.referenceNo}:</span>
                 <span className="reference-value">{referenceNumber}</span>
+                <button type="button" className="copy-btn" title={t.copyReference}>📋</button>
+              </div>
+              <div className="required-info">
+                <span className="required-star">*</span> {t.requiredFieldsInfo}
               </div>
             </div>
             
-            <form onSubmit={handleSubmit} className="complaint-form">
+            <form onSubmit={handleSubmit} className="complaint-form" ref={formRef} noValidate>
               {/* Complaint Type */}
               <div className="form-section">
-                <h3 className="section-title">{t.selectComplaintType} <span className="required">*</span></h3>
+                <h3 className="section-title">
+                  {t.selectComplaintType} <span className="required-star">*</span>
+                </h3>
                 <div className="complaint-types">
-                  <label className={`type-option ${formData.complaintType === 'service' ? 'active' : ''}`}>
-                    <input
-                      type="radio"
-                      name="complaintType"
-                      value="service"
-                      onChange={handleInputChange}
-                      onBlur={() => handleBlur('complaintType')}
-                    />
-                    <span className="type-icon">🔧</span>
-                    <span className="type-name">{t.serviceRelated}</span>
-                  </label>
-                  <label className={`type-option ${formData.complaintType === 'billing' ? 'active' : ''}`}>
-                    <input
-                      type="radio"
-                      name="complaintType"
-                      value="billing"
-                      onChange={handleInputChange}
-                      onBlur={() => handleBlur('complaintType')}
-                    />
-                    <span className="type-icon">💰</span>
-                    <span className="type-name">{t.billingRelated}</span>
-                  </label>
-                  <label className={`type-option ${formData.complaintType === 'technical' ? 'active' : ''}`}>
-                    <input
-                      type="radio"
-                      name="complaintType"
-                      value="technical"
-                      onChange={handleInputChange}
-                      onBlur={() => handleBlur('complaintType')}
-                    />
-                    <span className="type-icon">💻</span>
-                    <span className="type-name">{t.technicalRelated}</span>
-                  </label>
-                  <label className={`type-option ${formData.complaintType === 'network' ? 'active' : ''}`}>
-                    <input
-                      type="radio"
-                      name="complaintType"
-                      value="network"
-                      onChange={handleInputChange}
-                      onBlur={() => handleBlur('complaintType')}
-                    />
-                    <span className="type-icon">📡</span>
-                    <span className="type-name">{t.networkRelated}</span>
-                  </label>
-                  <label className={`type-option ${formData.complaintType === 'other' ? 'active' : ''}`}>
-                    <input
-                      type="radio"
-                      name="complaintType"
-                      value="other"
-                      onChange={handleInputChange}
-                      onBlur={() => handleBlur('complaintType')}
-                    />
-                    <span className="type-icon">📝</span>
-                    <span className="type-name">{t.other}</span>
-                  </label>
+                  {[
+                    { value: 'service', icon: '🔧', name: t.serviceRelated },
+                    { value: 'billing', icon: '💰', name: t.billingRelated },
+                    { value: 'technical', icon: '💻', name: t.technicalRelated },
+                    { value: 'network', icon: '📡', name: t.networkRelated },
+                    { value: 'other', icon: '📝', name: t.other }
+                  ].map(type => (
+                    <label key={type.value} className={`type-option ${formData.complaintType === type.value ? 'active' : ''}`}>
+                      <input
+                        type="radio"
+                        name="complaintType"
+                        value={type.value}
+                        onChange={handleInputChange}
+                        onBlur={() => handleBlur('complaintType')}
+                      />
+                      <span className="type-icon">{type.icon}</span>
+                      <span className="type-name">{type.name}</span>
+                    </label>
+                  ))}
                 </div>
-                {(touched.complaintType || errors.complaintType) && errors.complaintType && 
+                {submissionAttempted && (touched.complaintType || errors.complaintType) && errors.complaintType && 
                   <div className="error-message-field">{errors.complaintType}</div>}
               </div>
 
-              {/* Subject - Dropdown */}
+              {/* Subject - Dropdown with Categories */}
               <div className="form-section">
-                <h3 className="section-title">{t.subject} <span className="required">*</span></h3>
+                <h3 className="section-title">
+                  {t.subject} <span className="required-star">*</span>
+                </h3>
                 <div className="form-group">
                   <select
                     name="subject"
@@ -776,12 +991,17 @@ const ComplaintRegarding = () => {
                     onBlur={() => handleBlur('subject')}
                     required
                     disabled={!formData.complaintType}
+                    className={submissionAttempted && errors.subject ? 'error-input' : ''}
                   >
                     <option value="">{t.selectSubject}</option>
-                    {getSubjectOptions().map((option, index) => (
-                      <option key={index} value={option}>
-                        {option}
-                      </option>
+                    {Object.entries(getSubjectGroups()).map(([category, items]) => (
+                      <optgroup key={category} label={`— ${getCategoryLabel(category)} —`}>
+                        {items.map((item, idx) => (
+                          <option key={idx} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                   {!formData.complaintType && (
@@ -789,25 +1009,39 @@ const ComplaintRegarding = () => {
                       {language === 'np' ? 'कृपया पहिले गुनासोको प्रकार चयन गर्नुहोस्' : 'Please select complaint type first'}
                     </p>
                   )}
-                  {(touched.subject || errors.subject) && errors.subject && 
+                  {submissionAttempted && (touched.subject || errors.subject) && errors.subject && 
                     <div className="error-message-field">{errors.subject}</div>}
                 </div>
               </div>
 
               {/* Description */}
               <div className="form-section">
-                <h3 className="section-title">{t.description} <span className="required">*</span></h3>
+                <h3 className="section-title">
+                  {t.description} <span className="required-star">*</span>
+                </h3>
                 <div className="form-group">
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
                     onBlur={() => handleBlur('description')}
-                    rows="5"
-                    placeholder={t.enterDescription}
+                    rows="6"
+                    placeholder={`${t.enterDescription} (${t.descriptionMinError})`}
                     required
+                    maxLength={maxDescriptionChars}
+                    className={submissionAttempted && errors.description ? 'error-input' : ''}
                   ></textarea>
-                  {(touched.description || errors.description) && errors.description && 
+                  <div className="char-counter">
+                    <span className={descriptionCharCount < minDescriptionChars ? 'char-warning' : ''}>
+                      {descriptionCharCount} / {maxDescriptionChars} {t.remainingChars}
+                      {descriptionCharCount > 0 && descriptionCharCount < minDescriptionChars && 
+                        ` (${minDescriptionChars - descriptionCharCount} ${language === 'np' ? 'अक्षर थप्नुहोस्' : 'more characters needed'})`}
+                    </span>
+                    {descriptionCharCount >= minDescriptionChars && descriptionCharCount < 50 && (
+                      <span className="char-recommended">✓ {t.recommended}</span>
+                    )}
+                  </div>
+                  {submissionAttempted && (touched.description || errors.description) && errors.description && 
                     <div className="error-message-field">{errors.description}</div>}
                 </div>
               </div>
@@ -816,33 +1050,23 @@ const ComplaintRegarding = () => {
               <div className="form-section">
                 <h3 className="section-title">{t.priority}</h3>
                 <div className="priority-options">
-                  <label className={`priority-option ${formData.priority === 'high' ? 'active' : ''}`}>
-                    <input
-                      type="radio"
-                      name="priority"
-                      value="high"
-                      onChange={handleInputChange}
-                    />
-                    <span className="priority-badge high">🔴 {t.high}</span>
-                  </label>
-                  <label className={`priority-option ${formData.priority === 'medium' ? 'active' : ''}`}>
-                    <input
-                      type="radio"
-                      name="priority"
-                      value="medium"
-                      onChange={handleInputChange}
-                    />
-                    <span className="priority-badge medium">🟡 {t.medium}</span>
-                  </label>
-                  <label className={`priority-option ${formData.priority === 'low' ? 'active' : ''}`}>
-                    <input
-                      type="radio"
-                      name="priority"
-                      value="low"
-                      onChange={handleInputChange}
-                    />
-                    <span className="priority-badge low">🟢 {t.low}</span>
-                  </label>
+                  {[
+                    { value: 'high', label: t.high, icon: '🔴', color: 'high' },
+                    { value: 'medium', label: t.medium, icon: '🟡', color: 'medium' },
+                    { value: 'low', label: t.low, icon: '🟢', color: 'low' }
+                  ].map(priority => (
+                    <label key={priority.value} className={`priority-option ${formData.priority === priority.value ? 'active' : ''}`}>
+                      <input
+                        type="radio"
+                        name="priority"
+                        value={priority.value}
+                        onChange={handleInputChange}
+                      />
+                      <span className={`priority-badge ${priority.color}`}>
+                        {priority.icon} {priority.label}
+                      </span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
@@ -851,7 +1075,7 @@ const ComplaintRegarding = () => {
                 <h3 className="section-title">{t.personalInfo}</h3>
                 <div className="personal-info-grid">
                   <div className="form-group">
-                    <label>{t.fullName} <span className="required">*</span></label>
+                    <label>{t.fullName} <span className="required-star">*</span></label>
                     <input
                       type="text"
                       name="name"
@@ -860,8 +1084,9 @@ const ComplaintRegarding = () => {
                       onBlur={() => handleBlur('name')}
                       placeholder={t.enterFullName}
                       required
+                      className={submissionAttempted && errors.name ? 'error-input' : ''}
                     />
-                    {(touched.name || errors.name) && errors.name && 
+                    {submissionAttempted && (touched.name || errors.name) && errors.name && 
                       <div className="error-message-field">{errors.name}</div>}
                   </div>
                   <div className="form-group">
@@ -873,12 +1098,13 @@ const ComplaintRegarding = () => {
                       onChange={handleInputChange}
                       onBlur={() => handleBlur('email')}
                       placeholder={t.enterEmail}
+                      className={submissionAttempted && errors.email ? 'error-input' : ''}
                     />
-                    {(touched.email || errors.email) && errors.email && 
+                    {submissionAttempted && (touched.email || errors.email) && errors.email && 
                       <div className="error-message-field">{errors.email}</div>}
                   </div>
                   <div className="form-group">
-                    <label>{t.mobileNumber} <span className="required">*</span></label>
+                    <label>{t.mobileNumber} <span className="required-star">*</span></label>
                     <input
                       type="tel"
                       name="phone"
@@ -887,8 +1113,9 @@ const ComplaintRegarding = () => {
                       onBlur={() => handleBlur('phone')}
                       placeholder={t.enterMobile}
                       required
+                      className={submissionAttempted && errors.phone ? 'error-input' : ''}
                     />
-                    {(touched.phone || errors.phone) && errors.phone && 
+                    {submissionAttempted && (touched.phone || errors.phone) && errors.phone && 
                       <div className="error-message-field">{errors.phone}</div>}
                   </div>
                   <div className="form-group">
@@ -935,7 +1162,7 @@ const ComplaintRegarding = () => {
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
                   onDrop={handleDrop}
-                  onClick={() => document.getElementById('fileInput').click()}
+                  onClick={() => fileInputRef.current?.click()}
                 >
                   <div className="drop-zone-content">
                     <span className="upload-icon">📎</span>
@@ -944,7 +1171,7 @@ const ComplaintRegarding = () => {
                   </div>
                   <input 
                     type="file" 
-                    id="fileInput" 
+                    ref={fileInputRef}
                     multiple
                     onChange={handleFileChange} 
                     style={{ display: 'none' }} 
@@ -952,16 +1179,33 @@ const ComplaintRegarding = () => {
                   />
                 </div>
                 <p className="supported-files">{t.supportedFiles}</p>
+                <p className="max-files">{t.maxFiles}</p>
                 <p className="estimated-time">⏱️ {t.estimatedTime}</p>
                 
                 {selectedFiles.length > 0 && (
                   <div className="file-list">
+                    <div className="file-list-header">
+                      <span>{selectedFiles.length} {language === 'np' ? 'फाइल(हरू)' : 'file(s)'}</span>
+                    </div>
                     {selectedFiles.map((file, index) => (
                       <div key={index} className="file-item">
-                        <span className="file-icon">📄</span>
-                        <span className="file-name">{file.name}</span>
-                        <span className="file-size">({(file.size / 1024).toFixed(2)} KB)</span>
-                        <button type="button" onClick={() => removeFile(index)} className="remove-file">✕</button>
+                        <span className="file-icon">
+                          {file.type.includes('pdf') ? '📕' : 
+                           file.type.includes('image') ? '🖼️' : 
+                           file.type.includes('word') ? '📘' : '📄'}
+                        </span>
+                        <div className="file-info">
+                          <span className="file-name">{file.name}</span>
+                          <span className="file-size">({(file.size / 1024).toFixed(2)} KB)</span>
+                          {uploadProgress[file.name] && uploadProgress[file.name] < 100 && (
+                            <div className="upload-progress">
+                              <div className="progress-bar" style={{ width: `${uploadProgress[file.name]}%` }}></div>
+                            </div>
+                          )}
+                        </div>
+                        <button type="button" onClick={() => removeFile(index)} className="remove-file" title={t.fileRemoved}>
+                          ✕
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -969,11 +1213,18 @@ const ComplaintRegarding = () => {
               </div>
               
               <div className="form-buttons">
-                <button type="button" onClick={clearForm} className="btn-clear">
+                <button type="button" onClick={clearForm} className="btn-clear" disabled={isSubmitting}>
                   🗑️ {t.clearForm}
                 </button>
                 <button type="submit" className="btn-submit" disabled={isSubmitting}>
-                  {isSubmitting ? `⏳ ${t.submitting}` : `📌 ${t.submitComplaint}`}
+                  {isSubmitting ? (
+                    <>
+                      <span className="spinner"></span>
+                      {t.submitting}
+                    </>
+                  ) : (
+                    <>📌 {t.submitComplaint}</>
+                  )}
                 </button>
               </div>
             </form>
@@ -987,16 +1238,23 @@ const ComplaintRegarding = () => {
         </div>
       </div>
 
-      {/* Success Modal - stays on same page */}
+      {/* Success Modal */}
       {showSuccess && successData && (
-        <div className="success-modal-overlay">
-          <div className="success-modal">
+        <div className="success-modal-overlay" onClick={() => setShowSuccess(false)}>
+          <div className="success-modal" onClick={(e) => e.stopPropagation()}>
             <div className="success-icon">✅</div>
             <h3>{t.successMessage}</h3>
             <div className="success-details">
-              <p><strong>{t.referenceNo}:</strong> {referenceNumber}</p>
-              <p><strong>{t.ticketId}:</strong> {language === 'np' ? successData.complaintNumberNp : successData.complaintNumber}</p>
-              <p><strong>{t.password}:</strong> {successData.trackingPassword}</p>
+              <p><strong>{t.referenceNo}:</strong> 
+                <span className="highlight">{referenceNumber}</span>
+                <button className="copy-small" onClick={copyReferenceNumber}>📋</button>
+              </p>
+              <p><strong>{t.ticketId}:</strong> 
+                <span className="highlight">{language === 'np' ? successData.complaintNumberNp : successData.complaintNumber}</span>
+              </p>
+              <p><strong>{t.password}:</strong> 
+                <span className="highlight password">{successData.trackingPassword}</span>
+              </p>
               <p className="save-warning">⚠️ {t.saveDetails}</p>
             </div>
             <div className="modal-buttons">
@@ -1015,15 +1273,7 @@ const ComplaintRegarding = () => {
         </div>
       )}
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="footer-content">
-          <div className="footer-copyright">
-            <p>{t.footerTagline}</p>
-            <p className="copyright-text">{t.copyright}</p>
-          </div>
-        </div>
-      </footer>
+    
 
       <style jsx>{`
         * {
@@ -1037,6 +1287,89 @@ const ComplaintRegarding = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
           min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 200px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 350px;
+        }
+        
+        .toast-notification.success {
+          border-left: 4px solid #10b981;
+          background: #ecfdf5;
+        }
+        
+        .toast-notification.error {
+          border-left: 4px solid #ef4444;
+          background: #fef2f2;
+        }
+        
+        .toast-notification.info {
+          border-left: 4px solid #3b82f6;
+          background: #eff6ff;
+        }
+        
+        .toast-icon { font-size: 1.2rem; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+        
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Auto-save Indicator */
+        .auto-save-indicator {
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          z-index: 2000;
+          background: #10b981;
+          color: white;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 0.7rem;
+          animation: fadeInOut 2s ease;
+        }
+        
+        @keyframes fadeInOut {
+          0% { opacity: 0; transform: translateY(10px); }
+          15% { opacity: 1; transform: translateY(0); }
+          85% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-10px); }
+        }
+
+        /* Error Shake Animation */
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+        
+        .error-shake {
+          animation: shake 0.3s ease-in-out;
         }
 
         /* HEADER 1 - Top Bar */
@@ -1063,12 +1396,7 @@ const ComplaintRegarding = () => {
           gap: 20px;
         }
 
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
+        .header-left { display: flex; align-items: center; gap: 16px; }
         .we-are-here {
           display: flex;
           align-items: center;
@@ -1078,26 +1406,10 @@ const ComplaintRegarding = () => {
           border-radius: 40px;
           font-weight: 500;
         }
+        .quote-text { font-size: 0.9rem; letter-spacing: 0.5px; font-weight: 600; }
 
-        .quote-text {
-          font-size: 0.9rem;
-          letter-spacing: 0.5px;
-          font-weight: 600;
-        }
-
-        .header-right {
-          display: flex;
-          align-items: center;
-          gap: 25px;
-          flex-wrap: wrap;
-        }
-
-        .contact-info-group {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-        }
-
+        .header-right { display: flex; align-items: center; gap: 25px; flex-wrap: wrap; }
+        .contact-info-group { display: flex; align-items: center; gap: 15px; }
         .contact-info-item {
           display: flex;
           align-items: center;
@@ -1108,12 +1420,7 @@ const ComplaintRegarding = () => {
           border-radius: 30px;
           transition: all 0.3s ease;
         }
-
-        .contact-info-item:hover {
-          background: rgba(255,255,255,0.25);
-          transform: translateY(-1px);
-        }
-
+        .contact-info-item:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px); }
         .contact-icon { font-size: 0.85rem; }
         .contact-text { font-size: 0.75rem; font-weight: 500; }
 
@@ -1264,14 +1571,15 @@ const ComplaintRegarding = () => {
 
         /* Main Content */
         .main-content {
-          padding-top: 195px;
-          min-height: calc(100vh - 255px);
+          flex: 1;
+          margin-top: 195px;
+          padding: 40px 0;
         }
 
         .complaint-container {
           max-width: 1000px;
           margin: 0 auto;
-          padding: 40px 24px;
+          padding: 0 24px;
         }
 
         .complaint-card {
@@ -1286,20 +1594,9 @@ const ComplaintRegarding = () => {
           margin-bottom: 40px;
         }
 
-        .header-icon {
-          font-size: 3rem;
-          margin-bottom: 16px;
-        }
-
-        .complaint-header h2 {
-          font-size: 1.8rem;
-          color: #0d47a1;
-          margin-bottom: 8px;
-        }
-
-        .complaint-header p {
-          color: #6c8196;
-        }
+        .header-icon { font-size: 3rem; margin-bottom: 16px; }
+        .complaint-header h2 { font-size: 1.8rem; color: #0d47a1; margin-bottom: 8px; }
+        .complaint-header p { color: #6c8196; }
 
         .reference-box {
           margin-top: 15px;
@@ -1307,20 +1604,28 @@ const ComplaintRegarding = () => {
           background: #e8f0fe;
           border-radius: 30px;
           display: inline-flex;
+          align-items: center;
           gap: 10px;
           font-size: 0.9rem;
+          cursor: pointer;
+          transition: all 0.2s ease;
         }
+        .reference-box:hover { background: #d4e4f7; transform: translateY(-1px); }
+        .reference-label { font-weight: 600; color: #0d47a1; }
+        .reference-value { font-family: monospace; font-weight: 500; color: #1565c0; }
+        .copy-btn {
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 0.9rem;
+          opacity: 0.6;
+          transition: opacity 0.2s;
+          padding: 0 4px;
+        }
+        .copy-btn:hover { opacity: 1; }
 
-        .reference-label {
-          font-weight: 600;
-          color: #0d47a1;
-        }
-
-        .reference-value {
-          font-family: monospace;
-          font-weight: 500;
-          color: #1565c0;
-        }
+        .required-info { margin-top: 12px; font-size: 0.7rem; color: #6c8196; }
+        .required-star { color: #dc3545; margin-right: 2px; }
 
         .complaint-form { text-align: left; }
         .form-section {
@@ -1335,36 +1640,27 @@ const ComplaintRegarding = () => {
           color: #0d47a1;
           margin-bottom: 16px;
         }
-        .required {
-          color: #dc3545;
-          font-size: 0.8rem;
-        }
-        .optional {
-          color: #888;
-          font-size: 0.75rem;
-          font-weight: normal;
-        }
-        .helper-text {
-          font-size: 0.75rem;
-          color: #f57c00;
-          margin-top: 6px;
-        }
-        .error-message-field {
-          color: #dc3545;
-          font-size: 0.75rem;
-          margin-top: 6px;
-        }
-        .estimated-time {
-          font-size: 0.75rem;
-          color: #2e7d32;
-          margin-top: 8px;
+        .optional { color: #888; font-size: 0.75rem; font-weight: normal; }
+        .helper-text { font-size: 0.75rem; color: #f57c00; margin-top: 6px; }
+        .error-message-field { color: #dc3545; font-size: 0.75rem; margin-top: 6px; }
+        .error-input { border-color: #dc3545 !important; }
+        .char-counter {
           text-align: right;
+          font-size: 0.7rem;
+          margin-top: 5px;
+          color: #888;
+          display: flex;
+          justify-content: space-between;
         }
+        .char-warning { color: #f57c00; }
+        .char-recommended { color: #10b981; }
+        .estimated-time, .max-files { font-size: 0.7rem; color: #2e7d32; margin-top: 5px; }
+        .max-files { color: #1565c0; }
 
         /* Complaint Types */
         .complaint-types {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
           gap: 12px;
         }
         .type-option {
@@ -1377,33 +1673,15 @@ const ComplaintRegarding = () => {
           cursor: pointer;
           transition: all 0.3s ease;
         }
-        .type-option.active {
-          border-color: #1565c0;
-          background: #e3f2fd;
-        }
-        .type-option input {
-          display: none;
-        }
-        .type-icon {
-          font-size: 1.2rem;
-        }
-        .type-name {
-          font-size: 0.9rem;
-          font-weight: 500;
-        }
+        .type-option.active { border-color: #1565c0; background: #e3f2fd; }
+        .type-option input { display: none; }
+        .type-icon { font-size: 1.2rem; }
+        .type-name { font-size: 0.85rem; font-weight: 500; }
 
         /* Priority Options */
-        .priority-options {
-          display: flex;
-          gap: 15px;
-          flex-wrap: wrap;
-        }
-        .priority-option {
-          cursor: pointer;
-        }
-        .priority-option input {
-          display: none;
-        }
+        .priority-options { display: flex; gap: 15px; flex-wrap: wrap; }
+        .priority-option { cursor: pointer; }
+        .priority-option input { display: none; }
         .priority-badge {
           display: inline-block;
           padding: 8px 20px;
@@ -1413,18 +1691,9 @@ const ComplaintRegarding = () => {
           transition: all 0.3s ease;
           border: 2px solid transparent;
         }
-        .priority-badge.high {
-          background: #ffebee;
-          color: #c62828;
-        }
-        .priority-badge.medium {
-          background: #fff8e1;
-          color: #f57c00;
-        }
-        .priority-badge.low {
-          background: #e8f5e9;
-          color: #2e7d32;
-        }
+        .priority-badge.high { background: #ffebee; color: #c62828; }
+        .priority-badge.medium { background: #fff8e1; color: #f57c00; }
+        .priority-badge.low { background: #e8f5e9; color: #2e7d32; }
         .priority-option.active .priority-badge {
           border-color: #1565c0;
           transform: scale(1.05);
@@ -1478,16 +1747,8 @@ const ComplaintRegarding = () => {
           transition: all 0.3s ease;
           background: #fafafa;
         }
-        .drop-zone.drag-active {
-          border-color: #1565c0;
-          background: #e3f2fd;
-        }
-        .drop-zone-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 12px;
-        }
+        .drop-zone.drag-active { border-color: #1565c0; background: #e3f2fd; }
+        .drop-zone-content { display: flex; flex-direction: column; align-items: center; gap: 12px; }
         .upload-icon { font-size: 2.5rem; }
         .upload-btn {
           background: #1565c0;
@@ -1500,19 +1761,11 @@ const ComplaintRegarding = () => {
           transition: all 0.3s ease;
         }
         .upload-btn:hover { background: #0d47a1; }
-        .supported-files {
-          font-size: 0.7rem;
-          color: #888;
-          margin-top: 8px;
-        }
+        .supported-files { font-size: 0.7rem; color: #888; margin-top: 8px; }
 
         /* File List */
-        .file-list {
-          margin-top: 16px;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
+        .file-list { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+        .file-list-header { font-size: 0.8rem; font-weight: 500; color: #0d47a1; margin-bottom: 4px; }
         .file-item {
           display: flex;
           align-items: center;
@@ -1522,14 +1775,18 @@ const ComplaintRegarding = () => {
           border-radius: 8px;
         }
         .file-icon { font-size: 1rem; }
-        .file-name { flex: 1; font-size: 0.85rem; }
+        .file-info { flex: 1; }
+        .file-name { font-size: 0.85rem; word-break: break-all; display: block; }
         .file-size { font-size: 0.7rem; color: #888; }
+        .upload-progress { margin-top: 4px; height: 3px; background: #e0e0e0; border-radius: 3px; overflow: hidden; }
+        .progress-bar { height: 100%; background: #1565c0; transition: width 0.3s ease; }
         .remove-file {
           background: none;
           border: none;
           font-size: 1.1rem;
           cursor: pointer;
           color: #dc3545;
+          padding: 0 5px;
         }
         .remove-file:hover { color: #c62828; }
 
@@ -1550,15 +1807,26 @@ const ComplaintRegarding = () => {
           font-size: 1.1rem;
           cursor: pointer;
           transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
         }
         .btn-submit:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 10px 25px rgba(21, 101, 192, 0.3);
         }
-        .btn-submit:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
+        .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        .spinner {
+          width: 18px;
+          height: 18px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-top-color: white;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         .btn-clear {
           flex: 1;
@@ -1572,10 +1840,8 @@ const ComplaintRegarding = () => {
           cursor: pointer;
           transition: all 0.3s ease;
         }
-        .btn-clear:hover {
-          background: #e0e0e0;
-          border-color: #ccc;
-        }
+        .btn-clear:hover:not(:disabled) { background: #e0e0e0; border-color: #ccc; }
+        .btn-clear:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .back-to-home { margin-top: 24px; text-align: center; }
         .btn-back {
@@ -1605,6 +1871,7 @@ const ComplaintRegarding = () => {
           z-index: 2000;
           animation: fadeIn 0.3s ease;
         }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         .success-modal {
           background: white;
@@ -1615,18 +1882,10 @@ const ComplaintRegarding = () => {
           text-align: center;
           animation: slideUp 0.3s ease;
         }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        .success-icon {
-          font-size: 4rem;
-          margin-bottom: 20px;
-        }
-
-        .success-modal h3 {
-          color: #0d47a1;
-          font-size: 1.3rem;
-          margin-bottom: 20px;
-        }
-
+        .success-icon { font-size: 4rem; margin-bottom: 20px; }
+        .success-modal h3 { color: #0d47a1; font-size: 1.3rem; margin-bottom: 20px; }
         .success-details {
           background: #f0f7ff;
           border-radius: 12px;
@@ -1634,30 +1893,22 @@ const ComplaintRegarding = () => {
           margin-bottom: 20px;
           text-align: left;
         }
-
-        .success-details p {
-          margin: 10px 0;
-          font-size: 0.95rem;
-        }
-
-        .success-details strong {
-          color: #0d47a1;
-        }
-
-        .save-warning {
-          color: #ff9800;
+        .success-details p { margin: 10px 0; font-size: 0.95rem; word-break: break-all; }
+        .success-details strong { color: #0d47a1; }
+        .highlight { color: #1565c0; font-weight: 600; }
+        .password { font-family: monospace; letter-spacing: 1px; }
+        .copy-small {
+          background: none;
+          border: none;
+          cursor: pointer;
+          margin-left: 8px;
           font-size: 0.8rem;
-          margin-top: 10px;
-          padding-top: 10px;
-          border-top: 1px solid #ddd;
+          opacity: 0.6;
         }
+        .copy-small:hover { opacity: 1; }
+        .save-warning { color: #ff9800; font-size: 0.8rem; margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; }
 
-        .modal-buttons {
-          display: flex;
-          gap: 15px;
-          justify-content: center;
-        }
-
+        .modal-buttons { display: flex; gap: 15px; justify-content: center; }
         .btn-close, .btn-track {
           padding: 12px 24px;
           border: none;
@@ -1666,41 +1917,10 @@ const ComplaintRegarding = () => {
           cursor: pointer;
           transition: all 0.3s ease;
         }
-
-        .btn-close {
-          background: #f0f0f0;
-          color: #666;
-        }
-
-        .btn-close:hover {
-          background: #e0e0e0;
-        }
-
-        .btn-track {
-          background: linear-gradient(135deg, #1565c0, #0d47a1);
-          color: white;
-        }
-
-        .btn-track:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 5px 15px rgba(21,101,192,0.3);
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-          from {
-            transform: translateY(50px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
+        .btn-close { background: #f0f0f0; color: #666; }
+        .btn-close:hover { background: #e0e0e0; }
+        .btn-track { background: linear-gradient(135deg, #1565c0, #0d47a1); color: white; }
+        .btn-track:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(21,101,192,0.3); }
 
         /* Footer */
         .footer {
@@ -1710,41 +1930,37 @@ const ComplaintRegarding = () => {
           margin-top: 40px;
           text-align: center;
         }
-        .footer-content {
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-        .footer-copyright {
-          text-align: center;
-          font-size: 0.7rem;
-          opacity: 0.7;
-        }
-        .copyright-text {
-          margin-top: 5px;
-          font-size: 0.65rem;
-        }
+        .footer-content { max-width: 1200px; margin: 0 auto; }
+        .footer-copyright { text-align: center; }
+        .footer-copyright p { font-size: 0.75rem; opacity: 0.8; margin: 3px 0; }
+        .copyright-text { font-size: 0.65rem; opacity: 0.6; }
 
         /* Responsive */
         @media (max-width: 768px) {
-          .main-content { padding-top: 330px; }
+          .main-content { margin-top: 330px; }
           .complaint-card { padding: 28px 20px; }
           .complaint-header h2 { font-size: 1.4rem; }
           .personal-info-grid { grid-template-columns: 1fr; }
           .complaint-types { grid-template-columns: repeat(2, 1fr); }
-          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; }
+          .container-1, .container-2, .container-3 { padding: 0 20px; flex-direction: column; text-align: center; }
           .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
-          .contact-info-group { flex-direction: column; }
+          .contact-info-group { flex-direction: column; gap: 8px; }
           .logo-left, .logo-right { display: none; }
           .dept-text-center { flex: 1; }
           .success-modal { padding: 25px; margin: 20px; }
           .modal-buttons { flex-direction: column; }
           .form-buttons { flex-direction: column; }
+          .toast-notification { top: auto; bottom: 20px; right: 20px; left: 20px; max-width: calc(100% - 40px); }
+          .auto-save-indicator { bottom: 10px; right: 10px; font-size: 0.6rem; }
         }
 
         @media (max-width: 480px) {
           .complaint-types { grid-template-columns: 1fr; }
           .priority-options { flex-direction: column; }
           .priority-badge { text-align: center; }
+          .complaint-card { padding: 20px 16px; }
+          .section-title { font-size: 1rem; }
+          .btn-submit, .btn-clear { font-size: 0.9rem; padding: 12px; }
         }
       `}</style>
     </div>
