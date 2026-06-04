@@ -144,7 +144,8 @@ const AdminReportsUsers = () => {
       moderatelyActive: 'मध्यम सक्रिय',
       lowActivity: 'कम सक्रिय',
       website: 'वेबसाइट',
-      mobileApp: 'मोबाइल एप'
+      mobileApp: 'मोबाइल एप',
+      loading: 'लोड हुँदै...'
     },
     en: {
       usersReports: 'Users Reports',
@@ -206,7 +207,8 @@ const AdminReportsUsers = () => {
       moderatelyActive: 'Moderately Active',
       lowActivity: 'Low Activity',
       website: 'Website',
-      mobileApp: 'Mobile App'
+      mobileApp: 'Mobile App',
+      loading: 'Loading...'
     }
   };
 
@@ -285,324 +287,326 @@ const AdminReportsUsers = () => {
     <div className="admin-reports-users">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
-      <div className="reports-container">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
         <div className="main-container">
-          <div className="page-header">
-            <div>
-              <h1>👥 {t.usersReports}</h1>
-              <p>{t.generateReports}</p>
-            </div>
-            <div className="action-buttons-header">
-              <button className="export-btn pdf" onClick={handleExportPDF}>📄 {t.exportPDF}</button>
-              <button className="export-btn excel" onClick={handleExportExcel}>📊 {t.exportExcel}</button>
-              <button className="export-btn print" onClick={handlePrint}>🖨️ {t.print}</button>
-            </div>
-          </div>
-
-          {/* Filters Section */}
-          <div className="filters-section">
-            <div className="filter-group">
-              <label>{t.dateRange}</label>
-              <select 
-                value={dateRange} 
-                onChange={(e) => setDateRange(e.target.value)}
-                className="filter-select"
-              >
-                <option value="today">{t.today}</option>
-                <option value="week">{t.week}</option>
-                <option value="month">{t.month}</option>
-                <option value="quarter">{t.quarter}</option>
-                <option value="year">{t.year}</option>
-                <option value="custom">{t.custom}</option>
-              </select>
-            </div>
-
-            {dateRange === 'custom' && (
-              <div className="filter-group date-range">
-                <input
-                  type="date"
-                  value={customStartDate}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="date-input"
-                  placeholder={t.startDate}
-                />
-                <span>—</span>
-                <input
-                  type="date"
-                  value={customEndDate}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="date-input"
-                  placeholder={t.endDate}
-                />
+          <div className="content-wrapper">
+            <div className="page-header">
+              <div>
+                <h1>👥 {t.usersReports}</h1>
+                <p>{t.generateReports}</p>
               </div>
-            )}
-
-            <div className="filter-group">
-              <label>{t.reportType}</label>
-              <select 
-                value={reportType} 
-                onChange={(e) => setReportType(e.target.value)}
-                className="filter-select"
-              >
-                <option value="summary">{t.summary}</option>
-                <option value="detailed">{t.detailed}</option>
-                <option value="comparative">{t.comparative}</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>{t.filterByRole}</label>
-              <select 
-                value={selectedRole} 
-                onChange={(e) => setSelectedRole(e.target.value)}
-                className="filter-select"
-              >
-                <option value="all">{t.all}</option>
-                <option value="user">{t.users}</option>
-                <option value="staff">{t.staff}</option>
-                <option value="admin">{t.admin}</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>{t.filterByStatus}</label>
-              <select 
-                value={selectedStatus} 
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="filter-select"
-              >
-                <option value="all">{t.all}</option>
-                <option value="active">{t.active}</option>
-                <option value="inactive">{t.inactive}</option>
-                <option value="suspended">{t.suspended}</option>
-              </select>
-            </div>
-
-            <button className="generate-btn" onClick={handleGenerateReport}>
-              🔄 {t.generateReport}
-            </button>
-          </div>
-
-          {/* Summary Cards */}
-          <div className="summary-cards">
-            <div className="summary-card">
-              <div className="card-icon purple">👥</div>
-              <div className="card-info">
-                <div className="card-value">{currentData.summary.totalUsers.toLocaleString()}</div>
-                <div className="card-label">{t.totalUsers}</div>
-              </div>
-            </div>
-            <div className="summary-card">
-              <div className="card-icon green">🟢</div>
-              <div className="card-info">
-                <div className="card-value">{currentData.summary.activeUsers.toLocaleString()}</div>
-                <div className="card-label">{t.activeUsers}</div>
-              </div>
-            </div>
-            <div className="summary-card">
-              <div className="card-icon orange">⭕</div>
-              <div className="card-info">
-                <div className="card-value">{currentData.summary.inactiveUsers.toLocaleString()}</div>
-                <div className="card-label">{t.inactiveUsers}</div>
-              </div>
-            </div>
-            <div className="summary-card">
-              <div className="card-icon red">🔴</div>
-              <div className="card-info">
-                <div className="card-value">{currentData.summary.suspendedUsers.toLocaleString()}</div>
-                <div className="card-label">{t.suspendedUsers}</div>
-              </div>
-            </div>
-            <div className="summary-card">
-              <div className="card-icon blue">✨</div>
-              <div className="card-info">
-                <div className="card-value">{currentData.summary.newUsersThisMonth}</div>
-                <div className="card-label">{t.newUsersThisMonth}</div>
-              </div>
-            </div>
-            <div className="summary-card">
-              <div className="card-icon pink">⭐</div>
-              <div className="card-info">
-                <div className="card-value">{currentData.summary.satisfactionRate}%</div>
-                <div className="card-label">{t.satisfactionRate}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Growth Indicator */}
-          <div className="growth-card">
-            <div className="growth-info">
-              <span className="growth-label">{t.newUsersThisMonth}:</span>
-              <span className="growth-value">{currentData.summary.newUsersThisMonth}</span>
-            </div>
-            <div className="growth-info">
-              <span className="growth-label">{t.newUsersLastMonth}:</span>
-              <span className="growth-value">{currentData.summary.newUsersLastMonth}</span>
-            </div>
-            <div className="growth-info">
-              <span className="growth-label">{t.growth}:</span>
-              <span className="growth-value positive">+{currentData.summary.growth}%</span>
-            </div>
-            <div className="growth-info">
-              <span className="growth-label">{t.totalComplaints}:</span>
-              <span className="growth-value">{currentData.summary.totalComplaints}</span>
-            </div>
-            <div className="growth-info">
-              <span className="growth-label">{t.avgComplaintsPerUser}:</span>
-              <span className="growth-value">{currentData.summary.avgComplaintsPerUser}</span>
-            </div>
-          </div>
-
-          {/* Charts Grid */}
-          <div className="charts-grid">
-            {/* Role Breakdown */}
-            <div className="chart-card">
-              <h3>{t.roleBreakdown}</h3>
-              <div className="chart-content">
-                {currentData.roleBreakdown.map((item, idx) => (
-                  <div key={idx} className="chart-bar-item">
-                    <div className="chart-label">
-                      <span>{language === 'np' ? item.name : item.enName}</span>
-                      <span>{item.count.toLocaleString()} ({item.percentage}%)</span>
-                    </div>
-                    <div className="chart-bar-bg">
-                      <div 
-                        className="chart-bar-fill" 
-                        style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${200 + idx * 120}, 70%, 55%)` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+              <div className="action-buttons-header">
+                <button className="export-btn pdf" onClick={handleExportPDF}>📄 {t.exportPDF}</button>
+                <button className="export-btn excel" onClick={handleExportExcel}>📊 {t.exportExcel}</button>
+                <button className="export-btn print" onClick={handlePrint}>🖨️ {t.print}</button>
               </div>
             </div>
 
-            {/* Status Breakdown */}
-            <div className="chart-card">
-              <h3>{t.statusBreakdown}</h3>
-              <div className="chart-content">
-                {currentData.statusBreakdown.map((item, idx) => (
-                  <div key={idx} className="chart-bar-item">
-                    <div className="chart-label">
-                      <span>{language === 'np' ? item.name : item.enName}</span>
-                      <span>{item.count.toLocaleString()} ({item.percentage}%)</span>
-                    </div>
-                    <div className="chart-bar-bg">
-                      <div 
-                        className="chart-bar-fill" 
-                        style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${120 + idx * 90}, 70%, 55%)` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+            {/* Filters Section */}
+            <div className="filters-section">
+              <div className="filter-group">
+                <label>{t.dateRange}</label>
+                <select 
+                  value={dateRange} 
+                  onChange={(e) => setDateRange(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="today">{t.today}</option>
+                  <option value="week">{t.week}</option>
+                  <option value="month">{t.month}</option>
+                  <option value="quarter">{t.quarter}</option>
+                  <option value="year">{t.year}</option>
+                  <option value="custom">{t.custom}</option>
+                </select>
               </div>
-            </div>
 
-            {/* Activity Breakdown */}
-            <div className="chart-card">
-              <h3>{t.activityBreakdown}</h3>
-              <div className="chart-content">
-                {currentData.activityBreakdown.map((item, idx) => (
-                  <div key={idx} className="chart-bar-item">
-                    <div className="chart-label">
-                      <span>{language === 'np' ? item.name : item.enName}</span>
-                      <span>{item.count.toLocaleString()} ({item.percentage}%)</span>
-                    </div>
-                    <div className="chart-bar-bg">
-                      <div 
-                        className="chart-bar-fill" 
-                        style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${280 + idx * 30}, 70%, 55%)` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Registration Method */}
-            <div className="chart-card">
-              <h3>{t.registrationMethod}</h3>
-              <div className="chart-content">
-                {currentData.registrationMethod.map((item, idx) => (
-                  <div key={idx} className="chart-bar-item">
-                    <div className="chart-label">
-                      <span>{language === 'np' ? item.name : item.enName}</span>
-                      <span>{item.count.toLocaleString()} ({item.percentage}%)</span>
-                    </div>
-                    <div className="chart-bar-bg">
-                      <div 
-                        className="chart-bar-fill" 
-                        style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${160 + idx * 60}, 70%, 55%)` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Monthly Trend */}
-          <div className="trend-card">
-            <h3>{t.monthlyTrend}</h3>
-            <div className="trend-chart">
-              {currentData.monthlyTrend.map((item, idx) => (
-                <div key={idx} className="trend-bar-item">
-                  <div className="trend-label">{getMonthText(item.month)}</div>
-                  <div className="trend-bar-bg">
-                    <div 
-                      className="trend-bar-fill" 
-                      style={{ 
-                        height: `${(item.count / Math.max(...currentData.monthlyTrend.map(m => m.count))) * 100}%`,
-                        backgroundColor: `hsl(${210 + idx * 5}, 70%, 55%)`
-                      }}
-                    >
-                      <span className="trend-value">{item.count}</span>
-                    </div>
-                  </div>
+              {dateRange === 'custom' && (
+                <div className="filter-group date-range">
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="date-input"
+                    placeholder={t.startDate}
+                  />
+                  <span>—</span>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="date-input"
+                    placeholder={t.endDate}
+                  />
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
 
-          {/* Top Users Table */}
-          <div className="table-card">
-            <h3>{t.topUsers}</h3>
-            <div className="table-wrapper">
-              <table className="reports-table">
-                <thead>
-                  <tr>
-                    <th>{t.name}</th>
-                    <th>{t.email}</th>
-                    <th>{t.complaints}</th>
-                    <th>{t.resolved}</th>
-                    <th>{t.satisfaction}</th>
-                    <th>{t.status}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentData.topUsers.map((user) => (
-                    <tr key={user.id}>
-                      <td className="user-name">{language === 'np' ? user.name : user.enName}</td>
-                      <td>{user.email}</td>
-                      <td>{user.complaints}</td>
-                      <td>{user.resolved}</td>
-                      <td>
-                        <div className="satisfaction-star">
-                          <span>⭐</span> {user.satisfaction}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`status-badge ${getStatusClass(user.status)}`}>
-                          {getStatusText(user.status)}
-                        </span>
-                      </td>
-                    </tr>
+              <div className="filter-group">
+                <label>{t.reportType}</label>
+                <select 
+                  value={reportType} 
+                  onChange={(e) => setReportType(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="summary">{t.summary}</option>
+                  <option value="detailed">{t.detailed}</option>
+                  <option value="comparative">{t.comparative}</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>{t.filterByRole}</label>
+                <select 
+                  value={selectedRole} 
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.all}</option>
+                  <option value="user">{t.users}</option>
+                  <option value="staff">{t.staff}</option>
+                  <option value="admin">{t.admin}</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>{t.filterByStatus}</label>
+                <select 
+                  value={selectedStatus} 
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.all}</option>
+                  <option value="active">{t.active}</option>
+                  <option value="inactive">{t.inactive}</option>
+                  <option value="suspended">{t.suspended}</option>
+                </select>
+              </div>
+
+              <button className="generate-btn" onClick={handleGenerateReport}>
+                🔄 {t.generateReport}
+              </button>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="summary-cards">
+              <div className="summary-card">
+                <div className="card-icon purple">👥</div>
+                <div className="card-info">
+                  <div className="card-value">{currentData.summary.totalUsers.toLocaleString()}</div>
+                  <div className="card-label">{t.totalUsers}</div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="card-icon green">🟢</div>
+                <div className="card-info">
+                  <div className="card-value">{currentData.summary.activeUsers.toLocaleString()}</div>
+                  <div className="card-label">{t.activeUsers}</div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="card-icon orange">⭕</div>
+                <div className="card-info">
+                  <div className="card-value">{currentData.summary.inactiveUsers.toLocaleString()}</div>
+                  <div className="card-label">{t.inactiveUsers}</div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="card-icon red">🔴</div>
+                <div className="card-info">
+                  <div className="card-value">{currentData.summary.suspendedUsers.toLocaleString()}</div>
+                  <div className="card-label">{t.suspendedUsers}</div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="card-icon blue">✨</div>
+                <div className="card-info">
+                  <div className="card-value">{currentData.summary.newUsersThisMonth}</div>
+                  <div className="card-label">{t.newUsersThisMonth}</div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="card-icon pink">⭐</div>
+                <div className="card-info">
+                  <div className="card-value">{currentData.summary.satisfactionRate}%</div>
+                  <div className="card-label">{t.satisfactionRate}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Growth Indicator */}
+            <div className="growth-card">
+              <div className="growth-info">
+                <span className="growth-label">{t.newUsersThisMonth}:</span>
+                <span className="growth-value">{currentData.summary.newUsersThisMonth}</span>
+              </div>
+              <div className="growth-info">
+                <span className="growth-label">{t.newUsersLastMonth}:</span>
+                <span className="growth-value">{currentData.summary.newUsersLastMonth}</span>
+              </div>
+              <div className="growth-info">
+                <span className="growth-label">{t.growth}:</span>
+                <span className="growth-value positive">+{currentData.summary.growth}%</span>
+              </div>
+              <div className="growth-info">
+                <span className="growth-label">{t.totalComplaints}:</span>
+                <span className="growth-value">{currentData.summary.totalComplaints}</span>
+              </div>
+              <div className="growth-info">
+                <span className="growth-label">{t.avgComplaintsPerUser}:</span>
+                <span className="growth-value">{currentData.summary.avgComplaintsPerUser}</span>
+              </div>
+            </div>
+
+            {/* Charts Grid */}
+            <div className="charts-grid">
+              {/* Role Breakdown */}
+              <div className="chart-card">
+                <h3>{t.roleBreakdown}</h3>
+                <div className="chart-content">
+                  {currentData.roleBreakdown.map((item, idx) => (
+                    <div key={idx} className="chart-bar-item">
+                      <div className="chart-label">
+                        <span>{language === 'np' ? item.name : item.enName}</span>
+                        <span>{item.count.toLocaleString()} ({item.percentage}%)</span>
+                      </div>
+                      <div className="chart-bar-bg">
+                        <div 
+                          className="chart-bar-fill" 
+                          style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${200 + idx * 120}, 70%, 55%)` }}
+                        />
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
+
+              {/* Status Breakdown */}
+              <div className="chart-card">
+                <h3>{t.statusBreakdown}</h3>
+                <div className="chart-content">
+                  {currentData.statusBreakdown.map((item, idx) => (
+                    <div key={idx} className="chart-bar-item">
+                      <div className="chart-label">
+                        <span>{language === 'np' ? item.name : item.enName}</span>
+                        <span>{item.count.toLocaleString()} ({item.percentage}%)</span>
+                      </div>
+                      <div className="chart-bar-bg">
+                        <div 
+                          className="chart-bar-fill" 
+                          style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${120 + idx * 90}, 70%, 55%)` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Activity Breakdown */}
+              <div className="chart-card">
+                <h3>{t.activityBreakdown}</h3>
+                <div className="chart-content">
+                  {currentData.activityBreakdown.map((item, idx) => (
+                    <div key={idx} className="chart-bar-item">
+                      <div className="chart-label">
+                        <span>{language === 'np' ? item.name : item.enName}</span>
+                        <span>{item.count.toLocaleString()} ({item.percentage}%)</span>
+                      </div>
+                      <div className="chart-bar-bg">
+                        <div 
+                          className="chart-bar-fill" 
+                          style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${280 + idx * 30}, 70%, 55%)` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Registration Method */}
+              <div className="chart-card">
+                <h3>{t.registrationMethod}</h3>
+                <div className="chart-content">
+                  {currentData.registrationMethod.map((item, idx) => (
+                    <div key={idx} className="chart-bar-item">
+                      <div className="chart-label">
+                        <span>{language === 'np' ? item.name : item.enName}</span>
+                        <span>{item.count.toLocaleString()} ({item.percentage}%)</span>
+                      </div>
+                      <div className="chart-bar-bg">
+                        <div 
+                          className="chart-bar-fill" 
+                          style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${160 + idx * 60}, 70%, 55%)` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Monthly Trend */}
+            <div className="trend-card">
+              <h3>{t.monthlyTrend}</h3>
+              <div className="trend-chart">
+                {currentData.monthlyTrend.map((item, idx) => (
+                  <div key={idx} className="trend-bar-item">
+                    <div className="trend-label">{getMonthText(item.month)}</div>
+                    <div className="trend-bar-bg">
+                      <div 
+                        className="trend-bar-fill" 
+                        style={{ 
+                          height: `${(item.count / Math.max(...currentData.monthlyTrend.map(m => m.count))) * 100}%`,
+                          backgroundColor: `hsl(${210 + idx * 5}, 70%, 55%)`
+                        }}
+                      >
+                        <span className="trend-value">{item.count}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Top Users Table */}
+            <div className="table-card">
+              <h3>{t.topUsers}</h3>
+              <div className="table-wrapper">
+                <table className="reports-table">
+                  <thead>
+                    <tr>
+                      <th>{t.name}</th>
+                      <th>{t.email}</th>
+                      <th>{t.complaints}</th>
+                      <th>{t.resolved}</th>
+                      <th>{t.satisfaction}</th>
+                      <th>{t.status}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentData.topUsers.map((user) => (
+                      <tr key={user.id}>
+                        <td className="user-name">{language === 'np' ? user.name : user.enName}</td>
+                        <td>{user.email}</td>
+                        <td>{user.complaints}</td>
+                        <td>{user.resolved}</td>
+                        <td>
+                          <div className="satisfaction-star">
+                            <span>⭐</span> {user.satisfaction}
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`status-badge ${getStatusClass(user.status)}`}>
+                            {getStatusText(user.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -618,7 +622,10 @@ const AdminReportsUsers = () => {
         .admin-reports-users {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          min-height: 100vh;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
         }
 
         .loading-container {
@@ -643,12 +650,17 @@ const AdminReportsUsers = () => {
           to { transform: rotate(360deg); }
         }
 
-        .reports-container {
+        /* Dashboard Layout */
+        .dashboard-layout {
           display: flex;
+          height: calc(100vh - 195px);
           margin-top: 195px;
-          min-height: calc(100vh - 195px);
+          position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -657,13 +669,42 @@ const AdminReportsUsers = () => {
           height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 40;
+          z-index: 100;
+          overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
-          padding: 24px 32px;
           margin-left: 260px;
+          width: calc(100% - 260px);
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
+        }
+
+        .main-container::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+        }
+
+        .content-wrapper {
+          padding: 24px 32px;
+          min-height: 100%;
         }
 
         .page-header {
@@ -1084,59 +1125,89 @@ const AdminReportsUsers = () => {
         }
 
         @media (max-width: 768px) {
-          .reports-container {
-            margin-top: 280px;
+          .admin-reports-users {
+            height: auto;
+            overflow: auto;
           }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
           .sidebar-container {
-            top: 280px;
-            height: calc(100vh - 280px);
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
           }
+          
           .main-container {
-            padding: 16px;
             margin-left: 0;
+            width: 100%;
+            overflow-y: visible;
           }
+          
+          .content-wrapper {
+            padding: 16px;
+          }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 12px;
           }
+          
           .filters-section {
             flex-direction: column;
           }
+          
           .filter-group {
             width: 100%;
           }
+          
           .date-range {
             flex-direction: row;
           }
+          
           .summary-cards {
             grid-template-columns: repeat(2, 1fr);
           }
+          
           .trend-chart {
             height: auto;
             flex-direction: column;
           }
+          
           .trend-bar-item {
             flex-direction: row;
             width: 100%;
             justify-content: space-between;
           }
+          
           .trend-bar-bg {
             width: 60%;
           }
+          
           .trend-bar-fill {
             width: 100%;
             height: 30px !important;
             border-radius: 8px;
           }
+          
           .trend-value {
             top: 50%;
             left: 12px;
             transform: translateY(-50%);
           }
+          
           .action-buttons-header {
             flex-wrap: wrap;
           }
+          
           .growth-card {
             flex-direction: column;
             align-items: center;
@@ -1147,6 +1218,7 @@ const AdminReportsUsers = () => {
           .summary-cards {
             grid-template-columns: 1fr;
           }
+          
           .reports-table th,
           .reports-table td {
             padding: 8px;

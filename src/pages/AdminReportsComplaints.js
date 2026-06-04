@@ -160,7 +160,8 @@ const AdminReportsComplaints = () => {
       september: 'सेप्टेम्बर',
       october: 'अक्टोबर',
       november: 'नोभेम्बर',
-      december: 'डिसेम्बर'
+      december: 'डिसेम्बर',
+      loading: 'लोड हुँदै...'
     },
     en: {
       complaintsReports: 'Complaints Reports',
@@ -233,7 +234,8 @@ const AdminReportsComplaints = () => {
       september: 'September',
       october: 'October',
       november: 'November',
-      december: 'December'
+      december: 'December',
+      loading: 'Loading...'
     }
   };
 
@@ -327,315 +329,317 @@ const AdminReportsComplaints = () => {
     <div className="admin-reports">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
-      <div className="reports-container">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
         <div className="main-container">
-          <div className="page-header">
-            <div>
-              <h1>📊 {t.complaintsReports}</h1>
-              <p>{t.generateReports}</p>
-            </div>
-            <div className="action-buttons-header">
-              <button className="export-btn pdf" onClick={handleExportPDF}>📄 {t.exportPDF}</button>
-              <button className="export-btn excel" onClick={handleExportExcel}>📊 {t.exportExcel}</button>
-              <button className="export-btn print" onClick={handlePrint}>🖨️ {t.print}</button>
-            </div>
-          </div>
-
-          {/* Filters Section */}
-          <div className="filters-section">
-            <div className="filter-group">
-              <label>{t.dateRange}</label>
-              <select 
-                value={dateRange} 
-                onChange={(e) => setDateRange(e.target.value)}
-                className="filter-select"
-              >
-                <option value="today">{t.today}</option>
-                <option value="week">{t.week}</option>
-                <option value="month">{t.month}</option>
-                <option value="quarter">{t.quarter}</option>
-                <option value="year">{t.year}</option>
-                <option value="custom">{t.custom}</option>
-              </select>
-            </div>
-
-            {dateRange === 'custom' && (
-              <div className="filter-group date-range">
-                <input
-                  type="date"
-                  value={customStartDate}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="date-input"
-                  placeholder={t.startDate}
-                />
-                <span>—</span>
-                <input
-                  type="date"
-                  value={customEndDate}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="date-input"
-                  placeholder={t.endDate}
-                />
+          <div className="content-wrapper">
+            <div className="page-header">
+              <div>
+                <h1>📊 {t.complaintsReports}</h1>
+                <p>{t.generateReports}</p>
               </div>
-            )}
-
-            <div className="filter-group">
-              <label>{t.reportType}</label>
-              <select 
-                value={reportType} 
-                onChange={(e) => setReportType(e.target.value)}
-                className="filter-select"
-              >
-                <option value="summary">{t.summary}</option>
-                <option value="detailed">{t.detailed}</option>
-                <option value="comparative">{t.comparative}</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>{t.filterByCategory}</label>
-              <select 
-                value={selectedCategory} 
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="filter-select"
-              >
-                <option value="all">{t.all}</option>
-                <option value="internet">{t.internet}</option>
-                <option value="billing">{t.billing}</option>
-                <option value="network">{t.network}</option>
-                <option value="recharge">{t.recharge}</option>
-                <option value="technical">{t.technical}</option>
-                <option value="activation">{t.activation}</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>{t.filterByStatus}</label>
-              <select 
-                value={selectedStatus} 
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="filter-select"
-              >
-                <option value="all">{t.all}</option>
-                <option value="pending">{t.pending}</option>
-                <option value="in-progress">{t.inProgress}</option>
-                <option value="resolved">{t.resolved}</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>{t.filterByPriority}</label>
-              <select 
-                value={selectedPriority} 
-                onChange={(e) => setSelectedPriority(e.target.value)}
-                className="filter-select"
-              >
-                <option value="all">{t.all}</option>
-                <option value="high">{t.high}</option>
-                <option value="medium">{t.medium}</option>
-                <option value="low">{t.low}</option>
-              </select>
-            </div>
-
-            <button className="generate-btn" onClick={handleGenerateReport}>
-              🔄 {t.generateReport}
-            </button>
-          </div>
-
-          {/* Summary Cards */}
-          <div className="summary-cards">
-            <div className="summary-card">
-              <div className="card-icon blue">📋</div>
-              <div className="card-info">
-                <div className="card-value">{currentData.summary.totalComplaints}</div>
-                <div className="card-label">{t.totalComplaints}</div>
-              </div>
-            </div>
-            <div className="summary-card">
-              <div className="card-icon orange">⏳</div>
-              <div className="card-info">
-                <div className="card-value">{currentData.summary.pendingComplaints}</div>
-                <div className="card-label">{t.pendingComplaints}</div>
-              </div>
-            </div>
-            <div className="summary-card">
-              <div className="card-icon yellow">🔄</div>
-              <div className="card-info">
-                <div className="card-value">{currentData.summary.inProgressComplaints}</div>
-                <div className="card-label">{t.inProgressComplaints}</div>
-              </div>
-            </div>
-            <div className="summary-card">
-              <div className="card-icon green">✅</div>
-              <div className="card-info">
-                <div className="card-value">{currentData.summary.resolvedComplaints}</div>
-                <div className="card-label">{t.resolvedComplaints}</div>
-              </div>
-            </div>
-            <div className="summary-card">
-              <div className="card-icon purple">⏱️</div>
-              <div className="card-info">
-                <div className="card-value">{currentData.summary.avgResolutionDays} {language === 'np' ? 'दिन' : 'days'}</div>
-                <div className="card-label">{t.avgResolutionDays}</div>
-              </div>
-            </div>
-            <div className="summary-card">
-              <div className="card-icon pink">⭐</div>
-              <div className="card-info">
-                <div className="card-value">{currentData.summary.satisfactionRate}%</div>
-                <div className="card-label">{t.satisfactionRate}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Growth Indicator */}
-          <div className="growth-card">
-            <div className="growth-info">
-              <span className="growth-label">{t.thisMonth}:</span>
-              <span className="growth-value">{currentData.summary.thisMonth}</span>
-            </div>
-            <div className="growth-info">
-              <span className="growth-label">{t.lastMonth}:</span>
-              <span className="growth-value">{currentData.summary.lastMonth}</span>
-            </div>
-            <div className="growth-info">
-              <span className="growth-label">{t.growth}:</span>
-              <span className="growth-value positive">+{currentData.summary.growth}%</span>
-            </div>
-          </div>
-
-          {/* Charts Section */}
-          <div className="charts-grid">
-            {/* Category Breakdown */}
-            <div className="chart-card">
-              <h3>{t.categoryBreakdown}</h3>
-              <div className="chart-content">
-                {currentData.categoryBreakdown.map((item, idx) => (
-                  <div key={idx} className="chart-bar-item">
-                    <div className="chart-label">
-                      <span>{language === 'np' ? item.name : item.enName}</span>
-                      <span>{item.count} ({item.percentage}%)</span>
-                    </div>
-                    <div className="chart-bar-bg">
-                      <div 
-                        className="chart-bar-fill" 
-                        style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${200 + idx * 30}, 70%, 55%)` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+              <div className="action-buttons-header">
+                <button className="export-btn pdf" onClick={handleExportPDF}>📄 {t.exportPDF}</button>
+                <button className="export-btn excel" onClick={handleExportExcel}>📊 {t.exportExcel}</button>
+                <button className="export-btn print" onClick={handlePrint}>🖨️ {t.print}</button>
               </div>
             </div>
 
-            {/* Status Breakdown */}
-            <div className="chart-card">
-              <h3>{t.statusBreakdown}</h3>
-              <div className="pie-chart-container">
-                {currentData.statusBreakdown.map((item, idx) => (
-                  <div key={idx} className="pie-segment-info">
-                    <div className="pie-color" style={{ backgroundColor: `hsl(${120 + idx * 90}, 70%, 55%)` }} />
-                    <div className="pie-label">
-                      <span>{language === 'np' ? item.name : item.enName}</span>
-                      <span>{item.count} ({item.percentage}%)</span>
-                    </div>
-                  </div>
-                ))}
+            {/* Filters Section */}
+            <div className="filters-section">
+              <div className="filter-group">
+                <label>{t.dateRange}</label>
+                <select 
+                  value={dateRange} 
+                  onChange={(e) => setDateRange(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="today">{t.today}</option>
+                  <option value="week">{t.week}</option>
+                  <option value="month">{t.month}</option>
+                  <option value="quarter">{t.quarter}</option>
+                  <option value="year">{t.year}</option>
+                  <option value="custom">{t.custom}</option>
+                </select>
               </div>
-            </div>
 
-            {/* Priority Breakdown */}
-            <div className="chart-card">
-              <h3>{t.priorityBreakdown}</h3>
-              <div className="pie-chart-container">
-                {currentData.priorityBreakdown.map((item, idx) => (
-                  <div key={idx} className="pie-segment-info">
-                    <div className="pie-color" style={{ backgroundColor: `hsl(${0 + idx * 45}, 70%, 55%)` }} />
-                    <div className="pie-label">
-                      <span>{language === 'np' ? item.name : item.enName}</span>
-                      <span>{item.count} ({item.percentage}%)</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Channel Breakdown */}
-            <div className="chart-card">
-              <h3>{t.channelBreakdown}</h3>
-              <div className="chart-content">
-                {currentData.channelBreakdown.map((item, idx) => (
-                  <div key={idx} className="chart-bar-item">
-                    <div className="chart-label">
-                      <span>{language === 'np' ? item.name : item.enName}</span>
-                      <span>{item.count} ({item.percentage}%)</span>
-                    </div>
-                    <div className="chart-bar-bg">
-                      <div 
-                        className="chart-bar-fill" 
-                        style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${280 + idx * 20}, 70%, 55%)` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Monthly Trend */}
-          <div className="trend-card">
-            <h3>{t.monthlyTrend}</h3>
-            <div className="trend-chart">
-              {currentData.monthlyTrend.map((item, idx) => (
-                <div key={idx} className="trend-bar-item">
-                  <div className="trend-label">{getMonthText(item.month)}</div>
-                  <div className="trend-bar-bg">
-                    <div 
-                      className="trend-bar-fill" 
-                      style={{ 
-                        height: `${(item.count / Math.max(...currentData.monthlyTrend.map(m => m.count))) * 100}%`,
-                        backgroundColor: `hsl(${210 + idx * 5}, 70%, 55%)`
-                      }}
-                    >
-                      <span className="trend-value">{item.count}</span>
-                    </div>
-                  </div>
+              {dateRange === 'custom' && (
+                <div className="filter-group date-range">
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="date-input"
+                    placeholder={t.startDate}
+                  />
+                  <span>—</span>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="date-input"
+                    placeholder={t.endDate}
+                  />
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
 
-          {/* Top Complaints Table */}
-          <div className="table-card">
-            <h3>{t.topComplaints}</h3>
-            <div className="table-wrapper">
-              <table className="reports-table">
-                <thead>
-                  <tr>
-                    <th>{t.ticketId}</th>
-                    <th>{t.complainant}</th>
-                    <th>{t.category}</th>
-                    <th>{t.date}</th>
-                    <th>{t.status}</th>
-                    <th>{t.priority}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentData.topComplaints.map((complaint) => (
-                    <tr key={complaint.id}>
-                      <td className="ticket-id">{complaint.ticketId}</td>
-                      <td>{language === 'np' ? complaint.name : complaint.enName}</td>
-                      <td>{getCategoryText(complaint.category)}</td>
-                      <td>{language === 'np' ? complaint.date : complaint.enDate}</td>
-                      <td><span className={`status-badge status-${complaint.status}`}>{getStatusText(complaint.status)}</span></td>
-                      <td><span className={`priority-badge priority-${complaint.priority}`}>{getPriorityText(complaint.priority)}</span></td>
-                    </tr>
+              <div className="filter-group">
+                <label>{t.reportType}</label>
+                <select 
+                  value={reportType} 
+                  onChange={(e) => setReportType(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="summary">{t.summary}</option>
+                  <option value="detailed">{t.detailed}</option>
+                  <option value="comparative">{t.comparative}</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>{t.filterByCategory}</label>
+                <select 
+                  value={selectedCategory} 
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.all}</option>
+                  <option value="internet">{t.internet}</option>
+                  <option value="billing">{t.billing}</option>
+                  <option value="network">{t.network}</option>
+                  <option value="recharge">{t.recharge}</option>
+                  <option value="technical">{t.technical}</option>
+                  <option value="activation">{t.activation}</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>{t.filterByStatus}</label>
+                <select 
+                  value={selectedStatus} 
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.all}</option>
+                  <option value="pending">{t.pending}</option>
+                  <option value="in-progress">{t.inProgress}</option>
+                  <option value="resolved">{t.resolved}</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>{t.filterByPriority}</label>
+                <select 
+                  value={selectedPriority} 
+                  onChange={(e) => setSelectedPriority(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.all}</option>
+                  <option value="high">{t.high}</option>
+                  <option value="medium">{t.medium}</option>
+                  <option value="low">{t.low}</option>
+                </select>
+              </div>
+
+              <button className="generate-btn" onClick={handleGenerateReport}>
+                🔄 {t.generateReport}
+              </button>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="summary-cards">
+              <div className="summary-card">
+                <div className="card-icon blue">📋</div>
+                <div className="card-info">
+                  <div className="card-value">{currentData.summary.totalComplaints}</div>
+                  <div className="card-label">{t.totalComplaints}</div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="card-icon orange">⏳</div>
+                <div className="card-info">
+                  <div className="card-value">{currentData.summary.pendingComplaints}</div>
+                  <div className="card-label">{t.pendingComplaints}</div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="card-icon yellow">🔄</div>
+                <div className="card-info">
+                  <div className="card-value">{currentData.summary.inProgressComplaints}</div>
+                  <div className="card-label">{t.inProgressComplaints}</div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="card-icon green">✅</div>
+                <div className="card-info">
+                  <div className="card-value">{currentData.summary.resolvedComplaints}</div>
+                  <div className="card-label">{t.resolvedComplaints}</div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="card-icon purple">⏱️</div>
+                <div className="card-info">
+                  <div className="card-value">{currentData.summary.avgResolutionDays} {language === 'np' ? 'दिन' : 'days'}</div>
+                  <div className="card-label">{t.avgResolutionDays}</div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="card-icon pink">⭐</div>
+                <div className="card-info">
+                  <div className="card-value">{currentData.summary.satisfactionRate}%</div>
+                  <div className="card-label">{t.satisfactionRate}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Growth Indicator */}
+            <div className="growth-card">
+              <div className="growth-info">
+                <span className="growth-label">{t.thisMonth}:</span>
+                <span className="growth-value">{currentData.summary.thisMonth}</span>
+              </div>
+              <div className="growth-info">
+                <span className="growth-label">{t.lastMonth}:</span>
+                <span className="growth-value">{currentData.summary.lastMonth}</span>
+              </div>
+              <div className="growth-info">
+                <span className="growth-label">{t.growth}:</span>
+                <span className="growth-value positive">+{currentData.summary.growth}%</span>
+              </div>
+            </div>
+
+            {/* Charts Section */}
+            <div className="charts-grid">
+              {/* Category Breakdown */}
+              <div className="chart-card">
+                <h3>{t.categoryBreakdown}</h3>
+                <div className="chart-content">
+                  {currentData.categoryBreakdown.map((item, idx) => (
+                    <div key={idx} className="chart-bar-item">
+                      <div className="chart-label">
+                        <span>{language === 'np' ? item.name : item.enName}</span>
+                        <span>{item.count} ({item.percentage}%)</span>
+                      </div>
+                      <div className="chart-bar-bg">
+                        <div 
+                          className="chart-bar-fill" 
+                          style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${200 + idx * 30}, 70%, 55%)` }}
+                        />
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
+
+              {/* Status Breakdown */}
+              <div className="chart-card">
+                <h3>{t.statusBreakdown}</h3>
+                <div className="pie-chart-container">
+                  {currentData.statusBreakdown.map((item, idx) => (
+                    <div key={idx} className="pie-segment-info">
+                      <div className="pie-color" style={{ backgroundColor: `hsl(${120 + idx * 90}, 70%, 55%)` }} />
+                      <div className="pie-label">
+                        <span>{language === 'np' ? item.name : item.enName}</span>
+                        <span>{item.count} ({item.percentage}%)</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Priority Breakdown */}
+              <div className="chart-card">
+                <h3>{t.priorityBreakdown}</h3>
+                <div className="pie-chart-container">
+                  {currentData.priorityBreakdown.map((item, idx) => (
+                    <div key={idx} className="pie-segment-info">
+                      <div className="pie-color" style={{ backgroundColor: `hsl(${0 + idx * 45}, 70%, 55%)` }} />
+                      <div className="pie-label">
+                        <span>{language === 'np' ? item.name : item.enName}</span>
+                        <span>{item.count} ({item.percentage}%)</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Channel Breakdown */}
+              <div className="chart-card">
+                <h3>{t.channelBreakdown}</h3>
+                <div className="chart-content">
+                  {currentData.channelBreakdown.map((item, idx) => (
+                    <div key={idx} className="chart-bar-item">
+                      <div className="chart-label">
+                        <span>{language === 'np' ? item.name : item.enName}</span>
+                        <span>{item.count} ({item.percentage}%)</span>
+                      </div>
+                      <div className="chart-bar-bg">
+                        <div 
+                          className="chart-bar-fill" 
+                          style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${280 + idx * 20}, 70%, 55%)` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Monthly Trend */}
+            <div className="trend-card">
+              <h3>{t.monthlyTrend}</h3>
+              <div className="trend-chart">
+                {currentData.monthlyTrend.map((item, idx) => (
+                  <div key={idx} className="trend-bar-item">
+                    <div className="trend-label">{getMonthText(item.month)}</div>
+                    <div className="trend-bar-bg">
+                      <div 
+                        className="trend-bar-fill" 
+                        style={{ 
+                          height: `${(item.count / Math.max(...currentData.monthlyTrend.map(m => m.count))) * 100}%`,
+                          backgroundColor: `hsl(${210 + idx * 5}, 70%, 55%)`
+                        }}
+                      >
+                        <span className="trend-value">{item.count}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Top Complaints Table */}
+            <div className="table-card">
+              <h3>{t.topComplaints}</h3>
+              <div className="table-wrapper">
+                <table className="reports-table">
+                  <thead>
+                    <tr>
+                      <th>{t.ticketId}</th>
+                      <th>{t.complainant}</th>
+                      <th>{t.category}</th>
+                      <th>{t.date}</th>
+                      <th>{t.status}</th>
+                      <th>{t.priority}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentData.topComplaints.map((complaint) => (
+                      <tr key={complaint.id}>
+                        <td className="ticket-id">{complaint.ticketId}</td>
+                        <td>{language === 'np' ? complaint.name : complaint.enName}</td>
+                        <td>{getCategoryText(complaint.category)}</td>
+                        <td>{language === 'np' ? complaint.date : complaint.enDate}</td>
+                        <td><span className={`status-badge status-${complaint.status}`}>{getStatusText(complaint.status)}</span></td>
+                        <td><span className={`priority-badge priority-${complaint.priority}`}>{getPriorityText(complaint.priority)}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -651,7 +655,10 @@ const AdminReportsComplaints = () => {
         .admin-reports {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          min-height: 100vh;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
         }
 
         .loading-container {
@@ -676,12 +683,17 @@ const AdminReportsComplaints = () => {
           to { transform: rotate(360deg); }
         }
 
-        .reports-container {
+        /* Dashboard Layout */
+        .dashboard-layout {
           display: flex;
+          height: calc(100vh - 195px);
           margin-top: 195px;
-          min-height: calc(100vh - 195px);
+          position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -690,13 +702,42 @@ const AdminReportsComplaints = () => {
           height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 40;
+          z-index: 100;
+          overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
-          padding: 24px 32px;
           margin-left: 260px;
+          width: calc(100% - 260px);
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
+        }
+
+        .main-container::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+        }
+
+        .content-wrapper {
+          padding: 24px 32px;
+          min-height: 100%;
         }
 
         .page-header {
@@ -1141,56 +1182,85 @@ const AdminReportsComplaints = () => {
         }
 
         @media (max-width: 768px) {
-          .reports-container {
-            margin-top: 280px;
+          .admin-reports {
+            height: auto;
+            overflow: auto;
           }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
           .sidebar-container {
-            top: 280px;
-            height: calc(100vh - 280px);
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
           }
+          
           .main-container {
-            padding: 16px;
             margin-left: 0;
+            width: 100%;
+            overflow-y: visible;
           }
+          
+          .content-wrapper {
+            padding: 16px;
+          }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 12px;
           }
+          
           .filters-section {
             flex-direction: column;
           }
+          
           .filter-group {
             width: 100%;
           }
+          
           .date-range {
             flex-direction: row;
           }
+          
           .summary-cards {
             grid-template-columns: repeat(2, 1fr);
           }
+          
           .trend-chart {
             height: auto;
             flex-direction: column;
           }
+          
           .trend-bar-item {
             flex-direction: row;
             width: 100%;
             justify-content: space-between;
           }
+          
           .trend-bar-bg {
             width: 60%;
           }
+          
           .trend-bar-fill {
             width: 100%;
             height: 30px !important;
             border-radius: 8px;
           }
+          
           .trend-value {
             top: 50%;
             left: 12px;
             transform: translateY(-50%);
           }
+          
           .action-buttons-header {
             flex-wrap: wrap;
           }
@@ -1200,6 +1270,7 @@ const AdminReportsComplaints = () => {
           .summary-cards {
             grid-template-columns: 1fr;
           }
+          
           .reports-table th,
           .reports-table td {
             padding: 8px;

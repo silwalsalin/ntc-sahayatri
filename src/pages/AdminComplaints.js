@@ -26,6 +26,7 @@ const AdminComplaints = () => {
 
   // Fetch complaints from backend
   const fetchComplaints = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
       const response = await axios.get('http://localhost:5000/api/complaints', {
@@ -194,7 +195,6 @@ const AdminComplaints = () => {
       );
       
       if (response.data.success) {
-        // Update local state
         setComplaints(prevComplaints =>
           prevComplaints.map(complaint =>
             complaint.id === complaintId
@@ -594,171 +594,173 @@ const AdminComplaints = () => {
         </div>
       )}
       
-      <div className="complaints-container">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
         <div className="main-container">
-          <div className="page-header">
-            <div>
-              <h1>{t.complaintsManagement}</h1>
-              <p>{t.allComplaints}</p>
+          <div className="content-wrapper">
+            <div className="page-header">
+              <div>
+                <h1>{t.complaintsManagement}</h1>
+                <p>{t.allComplaints}</p>
+              </div>
+              <button className="refresh-btn" onClick={refreshData}>
+                🔄 {t.refresh}
+              </button>
             </div>
-            <button className="refresh-btn" onClick={refreshData}>
-              🔄 {t.refresh}
-            </button>
-          </div>
 
-          {/* Statistics Cards */}
-          <div className="stats-row">
-            <div className="stat-box">
-              <div className="stat-box-icon blue">📋</div>
-              <div className="stat-box-info">
-                <div className="stat-box-value">{complaints.length}</div>
-                <div className="stat-box-label">{t.totalComplaints}</div>
+            {/* Statistics Cards */}
+            <div className="stats-row">
+              <div className="stat-box">
+                <div className="stat-box-icon blue">📋</div>
+                <div className="stat-box-info">
+                  <div className="stat-box-value">{complaints.length}</div>
+                  <div className="stat-box-label">{t.totalComplaints}</div>
+                </div>
+              </div>
+              <div className="stat-box">
+                <div className="stat-box-icon orange">⏳</div>
+                <div className="stat-box-info">
+                  <div className="stat-box-value">{complaints.filter(c => c.status === 'pending').length}</div>
+                  <div className="stat-box-label">{t.pendingCount}</div>
+                </div>
+              </div>
+              <div className="stat-box">
+                <div className="stat-box-icon yellow">🔄</div>
+                <div className="stat-box-info">
+                  <div className="stat-box-value">{complaints.filter(c => c.status === 'in-progress').length}</div>
+                  <div className="stat-box-label">{t.inProgressCount}</div>
+                </div>
+              </div>
+              <div className="stat-box">
+                <div className="stat-box-icon green">✅</div>
+                <div className="stat-box-info">
+                  <div className="stat-box-value">{complaints.filter(c => c.status === 'resolved').length}</div>
+                  <div className="stat-box-label">{t.resolvedCount}</div>
+                </div>
               </div>
             </div>
-            <div className="stat-box">
-              <div className="stat-box-icon orange">⏳</div>
-              <div className="stat-box-info">
-                <div className="stat-box-value">{complaints.filter(c => c.status === 'pending').length}</div>
-                <div className="stat-box-label">{t.pendingCount}</div>
-              </div>
-            </div>
-            <div className="stat-box">
-              <div className="stat-box-icon yellow">🔄</div>
-              <div className="stat-box-info">
-                <div className="stat-box-value">{complaints.filter(c => c.status === 'in-progress').length}</div>
-                <div className="stat-box-label">{t.inProgressCount}</div>
-              </div>
-            </div>
-            <div className="stat-box">
-              <div className="stat-box-icon green">✅</div>
-              <div className="stat-box-info">
-                <div className="stat-box-value">{complaints.filter(c => c.status === 'resolved').length}</div>
-                <div className="stat-box-label">{t.resolvedCount}</div>
-              </div>
-            </div>
-          </div>
 
-          {/* Filters */}
-          <div className="filters-bar">
-            <div className="search-box">
-              <span className="search-icon">🔍</span>
-              <input
-                type="text"
-                placeholder={t.searchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            {/* Filters */}
+            <div className="filters-bar">
+              <div className="search-box">
+                <span className="search-icon">🔍</span>
+                <input
+                  type="text"
+                  placeholder={t.searchPlaceholder}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="filter-group">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.all}</option>
+                  <option value="pending">{t.pending}</option>
+                  <option value="in-progress">{t.inProgress}</option>
+                  <option value="review">{t.underReview}</option>
+                  <option value="resolved">{t.resolved}</option>
+                </select>
+                <select
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.all}</option>
+                  <option value="high">{t.high}</option>
+                  <option value="medium">{t.medium}</option>
+                  <option value="low">{t.low}</option>
+                </select>
+              </div>
             </div>
-            <div className="filter-group">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="filter-select"
-              >
-                <option value="all">{t.all}</option>
-                <option value="pending">{t.pending}</option>
-                <option value="in-progress">{t.inProgress}</option>
-                <option value="review">{t.underReview}</option>
-                <option value="resolved">{t.resolved}</option>
-              </select>
-              <select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-                className="filter-select"
-              >
-                <option value="all">{t.all}</option>
-                <option value="high">{t.high}</option>
-                <option value="medium">{t.medium}</option>
-                <option value="low">{t.low}</option>
-              </select>
-            </div>
-          </div>
 
-          {/* Complaints Table */}
-          <div className="table-wrapper">
-            <table className="complaints-table">
-              <thead>
-                <tr>
-                  <th>{t.ticketId}</th>
-                  <th>{t.complainant}</th>
-                  <th>{t.category}</th>
-                  <th>{t.date}</th>
-                  <th>{t.status}</th>
-                  <th>{t.priority}</th>
-                  <th>{t.actions}</th>
+            {/* Complaints Table */}
+            <div className="table-wrapper">
+              <table className="complaints-table">
+                <thead>
+                  <tr>
+                    <th>{t.ticketId}</th>
+                    <th>{t.complainant}</th>
+                    <th>{t.category}</th>
+                    <th>{t.date}</th>
+                    <th>{t.status}</th>
+                    <th>{t.priority}</th>
+                    <th>{t.actions}</th>
                 </tr>
-              </thead>
-              <tbody>
-                {paginatedComplaints.length > 0 ? (
-                  paginatedComplaints.map((complaint) => (
-                    <tr key={complaint.id}>
-                      <td className="ticket-id">{complaint.ticketId}</td>
-                      <td>{language === 'np' ? complaint.name : complaint.enName}</td>
-                      <td>{getCategoryText(complaint)}</td>
-                      <td>{getDate(complaint)}</td>
-                      <td>
-                        <span className={`status-badge ${getStatusClass(complaint.status)}`}>
-                          {getStatusText(complaint.status)}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
-                          {getPriorityText(complaint.priority)}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="action-buttons">
-                          <button className="view-btn" onClick={() => openModal(complaint)}>
-                            👁️ {t.viewDetails}
-                          </button>
-                          <button className="update-status-btn" onClick={() => openStatusModal(complaint)}>
-                            🔄 {t.updateStatus}
-                          </button>
+                </thead>
+                <tbody>
+                  {paginatedComplaints.length > 0 ? (
+                    paginatedComplaints.map((complaint) => (
+                      <tr key={complaint.id}>
+                        <td className="ticket-id">{complaint.ticketId}</td>
+                        <td>{language === 'np' ? complaint.name : complaint.enName}</td>
+                        <td>{getCategoryText(complaint)}</td>
+                        <td>{getDate(complaint)}</td>
+                        <td>
+                          <span className={`status-badge ${getStatusClass(complaint.status)}`}>
+                            {getStatusText(complaint.status)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
+                            {getPriorityText(complaint.priority)}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="action-buttons">
+                            <button className="view-btn" onClick={() => openModal(complaint)}>
+                              👁️ {t.viewDetails}
+                            </button>
+                            <button className="update-status-btn" onClick={() => openStatusModal(complaint)}>
+                              🔄 {t.updateStatus}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="no-data">
+                      <td colSpan="7">
+                        <div className="no-data-content">
+                          <span className="no-data-icon">📭</span>
+                          <p>{t.noComplaintsFound}</p>
+                          <small>{t.tryAdjustingFilters}</small>
                         </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="no-data">
-                      <div className="no-data-content">
-                        <span className="no-data-icon">📭</span>
-                        <p>{t.noComplaintsFound}</p>
-                        <small>{t.tryAdjustingFilters}</small>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="pagination-btn"
-              >
-                ← {t.previous}
-              </button>
-              <span className="pagination-info">
-                {t.page} {currentPage} {t.of} {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="pagination-btn"
-              >
-                {t.next} →
-              </button>
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="pagination-btn"
+                >
+                  ← {t.previous}
+                </button>
+                <span className="pagination-info">
+                  {t.page} {currentPage} {t.of} {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="pagination-btn"
+                >
+                  {t.next} →
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -893,7 +895,10 @@ const AdminComplaints = () => {
         .admin-complaints {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          min-height: 100vh;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
         }
 
         .backend-warning {
@@ -931,12 +936,17 @@ const AdminComplaints = () => {
           to { transform: rotate(360deg); }
         }
 
-        .complaints-container {
+        /* Dashboard Layout */
+        .dashboard-layout {
           display: flex;
+          height: calc(100vh - 195px);
           margin-top: 195px;
-          min-height: calc(100vh - 195px);
+          position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -945,14 +955,42 @@ const AdminComplaints = () => {
           height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 40;
+          z-index: 100;
           overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
-          padding: 24px 32px;
           margin-left: 260px;
+          width: calc(100% - 260px);
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
+        }
+
+        .main-container::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+        }
+
+        .content-wrapper {
+          padding: 24px 32px;
+          min-height: 100%;
         }
 
         .page-header {
@@ -1425,10 +1463,18 @@ const AdminComplaints = () => {
         }
 
         @media (max-width: 768px) {
-          .complaints-container {
-            margin-top: 280px;
-            flex-direction: column;
+          .admin-complaints {
+            height: auto;
+            overflow: auto;
           }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
           .sidebar-container {
             position: relative;
             top: 0;
@@ -1436,28 +1482,40 @@ const AdminComplaints = () => {
             height: auto;
             margin-bottom: 20px;
           }
+          
           .main-container {
-            padding: 16px;
             margin-left: 0;
+            width: 100%;
+            overflow-y: visible;
           }
+          
+          .content-wrapper {
+            padding: 16px;
+          }
+          
           .filters-bar {
             flex-direction: column;
           }
+          
           .filter-group {
             width: 100%;
             flex-direction: column;
           }
+          
           .filter-select {
             width: 100%;
           }
+          
           .stats-row {
             grid-template-columns: 1fr;
           }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 12px;
           }
+          
           .action-buttons {
             flex-direction: column;
           }

@@ -156,178 +156,180 @@ const AdminDashboard = () => {
         </div>
         
         <div className={`main-wrapper ${sidebarOpen ? 'with-sidebar' : 'full-width'}`}>
-          {/* Welcome Section */}
-          <div className="welcome-section">
-            <div className="welcome-content">
-              <div className="welcome-icon">👋</div>
-              <div className="welcome-text">
-                <h1>{t.welcomeBack}, <span className="admin-name">Admin</span></h1>
-                <p>{t.dashboard}</p>
+          <div className="main-content">
+            {/* Welcome Section */}
+            <div className="welcome-section">
+              <div className="welcome-content">
+                <div className="welcome-icon">👋</div>
+                <div className="welcome-text">
+                  <h1>{t.welcomeBack}, <span className="admin-name">Admin</span></h1>
+                  <p>{t.dashboard}</p>
+                </div>
+              </div>
+              <div className="date-display">
+                <span className="date-icon">📅</span>
+                <span className="date">{new Date().toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}</span>
               </div>
             </div>
-            <div className="date-display">
-              <span className="date-icon">📅</span>
-              <span className="date">{new Date().toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}</span>
-            </div>
-          </div>
 
-          {/* Stats Cards - Minimalist */}
-          <div className="stats-container">
-            <div className="stat-card">
-              <div className="stat-header">
-                <span className="stat-icon">📊</span>
-                <span className="stat-title">{t.totalComplaints}</span>
+            {/* Stats Cards */}
+            <div className="stats-container">
+              <div className="stat-card">
+                <div className="stat-header">
+                  <span className="stat-icon">📊</span>
+                  <span className="stat-title">{t.totalComplaints}</span>
+                </div>
+                <div className="stat-value">{stats.totalComplaints.toLocaleString()}</div>
+                <div className="stat-change positive">+12% from last month</div>
               </div>
-              <div className="stat-value">{stats.totalComplaints.toLocaleString()}</div>
-              <div className="stat-change positive">+12% from last month</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-header">
-                <span className="stat-icon">⏳</span>
-                <span className="stat-title">{t.pendingComplaints}</span>
+              <div className="stat-card">
+                <div className="stat-header">
+                  <span className="stat-icon">⏳</span>
+                  <span className="stat-title">{t.pendingComplaints}</span>
+                </div>
+                <div className="stat-value">{stats.pendingComplaints.toLocaleString()}</div>
+                <div className="stat-change negative">+5% from last month</div>
               </div>
-              <div className="stat-value">{stats.pendingComplaints.toLocaleString()}</div>
-              <div className="stat-change negative">+5% from last month</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-header">
-                <span className="stat-icon">🔄</span>
-                <span className="stat-title">{t.inProgressComplaints}</span>
+              <div className="stat-card">
+                <div className="stat-header">
+                  <span className="stat-icon">🔄</span>
+                  <span className="stat-title">{t.inProgressComplaints}</span>
+                </div>
+                <div className="stat-value">{stats.inProgressComplaints.toLocaleString()}</div>
+                <div className="stat-change positive">-3% from last month</div>
               </div>
-              <div className="stat-value">{stats.inProgressComplaints.toLocaleString()}</div>
-              <div className="stat-change positive">-3% from last month</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-header">
-                <span className="stat-icon">✅</span>
-                <span className="stat-title">{t.resolvedComplaints}</span>
+              <div className="stat-card">
+                <div className="stat-header">
+                  <span className="stat-icon">✅</span>
+                  <span className="stat-title">{t.resolvedComplaints}</span>
+                </div>
+                <div className="stat-value">{stats.resolvedComplaints.toLocaleString()}</div>
+                <div className="stat-change positive">+8% from last month</div>
               </div>
-              <div className="stat-value">{stats.resolvedComplaints.toLocaleString()}</div>
-              <div className="stat-change positive">+8% from last month</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-header">
-                <span className="stat-icon">👥</span>
-                <span className="stat-title">{t.totalUsers}</span>
+              <div className="stat-card">
+                <div className="stat-header">
+                  <span className="stat-icon">👥</span>
+                  <span className="stat-title">{t.totalUsers}</span>
+                </div>
+                <div className="stat-value">{stats.totalUsers.toLocaleString()}</div>
+                <div className="stat-change positive">+15% from last month</div>
               </div>
-              <div className="stat-value">{stats.totalUsers.toLocaleString()}</div>
-              <div className="stat-change positive">+15% from last month</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-header">
-                <span className="stat-icon">✨</span>
-                <span className="stat-title">{t.newUsersToday}</span>
+              <div className="stat-card">
+                <div className="stat-header">
+                  <span className="stat-icon">✨</span>
+                  <span className="stat-title">{t.newUsersToday}</span>
+                </div>
+                <div className="stat-value">+{stats.newUsersToday}</div>
+                <div className="stat-change positive">+2 from yesterday</div>
               </div>
-              <div className="stat-value">+{stats.newUsersToday}</div>
-              <div className="stat-change positive">+2 from yesterday</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-header">
-                <span className="stat-icon">🟢</span>
-                <span className="stat-title">{t.activeUsers}</span>
+              <div className="stat-card">
+                <div className="stat-header">
+                  <span className="stat-icon">🟢</span>
+                  <span className="stat-title">{t.activeUsers}</span>
+                </div>
+                <div className="stat-value">{stats.activeUsers.toLocaleString()}</div>
+                <div className="stat-change positive">+7% from last month</div>
               </div>
-              <div className="stat-value">{stats.activeUsers.toLocaleString()}</div>
-              <div className="stat-change positive">+7% from last month</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-header">
-                <span className="stat-icon">⭐</span>
-                <span className="stat-title">{t.satisfactionRate}</span>
+              <div className="stat-card">
+                <div className="stat-header">
+                  <span className="stat-icon">⭐</span>
+                  <span className="stat-title">{t.satisfactionRate}</span>
+                </div>
+                <div className="stat-value">{stats.satisfactionRate}%</div>
+                <div className="stat-change positive">+4% from last month</div>
               </div>
-              <div className="stat-value">{stats.satisfactionRate}%</div>
-              <div className="stat-change positive">+4% from last month</div>
             </div>
-          </div>
 
-          {/* Chart Section - Clean */}
-          <div className="chart-card">
-            <div className="card-title">
-              <h3>{t.monthlyTrend}</h3>
-              <button className="toggle-sidebar-btn" onClick={toggleSidebar}>
-                {sidebarOpen ? 'Hide Menu' : 'Show Menu'}
-              </button>
-            </div>
-            <div className="chart-container">
-              {chartData.datasets.map((value, idx) => (
-                <div key={idx} className="chart-item">
-                  <div className="chart-label">{chartData.labels[idx]}</div>
-                  <div className="chart-bar-container">
-                    <div 
-                      className="chart-bar" 
-                      style={{ 
-                        height: `${(value / Math.max(...chartData.datasets)) * 100}%`,
-                        background: `linear-gradient(180deg, #3b82f6, #60a5fa)`
-                      }}
-                    >
-                      <span className="chart-value">{value}</span>
+            {/* Chart Section */}
+            <div className="chart-card">
+              <div className="card-title">
+                <h3>{t.monthlyTrend}</h3>
+                <button className="toggle-sidebar-btn" onClick={toggleSidebar}>
+                  {sidebarOpen ? 'Hide Menu' : 'Show Menu'}
+                </button>
+              </div>
+              <div className="chart-container">
+                {chartData.datasets.map((value, idx) => (
+                  <div key={idx} className="chart-item">
+                    <div className="chart-label">{chartData.labels[idx]}</div>
+                    <div className="chart-bar-container">
+                      <div 
+                        className="chart-bar" 
+                        style={{ 
+                          height: `${(value / Math.max(...chartData.datasets)) * 100}%`,
+                          background: `linear-gradient(180deg, #3b82f6, #60a5fa)`
+                        }}
+                      >
+                        <span className="chart-value">{value}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Recent Complaints Table */}
-          <div className="table-card">
-            <div className="card-title">
-              <h3>{t.recentComplaints}</h3>
-              <button className="view-link" onClick={() => navigate('/admin-complaints')}>
-                {t.viewAll} →
-              </button>
-            </div>
-            <div className="table-responsive">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>{t.ticketId}</th>
-                    <th>{t.complainant}</th>
-                    <th>{t.category}</th>
-                    <th>{t.status}</th>
-                    <th>{t.date}</th>
-                    <th>{t.priority}</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentComplaints.map((complaint) => (
-                    <tr key={complaint.id}>
-                      <td className="ticket-id">{complaint.ticketId}</td>
-                      <td>{language === 'np' ? complaint.name : complaint.enName}</td>
-                      <td>{getCategoryText(complaint.category, complaint.enCategory)}</td>
-                      <td><span className={`badge ${getStatusClass(complaint.status)}`}>{getStatusText(complaint.status)}</span></td>
-                      <td>{complaint.date}</td>
-                      <td><span className={`badge-priority ${getPriorityClass(complaint.priority)}`}>{getPriorityText(complaint.priority)}</span></td>
-                      <td><button className="view-btn" onClick={() => navigate(`/admin-complaints/${complaint.id}`)}>View</button></td>
+            {/* Recent Complaints Table */}
+            <div className="table-card">
+              <div className="card-title">
+                <h3>{t.recentComplaints}</h3>
+                <button className="view-link" onClick={() => navigate('/admin-complaints')}>
+                  {t.viewAll} →
+                </button>
+              </div>
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>{t.ticketId}</th>
+                      <th>{t.complainant}</th>
+                      <th>{t.category}</th>
+                      <th>{t.status}</th>
+                      <th>{t.date}</th>
+                      <th>{t.priority}</th>
+                      <th></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {recentComplaints.map((complaint) => (
+                      <tr key={complaint.id}>
+                        <td className="ticket-id">{complaint.ticketId}</td>
+                        <td>{language === 'np' ? complaint.name : complaint.enName}</td>
+                        <td>{getCategoryText(complaint.category, complaint.enCategory)}</td>
+                        <td><span className={`badge ${getStatusClass(complaint.status)}`}>{getStatusText(complaint.status)}</span></td>
+                        <td>{complaint.date}</td>
+                        <td><span className={`badge-priority ${getPriorityClass(complaint.priority)}`}>{getPriorityText(complaint.priority)}</span></td>
+                        <td><button className="view-btn" onClick={() => navigate(`/admin-complaints/${complaint.id}`)}>View</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
 
-          {/* Quick Actions */}
-          <div className="actions-card">
-            <div className="card-title">
-              <h3>{t.quickActions}</h3>
-            </div>
-            <div className="actions-container">
-              <button className="action-btn-minimal" onClick={() => navigate('/admin-complaints/add')}>
-                <span>➕</span> {t.addComplaint}
-              </button>
-              <button className="action-btn-minimal" onClick={() => navigate('/admin-users')}>
-                <span>👥</span> {t.manageUsers}
-              </button>
-              <button className="action-btn-minimal" onClick={() => navigate('/admin-reports/complaints')}>
-                <span>📊</span> {t.generateReport}
-              </button>
-              <button className="action-btn-minimal" onClick={() => navigate('/admin-analytics')}>
-                <span>📈</span> {t.viewAnalytics}
-              </button>
+            {/* Quick Actions */}
+            <div className="actions-card">
+              <div className="card-title">
+                <h3>{t.quickActions}</h3>
+              </div>
+              <div className="actions-container">
+                <button className="action-btn-minimal" onClick={() => navigate('/admin-complaints/add')}>
+                  <span>➕</span> {t.addComplaint}
+                </button>
+                <button className="action-btn-minimal" onClick={() => navigate('/admin-users')}>
+                  <span>👥</span> {t.manageUsers}
+                </button>
+                <button className="action-btn-minimal" onClick={() => navigate('/admin-reports/complaints')}>
+                  <span>📊</span> {t.generateReport}
+                </button>
+                <button className="action-btn-minimal" onClick={() => navigate('/admin-analytics')}>
+                  <span>📈</span> {t.viewAnalytics}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -344,6 +346,7 @@ const AdminDashboard = () => {
           font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
           background: #f8fafc;
           min-height: 100vh;
+          overflow: hidden;
         }
 
         /* Loading */
@@ -372,8 +375,11 @@ const AdminDashboard = () => {
         /* Layout */
         .dashboard-layout {
           display: flex;
-          min-height: calc(100vh - 195px);
+          height: calc(100vh - 195px);
           margin-top: 195px;
+          position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
         .sidebar-wrapper {
@@ -382,27 +388,53 @@ const AdminDashboard = () => {
           left: 0;
           width: 260px;
           height: calc(100vh - 195px);
-          transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          z-index: 40;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          z-index: 100;
           background: white;
           border-right: 1px solid #e2e8f0;
+          transform: translateX(0);
         }
 
         .sidebar-wrapper.closed {
-          left: -260px;
+          transform: translateX(-260px);
         }
 
         .main-wrapper {
           flex: 1;
-          transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          padding: 32px 40px;
+          width: calc(100% - 260px);
           margin-left: 260px;
-          max-width: calc(100% - 260px);
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .main-wrapper.full-width {
           margin-left: 0;
-          max-width: 100%;
+          width: 100%;
+        }
+
+        .main-wrapper::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-wrapper::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .main-wrapper::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+        }
+
+        .main-wrapper::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+        }
+
+        .main-content {
+          padding: 24px 32px;
+          min-height: 100%;
         }
 
         /* Welcome Section */
@@ -410,9 +442,13 @@ const AdminDashboard = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 32px;
-          padding-bottom: 20px;
-          border-bottom: 2px solid #e2e8f0;
+          margin-bottom: 28px;
+          padding: 20px;
+          background: white;
+          border-radius: 20px;
+          border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
+          gap: 16px;
         }
 
         .welcome-content {
@@ -426,7 +462,7 @@ const AdminDashboard = () => {
         }
 
         .welcome-text h1 {
-          font-size: 1.8rem;
+          font-size: 1.6rem;
           font-weight: 600;
           color: #0f172a;
           margin-bottom: 4px;
@@ -441,7 +477,7 @@ const AdminDashboard = () => {
 
         .welcome-text p {
           color: #64748b;
-          font-size: 0.9rem;
+          font-size: 0.85rem;
         }
 
         .date-display {
@@ -449,7 +485,7 @@ const AdminDashboard = () => {
           align-items: center;
           gap: 8px;
           padding: 8px 16px;
-          background: white;
+          background: #f8fafc;
           border-radius: 12px;
           border: 1px solid #e2e8f0;
           font-size: 0.85rem;
@@ -465,7 +501,7 @@ const AdminDashboard = () => {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 20px;
-          margin-bottom: 32px;
+          margin-bottom: 28px;
         }
 
         .stat-card {
@@ -561,7 +597,7 @@ const AdminDashboard = () => {
           display: flex;
           align-items: flex-end;
           justify-content: space-around;
-          height: 240px;
+          height: 260px;
           gap: 16px;
         }
 
@@ -728,21 +764,24 @@ const AdminDashboard = () => {
 
         @media (max-width: 768px) {
           .dashboard-layout { 
-            margin-top: 280px; 
+            margin-top: 280px;
+            height: calc(100vh - 280px);
           }
           .sidebar-wrapper { 
             top: 280px; 
             height: calc(100vh - 280px); 
           }
           .main-wrapper { 
-            padding: 20px; 
             margin-left: 0;
-            max-width: 100%;
+            width: 100%;
+          }
+          .main-content {
+            padding: 16px;
           }
           .welcome-section { 
             flex-direction: column; 
             align-items: flex-start;
-            gap: 16px;
+            gap: 12px;
           }
           .stats-container { 
             grid-template-columns: 1fr;
@@ -771,6 +810,15 @@ const AdminDashboard = () => {
             top: 50%;
             left: 12px;
             transform: translateY(-50%);
+          }
+        }
+
+        @media (max-width: 480px) {
+          .stat-card {
+            padding: 16px;
+          }
+          .stat-value {
+            font-size: 1.6rem;
           }
         }
       `}</style>

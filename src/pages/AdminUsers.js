@@ -110,9 +110,10 @@ const AdminUsers = () => {
   // Fetch complaints from backend to extract unique complainants
   const fetchComplaints = async () => {
     try {
-      console.log('Fetching complaints from backend...');
-      const response = await axios.get('http://localhost:5000/api/complaints');
-      console.log('Complaints API Response:', response.data);
+      const token = localStorage.getItem('adminToken');
+      const response = await axios.get('http://localhost:5000/api/complaints', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
       if (response.data.success && Array.isArray(response.data.data)) {
         setAllComplaints(response.data.data);
@@ -129,13 +130,10 @@ const AdminUsers = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      console.log('Fetching users from backend...');
       const token = localStorage.getItem('adminToken');
       
-      // First fetch complaints to get complainant data
       const complaints = await fetchComplaints();
       
-      // Create a map of unique complainants from complaints
       const complainantMap = new Map();
       
       complaints.forEach(complaint => {
@@ -152,7 +150,6 @@ const AdminUsers = () => {
           });
         }
         
-        // Add complaint to user's complaint list
         if (email && complainantMap.has(email)) {
           const user = complainantMap.get(email);
           user.complaints.push(complaint);
@@ -160,13 +157,10 @@ const AdminUsers = () => {
         }
       });
       
-      // Try to fetch existing users from users API (if available)
       let existingUsers = [];
       try {
         const usersResponse = await axios.get('http://localhost:5000/api/users', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         });
         if (usersResponse.data.success && Array.isArray(usersResponse.data.data)) {
           existingUsers = usersResponse.data.data;
@@ -175,15 +169,12 @@ const AdminUsers = () => {
         console.log('Users API not available, using complainant data only');
       }
       
-      // Merge existing users with complainant data
       const mergedUsers = [];
       const processedEmails = new Set();
       
-      // Add existing users first
       existingUsers.forEach(user => {
         processedEmails.add(user.email);
         
-        // Find complaints for this user
         const userComplaints = complaints.filter(c => c.email === user.email);
         const totalComplaints = userComplaints.length;
         const resolvedComplaints = userComplaints.filter(c => 
@@ -212,7 +203,6 @@ const AdminUsers = () => {
         });
       });
       
-      // Add complainants that are not in existing users
       complainantMap.forEach((complainant, email) => {
         if (!processedEmails.has(email)) {
           const totalComplaints = complainant.complaints.length;
@@ -243,7 +233,6 @@ const AdminUsers = () => {
         }
       });
       
-      console.log(`Found ${mergedUsers.length} users (${mergedUsers.filter(u => u.complaintsCount > 0).length} with complaints)`);
       setUsers(mergedUsers);
       setBackendStatus('connected');
       
@@ -838,180 +827,182 @@ const AdminUsers = () => {
         </div>
       )}
       
-      <div className="users-container">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
         <div className="main-container">
-          <div className="page-header">
-            <div>
-              <h1>{t.userManagement}</h1>
-              <p>{t.manageUsers}</p>
-            </div>
-            <div className="header-buttons">
-              <button className="refresh-btn" onClick={refreshData}>
-                🔄 {t.refresh}
-              </button>
-              <button className="add-user-btn" onClick={openAddModal}>
-                ➕ {t.addNewUser}
-              </button>
-            </div>
-          </div>
-
-          {/* Statistics Cards */}
-          <div className="stats-row">
-            <div className="stat-card">
-              <div className="stat-icon purple">👥</div>
-              <div className="stat-info">
-                <div className="stat-value">{totalUsers}</div>
-                <div className="stat-label">{t.totalUsers}</div>
+          <div className="content-wrapper">
+            <div className="page-header">
+              <div>
+                <h1>{t.userManagement}</h1>
+                <p>{t.manageUsers}</p>
+              </div>
+              <div className="header-buttons">
+                <button className="refresh-btn" onClick={refreshData}>
+                  🔄 {t.refresh}
+                </button>
+                <button className="add-user-btn" onClick={openAddModal}>
+                  ➕ {t.addNewUser}
+                </button>
               </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-icon green">🟢</div>
-              <div className="stat-info">
-                <div className="stat-value">{activeUsers}</div>
-                <div className="stat-label">{t.activeUsers}</div>
+
+            {/* Statistics Cards */}
+            <div className="stats-row">
+              <div className="stat-card">
+                <div className="stat-icon purple">👥</div>
+                <div className="stat-info">
+                  <div className="stat-value">{totalUsers}</div>
+                  <div className="stat-label">{t.totalUsers}</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon green">🟢</div>
+                <div className="stat-info">
+                  <div className="stat-value">{activeUsers}</div>
+                  <div className="stat-label">{t.activeUsers}</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon blue">📋</div>
+                <div className="stat-info">
+                  <div className="stat-value">{totalComplaintsCount}</div>
+                  <div className="stat-label">{t.totalComplaintsLabel}</div>
+                </div>
               </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-icon blue">📋</div>
-              <div className="stat-info">
-                <div className="stat-value">{totalComplaintsCount}</div>
-                <div className="stat-label">{t.totalComplaintsLabel}</div>
+
+            {/* Filters */}
+            <div className="filters-bar">
+              <div className="search-box">
+                <span className="search-icon">🔍</span>
+                <input
+                  type="text"
+                  placeholder={t.searchPlaceholder}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="filter-group">
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  {Object.entries(rolesObj).map(([key, value]) => (
+                    <option key={key} value={key}>{value}</option>
+                  ))}
+                </select>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  {Object.entries(statusesObj).map(([key, value]) => (
+                    <option key={key} value={key}>{value}</option>
+                  ))}
+                </select>
               </div>
             </div>
-          </div>
 
-          {/* Filters */}
-          <div className="filters-bar">
-            <div className="search-box">
-              <span className="search-icon">🔍</span>
-              <input
-                type="text"
-                placeholder={t.searchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="filter-group">
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="filter-select"
-              >
-                {Object.entries(rolesObj).map(([key, value]) => (
-                  <option key={key} value={key}>{value}</option>
-                ))}
-              </select>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="filter-select"
-              >
-                {Object.entries(statusesObj).map(([key, value]) => (
-                  <option key={key} value={key}>{value}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Users Table */}
-          <div className="table-wrapper">
-            <table className="users-table">
-              <thead>
-                <tr>
-                  <th>{t.name}</th>
-                  <th>{t.email}</th>
-                  <th>{t.phone}</th>
-                  <th>{t.role}</th>
-                  <th>{t.status}</th>
-                  <th>{t.registeredDate}</th>
-                  <th>{t.complaints}</th>
-                  <th>{t.actions}</th>
+            {/* Users Table */}
+            <div className="table-wrapper">
+              <table className="users-table">
+                <thead>
+                  <tr>
+                    <th>{t.name}</th>
+                    <th>{t.email}</th>
+                    <th>{t.phone}</th>
+                    <th>{t.role}</th>
+                    <th>{t.status}</th>
+                    <th>{t.registeredDate}</th>
+                    <th>{t.complaints}</th>
+                    <th>{t.actions}</th>
                 </tr>
-              </thead>
-              <tbody>
-                {paginatedUsers.length > 0 ? (
-                  paginatedUsers.map((user) => (
-                    <tr key={user.id}>
-                      <td className="user-name">{language === 'np' ? user.name : user.enName}</td>
-                      <td>{user.email}</td>
-                      <td>{user.phone}</td>
-                      <td>{getRoleText(user.role)}</td>
-                      <td>
-                        <span className={`status-badge ${getStatusClass(user.status)}`}>
-                          {getStatusText(user.status)}
-                        </span>
-                      </td>
-                      <td>{getDate(user, 'registeredDate')}</td>
-                      <td>
-                        <span className="complaint-count-badge">
-                          {user.complaintsCount}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="action-buttons">
-                          <button className="view-btn" onClick={() => openModal(user)} title={t.viewDetails}>
-                            👁️
-                          </button>
-                          <button className="edit-btn" onClick={() => openEditModal(user)} title={t.editUserBtn}>
-                            ✏️
-                          </button>
-                          {user.status === 'active' ? (
-                            <button className="suspend-btn" onClick={() => updateUserStatus(user.id, 'suspended')} title={t.suspendUser}>
-                              🔒
+                </thead>
+                <tbody>
+                  {paginatedUsers.length > 0 ? (
+                    paginatedUsers.map((user) => (
+                      <tr key={user.id}>
+                        <td className="user-name">{language === 'np' ? user.name : user.enName}</td>
+                        <td>{user.email}</td>
+                        <td>{user.phone}</td>
+                        <td>{getRoleText(user.role)}</td>
+                        <td>
+                          <span className={`status-badge ${getStatusClass(user.status)}`}>
+                            {getStatusText(user.status)}
+                          </span>
+                        </td>
+                        <td>{getDate(user, 'registeredDate')}</td>
+                        <td>
+                          <span className="complaint-count-badge">
+                            {user.complaintsCount}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="action-buttons">
+                            <button className="view-btn" onClick={() => openModal(user)} title={t.viewDetails}>
+                              👁️
                             </button>
-                          ) : user.status === 'suspended' ? (
-                            <button className="activate-btn" onClick={() => updateUserStatus(user.id, 'active')} title={t.activateUser}>
-                              🔓
+                            <button className="edit-btn" onClick={() => openEditModal(user)} title={t.editUserBtn}>
+                              ✏️
                             </button>
-                          ) : null}
-                          <button className="delete-btn" onClick={() => deleteUser(user.id, user.name)} title={t.deleteUser}>
-                            🗑️
-                          </button>
+                            {user.status === 'active' ? (
+                              <button className="suspend-btn" onClick={() => updateUserStatus(user.id, 'suspended')} title={t.suspendUser}>
+                                🔒
+                              </button>
+                            ) : user.status === 'suspended' ? (
+                              <button className="activate-btn" onClick={() => updateUserStatus(user.id, 'active')} title={t.activateUser}>
+                                🔓
+                              </button>
+                            ) : null}
+                            <button className="delete-btn" onClick={() => deleteUser(user.id, user.name)} title={t.deleteUser}>
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="no-data">
+                      <td colSpan="8">
+                        <div className="no-data-content">
+                          <span className="no-data-icon">📭</span>
+                          <p>{t.noUsersFound}</p>
+                          <small>{t.tryAdjustingFilters}</small>
                         </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr className="no-data">
-                    <td colSpan="8">
-                      <div className="no-data-content">
-                        <span className="no-data-icon">📭</span>
-                        <p>{t.noUsersFound}</p>
-                        <small>{t.tryAdjustingFilters}</small>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="pagination-btn"
-              >
-                ← {t.previous}
-              </button>
-              <span className="pagination-info">
-                {t.page} {currentPage} {t.of} {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="pagination-btn"
-              >
-                {t.next} →
-              </button>
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="pagination-btn"
+                >
+                  ← {t.previous}
+                </button>
+                <span className="pagination-info">
+                  {t.page} {currentPage} {t.of} {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="pagination-btn"
+                >
+                  {t.next} →
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1071,7 +1062,6 @@ const AdminUsers = () => {
                 </span>
               </div>
               
-              {/* User's Complaints List */}
               {selectedUser.complaints && selectedUser.complaints.length > 0 && (
                 <div className="user-complaints-section">
                   <div className="section-title">
@@ -1297,7 +1287,10 @@ const AdminUsers = () => {
         .admin-users {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          min-height: 100vh;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
         }
 
         .backend-warning {
@@ -1335,12 +1328,17 @@ const AdminUsers = () => {
           to { transform: rotate(360deg); }
         }
 
-        .users-container {
+        /* Dashboard Layout */
+        .dashboard-layout {
           display: flex;
+          height: calc(100vh - 195px);
           margin-top: 195px;
-          min-height: calc(100vh - 195px);
+          position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -1349,13 +1347,42 @@ const AdminUsers = () => {
           height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 40;
+          z-index: 100;
+          overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
-          padding: 24px 32px;
           margin-left: 260px;
+          width: calc(100% - 260px);
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
+        }
+
+        .main-container::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+        }
+
+        .content-wrapper {
+          padding: 24px 32px;
+          min-height: 100%;
         }
 
         .page-header {
@@ -1713,7 +1740,7 @@ const AdminUsers = () => {
         .modal-content {
           background: white;
           border-radius: 20px;
-          max-width: 550px;
+          max-width: 700px;
           width: 90%;
           max-height: 85vh;
           overflow-y: auto;
@@ -1938,38 +1965,63 @@ const AdminUsers = () => {
         }
 
         @media (max-width: 768px) {
-          .users-container {
-            margin-top: 280px;
+          .admin-users {
+            height: auto;
+            overflow: auto;
           }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
           .sidebar-container {
-            top: 280px;
-            height: calc(100vh - 280px);
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
           }
+          
           .main-container {
-            padding: 16px;
             margin-left: 0;
+            width: 100%;
+            overflow-y: visible;
           }
+          
+          .content-wrapper {
+            padding: 16px;
+          }
+          
           .filters-bar {
             flex-direction: column;
           }
+          
           .filter-group {
             width: 100%;
             flex-direction: column;
           }
+          
           .filter-select {
             width: 100%;
           }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 12px;
           }
+          
           .stats-row {
             grid-template-columns: 1fr;
           }
+          
           .action-buttons {
             flex-direction: column;
           }
+          
           .header-buttons {
             width: 100%;
             flex-direction: column;
@@ -1982,13 +2034,16 @@ const AdminUsers = () => {
             padding: 8px;
             font-size: 0.7rem;
           }
+          
           .detail-row {
             flex-direction: column;
           }
+          
           .detail-row label {
             width: 100%;
             margin-bottom: 4px;
           }
+          
           .modal-footer {
             flex-direction: column;
           }

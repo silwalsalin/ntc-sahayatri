@@ -212,216 +212,218 @@ const AdminContact = () => {
     <div className="admin-contact">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
-      <div className="contact-container">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
         <div className="main-container">
-          <div className="page-header">
-            <div>
-              <h1>💬 {t.contactSupport}</h1>
-              <p>{t.getHelp}</p>
+          <div className="content-wrapper">
+            <div className="page-header">
+              <div>
+                <h1>💬 {t.contactSupport}</h1>
+                <p>{t.getHelp}</p>
+              </div>
             </div>
-          </div>
 
-          {/* Contact Info Cards */}
-          <div className="contact-cards">
-            <div className="contact-card" onClick={() => alert(t.callUs)}>
-              <div className="contact-card-icon">📞</div>
-              <div className="contact-card-info">
-                <h3>{t.callUs}</h3>
-                <p>01-4960008</p>
-                <span className="contact-card-hours">{t.supportHours}</span>
+            {/* Contact Info Cards */}
+            <div className="contact-cards">
+              <div className="contact-card" onClick={() => alert(t.callUs)}>
+                <div className="contact-card-icon">📞</div>
+                <div className="contact-card-info">
+                  <h3>{t.callUs}</h3>
+                  <p>01-4960008</p>
+                  <span className="contact-card-hours">{t.supportHours}</span>
+                </div>
               </div>
-            </div>
-            <div className="contact-card" onClick={() => alert(t.emailUs)}>
-              <div className="contact-card-icon">✉️</div>
-              <div className="contact-card-info">
-                <h3>{t.emailUs}</h3>
-                <p>support@ntc.com.np</p>
-                <span className="contact-card-hours">{t.supportHours}</span>
+              <div className="contact-card" onClick={() => alert(t.emailUs)}>
+                <div className="contact-card-icon">✉️</div>
+                <div className="contact-card-info">
+                  <h3>{t.emailUs}</h3>
+                  <p>support@ntc.com.np</p>
+                  <span className="contact-card-hours">{t.supportHours}</span>
+                </div>
               </div>
-            </div>
-            <div className="contact-card" onClick={handleLiveChat}>
-              <div className="contact-card-icon">💬</div>
-              <div className="contact-card-info">
-                <h3>{t.liveChat}</h3>
-                <p>{t.liveChat}</p>
-                <span className="contact-card-hours">24/7 Available</span>
+              <div className="contact-card" onClick={handleLiveChat}>
+                <div className="contact-card-icon">💬</div>
+                <div className="contact-card-info">
+                  <h3>{t.liveChat}</h3>
+                  <p>{t.liveChat}</p>
+                  <span className="contact-card-hours">24/7 Available</span>
+                </div>
               </div>
-            </div>
-            <div className="contact-card emergency">
-              <div className="contact-card-icon">🚨</div>
-              <div className="contact-card-info">
-                <h3>{t.emergencySupport}</h3>
-                <p>198 (Toll Free)</p>
-                <span className="contact-card-hours">{t.emergencyNumber}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="contact-tabs">
-            <button
-              className={`tab-btn ${activeTab === 'support' ? 'active' : ''}`}
-              onClick={() => setActiveTab('support')}
-            >
-              📝 {t.contactForm}
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'faq' ? 'active' : ''}`}
-              onClick={() => setActiveTab('faq')}
-            >
-              ❓ {t.faqTitle}
-            </button>
-          </div>
-
-          {/* Support Form Tab */}
-          {activeTab === 'support' && (
-            <div className="support-form-container">
-              <div className="form-card">
-                <h3>{t.contactForm}</h3>
-                
-                {sendSuccess && (
-                  <div className="success-message">
-                    ✓ {t.messageSent}
-                  </div>
-                )}
-                
-                <form onSubmit={handleSubmit}>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>{t.yourName} <span className="required">*</span></label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        placeholder={t.yourName}
-                        className={formErrors.name ? 'error' : ''}
-                      />
-                      {formErrors.name && <span className="error-text">{formErrors.name}</span>}
-                    </div>
-                    <div className="form-group">
-                      <label>{t.yourEmail} <span className="required">*</span></label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="example@email.com"
-                        className={formErrors.email ? 'error' : ''}
-                      />
-                      {formErrors.email && <span className="error-text">{formErrors.email}</span>}
-                    </div>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>{t.subject} <span className="required">*</span></label>
-                    <input
-                      type="text"
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleInputChange}
-                      placeholder={t.subject}
-                      className={formErrors.subject ? 'error' : ''}
-                    />
-                    {formErrors.subject && <span className="error-text">{formErrors.subject}</span>}
-                  </div>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>{t.category}</label>
-                      <select name="category" value={formData.category} onChange={handleInputChange}>
-                        {categories.map(cat => (
-                          <option key={cat.id} value={cat.id}>{cat.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>{t.priority}</label>
-                      <select name="priority" value={formData.priority} onChange={handleInputChange}>
-                        {priorities.map(pri => (
-                          <option key={pri.id} value={pri.id}>{pri.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>{t.message} <span className="required">*</span></label>
-                    <textarea
-                      name="message"
-                      value={formData.message}
-                      onChange={handleInputChange}
-                      rows="5"
-                      placeholder={t.message}
-                      className={formErrors.message ? 'error' : ''}
-                    />
-                    {formErrors.message && <span className="error-text">{formErrors.message}</span>}
-                  </div>
-                  
-                  <button type="submit" className="submit-btn" disabled={sending}>
-                    {sending ? (
-                      <>⏳ {t.sending}</>
-                    ) : (
-                      <>✉️ {t.sendMessage}</>
-                    )}
-                  </button>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* FAQ Tab */}
-          {activeTab === 'faq' && (
-            <div className="faq-container">
-              <div className="faq-card">
-                <h3>{t.faqTitle}</h3>
-                <div className="faq-list">
-                  {faqs.map((faq, index) => (
-                    <div key={faq.id} className="faq-item">
-                      <div className="faq-question">
-                        <span className="faq-number">{index + 1}.</span>
-                        <span>{faq.question}</span>
-                      </div>
-                      <div className="faq-answer">
-                        <span className="answer-icon">📌</span>
-                        <span>{faq.answer}</span>
-                      </div>
-                    </div>
-                  ))}
+              <div className="contact-card emergency">
+                <div className="contact-card-icon">🚨</div>
+                <div className="contact-card-info">
+                  <h3>{t.emergencySupport}</h3>
+                  <p>198 (Toll Free)</p>
+                  <span className="contact-card-hours">{t.emergencyNumber}</span>
                 </div>
               </div>
             </div>
-          )}
 
-          {/* Office Hours & Social Media */}
-          <div className="info-cards">
-            <div className="info-card">
-              <div className="info-icon">🏢</div>
-              <div className="info-content">
-                <h4>{t.officeHours}</h4>
-                <p>{t.supportHours}</p>
-              </div>
+            {/* Tabs */}
+            <div className="contact-tabs">
+              <button
+                className={`tab-btn ${activeTab === 'support' ? 'active' : ''}`}
+                onClick={() => setActiveTab('support')}
+              >
+                📝 {t.contactForm}
+              </button>
+              <button
+                className={`tab-btn ${activeTab === 'faq' ? 'active' : ''}`}
+                onClick={() => setActiveTab('faq')}
+              >
+                ❓ {t.faqTitle}
+              </button>
             </div>
-            <div className="info-card">
-              <div className="info-icon">📍</div>
-              <div className="info-content">
-                <h4>{t.findUsOn}</h4>
-                <p>Bhadrakali Plaza, Kathmandu</p>
+
+            {/* Support Form Tab */}
+            {activeTab === 'support' && (
+              <div className="support-form-container">
+                <div className="form-card">
+                  <h3>{t.contactForm}</h3>
+                  
+                  {sendSuccess && (
+                    <div className="success-message">
+                      ✓ {t.messageSent}
+                    </div>
+                  )}
+                  
+                  <form onSubmit={handleSubmit}>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>{t.yourName} <span className="required">*</span></label>
+                        <input
+                          type="text"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          placeholder={t.yourName}
+                          className={formErrors.name ? 'error' : ''}
+                        />
+                        {formErrors.name && <span className="error-text">{formErrors.name}</span>}
+                      </div>
+                      <div className="form-group">
+                        <label>{t.yourEmail} <span className="required">*</span></label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          placeholder="example@email.com"
+                          className={formErrors.email ? 'error' : ''}
+                        />
+                        {formErrors.email && <span className="error-text">{formErrors.email}</span>}
+                      </div>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>{t.subject} <span className="required">*</span></label>
+                      <input
+                        type="text"
+                        name="subject"
+                        value={formData.subject}
+                        onChange={handleInputChange}
+                        placeholder={t.subject}
+                        className={formErrors.subject ? 'error' : ''}
+                      />
+                      {formErrors.subject && <span className="error-text">{formErrors.subject}</span>}
+                    </div>
+                    
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>{t.category}</label>
+                        <select name="category" value={formData.category} onChange={handleInputChange}>
+                          {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>{t.priority}</label>
+                        <select name="priority" value={formData.priority} onChange={handleInputChange}>
+                          {priorities.map(pri => (
+                            <option key={pri.id} value={pri.id}>{pri.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>{t.message} <span className="required">*</span></label>
+                      <textarea
+                        name="message"
+                        value={formData.message}
+                        onChange={handleInputChange}
+                        rows="5"
+                        placeholder={t.message}
+                        className={formErrors.message ? 'error' : ''}
+                      />
+                      {formErrors.message && <span className="error-text">{formErrors.message}</span>}
+                    </div>
+                    
+                    <button type="submit" className="submit-btn" disabled={sending}>
+                      {sending ? (
+                        <>⏳ {t.sending}</>
+                      ) : (
+                        <>✉️ {t.sendMessage}</>
+                      )}
+                    </button>
+                  </form>
+                </div>
               </div>
-            </div>
-            <div className="info-card social">
-              <div className="info-icon">🌐</div>
-              <div className="info-content">
-                <h4>{t.socialMedia}</h4>
-                <div className="social-links">
-                  <button className="social-link" onClick={() => alert('Facebook')}>📘</button>
-                  <button className="social-link" onClick={() => alert('Twitter')}>🐦</button>
-                  <button className="social-link" onClick={() => alert('LinkedIn')}>🔗</button>
-                  <button className="social-link" onClick={() => alert('Instagram')}>📷</button>
+            )}
+
+            {/* FAQ Tab */}
+            {activeTab === 'faq' && (
+              <div className="faq-container">
+                <div className="faq-card">
+                  <h3>{t.faqTitle}</h3>
+                  <div className="faq-list">
+                    {faqs.map((faq, index) => (
+                      <div key={faq.id} className="faq-item">
+                        <div className="faq-question">
+                          <span className="faq-number">{index + 1}.</span>
+                          <span>{faq.question}</span>
+                        </div>
+                        <div className="faq-answer">
+                          <span className="answer-icon">📌</span>
+                          <span>{faq.answer}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Office Hours & Social Media */}
+            <div className="info-cards">
+              <div className="info-card">
+                <div className="info-icon">🏢</div>
+                <div className="info-content">
+                  <h4>{t.officeHours}</h4>
+                  <p>{t.supportHours}</p>
+                </div>
+              </div>
+              <div className="info-card">
+                <div className="info-icon">📍</div>
+                <div className="info-content">
+                  <h4>{t.findUsOn}</h4>
+                  <p>Bhadrakali Plaza, Kathmandu</p>
+                </div>
+              </div>
+              <div className="info-card social">
+                <div className="info-icon">🌐</div>
+                <div className="info-content">
+                  <h4>{t.socialMedia}</h4>
+                  <div className="social-links">
+                    <button className="social-link" onClick={() => alert('Facebook')}>📘</button>
+                    <button className="social-link" onClick={() => alert('Twitter')}>🐦</button>
+                    <button className="social-link" onClick={() => alert('LinkedIn')}>🔗</button>
+                    <button className="social-link" onClick={() => alert('Instagram')}>📷</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -439,7 +441,10 @@ const AdminContact = () => {
         .admin-contact {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          min-height: 100vh;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
         }
 
         .loading-container {
@@ -464,12 +469,17 @@ const AdminContact = () => {
           to { transform: rotate(360deg); }
         }
 
-        .contact-container {
+        /* Dashboard Layout */
+        .dashboard-layout {
           display: flex;
+          height: calc(100vh - 195px);
           margin-top: 195px;
-          min-height: calc(100vh - 195px);
+          position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -478,13 +488,42 @@ const AdminContact = () => {
           height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 40;
+          z-index: 100;
+          overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
-          padding: 24px 32px;
           margin-left: 260px;
+          width: calc(100% - 260px);
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
+        }
+
+        .main-container::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+        }
+
+        .content-wrapper {
+          padding: 24px 32px;
+          min-height: 100%;
         }
 
         .page-header {
@@ -802,31 +841,54 @@ const AdminContact = () => {
         }
 
         @media (max-width: 768px) {
-          .contact-container {
-            margin-top: 280px;
+          .admin-contact {
+            height: auto;
+            overflow: auto;
           }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
           .sidebar-container {
-            top: 280px;
-            height: calc(100vh - 280px);
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
           }
+          
           .main-container {
-            padding: 16px;
             margin-left: 0;
+            width: 100%;
+            overflow-y: visible;
           }
+          
+          .content-wrapper {
+            padding: 16px;
+          }
+          
           .contact-cards {
             grid-template-columns: 1fr;
           }
+          
           .form-row {
             grid-template-columns: 1fr;
             gap: 0;
           }
+          
           .info-cards {
             grid-template-columns: 1fr;
           }
+          
           .contact-tabs {
             flex-direction: column;
             border-bottom: none;
           }
+          
           .tab-btn {
             text-align: center;
           }
@@ -837,16 +899,20 @@ const AdminContact = () => {
             flex-direction: column;
             text-align: center;
           }
+          
           .info-card {
             flex-direction: column;
             text-align: center;
           }
+          
           .social-links {
             justify-content: center;
           }
+          
           .faq-question {
             flex-direction: column;
           }
+          
           .faq-answer {
             padding-left: 0;
           }

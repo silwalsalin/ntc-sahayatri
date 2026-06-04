@@ -275,10 +275,10 @@ const AdminSettingsSecurity = () => {
     const errors = {};
     
     if (!passwordData.currentPassword) {
-      errors.currentPassword = t.fillRequiredFields;
+      errors.currentPassword = 'Required';
     }
     if (!passwordData.newPassword) {
-      errors.newPassword = t.fillRequiredFields;
+      errors.newPassword = 'Required';
     } else if (passwordData.newPassword.length < securitySettings.minPasswordLength) {
       errors.newPassword = t.passwordTooShort;
     }
@@ -331,524 +331,526 @@ const AdminSettingsSecurity = () => {
     <div className="admin-security-settings">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
-      <div className="settings-container">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
         <div className="main-container">
-          <div className="page-header">
-            <div>
-              <h1>🔒 {t.securitySettings}</h1>
-              <p>{t.securitySettings}</p>
-            </div>
-            <div className="header-actions">
-              <button className="password-btn" onClick={() => setShowPasswordModal(true)}>
-                🔐 {t.changePassword}
-              </button>
-              {!securitySettings.twoFactorAuth && (
-                <button className="twofa-btn" onClick={handleSetup2FA}>
-                  📱 {t.setup2FA}
+          <div className="content-wrapper">
+            <div className="page-header">
+              <div>
+                <h1>🔒 {t.securitySettings}</h1>
+                <p>{t.securitySettings}</p>
+              </div>
+              <div className="header-actions">
+                <button className="password-btn" onClick={() => setShowPasswordModal(true)}>
+                  🔐 {t.changePassword}
                 </button>
-              )}
-              <button 
-                className={`save-btn ${saving ? 'saving' : ''}`} 
-                onClick={handleSaveSettings}
-                disabled={saving}
-              >
-                {saving ? <>⏳ {t.saving}</> : <>💾 {t.saveSettings}</>}
-              </button>
+                {!securitySettings.twoFactorAuth && (
+                  <button className="twofa-btn" onClick={handleSetup2FA}>
+                    📱 {t.setup2FA}
+                  </button>
+                )}
+                <button 
+                  className={`save-btn ${saving ? 'saving' : ''}`} 
+                  onClick={handleSaveSettings}
+                  disabled={saving}
+                >
+                  {saving ? <>⏳ {t.saving}</> : <>💾 {t.saveSettings}</>}
+                </button>
+              </div>
             </div>
-          </div>
 
-          {saveSuccess && (
-            <div className="success-message">
-              ✓ {t.saveSuccess}
-            </div>
-          )}
+            {saveSuccess && (
+              <div className="success-message">
+                ✓ {t.saveSuccess}
+              </div>
+            )}
 
-          {/* Account Info Cards */}
-          <div className="info-cards">
-            <div className="info-card">
-              <div className="info-icon">🕒</div>
-              <div className="info-content">
-                <div className="info-label">{t.lastPasswordChange}</div>
-                <div className="info-value">{securitySettings.lastPasswordChange}</div>
+            {/* Account Info Cards */}
+            <div className="info-cards">
+              <div className="info-card">
+                <div className="info-icon">🕒</div>
+                <div className="info-content">
+                  <div className="info-label">{t.lastPasswordChange}</div>
+                  <div className="info-value">{securitySettings.lastPasswordChange}</div>
+                </div>
+              </div>
+              <div className="info-card">
+                <div className="info-icon">📱</div>
+                <div className="info-content">
+                  <div className="info-label">{t.lastLogin}</div>
+                  <div className="info-value">{securitySettings.lastLogin}</div>
+                </div>
+              </div>
+              <div className="info-card">
+                <div className="info-icon">🌐</div>
+                <div className="info-content">
+                  <div className="info-label">{t.lastLoginIP}</div>
+                  <div className="info-value">{securitySettings.lastLoginIP}</div>
+                </div>
+              </div>
+              <div className="info-card">
+                <div className="info-icon">💻</div>
+                <div className="info-content">
+                  <div className="info-label">{t.activeSessions}</div>
+                  <div className="info-value">{securitySettings.activeSessions}</div>
+                </div>
               </div>
             </div>
-            <div className="info-card">
-              <div className="info-icon">📱</div>
-              <div className="info-content">
-                <div className="info-label">{t.lastLogin}</div>
-                <div className="info-value">{securitySettings.lastLogin}</div>
-              </div>
-            </div>
-            <div className="info-card">
-              <div className="info-icon">🌐</div>
-              <div className="info-content">
-                <div className="info-label">{t.lastLoginIP}</div>
-                <div className="info-value">{securitySettings.lastLoginIP}</div>
-              </div>
-            </div>
-            <div className="info-card">
-              <div className="info-icon">💻</div>
-              <div className="info-content">
-                <div className="info-label">{t.activeSessions}</div>
-                <div className="info-value">{securitySettings.activeSessions}</div>
-              </div>
-            </div>
-          </div>
 
-          {/* Session Security */}
-          <div className="settings-card">
-            <h3>{t.sessionSecurity}</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>{t.sessionTimeout}</label>
-                <div className="input-group">
+            {/* Session Security */}
+            <div className="settings-card">
+              <h3>{t.sessionSecurity}</h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>{t.sessionTimeout}</label>
+                  <div className="input-group">
+                    <input
+                      type="number"
+                      name="sessionTimeout"
+                      value={securitySettings.sessionTimeout}
+                      onChange={handleSecurityChange}
+                      min="1"
+                      max="480"
+                    />
+                    <select name="sessionTimeoutUnit" value={securitySettings.sessionTimeoutUnit} onChange={handleSecurityChange}>
+                      <option value="minutes">{t.minutes}</option>
+                      <option value="hours">{t.hours}</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>{t.maxConcurrentSessions}</label>
                   <input
                     type="number"
-                    name="sessionTimeout"
-                    value={securitySettings.sessionTimeout}
+                    name="maxConcurrentSessions"
+                    value={securitySettings.maxConcurrentSessions}
                     onChange={handleSecurityChange}
                     min="1"
-                    max="480"
+                    max="10"
                   />
-                  <select name="sessionTimeoutUnit" value={securitySettings.sessionTimeoutUnit} onChange={handleSecurityChange}>
-                    <option value="minutes">{t.minutes}</option>
-                    <option value="hours">{t.hours}</option>
-                  </select>
                 </div>
               </div>
-              <div className="form-group">
-                <label>{t.maxConcurrentSessions}</label>
-                <input
-                  type="number"
-                  name="maxConcurrentSessions"
-                  value={securitySettings.maxConcurrentSessions}
-                  onChange={handleSecurityChange}
-                  min="1"
-                  max="10"
-                />
-              </div>
-            </div>
-            <div className="checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="extendSessionOnActivity"
-                  checked={securitySettings.extendSessionOnActivity}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.extendSessionOnActivity}</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Login Security */}
-          <div className="settings-card">
-            <h3>{t.loginSecurity}</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>{t.maxLoginAttempts}</label>
-                <input
-                  type="number"
-                  name="maxLoginAttempts"
-                  value={securitySettings.maxLoginAttempts}
-                  onChange={handleSecurityChange}
-                  min="3"
-                  max="10"
-                />
-              </div>
-              <div className="form-group">
-                <label>{t.lockoutDuration}</label>
-                <div className="input-group">
+              <div className="checkbox-group">
+                <label className="checkbox-label">
                   <input
-                    type="number"
-                    name="lockoutDuration"
-                    value={securitySettings.lockoutDuration}
+                    type="checkbox"
+                    name="extendSessionOnActivity"
+                    checked={securitySettings.extendSessionOnActivity}
                     onChange={handleSecurityChange}
-                    min="5"
-                    max="60"
                   />
-                  <select name="lockoutDurationUnit" value={securitySettings.lockoutDurationUnit} onChange={handleSecurityChange}>
-                    <option value="minutes">{t.minutes}</option>
-                    <option value="hours">{t.hours}</option>
-                  </select>
-                </div>
+                  <span>{t.extendSessionOnActivity}</span>
+                </label>
               </div>
-              <div className="form-group">
-                <label>{t.loginAttemptWindow}</label>
-                <div className="input-group">
+            </div>
+
+            {/* Login Security */}
+            <div className="settings-card">
+              <h3>{t.loginSecurity}</h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>{t.maxLoginAttempts}</label>
                   <input
                     type="number"
-                    name="loginAttemptWindow"
-                    value={securitySettings.loginAttemptWindow}
+                    name="maxLoginAttempts"
+                    value={securitySettings.maxLoginAttempts}
                     onChange={handleSecurityChange}
-                    min="5"
-                    max="60"
+                    min="3"
+                    max="10"
                   />
-                  <select name="loginAttemptWindowUnit" value={securitySettings.loginAttemptWindowUnit} onChange={handleSecurityChange}>
-                    <option value="minutes">{t.minutes}</option>
-                    <option value="hours">{t.hours}</option>
-                  </select>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Password Policy */}
-          <div className="settings-card">
-            <h3>{t.passwordPolicy}</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>{t.passwordExpiryDays}</label>
-                <input
-                  type="number"
-                  name="passwordExpiryDays"
-                  value={securitySettings.passwordExpiryDays}
-                  onChange={handleSecurityChange}
-                  min="30"
-                  max="365"
-                />
-              </div>
-              <div className="form-group">
-                <label>{t.minPasswordLength}</label>
-                <input
-                  type="number"
-                  name="minPasswordLength"
-                  value={securitySettings.minPasswordLength}
-                  onChange={handleSecurityChange}
-                  min="6"
-                  max="20"
-                />
-              </div>
-              <div className="form-group">
-                <label>{t.maxPasswordLength}</label>
-                <input
-                  type="number"
-                  name="maxPasswordLength"
-                  value={securitySettings.maxPasswordLength}
-                  onChange={handleSecurityChange}
-                  min="8"
-                  max="64"
-                />
-              </div>
-              <div className="form-group">
-                <label>{t.preventPasswordReuse}</label>
-                <input
-                  type="number"
-                  name="preventPasswordReuse"
-                  value={securitySettings.preventPasswordReuse}
-                  onChange={handleSecurityChange}
-                  min="1"
-                  max="10"
-                />
-              </div>
-              <div className="form-group">
-                <label>{t.passwordHistoryDays}</label>
-                <input
-                  type="number"
-                  name="passwordHistoryDays"
-                  value={securitySettings.passwordHistoryDays}
-                  onChange={handleSecurityChange}
-                  min="30"
-                  max="365"
-                />
-              </div>
-            </div>
-            <div className="checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="requireUppercase"
-                  checked={securitySettings.requireUppercase}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.requireUppercase}</span>
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="requireLowercase"
-                  checked={securitySettings.requireLowercase}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.requireLowercase}</span>
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="requireNumbers"
-                  checked={securitySettings.requireNumbers}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.requireNumbers}</span>
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="requireSpecialChars"
-                  checked={securitySettings.requireSpecialChars}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.requireSpecialChars}</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Two-Factor Authentication */}
-          <div className="settings-card">
-            <h3>{t.twoFactorAuth}</h3>
-            <div className="checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="twoFactorAuth"
-                  checked={securitySettings.twoFactorAuth}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.twoFactorAuth}</span>
-              </label>
-            </div>
-            {securitySettings.twoFactorAuth && (
-              <>
                 <div className="form-group">
-                  <label>{t.twoFactorMethod}</label>
-                  <select name="twoFactorMethod" value={securitySettings.twoFactorMethod} onChange={handleSecurityChange}>
-                    <option value="authenticator">{t.authenticator}</option>
-                    <option value="sms">{t.sms}</option>
-                    <option value="email">{t.email}</option>
-                  </select>
+                  <label>{t.lockoutDuration}</label>
+                  <div className="input-group">
+                    <input
+                      type="number"
+                      name="lockoutDuration"
+                      value={securitySettings.lockoutDuration}
+                      onChange={handleSecurityChange}
+                      min="5"
+                      max="60"
+                    />
+                    <select name="lockoutDurationUnit" value={securitySettings.lockoutDurationUnit} onChange={handleSecurityChange}>
+                      <option value="minutes">{t.minutes}</option>
+                      <option value="hours">{t.hours}</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="backup-codes-info">
-                  <span>{t.backupCodesGenerated}: {securitySettings.backupCodesGenerated ? '✓' : '✗'}</span>
-                  <button className="generate-codes-btn" onClick={() => alert(t.generateBackupCodes)}>
-                    🔑 {t.generateBackupCodes}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Account Security */}
-          <div className="settings-card">
-            <h3>{t.accountSecurity}</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>{t.accountLockoutThreshold}</label>
-                <input
-                  type="number"
-                  name="accountLockoutThreshold"
-                  value={securitySettings.accountLockoutThreshold}
-                  onChange={handleSecurityChange}
-                  min="3"
-                  max="10"
-                />
-              </div>
-              <div className="form-group">
-                <label>{t.accountLockoutDuration}</label>
-                <input
-                  type="number"
-                  name="accountLockoutDuration"
-                  value={securitySettings.accountLockoutDuration}
-                  onChange={handleSecurityChange}
-                  min="15"
-                  max="1440"
-                />
-              </div>
-            </div>
-            <div className="checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="forcePasswordChangeOnFirstLogin"
-                  checked={securitySettings.forcePasswordChangeOnFirstLogin}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.forcePasswordChangeOnFirstLogin}</span>
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="notifyOnNewLogin"
-                  checked={securitySettings.notifyOnNewLogin}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.notifyOnNewLogin}</span>
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="notifyOnPasswordChange"
-                  checked={securitySettings.notifyOnPasswordChange}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.notifyOnPasswordChange}</span>
-              </label>
-            </div>
-          </div>
-
-          {/* IP Security */}
-          <div className="settings-card">
-            <h3>{t.ipSecurity}</h3>
-            <div className="checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="enableIpWhitelist"
-                  checked={securitySettings.enableIpWhitelist}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.enableIpWhitelist}</span>
-              </label>
-            </div>
-            {securitySettings.enableIpWhitelist && (
-              <div className="form-group full-width">
-                <label>{t.ipWhitelist}</label>
-                <textarea
-                  name="ipWhitelist"
-                  value={securitySettings.ipWhitelist}
-                  onChange={handleSecurityChange}
-                  rows="3"
-                  placeholder="192.168.1.1&#10;10.0.0.0/24&#10;172.16.0.1"
-                />
-              </div>
-            )}
-            <div className="checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="enableIpBlacklist"
-                  checked={securitySettings.enableIpBlacklist}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.enableIpBlacklist}</span>
-              </label>
-            </div>
-            {securitySettings.enableIpBlacklist && (
-              <div className="form-group full-width">
-                <label>{t.ipBlacklist}</label>
-                <textarea
-                  name="ipBlacklist"
-                  value={securitySettings.ipBlacklist}
-                  onChange={handleSecurityChange}
-                  rows="3"
-                  placeholder="192.168.1.100&#10;10.0.0.50"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Audit Logging */}
-          <div className="settings-card">
-            <h3>{t.auditLogging}</h3>
-            <div className="checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="enableAuditLog"
-                  checked={securitySettings.enableAuditLog}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.enableAuditLog}</span>
-              </label>
-            </div>
-            {securitySettings.enableAuditLog && (
-              <>
                 <div className="form-group">
-                  <label>{t.auditLogRetention}</label>
+                  <label>{t.loginAttemptWindow}</label>
+                  <div className="input-group">
+                    <input
+                      type="number"
+                      name="loginAttemptWindow"
+                      value={securitySettings.loginAttemptWindow}
+                      onChange={handleSecurityChange}
+                      min="5"
+                      max="60"
+                    />
+                    <select name="loginAttemptWindowUnit" value={securitySettings.loginAttemptWindowUnit} onChange={handleSecurityChange}>
+                      <option value="minutes">{t.minutes}</option>
+                      <option value="hours">{t.hours}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Password Policy */}
+            <div className="settings-card">
+              <h3>{t.passwordPolicy}</h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>{t.passwordExpiryDays}</label>
                   <input
                     type="number"
-                    name="auditLogRetention"
-                    value={securitySettings.auditLogRetention}
+                    name="passwordExpiryDays"
+                    value={securitySettings.passwordExpiryDays}
                     onChange={handleSecurityChange}
                     min="30"
                     max="365"
                   />
                 </div>
-                <div className="checkbox-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="logLoginAttempts"
-                      checked={securitySettings.logLoginAttempts}
-                      onChange={handleSecurityChange}
-                    />
-                    <span>{t.logLoginAttempts}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="logFailedLogins"
-                      checked={securitySettings.logFailedLogins}
-                      onChange={handleSecurityChange}
-                    />
-                    <span>{t.logFailedLogins}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="logPasswordChanges"
-                      checked={securitySettings.logPasswordChanges}
-                      onChange={handleSecurityChange}
-                    />
-                    <span>{t.logPasswordChanges}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="logSettingsChanges"
-                      checked={securitySettings.logSettingsChanges}
-                      onChange={handleSecurityChange}
-                    />
-                    <span>{t.logSettingsChanges}</span>
-                  </label>
+                <div className="form-group">
+                  <label>{t.minPasswordLength}</label>
+                  <input
+                    type="number"
+                    name="minPasswordLength"
+                    value={securitySettings.minPasswordLength}
+                    onChange={handleSecurityChange}
+                    min="6"
+                    max="20"
+                  />
                 </div>
-              </>
-            )}
-          </div>
+                <div className="form-group">
+                  <label>{t.maxPasswordLength}</label>
+                  <input
+                    type="number"
+                    name="maxPasswordLength"
+                    value={securitySettings.maxPasswordLength}
+                    onChange={handleSecurityChange}
+                    min="8"
+                    max="64"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>{t.preventPasswordReuse}</label>
+                  <input
+                    type="number"
+                    name="preventPasswordReuse"
+                    value={securitySettings.preventPasswordReuse}
+                    onChange={handleSecurityChange}
+                    min="1"
+                    max="10"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>{t.passwordHistoryDays}</label>
+                  <input
+                    type="number"
+                    name="passwordHistoryDays"
+                    value={securitySettings.passwordHistoryDays}
+                    onChange={handleSecurityChange}
+                    min="30"
+                    max="365"
+                  />
+                </div>
+              </div>
+              <div className="checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="requireUppercase"
+                    checked={securitySettings.requireUppercase}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.requireUppercase}</span>
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="requireLowercase"
+                    checked={securitySettings.requireLowercase}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.requireLowercase}</span>
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="requireNumbers"
+                    checked={securitySettings.requireNumbers}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.requireNumbers}</span>
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="requireSpecialChars"
+                    checked={securitySettings.requireSpecialChars}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.requireSpecialChars}</span>
+                </label>
+              </div>
+            </div>
 
-          {/* Security Headers */}
-          <div className="settings-card">
-            <h3>{t.securityHeaders}</h3>
-            <div className="checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="enableHSTS"
-                  checked={securitySettings.enableHSTS}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.enableHSTS}</span>
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="enableCSP"
-                  checked={securitySettings.enableCSP}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.enableCSP}</span>
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="enableXFrame"
-                  checked={securitySettings.enableXFrame}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.enableXFrame}</span>
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="enableXSSProtection"
-                  checked={securitySettings.enableXSSProtection}
-                  onChange={handleSecurityChange}
-                />
-                <span>{t.enableXSSProtection}</span>
-              </label>
+            {/* Two-Factor Authentication */}
+            <div className="settings-card">
+              <h3>{t.twoFactorAuth}</h3>
+              <div className="checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="twoFactorAuth"
+                    checked={securitySettings.twoFactorAuth}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.twoFactorAuth}</span>
+                </label>
+              </div>
+              {securitySettings.twoFactorAuth && (
+                <>
+                  <div className="form-group">
+                    <label>{t.twoFactorMethod}</label>
+                    <select name="twoFactorMethod" value={securitySettings.twoFactorMethod} onChange={handleSecurityChange}>
+                      <option value="authenticator">{t.authenticator}</option>
+                      <option value="sms">{t.sms}</option>
+                      <option value="email">{t.email}</option>
+                    </select>
+                  </div>
+                  <div className="backup-codes-info">
+                    <span>{t.backupCodesGenerated}: {securitySettings.backupCodesGenerated ? '✓' : '✗'}</span>
+                    <button className="generate-codes-btn" onClick={() => alert(t.generateBackupCodes)}>
+                      🔑 {t.generateBackupCodes}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Account Security */}
+            <div className="settings-card">
+              <h3>{t.accountSecurity}</h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>{t.accountLockoutThreshold}</label>
+                  <input
+                    type="number"
+                    name="accountLockoutThreshold"
+                    value={securitySettings.accountLockoutThreshold}
+                    onChange={handleSecurityChange}
+                    min="3"
+                    max="10"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>{t.accountLockoutDuration}</label>
+                  <input
+                    type="number"
+                    name="accountLockoutDuration"
+                    value={securitySettings.accountLockoutDuration}
+                    onChange={handleSecurityChange}
+                    min="15"
+                    max="1440"
+                  />
+                </div>
+              </div>
+              <div className="checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="forcePasswordChangeOnFirstLogin"
+                    checked={securitySettings.forcePasswordChangeOnFirstLogin}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.forcePasswordChangeOnFirstLogin}</span>
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="notifyOnNewLogin"
+                    checked={securitySettings.notifyOnNewLogin}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.notifyOnNewLogin}</span>
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="notifyOnPasswordChange"
+                    checked={securitySettings.notifyOnPasswordChange}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.notifyOnPasswordChange}</span>
+                </label>
+              </div>
+            </div>
+
+            {/* IP Security */}
+            <div className="settings-card">
+              <h3>{t.ipSecurity}</h3>
+              <div className="checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="enableIpWhitelist"
+                    checked={securitySettings.enableIpWhitelist}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.enableIpWhitelist}</span>
+                </label>
+              </div>
+              {securitySettings.enableIpWhitelist && (
+                <div className="form-group full-width">
+                  <label>{t.ipWhitelist}</label>
+                  <textarea
+                    name="ipWhitelist"
+                    value={securitySettings.ipWhitelist}
+                    onChange={handleSecurityChange}
+                    rows="3"
+                    placeholder="192.168.1.1&#10;10.0.0.0/24&#10;172.16.0.1"
+                  />
+                </div>
+              )}
+              <div className="checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="enableIpBlacklist"
+                    checked={securitySettings.enableIpBlacklist}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.enableIpBlacklist}</span>
+                </label>
+              </div>
+              {securitySettings.enableIpBlacklist && (
+                <div className="form-group full-width">
+                  <label>{t.ipBlacklist}</label>
+                  <textarea
+                    name="ipBlacklist"
+                    value={securitySettings.ipBlacklist}
+                    onChange={handleSecurityChange}
+                    rows="3"
+                    placeholder="192.168.1.100&#10;10.0.0.50"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Audit Logging */}
+            <div className="settings-card">
+              <h3>{t.auditLogging}</h3>
+              <div className="checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="enableAuditLog"
+                    checked={securitySettings.enableAuditLog}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.enableAuditLog}</span>
+                </label>
+              </div>
+              {securitySettings.enableAuditLog && (
+                <>
+                  <div className="form-group">
+                    <label>{t.auditLogRetention}</label>
+                    <input
+                      type="number"
+                      name="auditLogRetention"
+                      value={securitySettings.auditLogRetention}
+                      onChange={handleSecurityChange}
+                      min="30"
+                      max="365"
+                    />
+                  </div>
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="logLoginAttempts"
+                        checked={securitySettings.logLoginAttempts}
+                        onChange={handleSecurityChange}
+                      />
+                      <span>{t.logLoginAttempts}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="logFailedLogins"
+                        checked={securitySettings.logFailedLogins}
+                        onChange={handleSecurityChange}
+                      />
+                      <span>{t.logFailedLogins}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="logPasswordChanges"
+                        checked={securitySettings.logPasswordChanges}
+                        onChange={handleSecurityChange}
+                      />
+                      <span>{t.logPasswordChanges}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="logSettingsChanges"
+                        checked={securitySettings.logSettingsChanges}
+                        onChange={handleSecurityChange}
+                      />
+                      <span>{t.logSettingsChanges}</span>
+                    </label>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Security Headers */}
+            <div className="settings-card">
+              <h3>{t.securityHeaders}</h3>
+              <div className="checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="enableHSTS"
+                    checked={securitySettings.enableHSTS}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.enableHSTS}</span>
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="enableCSP"
+                    checked={securitySettings.enableCSP}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.enableCSP}</span>
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="enableXFrame"
+                    checked={securitySettings.enableXFrame}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.enableXFrame}</span>
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="enableXSSProtection"
+                    checked={securitySettings.enableXSSProtection}
+                    onChange={handleSecurityChange}
+                  />
+                  <span>{t.enableXSSProtection}</span>
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -945,7 +947,10 @@ const AdminSettingsSecurity = () => {
         .admin-security-settings {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          min-height: 100vh;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
         }
 
         .loading-container {
@@ -970,12 +975,17 @@ const AdminSettingsSecurity = () => {
           to { transform: rotate(360deg); }
         }
 
-        .settings-container {
+        /* Dashboard Layout */
+        .dashboard-layout {
           display: flex;
+          height: calc(100vh - 195px);
           margin-top: 195px;
-          min-height: calc(100vh - 195px);
+          position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -984,13 +994,42 @@ const AdminSettingsSecurity = () => {
           height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 40;
+          z-index: 100;
+          overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
-          padding: 24px 32px;
           margin-left: 260px;
+          width: calc(100% - 260px);
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
+        }
+
+        .main-container::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+        }
+
+        .content-wrapper {
+          padding: 24px 32px;
+          min-height: 100%;
         }
 
         .page-header {
@@ -1373,37 +1412,62 @@ const AdminSettingsSecurity = () => {
         }
 
         @media (max-width: 768px) {
-          .settings-container {
-            margin-top: 280px;
+          .admin-security-settings {
+            height: auto;
+            overflow: auto;
           }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
           .sidebar-container {
-            top: 280px;
-            height: calc(100vh - 280px);
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
           }
+          
           .main-container {
-            padding: 16px;
             margin-left: 0;
+            width: 100%;
+            overflow-y: visible;
           }
+          
+          .content-wrapper {
+            padding: 16px;
+          }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
           }
+          
           .header-actions {
             width: 100%;
           }
+          
           .password-btn, .twofa-btn, .save-btn {
             flex: 1;
             text-align: center;
           }
+          
           .info-cards {
             grid-template-columns: 1fr;
           }
+          
           .form-grid {
             grid-template-columns: 1fr;
           }
+          
           .form-group.full-width {
             grid-column: span 1;
           }
+          
           .checkbox-group {
             flex-direction: column;
             gap: 12px;
@@ -1414,6 +1478,7 @@ const AdminSettingsSecurity = () => {
           .modal-footer {
             flex-direction: column;
           }
+          
           .btn-cancel, .btn-save {
             width: 100%;
           }

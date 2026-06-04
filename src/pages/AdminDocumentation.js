@@ -448,108 +448,110 @@ const AdminDocumentation = () => {
     <div className="admin-documentation">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
-      <div className="doc-container">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
         <div className="main-container">
-          <div className="page-header">
-            <div>
-              <h1>📚 {t.documentation}</h1>
-              <p>{t.adminDocumentation}</p>
-            </div>
-            <div className="header-actions">
-              <button className="print-btn" onClick={handlePrint}>
-                🖨️ {t.printDoc}
-              </button>
-              <button className="pdf-btn" onClick={handleDownloadPDF}>
-                📄 {t.downloadPDF}
-              </button>
-            </div>
-          </div>
-
-          <div className="doc-layout">
-            {/* Sidebar Navigation */}
-            <div className="doc-sidebar">
-              <div className="search-box">
-                <span className="search-icon">🔍</span>
-                <input
-                  type="text"
-                  placeholder={t.searchDocs}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+          <div className="content-wrapper">
+            <div className="page-header">
+              <div>
+                <h1>📚 {t.documentation}</h1>
+                <p>{t.adminDocumentation}</p>
               </div>
-              
-              <div className="doc-nav">
-                <h4>{t.tableOfContents}</h4>
-                <ul>
-                  {filteredSections.map(section => (
-                    <li key={section.id}>
-                      <button
-                        className={`nav-link ${activeSection === section.id ? 'active' : ''}`}
-                        onClick={() => setActiveSection(section.id)}
-                      >
-                        <span className="nav-icon">{section.icon}</span>
-                        <span className="nav-label">{section.label}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
-              <div className="doc-footer-nav">
-                <h4>{t.helpCenter}</h4>
-                <div className="contact-options">
-                  <button className="contact-option" onClick={() => navigate('/admin-contact')}>
-                    <span>💬</span> {t.liveChat}
-                  </button>
-                  <button className="contact-option" onClick={() => alert(t.emailSupport)}>
-                    <span>✉️</span> {t.emailSupport}
-                  </button>
-                  <button className="contact-option" onClick={() => alert(t.phoneSupport)}>
-                    <span>📞</span> {t.phoneSupport}
-                  </button>
-                </div>
+              <div className="header-actions">
+                <button className="print-btn" onClick={handlePrint}>
+                  🖨️ {t.printDoc}
+                </button>
+                <button className="pdf-btn" onClick={handleDownloadPDF}>
+                  📄 {t.downloadPDF}
+                </button>
               </div>
             </div>
 
-            {/* Main Content */}
-            <div className="doc-content">
-              <div className="doc-header">
-                <h1>{currentTitle}</h1>
-                <div className="doc-meta">
-                  <span>📅 {t.lastUpdated}: {new Date().toLocaleDateString()}</span>
-                  <span>📌 {t.documentationVersion}: 2.0.0</span>
+            <div className="doc-layout">
+              {/* Sidebar Navigation */}
+              <div className="doc-sidebar">
+                <div className="search-box">
+                  <span className="search-icon">🔍</span>
+                  <input
+                    type="text"
+                    placeholder={t.searchDocs}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
-              </div>
-              
-              <div 
-                className="doc-body"
-                dangerouslySetInnerHTML={{ __html: currentContent }}
-              />
-              
-              <div className="doc-feedback">
-                <p>{t.wasThisHelpful}</p>
-                <div className="feedback-buttons">
-                  <button className="feedback-yes" onClick={() => handleFeedback(true)}>
-                    👍 {t.yes}
-                  </button>
-                  <button className="feedback-no" onClick={() => handleFeedback(false)}>
-                    👎 {t.no}
-                  </button>
+                
+                <div className="doc-nav">
+                  <h4>{t.tableOfContents}</h4>
+                  <ul>
+                    {filteredSections.map(section => (
+                      <li key={section.id}>
+                        <button
+                          className={`nav-link ${activeSection === section.id ? 'active' : ''}`}
+                          onClick={() => setActiveSection(section.id)}
+                        >
+                          <span className="nav-icon">{section.icon}</span>
+                          <span className="nav-label">{section.label}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
-              
-              <div className="doc-related">
-                <h4>{t.relatedTopics}</h4>
-                <div className="related-links">
-                  {sections.filter(s => s.id !== activeSection).slice(0, 4).map(section => (
-                    <button key={section.id} onClick={() => setActiveSection(section.id)}>
-                      {section.icon} {section.label}
+                
+                <div className="doc-footer-nav">
+                  <h4>{t.helpCenter}</h4>
+                  <div className="contact-options">
+                    <button className="contact-option" onClick={() => navigate('/admin-contact')}>
+                      <span>💬</span> {t.liveChat}
                     </button>
-                  ))}
+                    <button className="contact-option" onClick={() => alert(t.emailSupport)}>
+                      <span>✉️</span> {t.emailSupport}
+                    </button>
+                    <button className="contact-option" onClick={() => alert(t.phoneSupport)}>
+                      <span>📞</span> {t.phoneSupport}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Content */}
+              <div className="doc-content">
+                <div className="doc-header">
+                  <h1>{currentTitle}</h1>
+                  <div className="doc-meta">
+                    <span>📅 {t.lastUpdated}: {new Date().toLocaleDateString()}</span>
+                    <span>📌 {t.documentationVersion}: 2.0.0</span>
+                  </div>
+                </div>
+                
+                <div 
+                  className="doc-body"
+                  dangerouslySetInnerHTML={{ __html: currentContent }}
+                />
+                
+                <div className="doc-feedback">
+                  <p>{t.wasThisHelpful}</p>
+                  <div className="feedback-buttons">
+                    <button className="feedback-yes" onClick={() => handleFeedback(true)}>
+                      👍 {t.yes}
+                    </button>
+                    <button className="feedback-no" onClick={() => handleFeedback(false)}>
+                      👎 {t.no}
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="doc-related">
+                  <h4>{t.relatedTopics}</h4>
+                  <div className="related-links">
+                    {sections.filter(s => s.id !== activeSection).slice(0, 4).map(section => (
+                      <button key={section.id} onClick={() => setActiveSection(section.id)}>
+                        {section.icon} {section.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -567,7 +569,10 @@ const AdminDocumentation = () => {
         .admin-documentation {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          min-height: 100vh;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
         }
 
         .loading-container {
@@ -592,12 +597,17 @@ const AdminDocumentation = () => {
           to { transform: rotate(360deg); }
         }
 
-        .doc-container {
+        /* Dashboard Layout */
+        .dashboard-layout {
           display: flex;
+          height: calc(100vh - 195px);
           margin-top: 195px;
-          min-height: calc(100vh - 195px);
+          position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -606,13 +616,42 @@ const AdminDocumentation = () => {
           height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 40;
+          z-index: 100;
+          overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
-          padding: 24px 32px;
           margin-left: 260px;
+          width: calc(100% - 260px);
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
+        }
+
+        .main-container::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+        }
+
+        .content-wrapper {
+          padding: 24px 32px;
+          min-height: 100%;
         }
 
         .page-header {
@@ -680,9 +719,6 @@ const AdminDocumentation = () => {
         .doc-sidebar {
           width: 280px;
           flex-shrink: 0;
-          position: sticky;
-          top: 220px;
-          height: fit-content;
         }
 
         .search-box {
@@ -969,36 +1005,58 @@ const AdminDocumentation = () => {
           }
           .doc-sidebar {
             width: 100%;
-            position: static;
           }
         }
 
         @media (max-width: 768px) {
-          .doc-container {
-            margin-top: 280px;
+          .admin-documentation {
+            height: auto;
+            overflow: auto;
           }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
           .sidebar-container {
-            top: 280px;
-            height: calc(100vh - 280px);
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
           }
+          
           .main-container {
-            padding: 16px;
             margin-left: 0;
+            width: 100%;
+            overflow-y: visible;
           }
+          
+          .content-wrapper {
+            padding: 16px;
+          }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
           }
+          
           .header-actions {
             width: 100%;
           }
+          
           .print-btn, .pdf-btn {
             flex: 1;
             text-align: center;
           }
+          
           .doc-content {
             padding: 20px;
           }
+          
           .doc-header h1 {
             font-size: 1.4rem;
           }
@@ -1009,9 +1067,11 @@ const AdminDocumentation = () => {
             flex-direction: column;
             gap: 4px;
           }
+          
           .related-links {
             flex-direction: column;
           }
+          
           .related-links button {
             width: 100%;
           }
@@ -1019,19 +1079,29 @@ const AdminDocumentation = () => {
 
         /* Print Styles */
         @media print {
+          .admin-documentation {
+            height: auto;
+            overflow: visible;
+          }
+          
+          .dashboard-layout {
+            margin-top: 0;
+            height: auto;
+          }
+          
+          .main-container {
+            margin-left: 0;
+            width: 100%;
+          }
+          
           .header-1, .header-2, .header-3, .sidebar-container, .doc-sidebar, .page-header .header-actions, .doc-feedback, .doc-related {
             display: none;
           }
-          .main-container {
-            margin-left: 0;
-            padding: 0;
-          }
+          
           .doc-content {
             box-shadow: none;
             border: none;
-          }
-          .doc-container {
-            margin-top: 0;
+            padding: 0;
           }
         }
       `}</style>

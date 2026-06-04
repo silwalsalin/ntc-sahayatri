@@ -576,157 +576,159 @@ const AdminNotifications = () => {
     <div className="admin-notifications">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
-      <div className="notifications-container">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
         <div className="main-container">
-          <div className="page-header">
-            <div>
-              <h1>🔔 {t.notifications}</h1>
-              <p>{t.manageNotifications}</p>
-            </div>
-            <div className="header-actions">
-              <button className="send-btn" onClick={openSendModal}>
-                ✉️ {t.sendNotification}
-              </button>
-              <button className="mark-all-btn" onClick={markAllAsRead}>
-                ✓ {t.markAllAsRead}
-              </button>
-              <button className="delete-all-btn" onClick={deleteAll}>
-                🗑️ {t.deleteAll}
-              </button>
-            </div>
-          </div>
-
-          {/* Statistics Cards */}
-          <div className="stats-cards">
-            <div className="stat-card">
-              <div className="stat-icon blue">🔔</div>
-              <div className="stat-info">
-                <div className="stat-value">{totalNotifications}</div>
-                <div className="stat-label">{t.totalNotifications}</div>
+          <div className="content-wrapper">
+            <div className="page-header">
+              <div>
+                <h1>🔔 {t.notifications}</h1>
+                <p>{t.manageNotifications}</p>
+              </div>
+              <div className="header-actions">
+                <button className="send-btn" onClick={openSendModal}>
+                  ✉️ {t.sendNotification}
+                </button>
+                <button className="mark-all-btn" onClick={markAllAsRead}>
+                  ✓ {t.markAllAsRead}
+                </button>
+                <button className="delete-all-btn" onClick={deleteAll}>
+                  🗑️ {t.deleteAll}
+                </button>
               </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-icon orange">📭</div>
-              <div className="stat-info">
-                <div className="stat-value">{unreadCount}</div>
-                <div className="stat-label">{t.unreadCount}</div>
+
+            {/* Statistics Cards */}
+            <div className="stats-cards">
+              <div className="stat-card">
+                <div className="stat-icon blue">🔔</div>
+                <div className="stat-info">
+                  <div className="stat-value">{totalNotifications}</div>
+                  <div className="stat-label">{t.totalNotifications}</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon orange">📭</div>
+                <div className="stat-info">
+                  <div className="stat-value">{unreadCount}</div>
+                  <div className="stat-label">{t.unreadCount}</div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Filters */}
-          <div className="filters-bar">
-            <div className="filter-group">
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="filter-select"
-              >
-                {Object.entries(typesObj).map(([key, value]) => (
-                  <option key={key} value={key}>{value}</option>
-                ))}
-              </select>
-            </div>
-            <div className="filter-group">
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="filter-select"
-              >
-                {Object.entries(statusesObj).map(([key, value]) => (
-                  <option key={key} value={key}>{value}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Notifications List */}
-          <div className="notifications-list">
-            {paginatedNotifications.length > 0 ? (
-              paginatedNotifications.map((notification) => (
-                <div 
-                  key={notification.id} 
-                  className={`notification-item ${notification.status === 'unread' ? 'unread' : ''}`}
-                  onClick={() => openModal(notification)}
+            {/* Filters */}
+            <div className="filters-bar">
+              <div className="filter-group">
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="filter-select"
                 >
-                  <div className="notification-icon">{notification.icon}</div>
-                  <div className="notification-content">
-                    <div className="notification-header">
-                      <h4 className="notification-title">{getTitle(notification)}</h4>
-                      <span className={`priority-badge ${getPriorityClass(notification.priority)}`}>
-                        {getPriorityText(notification.priority)}
-                      </span>
+                  {Object.entries(typesObj).map(([key, value]) => (
+                    <option key={key} value={key}>{value}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="filter-group">
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="filter-select"
+                >
+                  {Object.entries(statusesObj).map(([key, value]) => (
+                    <option key={key} value={key}>{value}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Notifications List */}
+            <div className="notifications-list">
+              {paginatedNotifications.length > 0 ? (
+                paginatedNotifications.map((notification) => (
+                  <div 
+                    key={notification.id} 
+                    className={`notification-item ${notification.status === 'unread' ? 'unread' : ''}`}
+                    onClick={() => openModal(notification)}
+                  >
+                    <div className="notification-icon">{notification.icon}</div>
+                    <div className="notification-content">
+                      <div className="notification-header">
+                        <h4 className="notification-title">{getTitle(notification)}</h4>
+                        <span className={`priority-badge ${getPriorityClass(notification.priority)}`}>
+                          {getPriorityText(notification.priority)}
+                        </span>
+                      </div>
+                      <p className="notification-message">{getMessage(notification)}</p>
+                      <div className="notification-footer">
+                        <span className="notification-type">{getTypeText(notification.type)}</span>
+                        <span className="notification-sender">{getSender(notification)}</span>
+                        <span className="notification-time">{getDate(notification)} • {getTime(notification)}</span>
+                      </div>
                     </div>
-                    <p className="notification-message">{getMessage(notification)}</p>
-                    <div className="notification-footer">
-                      <span className="notification-type">{getTypeText(notification.type)}</span>
-                      <span className="notification-sender">{getSender(notification)}</span>
-                      <span className="notification-time">{getDate(notification)} • {getTime(notification)}</span>
-                    </div>
-                  </div>
-                  <div className="notification-actions">
-                    {notification.status === 'unread' && (
+                    <div className="notification-actions">
+                      {notification.status === 'unread' && (
+                        <button 
+                          className="mark-read-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markAsRead(notification.id);
+                          }}
+                          title={t.markAsRead}
+                        >
+                          ✓
+                        </button>
+                      )}
                       <button 
-                        className="mark-read-btn"
+                        className="delete-btn"
                         onClick={(e) => {
                           e.stopPropagation();
-                          markAsRead(notification.id);
+                          deleteNotification(notification.id);
                         }}
-                        title={t.markAsRead}
+                        title={t.deleteNotification}
                       >
-                        ✓
+                        🗑️
                       </button>
-                    )}
-                    <button 
-                      className="delete-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteNotification(notification.id);
-                      }}
-                      title={t.deleteNotification}
-                    >
-                      🗑️
-                    </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="no-data">
+                  <div className="no-data-content">
+                    <span className="no-data-icon">🔔</span>
+                    <p>{t.noNotificationsFound}</p>
+                    <small>{t.tryAdjustingFilters}</small>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="no-data">
-                <div className="no-data-content">
-                  <span className="no-data-icon">🔔</span>
-                  <p>{t.noNotificationsFound}</p>
-                  <small>{t.tryAdjustingFilters}</small>
-                </div>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="pagination-btn"
+                >
+                  ← {t.previous}
+                </button>
+                <span className="pagination-info">
+                  {t.page} {currentPage} {t.of} {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="pagination-btn"
+                >
+                  {t.next} →
+                </button>
               </div>
             )}
           </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="pagination-btn"
-              >
-                ← {t.previous}
-              </button>
-              <span className="pagination-info">
-                {t.page} {currentPage} {t.of} {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="pagination-btn"
-              >
-                {t.next} →
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -903,7 +905,10 @@ const AdminNotifications = () => {
         .admin-notifications {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          min-height: 100vh;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
         }
 
         .loading-container {
@@ -928,12 +933,17 @@ const AdminNotifications = () => {
           to { transform: rotate(360deg); }
         }
 
-        .notifications-container {
+        /* Dashboard Layout */
+        .dashboard-layout {
           display: flex;
+          height: calc(100vh - 195px);
           margin-top: 195px;
-          min-height: calc(100vh - 195px);
+          position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -942,13 +952,42 @@ const AdminNotifications = () => {
           height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 40;
+          z-index: 100;
+          overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
-          padding: 24px 32px;
           margin-left: 260px;
+          width: calc(100% - 260px);
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
+        }
+
+        .main-container::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+        }
+
+        .content-wrapper {
+          padding: 24px 32px;
+          min-height: 100%;
         }
 
         .page-header {
@@ -1463,42 +1502,68 @@ const AdminNotifications = () => {
 
         /* Responsive */
         @media (max-width: 768px) {
-          .notifications-container {
-            margin-top: 280px;
+          .admin-notifications {
+            height: auto;
+            overflow: auto;
           }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
           .sidebar-container {
-            top: 280px;
-            height: calc(100vh - 280px);
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
           }
+          
           .main-container {
-            padding: 16px;
             margin-left: 0;
+            width: 100%;
+            overflow-y: visible;
           }
+          
+          .content-wrapper {
+            padding: 16px;
+          }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
           }
+          
           .header-actions {
             width: 100%;
           }
+          
           .send-btn, .mark-all-btn, .delete-all-btn {
             flex: 1;
             text-align: center;
           }
+          
           .stats-cards {
             grid-template-columns: 1fr;
           }
+          
           .notification-item {
             flex-direction: column;
           }
+          
           .notification-actions {
             position: absolute;
             top: 16px;
             right: 16px;
           }
+          
           .form-row {
             flex-direction: column;
           }
+          
           .form-group.half {
             width: 100%;
           }
@@ -1509,20 +1574,25 @@ const AdminNotifications = () => {
             flex-direction: column;
             align-items: flex-start;
           }
+          
           .notification-footer {
             flex-direction: column;
             gap: 8px;
           }
+          
           .detail-row {
             flex-direction: column;
           }
+          
           .detail-row label {
             width: 100%;
             margin-bottom: 4px;
           }
+          
           .modal-footer {
             flex-direction: column;
           }
+          
           .btn-cancel, .btn-send, .btn-close {
             width: 100%;
           }

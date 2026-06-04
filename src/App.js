@@ -42,6 +42,13 @@ import StaffTasksCompleted from './pages/StaffTasksCompleted';
 import StaffReportsDaily from './pages/StaffReportsDaily';
 import StaffReportsWeekly from './pages/StaffReportsWeekly';
 import StaffReportsMonthly from './pages/StaffReportsMonthly';
+import StaffPerformance from './pages/StaffPerformance';
+import StaffNotifications from './pages/StaffNotifications';
+import StaffProfile from './pages/StaffProfile';
+import StaffAccountSettings from './pages/StaffAccountSettings';
+import StaffDocumentation from './pages/StaffDocumentation';
+import StaffContact from './pages/StaffContact';
+import AdminUsersAdd from './pages/AdminUsersAdd';
 function App() {
   return (
     <Router>
@@ -86,6 +93,13 @@ function App() {
           <Route path="/staff/reports/daily" element={<StaffReportsDaily />} />
           <Route path="/staff/reports/weekly" element={<StaffReportsWeekly />} />
           <Route path="/staff/reports/monthly" element={<StaffReportsMonthly />} />
+          <Route path="/staff/performance" element={<StaffPerformance />} />
+          <Route path="/staff/notifications" element={<StaffNotifications />} />
+          <Route path="/staff/profile" element={<StaffProfile />} />
+          <Route path="/staff/account-settings" element={<StaffAccountSettings />} />
+          <Route path="/staff/documentation" element={<StaffDocumentation />} />
+          <Route path="/staff/contact" element={<StaffContact />} />\
+          <Route path="/admin-users/add" element={<AdminUsersAdd />} />
                   </Routes>
       </div>
     </Router>

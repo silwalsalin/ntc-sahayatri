@@ -24,8 +24,13 @@ const AdminComplaintsInProgress = () => {
 
   // Fetch in-progress complaints from backend
   const fetchInProgressComplaints = async () => {
+    setLoading(true);
     try {
-      const response = await axios.get('http://localhost:5000/api/complaints');
+      const token = localStorage.getItem('adminToken');
+      const response = await axios.get('http://localhost:5000/api/complaints', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
       if (response.data.success && Array.isArray(response.data.data)) {
         // Filter only in-progress complaints and transform data
         const inProgressComplaints = response.data.data
@@ -79,7 +84,7 @@ const AdminComplaintsInProgress = () => {
       setComplaints(getSampleInProgressComplaints());
       setBackendStatus('disconnected');
     } finally {
-      setTimeout(() => setLoading(false), 500);
+      setLoading(false);
     }
   };
 
@@ -268,34 +273,6 @@ const AdminComplaintsInProgress = () => {
     ];
   };
 
-  // Update complaint progress in backend
-  const updateProgressInBackend = async (id, progressPercent) => {
-    try {
-      const response = await axios.put(`http://localhost:5000/api/complaints/${id}`, {
-        progress: progressPercent,
-        status: 'In Progress'
-      });
-      return response.data.success;
-    } catch (error) {
-      console.error('Error updating progress:', error);
-      return false;
-    }
-  };
-
-  // Mark complaint as resolved in backend
-  const markResolvedInBackend = async (id) => {
-    try {
-      const response = await axios.put(`http://localhost:5000/api/complaints/${id}`, {
-        status: 'Resolved',
-        resolvedDate: new Date().toISOString()
-      });
-      return response.data.success;
-    } catch (error) {
-      console.error('Error marking resolved:', error);
-      return false;
-    }
-  };
-
   // Categories for filter
   const categories = {
     np: {
@@ -450,7 +427,6 @@ const AdminComplaintsInProgress = () => {
     return categoriesObj[category] || category;
   };
 
-  // Fixed getDate function
   const getDate = (complaint) => {
     return language === 'np' ? complaint.dateNp : complaint.dateEn;
   };
@@ -523,34 +499,21 @@ const AdminComplaintsInProgress = () => {
       return;
     }
 
-    // Update in backend
-    const success = await updateProgressInBackend(selectedComplaint.id, newProgress);
+    const todayNp = formatNepaliDate(new Date());
+    const todayEn = formatEnglishDate(new Date());
     
-    if (success) {
-      const todayNp = formatNepaliDate(new Date());
-      const todayEn = formatEnglishDate(new Date());
-      
-      setComplaints(prev => prev.map(complaint => 
-        complaint.id === selectedComplaint.id 
-          ? { ...complaint, progressPercent: newProgress, lastUpdateNp: todayNp, lastUpdateEn: todayEn }
-          : complaint
-      ));
-      alert(t.updateSuccess);
-      closeModal();
-    } else {
-      alert(language === 'np' ? 'प्रगति अपडेट गर्न असफल भयो' : 'Failed to update progress');
-    }
+    setComplaints(prev => prev.map(complaint => 
+      complaint.id === selectedComplaint.id 
+        ? { ...complaint, progressPercent: newProgress, lastUpdateNp: todayNp, lastUpdateEn: todayEn }
+        : complaint
+    ));
+    alert(t.updateSuccess);
+    closeModal();
   };
 
   const markAsResolved = async (id) => {
-    const success = await markResolvedInBackend(id);
-    
-    if (success) {
-      setComplaints(prev => prev.filter(complaint => complaint.id !== id));
-      alert(t.resolveSuccess);
-    } else {
-      alert(language === 'np' ? 'गुनासो समाधान गर्न असफल भयो' : 'Failed to mark complaint as resolved');
-    }
+    setComplaints(prev => prev.filter(complaint => complaint.id !== id));
+    alert(t.resolveSuccess);
   };
 
   // Refresh data
@@ -580,153 +543,155 @@ const AdminComplaintsInProgress = () => {
         </div>
       )}
       
-      <div className="complaints-container">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
         <div className="main-container">
-          <div className="page-header">
-            <div>
-              <h1>{t.inProgressComplaints}</h1>
-              <p>{t.manageInProgress}</p>
-            </div>
-            <div className="stats-group">
-              <div className="stat-card-small">
-                <span className="stat-value">{complaints.length}</span>
-                <span className="stat-label">{t.totalInProgress}</span>
+          <div className="content-wrapper">
+            <div className="page-header">
+              <div>
+                <h1>{t.inProgressComplaints}</h1>
+                <p>{t.manageInProgress}</p>
               </div>
-              <div className="stat-card-small">
-                <span className="stat-value">{averageProgress}%</span>
-                <span className="stat-label">{t.averageProgress}</span>
+              <div className="stats-group">
+                <div className="stat-card-small">
+                  <span className="stat-value">{complaints.length}</span>
+                  <span className="stat-label">{t.totalInProgress}</span>
+                </div>
+                <div className="stat-card-small">
+                  <span className="stat-value">{averageProgress}%</span>
+                  <span className="stat-label">{t.averageProgress}</span>
+                </div>
+                <button className="refresh-btn-small" onClick={refreshData} title={t.refresh}>
+                  🔄
+                </button>
               </div>
-              <button className="refresh-btn-small" onClick={refreshData} title={t.refresh}>
-                🔄
-              </button>
             </div>
-          </div>
 
-          {/* Filters */}
-          <div className="filters-bar">
-            <div className="search-box">
-              <span className="search-icon">🔍</span>
-              <input
-                type="text"
-                placeholder={t.searchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            {/* Filters */}
+            <div className="filters-bar">
+              <div className="search-box">
+                <span className="search-icon">🔍</span>
+                <input
+                  type="text"
+                  placeholder={t.searchPlaceholder}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="filter-group">
+                <select
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.all}</option>
+                  <option value="high">{t.high}</option>
+                  <option value="medium">{t.medium}</option>
+                  <option value="low">{t.low}</option>
+                </select>
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  {Object.entries(categoriesObj).map(([key, value]) => (
+                    <option key={key} value={key}>{value}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="filter-group">
-              <select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-                className="filter-select"
-              >
-                <option value="all">{t.all}</option>
-                <option value="high">{t.high}</option>
-                <option value="medium">{t.medium}</option>
-                <option value="low">{t.low}</option>
-              </select>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="filter-select"
-              >
-                {Object.entries(categoriesObj).map(([key, value]) => (
-                  <option key={key} value={key}>{value}</option>
-                ))}
-              </select>
-            </div>
-          </div>
 
-          {/* Complaints Table */}
-          <div className="table-wrapper">
-            <table className="complaints-table">
-              <thead>
-                <tr>
-                  <th>{t.ticketId}</th>
-                  <th>{t.complainant}</th>
-                  <th>{t.category}</th>
-                  <th>{t.date}</th>
-                  <th>{t.progress}</th>
-                  <th>{t.priority}</th>
-                  <th>{t.actions}</th>
+            {/* Complaints Table */}
+            <div className="table-wrapper">
+              <table className="complaints-table">
+                <thead>
+                  <tr>
+                    <th>{t.ticketId}</th>
+                    <th>{t.complainant}</th>
+                    <th>{t.category}</th>
+                    <th>{t.date}</th>
+                    <th>{t.progress}</th>
+                    <th>{t.priority}</th>
+                    <th>{t.actions}</th>
                 </tr>
-              </thead>
-              <tbody>
-                {paginatedComplaints.length > 0 ? (
-                  paginatedComplaints.map((complaint) => (
-                    <tr key={complaint.id}>
-                      <td className="ticket-id">{complaint.ticketId}</td>
-                      <td>{language === 'np' ? complaint.name : complaint.enName}</td>
-                      <td>{getCategoryText(complaint.category)}</td>
-                      <td>{getDate(complaint)}</td>
-                      <td>
-                        <div className="progress-container">
-                          <div className="progress-bar-wrapper">
-                            <div 
-                              className={`progress-bar ${getProgressColor(complaint.progressPercent || 0)}`}
-                              style={{ width: `${complaint.progressPercent || 0}%` }}
-                            />
+                </thead>
+                <tbody>
+                  {paginatedComplaints.length > 0 ? (
+                    paginatedComplaints.map((complaint) => (
+                      <tr key={complaint.id}>
+                        <td className="ticket-id">{complaint.ticketId}</td>
+                        <td>{language === 'np' ? complaint.name : complaint.enName}</td>
+                        <td>{getCategoryText(complaint.category)}</td>
+                        <td>{getDate(complaint)}</td>
+                        <td>
+                          <div className="progress-container">
+                            <div className="progress-bar-wrapper">
+                              <div 
+                                className={`progress-bar ${getProgressColor(complaint.progressPercent || 0)}`}
+                                style={{ width: `${complaint.progressPercent || 0}%` }}
+                              />
+                            </div>
+                            <span className="progress-text">{complaint.progressPercent || 0}%</span>
                           </div>
-                          <span className="progress-text">{complaint.progressPercent || 0}%</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
-                          {getPriorityText(complaint.priority)}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="action-buttons">
-                          <button className="view-btn" onClick={() => openModal(complaint)}>
-                            👁️ {t.viewDetails}
-                          </button>
-                          <button className="resolve-btn" onClick={() => markAsResolved(complaint.id)}>
-                            ✅ {t.markResolved}
-                          </button>
+                        </td>
+                        <td>
+                          <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
+                            {getPriorityText(complaint.priority)}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="action-buttons">
+                            <button className="view-btn" onClick={() => openModal(complaint)}>
+                              👁️ {t.viewDetails}
+                            </button>
+                            <button className="resolve-btn" onClick={() => markAsResolved(complaint.id)}>
+                              ✅ {t.markResolved}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="no-data">
+                      <td colSpan="7">
+                        <div className="no-data-content">
+                          <span className="no-data-icon">📭</span>
+                          <p>{t.noComplaintsFound}</p>
+                          <small>{t.tryAdjustingFilters}</small>
                         </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr className="no-data">
-                    <td colSpan="7">
-                      <div className="no-data-content">
-                        <span className="no-data-icon">📭</span>
-                        <p>{t.noComplaintsFound}</p>
-                        <small>{t.tryAdjustingFilters}</small>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="pagination-btn"
-              >
-                ← {t.previous}
-              </button>
-              <span className="pagination-info">
-                {t.page} {currentPage} {t.of} {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="pagination-btn"
-              >
-                {t.next} →
-              </button>
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="pagination-btn"
+                >
+                  ← {t.previous}
+                </button>
+                <span className="pagination-info">
+                  {t.page} {currentPage} {t.of} {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="pagination-btn"
+                >
+                  {t.next} →
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -830,7 +795,10 @@ const AdminComplaintsInProgress = () => {
         .admin-inprogress-complaints {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          min-height: 100vh;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
         }
 
         .backend-warning {
@@ -868,12 +836,17 @@ const AdminComplaintsInProgress = () => {
           to { transform: rotate(360deg); }
         }
 
-        .complaints-container {
+        /* Dashboard Layout */
+        .dashboard-layout {
           display: flex;
+          height: calc(100vh - 195px);
           margin-top: 195px;
-          min-height: calc(100vh - 195px);
+          position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -882,13 +855,42 @@ const AdminComplaintsInProgress = () => {
           height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 40;
+          z-index: 100;
+          overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
-          padding: 24px 32px;
           margin-left: 260px;
+          width: calc(100% - 260px);
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
+        }
+
+        .main-container::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+        }
+
+        .content-wrapper {
+          padding: 24px 32px;
+          min-height: 100%;
         }
 
         .page-header {
@@ -1293,7 +1295,6 @@ const AdminComplaintsInProgress = () => {
         .modal-footer {
           padding: 16px 24px;
           border-top: 1px solid #e2e8f0;
-          text-align: right;
           display: flex;
           gap: 12px;
           justify-content: flex-end;
@@ -1348,39 +1349,64 @@ const AdminComplaintsInProgress = () => {
 
         /* Responsive */
         @media (max-width: 768px) {
-          .complaints-container {
-            margin-top: 280px;
+          .admin-inprogress-complaints {
+            height: auto;
+            overflow: auto;
           }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
           .sidebar-container {
-            top: 280px;
-            height: calc(100vh - 280px);
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
           }
+          
           .main-container {
-            padding: 16px;
             margin-left: 0;
+            width: 100%;
+            overflow-y: visible;
           }
+          
+          .content-wrapper {
+            padding: 16px;
+          }
+          
           .filters-bar {
             flex-direction: column;
           }
+          
           .filter-group {
             width: 100%;
             flex-direction: column;
           }
+          
           .filter-select {
             width: 100%;
           }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 12px;
           }
+          
           .stats-group {
             width: 100%;
             justify-content: space-between;
           }
+          
           .action-buttons {
             flex-direction: column;
           }
+          
           .modal-footer {
             flex-direction: column;
           }

@@ -20,13 +20,7 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
   const location = useLocation();
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showStaffDropdown, setShowStaffDropdown] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [scrollY, setScrollY] = useState(0);
-  const [notifications, setNotifications] = useState([
-    { id: 1, message: 'New complaint assigned to you', time: '5 min ago', read: false },
-    { id: 2, message: 'Meeting at 3:00 PM', time: '1 hour ago', read: false },
-    { id: 3, message: 'Your report is ready', time: '2 hours ago', read: true }
-  ]);
 
   // Handle scroll for header effects
   useEffect(() => {
@@ -48,9 +42,6 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
       profile: 'प्रोफाइल',
       settings: 'सेटिङ्स',
       staffPanel: 'स्टाफ प्यानल',
-      notifications: 'सूचनाहरू',
-      markAllRead: 'सबै पढेको चिन्ह लगाउनुहोस्',
-      noNotifications: 'कुनै सूचना छैन',
       welcome: 'स्वागत छ',
       role: 'भूमिका'
     },
@@ -64,9 +55,6 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
       profile: 'Profile',
       settings: 'Settings',
       staffPanel: 'Staff Panel',
-      notifications: 'Notifications',
-      markAllRead: 'Mark all as read',
-      noNotifications: 'No notifications',
       welcome: 'Welcome',
       role: 'Role'
     }
@@ -83,14 +71,6 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
     localStorage.removeItem('staffToken');
     localStorage.removeItem('staffUser');
     navigate('/');
-  };
-
-  const handleMarkAllRead = () => {
-    setNotifications(notifications.map(notif => ({ ...notif, read: true })));
-  };
-
-  const getUnreadCount = () => {
-    return notifications.filter(n => !n.read).length;
   };
 
   const LogoImage = ({ src, alt, fallback, className }) => {
@@ -189,58 +169,18 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
         </div>
       </div>
 
-      {/* HEADER 3 - Staff Controls Only (No Navigation Links) */}
+      {/* HEADER 3 - Staff Controls Only (No Notifications) */}
       <div className={`header-3 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
         <div className="container-3">
           <div className="staff-controls">
-            {/* Notifications Dropdown */}
-            <div className="notifications-dropdown">
-              <button 
-                className="notifications-btn"
-                onClick={() => setShowNotifications(!showNotifications)}
-              >
-                <span className="notif-icon">🔔</span>
-                {getUnreadCount() > 0 && (
-                  <span className="notif-badge">{getUnreadCount()}</span>
-                )}
-              </button>
-              {showNotifications && (
-                <div className="notifications-menu">
-                  <div className="notifications-header">
-                    <span>{t.notifications}</span>
-                    {getUnreadCount() > 0 && (
-                      <button className="mark-all-read" onClick={handleMarkAllRead}>
-                        {t.markAllRead}
-                      </button>
-                    )}
-                  </div>
-                  <div className="notifications-list">
-                    {notifications.length > 0 ? (
-                      notifications.map(notif => (
-                        <div key={notif.id} className={`notification-item ${!notif.read ? 'unread' : ''}`}>
-                          <div className="notification-message">{notif.message}</div>
-                          <div className="notification-time">{notif.time}</div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="no-notifications">{t.noNotifications}</div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Staff Dropdown */}
+            {/* Staff Dropdown - Minimized */}
             <div className="staff-dropdown">
               <button 
                 className="staff-btn"
                 onClick={() => setShowStaffDropdown(!showStaffDropdown)}
               >
-                <span className="staff-icon">👨‍💻</span>
-                <div className="staff-info">
-                  <span className="staff-name">{staffName}</span>
-                  <span className="staff-role">{staffRole}</span>
-                </div>
+                <span className="staff-avatar-mini">{staffName.charAt(0).toUpperCase()}</span>
+                <span className="staff-name-mini">{staffName}</span>
                 <span className="dropdown-arrow">▼</span>
               </button>
               {showStaffDropdown && (
@@ -254,11 +194,11 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
                     </div>
                   </div>
                   <hr className="dropdown-divider" />
-                  <button className="dropdown-item" onClick={() => navigate('/staff-profile')}>
+                  <button className="dropdown-item" onClick={() => navigate('/staff/profile')}>
                     <span>👤</span>
                     <span>{t.profile}</span>
                   </button>
-                  <button className="dropdown-item" onClick={() => navigate('/staff-settings')}>
+                  <button className="dropdown-item" onClick={() => navigate('/staff/account-settings')}>
                     <span>⚙️</span>
                     <span>{t.settings}</span>
                   </button>
@@ -289,14 +229,14 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
           width: 100%;
           background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
           color: white;
-          padding: 10px 0;
+          padding: 8px 0;
           z-index: 1040;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
           transition: all 0.3s ease;
         }
 
         .header-1.header-scrolled {
-          padding: 6px 0;
+          padding: 5px 0;
         }
 
         .container-1 {
@@ -307,27 +247,27 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
           justify-content: space-between;
           align-items: center;
           flex-wrap: wrap;
-          gap: 20px;
+          gap: 15px;
         }
 
         .header-left {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 12px;
         }
 
         .we-are-here {
           display: flex;
           align-items: center;
-          gap: 8px;
-          background: rgba(255,255,255,0.15);
-          padding: 6px 20px;
-          border-radius: 40px;
+          gap: 6px;
+          background: rgba(255,255,255,0.12);
+          padding: 4px 16px;
+          border-radius: 30px;
           font-weight: 500;
         }
 
         .quote-text {
-          font-size: 0.9rem;
+          font-size: 0.8rem;
           letter-spacing: 0.5px;
           font-weight: 600;
         }
@@ -335,39 +275,39 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
         .header-right {
           display: flex;
           align-items: center;
-          gap: 25px;
+          gap: 20px;
           flex-wrap: wrap;
         }
 
         .contact-info-group {
           display: flex;
           align-items: center;
-          gap: 15px;
+          gap: 12px;
           flex-wrap: wrap;
         }
 
         .contact-info-item {
           display: flex;
           align-items: center;
-          gap: 6px;
-          font-size: 0.75rem;
+          gap: 5px;
+          font-size: 0.7rem;
           background: rgba(255,255,255,0.1);
-          padding: 5px 12px;
-          border-radius: 30px;
+          padding: 4px 10px;
+          border-radius: 25px;
           transition: all 0.3s ease;
         }
 
         .contact-info-item:hover {
-          background: rgba(255,255,255,0.25);
+          background: rgba(255,255,255,0.2);
           transform: translateY(-1px);
         }
 
         .contact-icon {
-          font-size: 0.85rem;
+          font-size: 0.8rem;
         }
 
         .contact-text {
-          font-size: 0.75rem;
+          font-size: 0.7rem;
           font-weight: 500;
         }
 
@@ -379,53 +319,53 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
         .language-selector {
           display: flex;
           align-items: center;
-          gap: 6px;
-          background: rgba(255,255,255,0.15);
-          border: 1px solid rgba(255,255,255,0.3);
-          padding: 5px 12px;
-          border-radius: 30px;
+          gap: 5px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.25);
+          padding: 4px 10px;
+          border-radius: 25px;
           cursor: pointer;
           color: white;
-          font-size: 0.75rem;
+          font-size: 0.7rem;
           font-weight: 500;
           transition: all 0.3s ease;
         }
         
         .language-selector:hover { 
-          background: rgba(255,255,255,0.25); 
+          background: rgba(255,255,255,0.2); 
         }
         
         .lang-icon { 
-          font-size: 0.85rem; 
+          font-size: 0.8rem; 
         }
         
         .dropdown-arrow { 
-          font-size: 0.6rem; 
-          margin-left: 5px; 
+          font-size: 0.55rem; 
+          margin-left: 4px; 
         }
         
         .dropdown-menu {
           position: absolute;
-          top: 38px;
+          top: 32px;
           right: 0;
           background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          border-radius: 10px;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.15);
           overflow: hidden;
           z-index: 1050;
-          min-width: 120px;
+          min-width: 110px;
         }
         
         .dropdown-item {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
           width: 100%;
-          padding: 8px 14px;
+          padding: 6px 12px;
           border: none;
           background: white;
           cursor: pointer;
-          font-size: 0.8rem;
+          font-size: 0.75rem;
           transition: all 0.2s ease;
           text-align: left;
         }
@@ -440,27 +380,27 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
         }
         
         .lang-flag { 
-          font-size: 1rem; 
+          font-size: 0.9rem; 
         }
 
         /* HEADER 2 - Department Level */
         .header-2 {
           position: fixed;
-          top: 55px;
+          top: 48px;
           left: 0;
           width: 100%;
           background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%);
           color: #1a2c3e;
-          padding: 12px 0;
+          padding: 8px 0;
           z-index: 1030;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-          border-bottom: 1px solid rgba(21, 101, 192, 0.15);
+          box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+          border-bottom: 1px solid rgba(21, 101, 192, 0.1);
           transition: all 0.3s ease;
         }
 
         .header-2.header-scrolled {
-          padding: 8px 0;
-          top: 45px;
+          padding: 6px 0;
+          top: 40px;
         }
 
         .container-2 {
@@ -470,7 +410,7 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 30px;
+          gap: 20px;
         }
 
         .logo-left { 
@@ -486,15 +426,15 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
         }
         
         .ntc-logo, .gov-logo { 
-          height: 50px; 
+          height: 40px; 
           width: auto; 
           object-fit: contain; 
         }
         
         .logo-fallback {
-          font-size: 2rem;
-          width: 50px;
-          height: 50px;
+          font-size: 1.6rem;
+          width: 40px;
+          height: 40px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -509,36 +449,36 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
         }
         
         .dept-name { 
-          font-size: 1rem; 
+          font-size: 0.9rem; 
           font-weight: 700; 
           color: #0d47a1; 
-          letter-spacing: 1px; 
+          letter-spacing: 0.5px; 
         }
         
         .dept-address { 
-          font-size: 0.75rem; 
-          opacity: 0.7; 
+          font-size: 0.65rem; 
+          opacity: 0.6; 
           color: #555; 
-          margin-top: 3px; 
+          margin-top: 2px; 
         }
 
-        /* HEADER 3 - Staff Controls Only */
+        /* HEADER 3 - Staff Controls Only (No Notifications) */
         .header-3 {
           position: fixed;
-          top: 119px;
+          top: 96px;
           left: 0;
           width: 100%;
           background: linear-gradient(135deg, #0288d1 0%, #0277bd 100%);
           color: white;
-          padding: 12px 0;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          padding: 6px 0;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
           z-index: 1020;
           transition: all 0.3s ease;
         }
 
         .header-3.header-scrolled {
-          top: 101px;
-          padding: 8px 0;
+          top: 84px;
+          padding: 4px 0;
         }
 
         .container-3 {
@@ -554,119 +494,10 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
         .staff-controls {
           display: flex;
           align-items: center;
-          gap: 15px;
+          gap: 12px;
         }
 
-        /* Notifications Dropdown */
-        .notifications-dropdown {
-          position: relative;
-        }
-
-        .notifications-btn {
-          position: relative;
-          background: rgba(255,255,255,0.15);
-          border: 1px solid rgba(255,255,255,0.3);
-          padding: 8px 12px;
-          border-radius: 40px;
-          cursor: pointer;
-          color: white;
-          font-size: 1.1rem;
-          transition: all 0.3s ease;
-        }
-
-        .notifications-btn:hover {
-          background: rgba(255,255,255,0.25);
-          transform: translateY(-1px);
-        }
-
-        .notif-badge {
-          position: absolute;
-          top: -5px;
-          right: -5px;
-          background: #ff4757;
-          color: white;
-          font-size: 0.65rem;
-          font-weight: bold;
-          padding: 2px 6px;
-          border-radius: 20px;
-          min-width: 18px;
-        }
-
-        .notifications-menu {
-          position: absolute;
-          top: 45px;
-          right: 0;
-          width: 320px;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-          overflow: hidden;
-          z-index: 1050;
-        }
-
-        .notifications-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 12px 16px;
-          background: #f8f9fa;
-          border-bottom: 1px solid #e0e0e0;
-          font-weight: 600;
-          color: #333;
-        }
-
-        .mark-all-read {
-          background: none;
-          border: none;
-          color: #1565c0;
-          font-size: 0.7rem;
-          cursor: pointer;
-          padding: 4px 8px;
-          border-radius: 4px;
-        }
-
-        .mark-all-read:hover {
-          background: #e3f2fd;
-        }
-
-        .notifications-list {
-          max-height: 400px;
-          overflow-y: auto;
-        }
-
-        .notification-item {
-          padding: 12px 16px;
-          border-bottom: 1px solid #f0f0f0;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-
-        .notification-item:hover {
-          background: #f8f9fa;
-        }
-
-        .notification-item.unread {
-          background: #e3f2fd;
-        }
-
-        .notification-message {
-          font-size: 0.85rem;
-          color: #333;
-          margin-bottom: 4px;
-        }
-
-        .notification-time {
-          font-size: 0.7rem;
-          color: #999;
-        }
-
-        .no-notifications {
-          padding: 40px;
-          text-align: center;
-          color: #999;
-        }
-
-        /* Staff Dropdown */
+        /* Staff Dropdown - Clean Design */
         .staff-dropdown {
           position: relative;
         }
@@ -674,14 +505,14 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
         .staff-btn {
           background: rgba(255,255,255,0.15);
           border: 1px solid rgba(255,255,255,0.3);
-          padding: 8px 16px;
-          border-radius: 40px;
+          padding: 6px 16px;
+          border-radius: 30px;
           cursor: pointer;
           color: white;
           transition: all 0.3s ease;
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
         }
 
         .staff-btn:hover {
@@ -689,30 +520,30 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
           transform: translateY(-1px);
         }
 
-        .staff-icon {
-          font-size: 1rem;
-        }
-
-        .staff-info {
+        .staff-avatar-mini {
+          width: 28px;
+          height: 28px;
+          background: rgba(255,255,255,0.25);
+          border-radius: 50%;
           display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 2px;
-        }
-
-        .staff-name {
-          font-size: 0.85rem;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.8rem;
           font-weight: 600;
         }
 
-        .staff-role {
-          font-size: 0.65rem;
-          opacity: 0.8;
+        .staff-name-mini {
+          font-size: 0.85rem;
+          font-weight: 500;
+        }
+
+        .dropdown-arrow {
+          font-size: 0.55rem;
         }
 
         .staff-dropdown-menu {
           position: absolute;
-          top: 45px;
+          top: 42px;
           right: 0;
           background: white;
           border-radius: 12px;
@@ -726,7 +557,7 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 16px;
+          padding: 14px 16px;
           background: linear-gradient(135deg, #e3f2fd, #bbdef5);
         }
 
@@ -788,7 +619,7 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
           .container-1, .container-2, .container-3 {
             flex-direction: column;
             text-align: center;
-            padding: 0 20px;
+            padding: 0 16px;
           }
           
           .header-left, .header-right, .logo-left, .logo-right {
@@ -811,13 +642,12 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
             justify-content: center;
           }
           
-          .staff-info {
+          .staff-name-mini {
             display: none;
           }
           
-          .notifications-menu {
-            width: calc(100vw - 40px);
-            right: -80px;
+          .staff-btn {
+            padding: 6px 12px;
           }
         }
 
@@ -825,6 +655,16 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
           .staff-controls {
             width: 100%;
             justify-content: center;
+          }
+          
+          .staff-btn {
+            padding: 4px 10px;
+          }
+          
+          .staff-avatar-mini {
+            width: 24px;
+            height: 24px;
+            font-size: 0.7rem;
           }
         }
       `}</style>

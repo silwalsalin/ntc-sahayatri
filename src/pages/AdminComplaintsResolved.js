@@ -74,7 +74,7 @@ const AdminComplaintsResolved = () => {
     return priorityMap[priority] || 'medium';
   };
 
-  // Get sample resolved complaints as fallback (using the helper functions)
+  // Get sample resolved complaints as fallback
   const getSampleResolvedComplaints = () => {
     const sampleSubmittedDate = '2024-01-20';
     const sampleResolvedDate = '2024-01-22';
@@ -161,21 +161,18 @@ const AdminComplaintsResolved = () => {
 
   // Fetch resolved complaints from backend
   const fetchResolvedComplaints = async () => {
+    setLoading(true);
     try {
-      console.log('Fetching complaints from backend...');
-      const response = await axios.get('http://localhost:5000/api/complaints');
-      console.log('API Response:', response.data);
+      const token = localStorage.getItem('adminToken');
+      const response = await axios.get('http://localhost:5000/api/complaints', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
       if (response.data.success && Array.isArray(response.data.data)) {
-        // Filter only resolved complaints
         const resolvedComplaints = response.data.data
           .filter(complaint => {
             const status = complaint.status || complaint.statusNp;
-            const isResolved = status === 'Resolved' || status === 'समाधान भयो' || status === 'resolved';
-            if (isResolved) {
-              console.log('Found resolved complaint:', complaint.complaintNumber);
-            }
-            return isResolved;
+            return status === 'Resolved' || status === 'समाधान भयो' || status === 'resolved';
           })
           .map(complaint => {
             const submittedDate = complaint.submittedDate || complaint.createdAt || new Date().toISOString();
@@ -213,7 +210,6 @@ const AdminComplaintsResolved = () => {
             };
           });
         
-        console.log(`Found ${resolvedComplaints.length} resolved complaints`);
         setComplaints(resolvedComplaints);
         setBackendStatus('connected');
       } else {
@@ -226,7 +222,7 @@ const AdminComplaintsResolved = () => {
       setComplaints(getSampleResolvedComplaints());
       setBackendStatus('disconnected');
     } finally {
-      setTimeout(() => setLoading(false), 500);
+      setLoading(false);
     }
   };
 
@@ -407,13 +403,11 @@ const AdminComplaintsResolved = () => {
     return categoriesObj[category] || category;
   };
 
-  // Fixed: Get formatted date using the helper function
   const getDate = (complaint) => {
     const dateToFormat = complaint.submittedDate || complaint.dateNp || complaint.dateEn;
     return language === 'np' ? formatDate(dateToFormat, 'nepali') : formatDate(dateToFormat, 'english');
   };
 
-  // Fixed: Get formatted resolved date
   const getResolvedDate = (complaint) => {
     const dateToFormat = complaint.resolvedDate || complaint.resolvedDateEn || complaint.resolvedDateNp;
     return language === 'np' ? formatDate(dateToFormat, 'nepali') : formatDate(dateToFormat, 'english');
@@ -551,183 +545,187 @@ const AdminComplaintsResolved = () => {
     <div className="admin-resolved-complaints">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
+      {/* Backend Status Banner */}
       {backendStatus === 'disconnected' && (
         <div className="backend-warning">
           ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।' : 'Backend server not connected. Showing sample data.'}
         </div>
       )}
       
-      <div className="complaints-container">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
         <div className="main-container">
-          <div className="page-header">
-            <div>
-              <h1>{t.resolvedComplaints}</h1>
-              <p>{t.manageResolved}</p>
-            </div>
-            <div className="header-buttons">
-              <button className="refresh-btn" onClick={refreshData}>
-                🔄 {t.refresh}
-              </button>
-              <button className="report-btn" onClick={() => alert(t.generateReport)}>
-                📊 {t.generateReport}
-              </button>
-            </div>
-          </div>
-
-          {/* Statistics Cards */}
-          <div className="stats-row">
-            <div className="stat-card">
-              <div className="stat-icon green">✅</div>
-              <div className="stat-info">
-                <div className="stat-value">{totalResolved}</div>
-                <div className="stat-label">{t.totalResolved}</div>
+          <div className="content-wrapper">
+            <div className="page-header">
+              <div>
+                <h1>{t.resolvedComplaints}</h1>
+                <p>{t.manageResolved}</p>
+              </div>
+              <div className="header-buttons">
+                <button className="refresh-btn" onClick={refreshData}>
+                  🔄 {t.refresh}
+                </button>
+                <button className="report-btn" onClick={() => alert(t.generateReport)}>
+                  📊 {t.generateReport}
+                </button>
               </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-icon blue">⏱️</div>
-              <div className="stat-info">
-                <div className="stat-value">{avgResolutionDays} {language === 'np' ? 'दिन' : 'days'}</div>
-                <div className="stat-label">{t.avgResolutionTime}</div>
+
+            {/* Statistics Cards */}
+            <div className="stats-row">
+              <div className="stat-card">
+                <div className="stat-icon green">✅</div>
+                <div className="stat-info">
+                  <div className="stat-value">{totalResolved}</div>
+                  <div className="stat-label">{t.totalResolved}</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon blue">⏱️</div>
+                <div className="stat-info">
+                  <div className="stat-value">{avgResolutionDays} {language === 'np' ? 'दिन' : 'days'}</div>
+                  <div className="stat-label">{t.avgResolutionTime}</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon orange">⭐</div>
+                <div className="stat-info">
+                  <div className="stat-value">{avgSatisfaction}/5</div>
+                  <div className="stat-label">{t.avgSatisfaction}</div>
+                </div>
               </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-icon orange">⭐</div>
-              <div className="stat-info">
-                <div className="stat-value">{avgSatisfaction}/5</div>
-                <div className="stat-label">{t.avgSatisfaction}</div>
+
+            {/* Filters */}
+            <div className="filters-bar">
+              <div className="search-box">
+                <span className="search-icon">🔍</span>
+                <input
+                  type="text"
+                  placeholder={t.searchPlaceholder}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="filter-group">
+                <select
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.all}</option>
+                  <option value="high">{t.high}</option>
+                  <option value="medium">{t.medium}</option>
+                  <option value="low">{t.low}</option>
+                </select>
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  {Object.entries(categoriesObj).map(([key, value]) => (
+                    <option key={key} value={key}>{value}</option>
+                  ))}
+                </select>
+                <select
+                  value={timeRangeFilter}
+                  onChange={(e) => setTimeRangeFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  {Object.entries(timeRangesObj).map(([key, value]) => (
+                    <option key={key} value={key}>{value}</option>
+                  ))}
+                </select>
               </div>
             </div>
-          </div>
 
-          {/* Filters */}
-          <div className="filters-bar">
-            <div className="search-box">
-              <span className="search-icon">🔍</span>
-              <input
-                type="text"
-                placeholder={t.searchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="filter-group">
-              <select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-                className="filter-select"
-              >
-                <option value="all">{t.all}</option>
-                <option value="high">{t.high}</option>
-                <option value="medium">{t.medium}</option>
-                <option value="low">{t.low}</option>
-              </select>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="filter-select"
-              >
-                {Object.entries(categoriesObj).map(([key, value]) => (
-                  <option key={key} value={key}>{value}</option>
-                ))}
-              </select>
-              <select
-                value={timeRangeFilter}
-                onChange={(e) => setTimeRangeFilter(e.target.value)}
-                className="filter-select"
-              >
-                {Object.entries(timeRangesObj).map(([key, value]) => (
-                  <option key={key} value={key}>{value}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Complaints Table */}
-          <div className="table-wrapper">
-            <table className="complaints-table">
-              <thead>
-                <tr>
-                  <th>{t.ticketId}</th>
-                  <th>{t.complainant}</th>
-                  <th>{t.category}</th>
-                  <th>{t.date}</th>
-                  <th>{t.resolvedDate}</th>
-                  <th>{t.resolutionTime}</th>
-                  <th>{t.priority}</th>
-                  <th>{t.satisfaction}</th>
-                  <th>{t.actions}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedComplaints.length > 0 ? (
-                  paginatedComplaints.map((complaint) => (
-                    <tr key={complaint.id}>
-                      <td className="ticket-id">{complaint.ticketId}</td>
-                      <td>{language === 'np' ? complaint.name : complaint.enName}</td>
-                      <td>{getCategoryText(complaint.category)}</td>
-                      <td>{getDate(complaint)}</td>
-                      <td>{getResolvedDate(complaint)}</td>
-                      <td>{getResolutionTime(complaint)}</td>
-                      <td>
-                        <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
-                          {getPriorityText(complaint.priority)}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="satisfaction-container">
-                          <div className="stars">{renderStars(complaint.satisfactionRating)}</div>
-                          <span className={`satisfaction-text ${getSatisfactionClass(complaint.satisfactionRating)}`}>
-                            {getSatisfactionText(complaint.satisfactionRating)}
+            {/* Complaints Table */}
+            <div className="table-wrapper">
+              <table className="complaints-table">
+                <thead>
+                  <tr>
+                    <th>{t.ticketId}</th>
+                    <th>{t.complainant}</th>
+                    <th>{t.category}</th>
+                    <th>{t.date}</th>
+                    <th>{t.resolvedDate}</th>
+                    <th>{t.resolutionTime}</th>
+                    <th>{t.priority}</th>
+                    <th>{t.satisfaction}</th>
+                    <th>{t.actions}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedComplaints.length > 0 ? (
+                    paginatedComplaints.map((complaint) => (
+                      <tr key={complaint.id}>
+                        <td className="ticket-id">{complaint.ticketId}</td>
+                        <td>{language === 'np' ? complaint.name : complaint.enName}</td>
+                        <td>{getCategoryText(complaint.category)}</td>
+                        <td>{getDate(complaint)}</td>
+                        <td>{getResolvedDate(complaint)}</td>
+                        <td>{getResolutionTime(complaint)}</td>
+                        <td>
+                          <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
+                            {getPriorityText(complaint.priority)}
                           </span>
+                        </td>
+                        <td>
+                          <div className="satisfaction-container">
+                            <div className="stars">{renderStars(complaint.satisfactionRating)}</div>
+                            <span className={`satisfaction-text ${getSatisfactionClass(complaint.satisfactionRating)}`}>
+                              {getSatisfactionText(complaint.satisfactionRating)}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <button className="view-btn" onClick={() => openModal(complaint)}>
+                            👁️ {t.viewDetails}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="no-data">
+                      <td colSpan="9">
+                        <div className="no-data-content">
+                          <span className="no-data-icon">📭</span>
+                          <p>{t.noComplaintsFound}</p>
+                          <small>{t.tryAdjustingFilters}</small>
                         </div>
                       </td>
-                      <td>
-                        <button className="view-btn" onClick={() => openModal(complaint)}>
-                          👁️ {t.viewDetails}
-                        </button>
-                      </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr className="no-data">
-                    <td colSpan="9">
-                      <div className="no-data-content">
-                        <span className="no-data-icon">📭</span>
-                        <p>{t.noComplaintsFound}</p>
-                        <small>{t.tryAdjustingFilters}</small>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="pagination-btn"
-              >
-                ← {t.previous}
-              </button>
-              <span className="pagination-info">
-                {t.page} {currentPage} {t.of} {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="pagination-btn"
-              >
-                {t.next} →
-              </button>
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="pagination-btn"
+                >
+                  ← {t.previous}
+                </button>
+                <span className="pagination-info">
+                  {t.page} {currentPage} {t.of} {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="pagination-btn"
+                >
+                  {t.next} →
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -812,13 +810,21 @@ const AdminComplaintsResolved = () => {
       )}
 
       <style jsx>{`
-        /* Your existing styles remain exactly the same */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
         .admin-resolved-complaints {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          min-height: 100vh;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
         }
+
         .backend-warning {
           position: fixed;
           top: 195px;
@@ -831,6 +837,7 @@ const AdminComplaintsResolved = () => {
           z-index: 100;
           font-size: 0.8rem;
         }
+
         .loading-container {
           display: flex;
           flex-direction: column;
@@ -839,6 +846,7 @@ const AdminComplaintsResolved = () => {
           height: 100vh;
           gap: 16px;
         }
+
         .loading-spinner {
           width: 40px;
           height: 40px;
@@ -847,12 +855,22 @@ const AdminComplaintsResolved = () => {
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .complaints-container {
-          display: flex;
-          margin-top: 195px;
-          min-height: calc(100vh - 195px);
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
+
+        /* Dashboard Layout */
+        .dashboard-layout {
+          display: flex;
+          height: calc(100vh - 195px);
+          margin-top: 195px;
+          position: relative;
+          width: 100%;
+          overflow: hidden;
+        }
+
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -861,13 +879,44 @@ const AdminComplaintsResolved = () => {
           height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 40;
+          z-index: 100;
+          overflow-y: auto;
         }
+
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
-          padding: 24px 32px;
           margin-left: 260px;
+          width: calc(100% - 260px);
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
         }
+
+        .main-container::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+        }
+
+        .content-wrapper {
+          padding: 24px 32px;
+          min-height: 100%;
+        }
+
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -876,14 +925,24 @@ const AdminComplaintsResolved = () => {
           padding-bottom: 16px;
           border-bottom: 2px solid #e2e8f0;
         }
+
         .page-header h1 {
           font-size: 1.6rem;
           font-weight: 600;
           color: #0f172a;
           margin-bottom: 4px;
         }
-        .page-header p { color: #64748b; font-size: 0.85rem; }
-        .header-buttons { display: flex; gap: 12px; }
+
+        .page-header p {
+          color: #64748b;
+          font-size: 0.85rem;
+        }
+
+        .header-buttons {
+          display: flex;
+          gap: 12px;
+        }
+
         .refresh-btn {
           background: white;
           border: 1px solid #e2e8f0;
@@ -893,11 +952,13 @@ const AdminComplaintsResolved = () => {
           font-weight: 500;
           color: #475569;
         }
+
         .refresh-btn:hover {
           background: #f8fafc;
           border-color: #3b82f6;
           color: #3b82f6;
         }
+
         .report-btn {
           background: linear-gradient(135deg, #8b5cf6, #7c3aed);
           color: white;
@@ -907,16 +968,20 @@ const AdminComplaintsResolved = () => {
           cursor: pointer;
           font-weight: 500;
         }
+
         .report-btn:hover {
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(139,92,246,0.3);
         }
+
+        /* Statistics Cards */
         .stats-row {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 20px;
           margin-bottom: 28px;
         }
+
         .stat-card {
           background: white;
           border-radius: 16px;
@@ -926,7 +991,12 @@ const AdminComplaintsResolved = () => {
           gap: 16px;
           border: 1px solid #e2e8f0;
         }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
+        .stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
         .stat-icon {
           width: 50px;
           height: 50px;
@@ -936,12 +1006,16 @@ const AdminComplaintsResolved = () => {
           justify-content: center;
           font-size: 1.8rem;
         }
+
         .stat-icon.green { background: #d1fae5; color: #059669; }
         .stat-icon.blue { background: #dbeafe; color: #2563eb; }
         .stat-icon.orange { background: #fed7aa; color: #ea580c; }
+
         .stat-info { flex: 1; }
         .stat-value { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
         .stat-label { font-size: 0.75rem; color: #64748b; margin-top: 4px; }
+
+        /* Filters */
         .filters-bar {
           display: flex;
           justify-content: space-between;
@@ -953,7 +1027,12 @@ const AdminComplaintsResolved = () => {
           border-radius: 16px;
           border: 1px solid #e2e8f0;
         }
-        .search-box { flex: 1; position: relative; }
+
+        .search-box {
+          flex: 1;
+          position: relative;
+        }
+
         .search-icon {
           position: absolute;
           left: 14px;
@@ -962,6 +1041,7 @@ const AdminComplaintsResolved = () => {
           font-size: 1rem;
           color: #9ca3af;
         }
+
         .search-box input {
           width: 100%;
           padding: 10px 16px 10px 40px;
@@ -969,12 +1049,18 @@ const AdminComplaintsResolved = () => {
           border-radius: 10px;
           font-size: 0.85rem;
         }
+
         .search-box input:focus {
           outline: none;
           border-color: #3b82f6;
           box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
         }
-        .filter-group { display: flex; gap: 12px; }
+
+        .filter-group {
+          display: flex;
+          gap: 12px;
+        }
+
         .filter-select {
           padding: 10px 16px;
           border: 1px solid #e2e8f0;
@@ -983,27 +1069,49 @@ const AdminComplaintsResolved = () => {
           background: white;
           cursor: pointer;
         }
+
+        /* Table */
         .table-wrapper {
           overflow-x: auto;
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
         }
-        .complaints-table { width: 100%; border-collapse: collapse; }
-        .complaints-table th, .complaints-table td {
+
+        .complaints-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        .complaints-table th,
+        .complaints-table td {
           padding: 14px 12px;
           text-align: left;
           border-bottom: 1px solid #f1f5f9;
         }
+
         .complaints-table th {
           background: #f8fafc;
           color: #64748b;
           font-weight: 500;
           font-size: 0.8rem;
         }
-        .complaints-table td { color: #334155; font-size: 0.85rem; }
-        .complaints-table tr:hover { background: #fafcff; }
-        .ticket-id { font-family: monospace; font-weight: 600; color: #3b82f6; }
+
+        .complaints-table td {
+          color: #334155;
+          font-size: 0.85rem;
+        }
+
+        .complaints-table tr:hover {
+          background: #fafcff;
+        }
+
+        .ticket-id {
+          font-family: monospace;
+          font-weight: 600;
+          color: #3b82f6;
+        }
+
         .priority-badge {
           display: inline-block;
           padding: 4px 12px;
@@ -1011,19 +1119,36 @@ const AdminComplaintsResolved = () => {
           font-size: 0.7rem;
           font-weight: 500;
         }
+
         .priority-high { background: #fee2e2; color: #dc2626; }
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #e0e7ff; color: #4f46e5; }
-        .satisfaction-container { display: flex; flex-direction: column; gap: 4px; }
-        .stars { display: flex; gap: 2px; }
+
+        .satisfaction-container {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .stars {
+          display: flex;
+          gap: 2px;
+        }
+
         .star { font-size: 0.8rem; }
         .star-filled { color: #f59e0b; }
         .star-empty { color: #d1d5db; }
-        .satisfaction-text { font-size: 0.65rem; font-weight: 500; }
+
+        .satisfaction-text {
+          font-size: 0.65rem;
+          font-weight: 500;
+        }
+
         .satisfaction-excellent { color: #059669; }
         .satisfaction-good { color: #3b82f6; }
         .satisfaction-average { color: #f59e0b; }
         .satisfaction-poor { color: #ef4444; }
+
         .view-btn {
           background: #f1f5f9;
           border: none;
@@ -1032,10 +1157,24 @@ const AdminComplaintsResolved = () => {
           cursor: pointer;
           font-size: 0.7rem;
         }
+
         .view-btn:hover { background: #e2e8f0; }
-        .no-data { text-align: center; padding: 40px !important; }
-        .no-data-content { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+        .no-data {
+          text-align: center;
+          padding: 40px !important;
+        }
+
+        .no-data-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+        }
+
         .no-data-icon { font-size: 3rem; }
+
+        /* Pagination */
         .pagination {
           display: flex;
           justify-content: center;
@@ -1044,6 +1183,7 @@ const AdminComplaintsResolved = () => {
           margin-top: 24px;
           padding: 16px;
         }
+
         .pagination-btn {
           background: white;
           border: 1px solid #e2e8f0;
@@ -1053,13 +1193,24 @@ const AdminComplaintsResolved = () => {
           color: #475569;
           font-weight: 500;
         }
+
         .pagination-btn:hover:not(:disabled) {
           background: #f8fafc;
           border-color: #3b82f6;
           color: #3b82f6;
         }
-        .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .pagination-info { color: #64748b; font-size: 0.85rem; }
+
+        .pagination-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .pagination-info {
+          color: #64748b;
+          font-size: 0.85rem;
+        }
+
+        /* Modal */
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -1073,6 +1224,7 @@ const AdminComplaintsResolved = () => {
           z-index: 1100;
           backdrop-filter: blur(4px);
         }
+
         .modal-content {
           background: white;
           border-radius: 20px;
@@ -1082,6 +1234,7 @@ const AdminComplaintsResolved = () => {
           overflow-y: auto;
           box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
+
         .modal-header {
           display: flex;
           justify-content: space-between;
@@ -1093,7 +1246,12 @@ const AdminComplaintsResolved = () => {
           background: white;
           z-index: 10;
         }
-        .modal-header h2 { font-size: 1.2rem; color: #0f172a; }
+
+        .modal-header h2 {
+          font-size: 1.2rem;
+          color: #0f172a;
+        }
+
         .modal-close {
           background: none;
           border: none;
@@ -1101,26 +1259,57 @@ const AdminComplaintsResolved = () => {
           cursor: pointer;
           color: #94a3b8;
         }
+
         .modal-close:hover { color: #475569; }
-        .modal-body { padding: 24px; }
+
+        .modal-body {
+          padding: 24px;
+        }
+
         .detail-row {
           display: flex;
           margin-bottom: 16px;
           padding-bottom: 12px;
           border-bottom: 1px solid #f1f5f9;
         }
+
         .detail-row label {
           width: 130px;
           font-weight: 600;
           color: #0f172a;
           flex-shrink: 0;
         }
-        .detail-row span, .detail-row p { flex: 1; color: #334155; }
-        .detail-row.full-width { flex-direction: column; }
-        .detail-row.full-width label { width: 100%; margin-bottom: 8px; }
-        .satisfaction-display { display: flex; flex-direction: column; gap: 8px; }
-        .stars-large { display: flex; gap: 4px; }
-        .stars-large .star { font-size: 1.2rem; }
+
+        .detail-row span,
+        .detail-row p {
+          flex: 1;
+          color: #334155;
+        }
+
+        .detail-row.full-width {
+          flex-direction: column;
+        }
+
+        .detail-row.full-width label {
+          width: 100%;
+          margin-bottom: 8px;
+        }
+
+        .satisfaction-display {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .stars-large {
+          display: flex;
+          gap: 4px;
+        }
+
+        .stars-large .star {
+          font-size: 1.2rem;
+        }
+
         .feedback-text {
           font-style: italic;
           background: #f8fafc;
@@ -1128,6 +1317,7 @@ const AdminComplaintsResolved = () => {
           border-radius: 8px;
           margin-top: 4px;
         }
+
         .modal-footer {
           padding: 16px 24px;
           border-top: 1px solid #e2e8f0;
@@ -1136,6 +1326,7 @@ const AdminComplaintsResolved = () => {
           bottom: 0;
           background: white;
         }
+
         .btn-close {
           background: #f1f5f9;
           color: #475569;
@@ -1145,23 +1336,85 @@ const AdminComplaintsResolved = () => {
           cursor: pointer;
           font-weight: 500;
         }
+
         .btn-close:hover { background: #e2e8f0; }
-        @media (max-width: 1200px) { .stats-row { grid-template-columns: repeat(3, 1fr); } }
+
+        /* Responsive */
         @media (max-width: 768px) {
-          .complaints-container { margin-top: 280px; }
-          .sidebar-container { top: 280px; height: calc(100vh - 280px); }
-          .main-container { padding: 16px; margin-left: 0; }
-          .filters-bar { flex-direction: column; }
-          .filter-group { width: 100%; flex-direction: column; }
-          .filter-select { width: 100%; }
-          .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
-          .stats-row { grid-template-columns: 1fr; }
-          .header-buttons { width: 100%; flex-direction: column; }
+          .admin-resolved-complaints {
+            height: auto;
+            overflow: auto;
+          }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
+          .sidebar-container {
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+          }
+          
+          .main-container {
+            margin-left: 0;
+            width: 100%;
+            overflow-y: visible;
+          }
+          
+          .content-wrapper {
+            padding: 16px;
+          }
+          
+          .stats-row {
+            grid-template-columns: 1fr;
+          }
+          
+          .filters-bar {
+            flex-direction: column;
+          }
+          
+          .filter-group {
+            width: 100%;
+            flex-direction: column;
+          }
+          
+          .filter-select {
+            width: 100%;
+          }
+          
+          .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
+          
+          .header-buttons {
+            width: 100%;
+            flex-direction: column;
+          }
         }
+
         @media (max-width: 480px) {
-          .complaints-table th, .complaints-table td { padding: 8px; font-size: 0.7rem; }
-          .detail-row { flex-direction: column; }
-          .detail-row label { width: 100%; margin-bottom: 4px; }
+          .complaints-table th,
+          .complaints-table td {
+            padding: 8px;
+            font-size: 0.7rem;
+          }
+          
+          .detail-row {
+            flex-direction: column;
+          }
+          
+          .detail-row label {
+            width: 100%;
+            margin-bottom: 4px;
+          }
         }
       `}</style>
     </div>

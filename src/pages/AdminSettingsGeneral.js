@@ -343,630 +343,632 @@ const AdminSettingsGeneral = () => {
     <div className="admin-settings">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
-      <div className="settings-container">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
         <div className="main-container">
-          <div className="page-header">
-            <div>
-              <h1>⚙️ {t.settings}</h1>
-              <p>{t.generalSettings}</p>
-            </div>
-            <button 
-              className={`save-btn ${saving ? 'saving' : ''}`} 
-              onClick={handleSaveSettings}
-              disabled={saving}
-            >
-              {saving ? (
-                <>⏳ {t.saving}</>
-              ) : (
-                <>💾 {t.saveSettings}</>
-              )}
-            </button>
-          </div>
-
-          {saveSuccess && (
-            <div className="success-message">
-              ✓ {t.saveSuccess}
-            </div>
-          )}
-
-          {/* Tabs */}
-          <div className="settings-tabs">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
+          <div className="content-wrapper">
+            <div className="page-header">
+              <div>
+                <h1>⚙️ {t.settings}</h1>
+                <p>{t.generalSettings}</p>
+              </div>
+              <button 
+                className={`save-btn ${saving ? 'saving' : ''}`} 
+                onClick={handleSaveSettings}
+                disabled={saving}
               >
-                <span className="tab-icon">{tab.icon}</span>
-                <span className="tab-label">{tab.label}</span>
+                {saving ? (
+                  <>⏳ {t.saving}</>
+                ) : (
+                  <>💾 {t.saveSettings}</>
+                )}
               </button>
-            ))}
+            </div>
+
+            {saveSuccess && (
+              <div className="success-message">
+                ✓ {t.saveSuccess}
+              </div>
+            )}
+
+            {/* Tabs */}
+            <div className="settings-tabs">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  <span className="tab-icon">{tab.icon}</span>
+                  <span className="tab-label">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* General Settings Tab */}
+            {activeTab === 'general' && (
+              <div className="settings-section">
+                <div className="settings-card">
+                  <h3>{t.generalSettings}</h3>
+                  
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>{t.siteName} (English)</label>
+                      <input
+                        type="text"
+                        name="siteName"
+                        value={generalSettings.siteName}
+                        onChange={handleGeneralChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.siteName} ({t.nepali})</label>
+                      <input
+                        type="text"
+                        name="siteName_np"
+                        value={generalSettings.siteName_np}
+                        onChange={handleGeneralChange}
+                      />
+                    </div>
+                    <div className="form-group full-width">
+                      <label>{t.siteDescription} (English)</label>
+                      <textarea
+                        name="siteDescription"
+                        value={generalSettings.siteDescription}
+                        onChange={handleGeneralChange}
+                        rows="2"
+                      />
+                    </div>
+                    <div className="form-group full-width">
+                      <label>{t.siteDescription} ({t.nepali})</label>
+                      <textarea
+                        name="siteDescription_np"
+                        value={generalSettings.siteDescription_np}
+                        onChange={handleGeneralChange}
+                        rows="2"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.siteEmail}</label>
+                      <input
+                        type="email"
+                        name="siteEmail"
+                        value={generalSettings.siteEmail}
+                        onChange={handleGeneralChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.sitePhone}</label>
+                      <input
+                        type="text"
+                        name="sitePhone"
+                        value={generalSettings.sitePhone}
+                        onChange={handleGeneralChange}
+                      />
+                    </div>
+                    <div className="form-group full-width">
+                      <label>{t.siteAddress} (English)</label>
+                      <input
+                        type="text"
+                        name="siteAddress"
+                        value={generalSettings.siteAddress}
+                        onChange={handleGeneralChange}
+                      />
+                    </div>
+                    <div className="form-group full-width">
+                      <label>{t.siteAddress} ({t.nepali})</label>
+                      <input
+                        type="text"
+                        name="siteAddress_np"
+                        value={generalSettings.siteAddress_np}
+                        onChange={handleGeneralChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.timezone}</label>
+                      <select name="timezone" value={generalSettings.timezone} onChange={handleGeneralChange}>
+                        <option value="Asia/Kathmandu">Asia/Kathmandu (NPT)</option>
+                        <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                        <option value="UTC">UTC</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>{t.dateFormat}</label>
+                      <select name="dateFormat" value={generalSettings.dateFormat} onChange={handleGeneralChange}>
+                        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>{t.timeFormat}</label>
+                      <select name="timeFormat" value={generalSettings.timeFormat} onChange={handleGeneralChange}>
+                        <option value="24h">{t.hours24}</option>
+                        <option value="12h">{t.hours12}</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>{t.defaultLanguage}</label>
+                      <select name="defaultLanguage" value={generalSettings.defaultLanguage} onChange={handleGeneralChange}>
+                        <option value="np">{t.nepali}</option>
+                        <option value="en">{t.english}</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>{t.itemsPerPage}</label>
+                      <select name="itemsPerPage" value={generalSettings.itemsPerPage} onChange={handleGeneralChange}>
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="15">15</option>
+                        <option value="20">20</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="enableRegistration"
+                        checked={generalSettings.enableRegistration}
+                        onChange={handleGeneralChange}
+                      />
+                      <span>{t.enableRegistration}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="enablePublicComplaints"
+                        checked={generalSettings.enablePublicComplaints}
+                        onChange={handleGeneralChange}
+                      />
+                      <span>{t.enablePublicComplaints}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="maintenanceMode"
+                        checked={generalSettings.maintenanceMode}
+                        onChange={handleGeneralChange}
+                      />
+                      <span>{t.maintenanceMode}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Email Settings Tab */}
+            {activeTab === 'email' && (
+              <div className="settings-section">
+                <div className="settings-card">
+                  <h3>{t.emailSettings}</h3>
+                  
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>{t.smtpHost}</label>
+                      <input
+                        type="text"
+                        name="smtpHost"
+                        value={emailSettings.smtpHost}
+                        onChange={handleEmailChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.smtpPort}</label>
+                      <input
+                        type="text"
+                        name="smtpPort"
+                        value={emailSettings.smtpPort}
+                        onChange={handleEmailChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.smtpUser}</label>
+                      <input
+                        type="text"
+                        name="smtpUser"
+                        value={emailSettings.smtpUser}
+                        onChange={handleEmailChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.smtpPassword}</label>
+                      <input
+                        type="password"
+                        name="smtpPassword"
+                        value={emailSettings.smtpPassword}
+                        onChange={handleEmailChange}
+                        placeholder="********"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.smtpEncryption}</label>
+                      <select name="smtpEncryption" value={emailSettings.smtpEncryption} onChange={handleEmailChange}>
+                        <option value="tls">{t.tls}</option>
+                        <option value="ssl">{t.ssl}</option>
+                        <option value="none">{t.none}</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>{t.fromEmail}</label>
+                      <input
+                        type="email"
+                        name="fromEmail"
+                        value={emailSettings.fromEmail}
+                        onChange={handleEmailChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.fromName} (English)</label>
+                      <input
+                        type="text"
+                        name="fromName"
+                        value={emailSettings.fromName}
+                        onChange={handleEmailChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.fromName} ({t.nepali})</label>
+                      <input
+                        type="text"
+                        name="fromName_np"
+                        value={emailSettings.fromName_np}
+                        onChange={handleEmailChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="sendComplaintConfirmation"
+                        checked={emailSettings.sendComplaintConfirmation}
+                        onChange={handleEmailChange}
+                      />
+                      <span>{t.sendComplaintConfirmation}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="sendComplaintUpdate"
+                        checked={emailSettings.sendComplaintUpdate}
+                        onChange={handleEmailChange}
+                      />
+                      <span>{t.sendComplaintUpdate}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="sendComplaintResolved"
+                        checked={emailSettings.sendComplaintResolved}
+                        onChange={handleEmailChange}
+                      />
+                      <span>{t.sendComplaintResolved}</span>
+                    </label>
+                  </div>
+
+                  <button className="test-email-btn" onClick={handleTestEmail}>
+                    ✉️ {t.testEmail}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Security Settings Tab */}
+            {activeTab === 'security' && (
+              <div className="settings-section">
+                <div className="settings-card">
+                  <h3>{t.securitySettings}</h3>
+                  
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>{t.sessionTimeout}</label>
+                      <input
+                        type="number"
+                        name="sessionTimeout"
+                        value={securitySettings.sessionTimeout}
+                        onChange={handleSecurityChange}
+                        min="5"
+                        max="120"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.maxLoginAttempts}</label>
+                      <input
+                        type="number"
+                        name="maxLoginAttempts"
+                        value={securitySettings.maxLoginAttempts}
+                        onChange={handleSecurityChange}
+                        min="3"
+                        max="10"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.lockoutDuration}</label>
+                      <input
+                        type="number"
+                        name="lockoutDuration"
+                        value={securitySettings.lockoutDuration}
+                        onChange={handleSecurityChange}
+                        min="5"
+                        max="60"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.passwordExpiryDays}</label>
+                      <input
+                        type="number"
+                        name="passwordExpiryDays"
+                        value={securitySettings.passwordExpiryDays}
+                        onChange={handleSecurityChange}
+                        min="30"
+                        max="365"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.minPasswordLength}</label>
+                      <input
+                        type="number"
+                        name="minPasswordLength"
+                        value={securitySettings.minPasswordLength}
+                        onChange={handleSecurityChange}
+                        min="6"
+                        max="20"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="requireUppercase"
+                        checked={securitySettings.requireUppercase}
+                        onChange={handleSecurityChange}
+                      />
+                      <span>{t.requireUppercase}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="requireLowercase"
+                        checked={securitySettings.requireLowercase}
+                        onChange={handleSecurityChange}
+                      />
+                      <span>{t.requireLowercase}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="requireNumbers"
+                        checked={securitySettings.requireNumbers}
+                        onChange={handleSecurityChange}
+                      />
+                      <span>{t.requireNumbers}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="requireSpecialChars"
+                        checked={securitySettings.requireSpecialChars}
+                        onChange={handleSecurityChange}
+                      />
+                      <span>{t.requireSpecialChars}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="twoFactorAuth"
+                        checked={securitySettings.twoFactorAuth}
+                        onChange={handleSecurityChange}
+                      />
+                      <span>{t.twoFactorAuth}</span>
+                    </label>
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label>{t.ipWhitelist}</label>
+                    <textarea
+                      name="ipWhitelist"
+                      value={securitySettings.ipWhitelist}
+                      onChange={handleSecurityChange}
+                      rows="3"
+                      placeholder="192.168.1.1&#10;10.0.0.1&#10;172.16.0.1"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Backup Settings Tab */}
+            {activeTab === 'backup' && (
+              <div className="settings-section">
+                <div className="settings-card">
+                  <h3>{t.backupSettings}</h3>
+                  
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="autoBackup"
+                        checked={backupSettings.autoBackup}
+                        onChange={handleBackupChange}
+                      />
+                      <span>{t.autoBackup}</span>
+                    </label>
+                  </div>
+
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>{t.backupFrequency}</label>
+                      <select name="backupFrequency" value={backupSettings.backupFrequency} onChange={handleBackupChange}>
+                        <option value="daily">{t.daily}</option>
+                        <option value="weekly">{t.weekly}</option>
+                        <option value="monthly">{t.monthly}</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>{t.backupTime}</label>
+                      <input
+                        type="time"
+                        name="backupTime"
+                        value={backupSettings.backupTime}
+                        onChange={handleBackupChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.backupRetention}</label>
+                      <input
+                        type="number"
+                        name="backupRetention"
+                        value={backupSettings.backupRetention}
+                        onChange={handleBackupChange}
+                        min="7"
+                        max="365"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.backupLocation}</label>
+                      <input
+                        type="text"
+                        name="backupLocation"
+                        value={backupSettings.backupLocation}
+                        onChange={handleBackupChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="backup-info">
+                    <div className="info-row">
+                      <span className="info-label">{t.lastBackup}:</span>
+                      <span className="info-value">{backupSettings.lastBackup}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-label">{t.lastBackupSize}:</span>
+                      <span className="info-value">{backupSettings.lastBackupSize}</span>
+                    </div>
+                  </div>
+
+                  <button className="manual-backup-btn" onClick={handleManualBackup}>
+                    💾 {t.backupNow}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Notification Settings Tab */}
+            {activeTab === 'notifications' && (
+              <div className="settings-section">
+                <div className="settings-card">
+                  <h3>{t.notificationSettings}</h3>
+                  
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="emailNotifications"
+                        checked={notificationSettings.emailNotifications}
+                        onChange={handleNotificationChange}
+                      />
+                      <span>{t.emailNotifications}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="smsNotifications"
+                        checked={notificationSettings.smsNotifications}
+                        onChange={handleNotificationChange}
+                      />
+                      <span>{t.smsNotifications}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="pushNotifications"
+                        checked={notificationSettings.pushNotifications}
+                        onChange={handleNotificationChange}
+                      />
+                      <span>{t.pushNotifications}</span>
+                    </label>
+                  </div>
+
+                  <div className="form-group">
+                    <label>{t.adminEmail}</label>
+                    <input
+                      type="email"
+                      name="adminEmail"
+                      value={notificationSettings.adminEmail}
+                      onChange={handleNotificationChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>{t.adminPhone}</label>
+                    <input
+                      type="text"
+                      name="adminPhone"
+                      value={notificationSettings.adminPhone}
+                      onChange={handleNotificationChange}
+                    />
+                  </div>
+
+                  <div className="checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="notifyNewComplaint"
+                        checked={notificationSettings.notifyNewComplaint}
+                        onChange={handleNotificationChange}
+                      />
+                      <span>{t.notifyNewComplaint}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="notifyComplaintUpdate"
+                        checked={notificationSettings.notifyComplaintUpdate}
+                        onChange={handleNotificationChange}
+                      />
+                      <span>{t.notifyComplaintUpdate}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="notifyComplaintResolved"
+                        checked={notificationSettings.notifyComplaintResolved}
+                        onChange={handleNotificationChange}
+                      />
+                      <span>{t.notifyComplaintResolved}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="notifyNewUser"
+                        checked={notificationSettings.notifyNewUser}
+                        onChange={handleNotificationChange}
+                      />
+                      <span>{t.notifyNewUser}</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="notifySystemUpdate"
+                        checked={notificationSettings.notifySystemUpdate}
+                        onChange={handleNotificationChange}
+                      />
+                      <span>{t.notifySystemUpdate}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* General Settings Tab */}
-          {activeTab === 'general' && (
-            <div className="settings-section">
-              <div className="settings-card">
-                <h3>{t.generalSettings}</h3>
-                
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>{t.siteName} (English)</label>
-                    <input
-                      type="text"
-                      name="siteName"
-                      value={generalSettings.siteName}
-                      onChange={handleGeneralChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.siteName} ({t.nepali})</label>
-                    <input
-                      type="text"
-                      name="siteName_np"
-                      value={generalSettings.siteName_np}
-                      onChange={handleGeneralChange}
-                    />
-                  </div>
-                  <div className="form-group full-width">
-                    <label>{t.siteDescription} (English)</label>
-                    <textarea
-                      name="siteDescription"
-                      value={generalSettings.siteDescription}
-                      onChange={handleGeneralChange}
-                      rows="2"
-                    />
-                  </div>
-                  <div className="form-group full-width">
-                    <label>{t.siteDescription} ({t.nepali})</label>
-                    <textarea
-                      name="siteDescription_np"
-                      value={generalSettings.siteDescription_np}
-                      onChange={handleGeneralChange}
-                      rows="2"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.siteEmail}</label>
-                    <input
-                      type="email"
-                      name="siteEmail"
-                      value={generalSettings.siteEmail}
-                      onChange={handleGeneralChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.sitePhone}</label>
-                    <input
-                      type="text"
-                      name="sitePhone"
-                      value={generalSettings.sitePhone}
-                      onChange={handleGeneralChange}
-                    />
-                  </div>
-                  <div className="form-group full-width">
-                    <label>{t.siteAddress} (English)</label>
-                    <input
-                      type="text"
-                      name="siteAddress"
-                      value={generalSettings.siteAddress}
-                      onChange={handleGeneralChange}
-                    />
-                  </div>
-                  <div className="form-group full-width">
-                    <label>{t.siteAddress} ({t.nepali})</label>
-                    <input
-                      type="text"
-                      name="siteAddress_np"
-                      value={generalSettings.siteAddress_np}
-                      onChange={handleGeneralChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.timezone}</label>
-                    <select name="timezone" value={generalSettings.timezone} onChange={handleGeneralChange}>
-                      <option value="Asia/Kathmandu">Asia/Kathmandu (NPT)</option>
-                      <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                      <option value="UTC">UTC</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>{t.dateFormat}</label>
-                    <select name="dateFormat" value={generalSettings.dateFormat} onChange={handleGeneralChange}>
-                      <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                      <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                      <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>{t.timeFormat}</label>
-                    <select name="timeFormat" value={generalSettings.timeFormat} onChange={handleGeneralChange}>
-                      <option value="24h">{t.hours24}</option>
-                      <option value="12h">{t.hours12}</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>{t.defaultLanguage}</label>
-                    <select name="defaultLanguage" value={generalSettings.defaultLanguage} onChange={handleGeneralChange}>
-                      <option value="np">{t.nepali}</option>
-                      <option value="en">{t.english}</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>{t.itemsPerPage}</label>
-                    <select name="itemsPerPage" value={generalSettings.itemsPerPage} onChange={handleGeneralChange}>
-                      <option value="5">5</option>
-                      <option value="10">10</option>
-                      <option value="15">15</option>
-                      <option value="20">20</option>
-                      <option value="25">25</option>
-                      <option value="50">50</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="checkbox-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="enableRegistration"
-                      checked={generalSettings.enableRegistration}
-                      onChange={handleGeneralChange}
-                    />
-                    <span>{t.enableRegistration}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="enablePublicComplaints"
-                      checked={generalSettings.enablePublicComplaints}
-                      onChange={handleGeneralChange}
-                    />
-                    <span>{t.enablePublicComplaints}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="maintenanceMode"
-                      checked={generalSettings.maintenanceMode}
-                      onChange={handleGeneralChange}
-                    />
-                    <span>{t.maintenanceMode}</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Email Settings Tab */}
-          {activeTab === 'email' && (
-            <div className="settings-section">
-              <div className="settings-card">
-                <h3>{t.emailSettings}</h3>
-                
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>{t.smtpHost}</label>
-                    <input
-                      type="text"
-                      name="smtpHost"
-                      value={emailSettings.smtpHost}
-                      onChange={handleEmailChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.smtpPort}</label>
-                    <input
-                      type="text"
-                      name="smtpPort"
-                      value={emailSettings.smtpPort}
-                      onChange={handleEmailChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.smtpUser}</label>
-                    <input
-                      type="text"
-                      name="smtpUser"
-                      value={emailSettings.smtpUser}
-                      onChange={handleEmailChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.smtpPassword}</label>
-                    <input
-                      type="password"
-                      name="smtpPassword"
-                      value={emailSettings.smtpPassword}
-                      onChange={handleEmailChange}
-                      placeholder="********"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.smtpEncryption}</label>
-                    <select name="smtpEncryption" value={emailSettings.smtpEncryption} onChange={handleEmailChange}>
-                      <option value="tls">{t.tls}</option>
-                      <option value="ssl">{t.ssl}</option>
-                      <option value="none">{t.none}</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>{t.fromEmail}</label>
-                    <input
-                      type="email"
-                      name="fromEmail"
-                      value={emailSettings.fromEmail}
-                      onChange={handleEmailChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.fromName} (English)</label>
-                    <input
-                      type="text"
-                      name="fromName"
-                      value={emailSettings.fromName}
-                      onChange={handleEmailChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.fromName} ({t.nepali})</label>
-                    <input
-                      type="text"
-                      name="fromName_np"
-                      value={emailSettings.fromName_np}
-                      onChange={handleEmailChange}
-                    />
-                  </div>
-                </div>
-
-                <div className="checkbox-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="sendComplaintConfirmation"
-                      checked={emailSettings.sendComplaintConfirmation}
-                      onChange={handleEmailChange}
-                    />
-                    <span>{t.sendComplaintConfirmation}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="sendComplaintUpdate"
-                      checked={emailSettings.sendComplaintUpdate}
-                      onChange={handleEmailChange}
-                    />
-                    <span>{t.sendComplaintUpdate}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="sendComplaintResolved"
-                      checked={emailSettings.sendComplaintResolved}
-                      onChange={handleEmailChange}
-                    />
-                    <span>{t.sendComplaintResolved}</span>
-                  </label>
-                </div>
-
-                <button className="test-email-btn" onClick={handleTestEmail}>
-                  ✉️ {t.testEmail}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Security Settings Tab */}
-          {activeTab === 'security' && (
-            <div className="settings-section">
-              <div className="settings-card">
-                <h3>{t.securitySettings}</h3>
-                
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>{t.sessionTimeout}</label>
-                    <input
-                      type="number"
-                      name="sessionTimeout"
-                      value={securitySettings.sessionTimeout}
-                      onChange={handleSecurityChange}
-                      min="5"
-                      max="120"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.maxLoginAttempts}</label>
-                    <input
-                      type="number"
-                      name="maxLoginAttempts"
-                      value={securitySettings.maxLoginAttempts}
-                      onChange={handleSecurityChange}
-                      min="3"
-                      max="10"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.lockoutDuration}</label>
-                    <input
-                      type="number"
-                      name="lockoutDuration"
-                      value={securitySettings.lockoutDuration}
-                      onChange={handleSecurityChange}
-                      min="5"
-                      max="60"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.passwordExpiryDays}</label>
-                    <input
-                      type="number"
-                      name="passwordExpiryDays"
-                      value={securitySettings.passwordExpiryDays}
-                      onChange={handleSecurityChange}
-                      min="30"
-                      max="365"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.minPasswordLength}</label>
-                    <input
-                      type="number"
-                      name="minPasswordLength"
-                      value={securitySettings.minPasswordLength}
-                      onChange={handleSecurityChange}
-                      min="6"
-                      max="20"
-                    />
-                  </div>
-                </div>
-
-                <div className="checkbox-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="requireUppercase"
-                      checked={securitySettings.requireUppercase}
-                      onChange={handleSecurityChange}
-                    />
-                    <span>{t.requireUppercase}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="requireLowercase"
-                      checked={securitySettings.requireLowercase}
-                      onChange={handleSecurityChange}
-                    />
-                    <span>{t.requireLowercase}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="requireNumbers"
-                      checked={securitySettings.requireNumbers}
-                      onChange={handleSecurityChange}
-                    />
-                    <span>{t.requireNumbers}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="requireSpecialChars"
-                      checked={securitySettings.requireSpecialChars}
-                      onChange={handleSecurityChange}
-                    />
-                    <span>{t.requireSpecialChars}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="twoFactorAuth"
-                      checked={securitySettings.twoFactorAuth}
-                      onChange={handleSecurityChange}
-                    />
-                    <span>{t.twoFactorAuth}</span>
-                  </label>
-                </div>
-
-                <div className="form-group full-width">
-                  <label>{t.ipWhitelist}</label>
-                  <textarea
-                    name="ipWhitelist"
-                    value={securitySettings.ipWhitelist}
-                    onChange={handleSecurityChange}
-                    rows="3"
-                    placeholder="192.168.1.1&#10;10.0.0.1&#10;172.16.0.1"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Backup Settings Tab */}
-          {activeTab === 'backup' && (
-            <div className="settings-section">
-              <div className="settings-card">
-                <h3>{t.backupSettings}</h3>
-                
-                <div className="checkbox-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="autoBackup"
-                      checked={backupSettings.autoBackup}
-                      onChange={handleBackupChange}
-                    />
-                    <span>{t.autoBackup}</span>
-                  </label>
-                </div>
-
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>{t.backupFrequency}</label>
-                    <select name="backupFrequency" value={backupSettings.backupFrequency} onChange={handleBackupChange}>
-                      <option value="daily">{t.daily}</option>
-                      <option value="weekly">{t.weekly}</option>
-                      <option value="monthly">{t.monthly}</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>{t.backupTime}</label>
-                    <input
-                      type="time"
-                      name="backupTime"
-                      value={backupSettings.backupTime}
-                      onChange={handleBackupChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.backupRetention}</label>
-                    <input
-                      type="number"
-                      name="backupRetention"
-                      value={backupSettings.backupRetention}
-                      onChange={handleBackupChange}
-                      min="7"
-                      max="365"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.backupLocation}</label>
-                    <input
-                      type="text"
-                      name="backupLocation"
-                      value={backupSettings.backupLocation}
-                      onChange={handleBackupChange}
-                    />
-                  </div>
-                </div>
-
-                <div className="backup-info">
-                  <div className="info-row">
-                    <span className="info-label">{t.lastBackup}:</span>
-                    <span className="info-value">{backupSettings.lastBackup}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">{t.lastBackupSize}:</span>
-                    <span className="info-value">{backupSettings.lastBackupSize}</span>
-                  </div>
-                </div>
-
-                <button className="manual-backup-btn" onClick={handleManualBackup}>
-                  💾 {t.backupNow}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Notification Settings Tab */}
-          {activeTab === 'notifications' && (
-            <div className="settings-section">
-              <div className="settings-card">
-                <h3>{t.notificationSettings}</h3>
-                
-                <div className="checkbox-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="emailNotifications"
-                      checked={notificationSettings.emailNotifications}
-                      onChange={handleNotificationChange}
-                    />
-                    <span>{t.emailNotifications}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="smsNotifications"
-                      checked={notificationSettings.smsNotifications}
-                      onChange={handleNotificationChange}
-                    />
-                    <span>{t.smsNotifications}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="pushNotifications"
-                      checked={notificationSettings.pushNotifications}
-                      onChange={handleNotificationChange}
-                    />
-                    <span>{t.pushNotifications}</span>
-                  </label>
-                </div>
-
-                <div className="form-group">
-                  <label>{t.adminEmail}</label>
-                  <input
-                    type="email"
-                    name="adminEmail"
-                    value={notificationSettings.adminEmail}
-                    onChange={handleNotificationChange}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>{t.adminPhone}</label>
-                  <input
-                    type="text"
-                    name="adminPhone"
-                    value={notificationSettings.adminPhone}
-                    onChange={handleNotificationChange}
-                  />
-                </div>
-
-                <div className="checkbox-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="notifyNewComplaint"
-                      checked={notificationSettings.notifyNewComplaint}
-                      onChange={handleNotificationChange}
-                    />
-                    <span>{t.notifyNewComplaint}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="notifyComplaintUpdate"
-                      checked={notificationSettings.notifyComplaintUpdate}
-                      onChange={handleNotificationChange}
-                    />
-                    <span>{t.notifyComplaintUpdate}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="notifyComplaintResolved"
-                      checked={notificationSettings.notifyComplaintResolved}
-                      onChange={handleNotificationChange}
-                    />
-                    <span>{t.notifyComplaintResolved}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="notifyNewUser"
-                      checked={notificationSettings.notifyNewUser}
-                      onChange={handleNotificationChange}
-                    />
-                    <span>{t.notifyNewUser}</span>
-                  </label>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="notifySystemUpdate"
-                      checked={notificationSettings.notifySystemUpdate}
-                      onChange={handleNotificationChange}
-                    />
-                    <span>{t.notifySystemUpdate}</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -980,7 +982,10 @@ const AdminSettingsGeneral = () => {
         .admin-settings {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          min-height: 100vh;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
         }
 
         .loading-container {
@@ -1005,12 +1010,17 @@ const AdminSettingsGeneral = () => {
           to { transform: rotate(360deg); }
         }
 
-        .settings-container {
+        /* Dashboard Layout */
+        .dashboard-layout {
           display: flex;
+          height: calc(100vh - 195px);
           margin-top: 195px;
-          min-height: calc(100vh - 195px);
+          position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -1019,13 +1029,42 @@ const AdminSettingsGeneral = () => {
           height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 40;
+          z-index: 100;
+          overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
-          padding: 24px 32px;
           margin-left: 260px;
+          width: calc(100% - 260px);
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
+        }
+
+        .main-container::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+        }
+
+        .content-wrapper {
+          padding: 24px 32px;
+          min-height: 100%;
         }
 
         .page-header {
@@ -1252,35 +1291,60 @@ const AdminSettingsGeneral = () => {
           color: #0f172a;
         }
 
+        /* Responsive */
         @media (max-width: 768px) {
-          .settings-container {
-            margin-top: 280px;
+          .admin-settings {
+            height: auto;
+            overflow: auto;
           }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
           .sidebar-container {
-            top: 280px;
-            height: calc(100vh - 280px);
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
           }
+          
           .main-container {
-            padding: 16px;
             margin-left: 0;
+            width: 100%;
+            overflow-y: visible;
           }
+          
+          .content-wrapper {
+            padding: 16px;
+          }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
           }
+          
           .form-grid {
             grid-template-columns: 1fr;
           }
+          
           .form-group.full-width {
             grid-column: span 1;
           }
+          
           .settings-tabs {
             overflow-x: auto;
             flex-wrap: nowrap;
           }
+          
           .tab-btn {
             white-space: nowrap;
           }
+          
           .checkbox-group {
             flex-direction: column;
             gap: 12px;

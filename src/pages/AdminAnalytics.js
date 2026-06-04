@@ -196,264 +196,266 @@ const AdminAnalytics = () => {
     <div className="admin-analytics">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
-      <div className="analytics-container">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
         <div className="main-container">
-          <div className="page-header">
-            <div>
-              <h1>📊 {t.analytics}</h1>
-              <p>{t.dashboard}</p>
+          <div className="content-wrapper">
+            <div className="page-header">
+              <div>
+                <h1>📊 {t.analytics}</h1>
+                <p>{t.dashboard}</p>
+              </div>
+              <div className="header-actions">
+                <select 
+                  value={timePeriod} 
+                  onChange={(e) => setTimePeriod(e.target.value)}
+                  className="period-select"
+                >
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="quarter">This Quarter</option>
+                  <option value="year">This Year</option>
+                </select>
+                <button className="export-btn" onClick={handleExportReport}>📥 {t.exportReport}</button>
+                <button className="refresh-btn" onClick={handleRefresh}>🔄 {t.refresh}</button>
+              </div>
             </div>
-            <div className="header-actions">
-              <select 
-                value={timePeriod} 
-                onChange={(e) => setTimePeriod(e.target.value)}
-                className="period-select"
-              >
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-                <option value="quarter">This Quarter</option>
-                <option value="year">This Year</option>
-              </select>
-              <button className="export-btn" onClick={handleExportReport}>📥 {t.exportReport}</button>
-              <button className="refresh-btn" onClick={handleRefresh}>🔄 {t.refresh}</button>
-            </div>
-          </div>
 
-          {/* Overview Cards */}
-          <div className="overview-cards">
-            <div className="overview-card">
-              <div className="card-icon blue">📋</div>
-              <div className="card-info">
-                <div className="card-value">{analyticsData.overview.totalComplaints}</div>
-                <div className="card-label">{t.complaints}</div>
-                <div className="card-trend positive">↑ 12% {t.vsLastMonth}</div>
+            {/* Overview Cards */}
+            <div className="overview-cards">
+              <div className="overview-card">
+                <div className="card-icon blue">📋</div>
+                <div className="card-info">
+                  <div className="card-value">{analyticsData.overview.totalComplaints}</div>
+                  <div className="card-label">{t.complaints}</div>
+                  <div className="card-trend positive">↑ 12% {t.vsLastMonth}</div>
+                </div>
+              </div>
+              <div className="overview-card">
+                <div className="card-icon green">✅</div>
+                <div className="card-info">
+                  <div className="card-value">{analyticsData.overview.resolvedComplaints}</div>
+                  <div className="card-label">{t.resolved}</div>
+                  <div className="card-trend positive">↑ 8% {t.vsLastMonth}</div>
+                </div>
+              </div>
+              <div className="overview-card">
+                <div className="card-icon orange">⏳</div>
+                <div className="card-info">
+                  <div className="card-value">{analyticsData.overview.pendingComplaints}</div>
+                  <div className="card-label">{t.pending}</div>
+                  <div className="card-trend negative">↑ 5% {t.vsLastMonth}</div>
+                </div>
+              </div>
+              <div className="overview-card">
+                <div className="card-icon yellow">🔄</div>
+                <div className="card-info">
+                  <div className="card-value">{analyticsData.overview.inProgressComplaints}</div>
+                  <div className="card-label">{t.inProgress}</div>
+                  <div className="card-trend positive">↓ 3% {t.vsLastMonth}</div>
+                </div>
+              </div>
+              <div className="overview-card">
+                <div className="card-icon pink">⭐</div>
+                <div className="card-info">
+                  <div className="card-value">{analyticsData.overview.satisfactionRate}%</div>
+                  <div className="card-label">{t.satisfactionRate}</div>
+                  <div className="card-trend positive">↑ 4% {t.vsLastMonth}</div>
+                </div>
+              </div>
+              <div className="overview-card">
+                <div className="card-icon purple">⏱️</div>
+                <div className="card-info">
+                  <div className="card-value">{language === 'np' ? analyticsData.overview.avgResponseTime : analyticsData.overview.enAvgResponseTime} {t.hours}</div>
+                  <div className="card-label">{t.avgResponseTime}</div>
+                  <div className="card-trend positive">↓ 0.5% {t.vsLastMonth}</div>
+                </div>
               </div>
             </div>
-            <div className="overview-card">
-              <div className="card-icon green">✅</div>
-              <div className="card-info">
-                <div className="card-value">{analyticsData.overview.resolvedComplaints}</div>
-                <div className="card-label">{t.resolved}</div>
-                <div className="card-trend positive">↑ 8% {t.vsLastMonth}</div>
-              </div>
-            </div>
-            <div className="overview-card">
-              <div className="card-icon orange">⏳</div>
-              <div className="card-info">
-                <div className="card-value">{analyticsData.overview.pendingComplaints}</div>
-                <div className="card-label">{t.pending}</div>
-                <div className="card-trend negative">↑ 5% {t.vsLastMonth}</div>
-              </div>
-            </div>
-            <div className="overview-card">
-              <div className="card-icon yellow">🔄</div>
-              <div className="card-info">
-                <div className="card-value">{analyticsData.overview.inProgressComplaints}</div>
-                <div className="card-label">{t.inProgress}</div>
-                <div className="card-trend positive">↓ 3% {t.vsLastMonth}</div>
-              </div>
-            </div>
-            <div className="overview-card">
-              <div className="card-icon pink">⭐</div>
-              <div className="card-info">
-                <div className="card-value">{analyticsData.overview.satisfactionRate}%</div>
-                <div className="card-label">{t.satisfactionRate}</div>
-                <div className="card-trend positive">↑ 4% {t.vsLastMonth}</div>
-              </div>
-            </div>
-            <div className="overview-card">
-              <div className="card-icon purple">⏱️</div>
-              <div className="card-info">
-                <div className="card-value">{language === 'np' ? analyticsData.overview.avgResponseTime : analyticsData.overview.enAvgResponseTime} {t.hours}</div>
-                <div className="card-label">{t.avgResponseTime}</div>
-                <div className="card-trend positive">↓ 0.5% {t.vsLastMonth}</div>
-              </div>
-            </div>
-          </div>
 
-          {/* Stats Row */}
-          <div className="stats-row">
-            <div className="stat-box">
-              <span className="stat-box-icon">⏰</span>
-              <div className="stat-box-info">
-                <div className="stat-box-value">{language === 'np' ? analyticsData.overview.peakHour : analyticsData.overview.enPeakHour}</div>
-                <div className="stat-box-label">{t.peakHour}</div>
+            {/* Stats Row */}
+            <div className="stats-row">
+              <div className="stat-box">
+                <span className="stat-box-icon">⏰</span>
+                <div className="stat-box-info">
+                  <div className="stat-box-value">{language === 'np' ? analyticsData.overview.peakHour : analyticsData.overview.enPeakHour}</div>
+                  <div className="stat-box-label">{t.peakHour}</div>
+                </div>
+              </div>
+              <div className="stat-box">
+                <span className="stat-box-icon">📅</span>
+                <div className="stat-box-info">
+                  <div className="stat-box-value">{language === 'np' ? analyticsData.overview.busiestDay : analyticsData.overview.enBusiestDay}</div>
+                  <div className="stat-box-label">{t.busiestDay}</div>
+                </div>
+              </div>
+              <div className="stat-box">
+                <span className="stat-box-icon">⚡</span>
+                <div className="stat-box-info">
+                  <div className="stat-box-value">{language === 'np' ? analyticsData.overview.avgResolutionTime : analyticsData.overview.enAvgResolutionTime} {t.days}</div>
+                  <div className="stat-box-label">{t.avgResolutionTime}</div>
+                </div>
               </div>
             </div>
-            <div className="stat-box">
-              <span className="stat-box-icon">📅</span>
-              <div className="stat-box-info">
-                <div className="stat-box-value">{language === 'np' ? analyticsData.overview.busiestDay : analyticsData.overview.enBusiestDay}</div>
-                <div className="stat-box-label">{t.busiestDay}</div>
-              </div>
-            </div>
-            <div className="stat-box">
-              <span className="stat-box-icon">⚡</span>
-              <div className="stat-box-info">
-                <div className="stat-box-value">{language === 'np' ? analyticsData.overview.avgResolutionTime : analyticsData.overview.enAvgResolutionTime} {t.days}</div>
-                <div className="stat-box-label">{t.avgResolutionTime}</div>
-              </div>
-            </div>
-          </div>
 
-          {/* Category Distribution */}
-          <div className="chart-card">
-            <h3>{t.categoryDistribution}</h3>
-            <div className="category-grid">
-              {analyticsData.categories.data.map((value, idx) => {
-                const percentage = ((value / totalCategories) * 100).toFixed(1);
-                return (
-                  <div key={idx} className="category-item">
-                    <div className="category-header">
-                      <span className="category-dot" style={{ backgroundColor: analyticsData.categories.colors[idx] }}></span>
-                      <span className="category-name">{getCategoryLabels()[idx]}</span>
-                      <span className="category-value">{value}</span>
-                    </div>
-                    <div className="category-bar">
-                      <div className="category-bar-fill" style={{ width: `${percentage}%`, backgroundColor: analyticsData.categories.colors[idx] }}></div>
-                    </div>
-                    <div className="category-percentage">{percentage}%</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Monthly Trend */}
-          <div className="chart-card">
-            <h3>{t.monthlyTrend}</h3>
-            <div className="trend-container">
-              <div className="trend-legend">
-                <span className="legend-dot complaints"></span>
-                <span>{t.complaints}</span>
-                <span className="legend-dot resolved"></span>
-                <span>{t.resolved}</span>
-              </div>
-              <div className="trend-chart">
-                {analyticsData.trends.complaints.map((value, idx) => (
-                  <div key={idx} className="trend-column">
-                    <div className="trend-bars">
-                      <div 
-                        className="trend-bar complaints-bar" 
-                        style={{ height: `${(value / maxTrendValue) * 100}%` }}
-                      >
-                        <span className="trend-value">{value}</span>
+            {/* Category Distribution */}
+            <div className="chart-card">
+              <h3>{t.categoryDistribution}</h3>
+              <div className="category-grid">
+                {analyticsData.categories.data.map((value, idx) => {
+                  const percentage = ((value / totalCategories) * 100).toFixed(1);
+                  return (
+                    <div key={idx} className="category-item">
+                      <div className="category-header">
+                        <span className="category-dot" style={{ backgroundColor: analyticsData.categories.colors[idx] }}></span>
+                        <span className="category-name">{getCategoryLabels()[idx]}</span>
+                        <span className="category-value">{value}</span>
                       </div>
-                      <div 
-                        className="trend-bar resolved-bar" 
-                        style={{ height: `${(analyticsData.trends.resolved[idx] / maxTrendValue) * 100}%` }}
-                      >
-                        <span className="trend-value">{analyticsData.trends.resolved[idx]}</span>
+                      <div className="category-bar">
+                        <div className="category-bar-fill" style={{ width: `${percentage}%`, backgroundColor: analyticsData.categories.colors[idx] }}></div>
+                      </div>
+                      <div className="category-percentage">{percentage}%</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Monthly Trend */}
+            <div className="chart-card">
+              <h3>{t.monthlyTrend}</h3>
+              <div className="trend-container">
+                <div className="trend-legend">
+                  <span className="legend-dot complaints"></span>
+                  <span>{t.complaints}</span>
+                  <span className="legend-dot resolved"></span>
+                  <span>{t.resolved}</span>
+                </div>
+                <div className="trend-chart">
+                  {analyticsData.trends.complaints.map((value, idx) => (
+                    <div key={idx} className="trend-column">
+                      <div className="trend-bars">
+                        <div 
+                          className="trend-bar complaints-bar" 
+                          style={{ height: `${(value / maxTrendValue) * 100}%` }}
+                        >
+                          <span className="trend-value">{value}</span>
+                        </div>
+                        <div 
+                          className="trend-bar resolved-bar" 
+                          style={{ height: `${(analyticsData.trends.resolved[idx] / maxTrendValue) * 100}%` }}
+                        >
+                          <span className="trend-value">{analyticsData.trends.resolved[idx]}</span>
+                        </div>
+                      </div>
+                      <div className="trend-label">{getMonthLabels()[idx]}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Response vs Resolution */}
+            <div className="chart-card">
+              <h3>{t.responseVsResolution}</h3>
+              <div className="dual-legend">
+                <span className="legend-dot response"></span>
+                <span>{t.avgResponseTime} ({t.hours})</span>
+                <span className="legend-dot resolution"></span>
+                <span>{t.avgResolutionTime} ({t.days})</span>
+              </div>
+              <div className="dual-chart">
+                {analyticsData.performance.responseTime.map((value, idx) => (
+                  <div key={idx} className="dual-column">
+                    <div className="dual-bars">
+                      <div className="dual-bar response-bar" style={{ height: `${(value / 5) * 100}%` }}>
+                        <span className="dual-value">{value}</span>
+                      </div>
+                      <div className="dual-bar resolution-bar" style={{ height: `${(analyticsData.performance.resolutionTime[idx] / 5) * 100}%` }}>
+                        <span className="dual-value">{analyticsData.performance.resolutionTime[idx]}</span>
                       </div>
                     </div>
-                    <div className="trend-label">{getMonthLabels()[idx]}</div>
+                    <div className="dual-label">{getPerfLabels()[idx]}</div>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* Response vs Resolution */}
-          <div className="chart-card">
-            <h3>{t.responseVsResolution}</h3>
-            <div className="dual-legend">
-              <span className="legend-dot response"></span>
-              <span>{t.avgResponseTime} ({t.hours})</span>
-              <span className="legend-dot resolution"></span>
-              <span>{t.avgResolutionTime} ({t.days})</span>
-            </div>
-            <div className="dual-chart">
-              {analyticsData.performance.responseTime.map((value, idx) => (
-                <div key={idx} className="dual-column">
-                  <div className="dual-bars">
-                    <div className="dual-bar response-bar" style={{ height: `${(value / 5) * 100}%` }}>
-                      <span className="dual-value">{value}</span>
-                    </div>
-                    <div className="dual-bar resolution-bar" style={{ height: `${(analyticsData.performance.resolutionTime[idx] / 5) * 100}%` }}>
-                      <span className="dual-value">{analyticsData.performance.resolutionTime[idx]}</span>
-                    </div>
-                  </div>
-                  <div className="dual-label">{getPerfLabels()[idx]}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Top Performers */}
-          <div className="chart-card">
-            <h3>{t.topPerformers}</h3>
-            <div className="table-wrapper">
-              <table className="performers-table">
-                <thead>
-                  <tr>
-                    <th>{t.team}</th>
-                    <th>{t.resolvedCount}</th>
-                    <th>{t.avgTime} ({t.days})</th>
-                    <th>{t.satisfaction}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {analyticsData.topPerformers.map((performer) => (
-                    <tr key={performer.id}>
-                      <td className="performer-name">{language === 'np' ? performer.name : performer.enName}</td>
-                      <td>{performer.resolved}</td>
-                      <td>{performer.avgTime} {t.days}</td>
-                      <td>
-                        <div className="star-rating">
-                          {'★'.repeat(Math.floor(performer.satisfaction))}
-                          {'☆'.repeat(5 - Math.floor(performer.satisfaction))}
-                          <span className="rating-value">({performer.satisfaction})</span>
-                        </div>
-                      </td>
+            {/* Top Performers */}
+            <div className="chart-card">
+              <h3>{t.topPerformers}</h3>
+              <div className="table-wrapper">
+                <table className="performers-table">
+                  <thead>
+                    <tr>
+                      <th>{t.team}</th>
+                      <th>{t.resolvedCount}</th>
+                      <th>{t.avgTime} ({t.days})</th>
+                      <th>{t.satisfaction}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {analyticsData.topPerformers.map((performer) => (
+                      <tr key={performer.id}>
+                        <td className="performer-name">{language === 'np' ? performer.name : performer.enName}</td>
+                        <td>{performer.resolved}</td>
+                        <td>{performer.avgTime} {t.days}</td>
+                        <td>
+                          <div className="star-rating">
+                            {'★'.repeat(Math.floor(performer.satisfaction))}
+                            {'☆'.repeat(5 - Math.floor(performer.satisfaction))}
+                            <span className="rating-value">({performer.satisfaction})</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
 
-          {/* Hourly Distribution */}
-          <div className="chart-card">
-            <h3>{t.hourlyDistribution}</h3>
-            <div className="hourly-container">
-              {analyticsData.hourlyDistribution.map((item, idx) => (
-                <div key={idx} className="hourly-item">
-                  <div className="hourly-label">{getHourText(item)}</div>
-                  <div className="hourly-bar-wrapper">
-                    <div 
-                      className="hourly-bar" 
-                      style={{ height: `${(item.count / maxCount) * 100}%` }}
-                    >
-                      <span className="hourly-count">{item.count}</span>
+            {/* Hourly Distribution */}
+            <div className="chart-card">
+              <h3>{t.hourlyDistribution}</h3>
+              <div className="hourly-container">
+                {analyticsData.hourlyDistribution.map((item, idx) => (
+                  <div key={idx} className="hourly-item">
+                    <div className="hourly-label">{getHourText(item)}</div>
+                    <div className="hourly-bar-wrapper">
+                      <div 
+                        className="hourly-bar" 
+                        style={{ height: `${(item.count / maxCount) * 100}%` }}
+                      >
+                        <span className="hourly-count">{item.count}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Day-wise Distribution */}
-          <div className="chart-card">
-            <h3>{t.dayWiseDistribution}</h3>
-            <div className="daywise-container">
-              {analyticsData.dayWiseDistribution.map((item, idx) => (
-                <div key={idx} className="daywise-item">
-                  <div className="daywise-label">{getDayText(item)}</div>
-                  <div className="daywise-bar-wrapper">
-                    <div 
-                      className="daywise-bar" 
-                      style={{ height: `${(item.count / maxDayCount) * 100}%` }}
-                    >
-                      <span className="daywise-count">{item.count}</span>
+            {/* Day-wise Distribution */}
+            <div className="chart-card">
+              <h3>{t.dayWiseDistribution}</h3>
+              <div className="daywise-container">
+                {analyticsData.dayWiseDistribution.map((item, idx) => (
+                  <div key={idx} className="daywise-item">
+                    <div className="daywise-label">{getDayText(item)}</div>
+                    <div className="daywise-bar-wrapper">
+                      <div 
+                        className="daywise-bar" 
+                        style={{ height: `${(item.count / maxDayCount) * 100}%` }}
+                      >
+                        <span className="daywise-count">{item.count}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -469,7 +471,10 @@ const AdminAnalytics = () => {
         .admin-analytics {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          min-height: 100vh;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
         }
 
         .loading-container {
@@ -494,12 +499,17 @@ const AdminAnalytics = () => {
           to { transform: rotate(360deg); }
         }
 
-        .analytics-container {
+        /* Dashboard Layout */
+        .dashboard-layout {
           display: flex;
+          height: calc(100vh - 195px);
           margin-top: 195px;
-          min-height: calc(100vh - 195px);
+          position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -508,13 +518,42 @@ const AdminAnalytics = () => {
           height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 40;
+          z-index: 100;
+          overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
-          padding: 24px 32px;
           margin-left: 260px;
+          width: calc(100% - 260px);
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
+        }
+
+        .main-container::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .main-container::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+        }
+
+        .content-wrapper {
+          padding: 24px 32px;
+          min-height: 100%;
         }
 
         .page-header {
@@ -1096,44 +1135,70 @@ const AdminAnalytics = () => {
         }
 
         @media (max-width: 768px) {
-          .analytics-container {
-            margin-top: 280px;
+          .admin-analytics {
+            height: auto;
+            overflow: auto;
           }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
           .sidebar-container {
-            top: 280px;
-            height: calc(100vh - 280px);
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
           }
+          
           .main-container {
-            padding: 16px;
             margin-left: 0;
+            width: 100%;
+            overflow-y: visible;
           }
+          
+          .content-wrapper {
+            padding: 16px;
+          }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
           }
+          
           .overview-cards {
             grid-template-columns: repeat(2, 1fr);
           }
+          
           .stats-row {
             grid-template-columns: 1fr;
           }
+          
           .trend-chart, .dual-chart, .hourly-container, .daywise-container {
             height: auto;
             flex-direction: column;
           }
+          
           .trend-column, .dual-column, .hourly-item, .daywise-item {
             flex-direction: row;
             width: 100%;
             justify-content: space-between;
           }
+          
           .trend-bars, .dual-bars, .hourly-bar-wrapper, .daywise-bar-wrapper {
             width: 60%;
           }
+          
           .trend-bar, .dual-bar, .hourly-bar, .daywise-bar {
             width: 100%;
             height: 30px !important;
             border-radius: 6px;
           }
+          
           .trend-value, .dual-value, .hourly-count, .daywise-count {
             top: 50%;
             left: 10px;
@@ -1145,11 +1210,13 @@ const AdminAnalytics = () => {
           .overview-cards {
             grid-template-columns: 1fr;
           }
+          
           .performers-table th,
           .performers-table td {
             padding: 8px;
             font-size: 0.7rem;
           }
+          
           .category-header {
             flex-wrap: wrap;
           }
