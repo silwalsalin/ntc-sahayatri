@@ -31,6 +31,17 @@ import AdminContact from './pages/AdminContact';
 import StaffDashboard from './pages/StaffDashboard';
 import StaffComplaintsAssigned from './pages/StaffComplaintsAssigned';
 import StaffComplaintSolve from './pages/StaffComplaintSolve';
+import StaffComplaintsMy from './pages/StaffComplaintsMy';
+import StaffComplaintsAll from './pages/StaffComplaintsAll';
+import StaffCmplaintsPending from './pages/StaffComplaintsPending';
+import StaffComplaintsInprogress from './pages/StaffComplaintsInprogress';
+import StaffComplaintsResolved from './pages/StaffComplaintsResolved';
+import StaffTasks from './pages/StaffTasks';
+import StaffTasksPending from './pages/StaffTasksPending';
+import StaffTasksCompleted from './pages/StaffTasksCompleted';
+import StaffReportsDaily from './pages/StaffReportsDaily';
+import StaffReportsWeekly from './pages/StaffReportsWeekly';
+import StaffReportsMonthly from './pages/StaffReportsMonthly';
 function App() {
   return (
     <Router>
@@ -64,6 +75,17 @@ function App() {
           <Route path="/staff-dashboard" element={<StaffDashboard />} />
           <Route path="/staff/complaints/assigned" element={<StaffComplaintsAssigned />} />
           <Route path="/staff/complaints/solve/:id" element={<StaffComplaintSolve />} />
+          <Route path="/staff/complaints/my" element={<StaffComplaintsMy />} />
+          <Route path="/staff/complaints/all" element={<StaffComplaintsAll />} />
+          <Route path="/staff/complaints/pending" element={<StaffCmplaintsPending />} />
+          <Route path="/staff/complaints/in-progress" element={<StaffComplaintsInprogress />} />
+          <Route path="/staff/complaints/resolved" element={<StaffComplaintsResolved />} />
+          <Route path="/staff/tasks" element={<StaffTasks />} />
+          <Route path="/staff/tasks/pending" element={<StaffTasksPending />} />
+          <Route path="/staff/tasks/completed" element={<StaffTasksCompleted />} />
+          <Route path="/staff/reports/daily" element={<StaffReportsDaily />} />
+          <Route path="/staff/reports/weekly" element={<StaffReportsWeekly />} />
+          <Route path="/staff/reports/monthly" element={<StaffReportsMonthly />} />
                   </Routes>
       </div>
     </Router>
