@@ -48,7 +48,7 @@ import StaffProfile from './pages/StaffProfile';
 import StaffAccountSettings from './pages/StaffAccountSettings';
 import StaffDocumentation from './pages/StaffDocumentation';
 import StaffContact from './pages/StaffContact';
-import AdminUsersAdd from './pages/AdminUsersAdd';
+import AdminProfile from './pages/AdminProfile';
 function App() {
   return (
     <Router>
@@ -98,8 +98,9 @@ function App() {
           <Route path="/staff/profile" element={<StaffProfile />} />
           <Route path="/staff/account-settings" element={<StaffAccountSettings />} />
           <Route path="/staff/documentation" element={<StaffDocumentation />} />
-          <Route path="/staff/contact" element={<StaffContact />} />\
-          <Route path="/admin-users/add" element={<AdminUsersAdd />} />
+          <Route path="/staff/contact" element={<StaffContact />} />
+          <Route path="/admin-profile" element={<AdminProfile />} />
+        
                   </Routes>
       </div>
     </Router>

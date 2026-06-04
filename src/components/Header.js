@@ -15,7 +15,7 @@ try {
   govLogo = null;
 }
 
-const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
+const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "admin" }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
@@ -41,7 +41,9 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
       logout: 'लगआउट',
       profile: 'प्रोफाइल',
       settings: 'सेटिङ्स',
-      adminPanel: 'प्रशासक प्यानल'
+      adminPanel: 'प्रशासक प्यानल',
+      welcome: 'स्वागत छ',
+      admin: 'प्रशासक'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -52,7 +54,9 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
       logout: 'Logout',
       profile: 'Profile',
       settings: 'Settings',
-      adminPanel: 'Admin Panel'
+      adminPanel: 'Admin Panel',
+      welcome: 'Welcome',
+      admin: 'Admin'
     }
   };
 
@@ -64,8 +68,10 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
+    localStorage.removeItem('token');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('user');
     navigate('/');
   };
 
@@ -84,6 +90,14 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
         onError={() => setImgError(true)}
       />
     );
+  };
+
+  // Get display name for admin
+  const getDisplayName = () => {
+    if (adminName && adminName !== 'Admin') {
+      return adminName;
+    }
+    return userRole === 'admin' ? t.admin : adminName;
   };
 
   return (
@@ -165,35 +179,41 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
         </div>
       </div>
 
-      {/* HEADER 3 - Navigation Bar - Only Admin Dropdown */}
+      {/* HEADER 3 - Navigation Bar with Admin Dropdown */}
       <div className={`header-3 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
         <div className="container-3">
-          <div className="admin-dropdown">
-            <button 
-              className="admin-btn"
-              onClick={() => setShowAdminDropdown(!showAdminDropdown)}
-            >
-              <span className="admin-icon">👨‍💼</span>
-              <span className="admin-name">{adminName}</span>
-              <span className="dropdown-arrow">▼</span>
-            </button>
-            {showAdminDropdown && (
-              <div className="admin-dropdown-menu">
-                <button className="dropdown-item" onClick={() => navigate('/admin-profile')}>
-                  <span>👤</span>
-                  <span>{t.profile}</span>
-                </button>
-                <button className="dropdown-item" onClick={() => navigate('/admin-settings')}>
-                  <span>⚙️</span>
-                  <span>{t.settings}</span>
-                </button>
-                <hr className="dropdown-divider" />
-                <button className="dropdown-item logout" onClick={handleLogout}>
-                  <span>🚪</span>
-                  <span>{t.logout}</span>
-                </button>
-              </div>
-            )}
+          <div className="admin-info-display">
+            <div className="welcome-text">
+              {t.welcome}, 
+            </div>
+            <div className="admin-dropdown">
+              <button 
+                className="admin-btn"
+                onClick={() => setShowAdminDropdown(!showAdminDropdown)}
+              >
+                <span className="admin-icon">👨‍💼</span>
+                <span className="admin-name">{getDisplayName()}</span>
+                <span className="admin-role-badge">{userRole === 'admin' ? t.admin : ''}</span>
+                <span className="dropdown-arrow">▼</span>
+              </button>
+              {showAdminDropdown && (
+                <div className="admin-dropdown-menu">
+                  <button className="dropdown-item" onClick={() => navigate('/admin-profile')}>
+                    <span>👤</span>
+                    <span>{t.profile}</span>
+                  </button>
+                  <button className="dropdown-item" onClick={() => navigate('/admin-settings/general')}>
+                    <span>⚙️</span>
+                    <span>{t.settings}</span>
+                  </button>
+                  <hr className="dropdown-divider" />
+                  <button className="dropdown-item logout" onClick={handleLogout}>
+                    <span>🚪</span>
+                    <span>{t.logout}</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -446,7 +466,7 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
           margin-top: 3px; 
         }
 
-        /* HEADER 3 - Navigation Bar (Only Admin Dropdown) */
+        /* HEADER 3 - Navigation Bar */
         .header-3 {
           position: fixed;
           top: 119px;
@@ -474,15 +494,36 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
           align-items: center;
         }
 
+        /* Admin Info Display */
+        .admin-info-display {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: rgba(255,255,255,0.1);
+          padding: 5px 15px;
+          border-radius: 50px;
+          transition: all 0.3s ease;
+        }
+
+        .admin-info-display:hover {
+          background: rgba(255,255,255,0.2);
+        }
+
+        .welcome-text {
+          font-size: 0.85rem;
+          font-weight: 500;
+          opacity: 0.9;
+        }
+
         /* Admin Dropdown */
         .admin-dropdown {
           position: relative;
         }
 
         .admin-btn {
-          background: rgba(255,255,255,0.15);
-          border: 1px solid rgba(255,255,255,0.3);
-          padding: 8px 20px;
+          background: transparent;
+          border: none;
+          padding: 8px 12px;
           border-radius: 40px;
           cursor: pointer;
           color: white;
@@ -491,20 +532,33 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
           transition: all 0.3s ease;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
         }
 
         .admin-btn:hover {
-          background: rgba(255,255,255,0.25);
+          background: rgba(255,255,255,0.15);
           transform: translateY(-1px);
         }
 
         .admin-icon {
-          font-size: 1rem;
+          font-size: 1.1rem;
         }
 
         .admin-name {
-          font-size: 0.85rem;
+          font-size: 0.9rem;
+          font-weight: 600;
+          max-width: 150px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .admin-role-badge {
+          font-size: 0.65rem;
+          background: rgba(255,255,255,0.25);
+          padding: 2px 8px;
+          border-radius: 20px;
+          font-weight: 500;
         }
 
         .admin-dropdown-menu {
@@ -553,11 +607,17 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
         }
 
         /* Responsive */
+        @media (max-width: 992px) {
+          .container-1, .container-2, .container-3 {
+            padding: 0 20px;
+          }
+        }
+
         @media (max-width: 768px) {
           .container-1, .container-2, .container-3 {
             flex-direction: column;
             text-align: center;
-            padding: 0 20px;
+            padding: 0 16px;
           }
           
           .container-3 {
@@ -579,6 +639,35 @@ const Header = ({ language, setLanguage, adminName = "Admin User" }) => {
           
           .dept-text-center {
             flex: 1;
+          }
+
+          .admin-info-display {
+            width: 100%;
+            justify-content: center;
+          }
+
+          .admin-name {
+            max-width: 120px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .admin-info-display {
+            padding: 5px 10px;
+          }
+
+          .welcome-text {
+            font-size: 0.75rem;
+          }
+
+          .admin-name {
+            font-size: 0.8rem;
+            max-width: 100px;
+          }
+
+          .admin-role-badge {
+            font-size: 0.6rem;
+            padding: 2px 6px;
           }
         }
       `}</style>

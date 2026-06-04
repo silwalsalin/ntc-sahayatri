@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const Sidebar = ({ language }) => {
+const Sidebar = ({ language, isOpen = true, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedMenus, setExpandedMenus] = useState({});
@@ -23,7 +23,6 @@ const Sidebar = ({ language }) => {
       resolvedComplaints: 'समाधान',
       users: 'प्रयोगकर्ताहरू',
       allUsers: 'सबै प्रयोगकर्ता',
-      addUser: 'प्रयोगकर्ता थप्नुहोस्',
       reports: 'रिपोर्टहरू',
       complaintReports: 'गुनासो रिपोर्ट',
       userReports: 'प्रयोगकर्ता रिपोर्ट',
@@ -46,7 +45,6 @@ const Sidebar = ({ language }) => {
       resolvedComplaints: 'Resolved',
       users: 'Users',
       allUsers: 'All Users',
-      addUser: 'Add User',
       reports: 'Reports',
       complaintReports: 'Complaint Reports',
       userReports: 'User Reports',
@@ -88,8 +86,8 @@ const Sidebar = ({ language }) => {
       icon: '👥',
       label: t.users,
       children: [
-        { id: 'all-users', icon: '👤', label: t.allUsers, path: '/admin-users' },
-        { id: 'add-user', icon: '➕', label: t.addUser, path: '/admin-users/add' }
+        { id: 'all-users', icon: '👤', label: t.allUsers, path: '/admin-users' }
+        // Add User option removed from here
       ]
     },
     {
@@ -136,16 +134,25 @@ const Sidebar = ({ language }) => {
   // Filter menu items based on search
   const filterMenuItems = (items, term) => {
     if (!term) return items;
-    return items.filter(item => {
+    return items.reduce((acc, item) => {
       const matchLabel = item.label.toLowerCase().includes(term.toLowerCase());
       if (item.children) {
-        const matchChildren = item.children.some(child => 
+        const matchChildren = item.children.filter(child => 
           child.label.toLowerCase().includes(term.toLowerCase())
         );
-        if (matchChildren) return true;
+        if (matchChildren.length > 0) {
+          acc.push({
+            ...item,
+            children: matchChildren
+          });
+        } else if (matchLabel) {
+          acc.push(item);
+        }
+      } else if (matchLabel) {
+        acc.push(item);
       }
-      return matchLabel;
-    });
+      return acc;
+    }, []);
   };
 
   const filteredMenuItems = filterMenuItems(menuItems, searchTerm);
@@ -157,21 +164,30 @@ const Sidebar = ({ language }) => {
     }));
   };
 
-  const isActivePath = (path) => {
+  const isActivePath = (path, exact = false) => {
     if (!path) return false;
+    if (exact) {
+      return activePath === path;
+    }
     if (path === '/admin-dashboard') {
       return activePath === path;
     }
-    return activePath.startsWith(path);
+    return activePath === path || activePath.startsWith(path + '/');
   };
 
   const isChildActive = (children) => {
     if (!children) return false;
-    return children.some(child => activePath.startsWith(child.path));
+    return children.some(child => 
+      activePath === child.path || activePath.startsWith(child.path + '/')
+    );
   };
 
   const handleNavigation = (path) => {
     navigate(path);
+    // Close sidebar on mobile after navigation
+    if (window.innerWidth <= 768 && onClose) {
+      onClose();
+    }
   };
 
   // Auto-expand menus that have active children
@@ -186,13 +202,13 @@ const Sidebar = ({ language }) => {
   }, [activePath]);
 
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-logo">
           <span className="logo-icon">📡</span>
           <div className="logo-text">
             <span className="logo-title">NTC Sahayatri</span>
-            <span className="logo-subtitle">Admin</span>
+            <span className="logo-subtitle">Admin Panel</span>
           </div>
         </div>
       </div>
@@ -206,6 +222,11 @@ const Sidebar = ({ language }) => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+        {searchTerm && (
+          <button className="search-clear" onClick={() => setSearchTerm('')}>
+            ✕
+          </button>
+        )}
       </div>
 
       <div className="sidebar-menu">
@@ -238,7 +259,7 @@ const Sidebar = ({ language }) => {
               </>
             ) : (
               <button
-                className={`menu-item ${isActivePath(item.path) ? 'active' : ''}`}
+                className={`menu-item ${isActivePath(item.path, item.exact) ? 'active' : ''}`}
                 onClick={() => handleNavigation(item.path)}
               >
                 <span className="menu-icon">{item.icon}</span>
@@ -260,7 +281,7 @@ const Sidebar = ({ language }) => {
         <div className="admin-info">
           <div className="admin-avatar">👨‍💼</div>
           <div className="admin-details">
-            <span className="admin-name">Admin</span>
+            <span className="admin-name">Admin User</span>
             <span className="admin-role">Administrator</span>
           </div>
         </div>
@@ -268,10 +289,10 @@ const Sidebar = ({ language }) => {
 
       <style jsx>{`
         .sidebar {
-          width: 260px;
+          width: 280px;
           height: 100%;
-          background: #ffffff;
-          border-right: 1px solid #e5e7eb;
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          border-right: 1px solid #e2e8f0;
           display: flex;
           flex-direction: column;
           overflow: hidden;
@@ -279,140 +300,201 @@ const Sidebar = ({ language }) => {
 
         /* Header */
         .sidebar-header {
-          padding: 20px 16px;
-          border-bottom: 1px solid #f0f0f0;
+          padding: 24px 20px;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+          background: white;
         }
 
         .sidebar-logo {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
         }
 
         .logo-icon {
-          font-size: 1.6rem;
+          font-size: 1.8rem;
+          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
         }
 
         .logo-text {
           display: flex;
           flex-direction: column;
+          gap: 2px;
         }
 
         .logo-title {
-          font-size: 0.9rem;
-          font-weight: 600;
-          color: #111827;
+          font-size: 1rem;
+          font-weight: 700;
+          color: #0f172a;
+          letter-spacing: -0.3px;
         }
 
         .logo-subtitle {
-          font-size: 0.65rem;
-          color: #6b7280;
+          font-size: 0.7rem;
+          color: #64748b;
+          font-weight: 500;
         }
 
         /* Search */
         .sidebar-search {
-          padding: 12px 16px;
+          padding: 16px 20px;
           position: relative;
-          border-bottom: 1px solid #f0f0f0;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+          background: white;
         }
 
         .search-icon {
           position: absolute;
-          left: 28px;
+          left: 32px;
           top: 50%;
           transform: translateY(-50%);
-          font-size: 0.8rem;
-          color: #9ca3af;
+          font-size: 0.9rem;
+          color: #94a3b8;
+          pointer-events: none;
         }
 
         .search-input {
           width: 100%;
-          padding: 8px 12px 8px 32px;
-          background: #f9fafb;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          font-size: 0.8rem;
-          transition: all 0.2s;
-          color: #374151;
+          padding: 10px 32px 10px 36px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          font-size: 0.85rem;
+          transition: all 0.2s ease;
+          color: #0f172a;
+          font-family: inherit;
         }
 
         .search-input:focus {
           outline: none;
           border-color: #3b82f6;
           background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .search-input::placeholder {
-          color: #9ca3af;
+          color: #94a3b8;
+        }
+
+        .search-clear {
+          position: absolute;
+          right: 32px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: #e2e8f0;
+          border: none;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-size: 11px;
+          color: #64748b;
+          transition: all 0.2s;
+        }
+
+        .search-clear:hover {
+          background: #cbd5e1;
+          color: #0f172a;
         }
 
         /* Menu */
         .sidebar-menu {
           flex: 1;
           overflow-y: auto;
-          padding: 8px 0;
+          padding: 12px 12px;
+          background: white;
         }
 
         .sidebar-menu::-webkit-scrollbar {
-          width: 4px;
+          width: 5px;
         }
 
         .sidebar-menu::-webkit-scrollbar-track {
-          background: #f1f1f1;
+          background: #f1f5f9;
+          border-radius: 10px;
         }
 
         .sidebar-menu::-webkit-scrollbar-thumb {
-          background: #c1c1c1;
-          border-radius: 4px;
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+
+        .sidebar-menu::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
         }
 
         .menu-item-wrapper {
-          margin: 2px 8px;
+          margin-bottom: 4px;
         }
 
         .menu-item {
           width: 100%;
           display: flex;
           align-items: center;
-          gap: 10px;
-          padding: 10px 12px;
+          gap: 12px;
+          padding: 12px 14px;
           background: transparent;
           border: none;
-          color: #374151;
+          color: #475569;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.2s ease;
           text-align: left;
-          font-size: 0.85rem;
-          border-radius: 8px;
+          font-size: 0.9rem;
+          font-weight: 500;
+          border-radius: 12px;
+          position: relative;
         }
 
         .menu-item:hover {
-          background: #f3f4f6;
+          background: #f1f5f9;
+          color: #0f172a;
+          transform: translateX(2px);
         }
 
         .menu-item.active {
-          background: #eff6ff;
-          color: #3b82f6;
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          color: #2563eb;
+          font-weight: 600;
+        }
+
+        .menu-item.active::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 3px;
+          height: 20px;
+          background: #3b82f6;
+          border-radius: 0 3px 3px 0;
         }
 
         .menu-item.has-active-child {
-          background: #f9fafb;
+          background: #f8fafc;
+          color: #1e293b;
         }
 
         .menu-icon {
-          font-size: 1.1rem;
-          min-width: 24px;
+          font-size: 1.2rem;
+          min-width: 28px;
+          filter: drop-shadow(0 1px 1px rgba(0,0,0,0.05));
         }
 
         .menu-label {
           flex: 1;
-          font-weight: 500;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .menu-arrow {
-          font-size: 0.6rem;
-          color: #9ca3af;
-          transition: transform 0.2s;
+          font-size: 0.7rem;
+          color: #94a3b8;
+          transition: transform 0.25s ease;
+          margin-left: auto;
         }
 
         .menu-item.expanded .menu-arrow {
@@ -421,9 +503,23 @@ const Sidebar = ({ language }) => {
 
         /* Submenu */
         .submenu {
-          margin-left: 32px;
-          padding-left: 8px;
-          border-left: 1px solid #e5e7eb;
+          margin-left: 40px;
+          padding-left: 12px;
+          border-left: 2px solid #e2e8f0;
+          margin-top: 4px;
+          margin-bottom: 4px;
+          animation: slideDown 0.25s ease-out;
+        }
+
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         .submenu-item {
@@ -431,90 +527,126 @@ const Sidebar = ({ language }) => {
           display: flex;
           align-items: center;
           gap: 10px;
-          padding: 8px 12px;
+          padding: 10px 12px;
           background: transparent;
           border: none;
-          color: #6b7280;
+          color: #64748b;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.2s ease;
           text-align: left;
-          font-size: 0.8rem;
-          border-radius: 6px;
+          font-size: 0.85rem;
+          border-radius: 10px;
+          position: relative;
         }
 
         .submenu-item:hover {
-          background: #f3f4f6;
-          color: #374151;
+          background: #f1f5f9;
+          color: #0f172a;
+          transform: translateX(4px);
         }
 
         .submenu-item.active {
           background: #eff6ff;
-          color: #3b82f6;
+          color: #2563eb;
+          font-weight: 500;
+        }
+
+        .submenu-item.active::before {
+          content: '';
+          position: absolute;
+          left: -14px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 2px;
+          height: 16px;
+          background: #3b82f6;
+          border-radius: 2px;
         }
 
         .submenu-icon {
-          font-size: 0.9rem;
-          min-width: 20px;
+          font-size: 1rem;
+          min-width: 24px;
+          opacity: 0.8;
         }
 
         .submenu-label {
           flex: 1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         /* No results */
         .no-results {
           text-align: center;
-          padding: 40px 16px;
-          color: #9ca3af;
+          padding: 48px 20px;
+          color: #94a3b8;
         }
 
         .no-results span {
-          font-size: 2rem;
+          font-size: 2.5rem;
           display: block;
-          margin-bottom: 8px;
+          margin-bottom: 12px;
+          opacity: 0.5;
         }
 
         .no-results p {
-          font-size: 0.8rem;
+          font-size: 0.85rem;
+          font-weight: 500;
         }
 
         /* Footer */
         .sidebar-footer {
-          padding: 12px 16px;
-          border-top: 1px solid #f0f0f0;
+          padding: 16px 20px;
+          border-top: 1px solid rgba(0, 0, 0, 0.06);
+          background: white;
+          margin-top: auto;
         }
 
         .admin-info {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
+          padding: 8px;
+          border-radius: 12px;
+          transition: all 0.2s;
+          cursor: pointer;
+        }
+
+        .admin-info:hover {
+          background: #f8fafc;
         }
 
         .admin-avatar {
-          width: 32px;
-          height: 32px;
-          background: #eff6ff;
+          width: 40px;
+          height: 40px;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1rem;
+          font-size: 1.2rem;
+          color: white;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
         }
 
         .admin-details {
           display: flex;
           flex-direction: column;
+          gap: 2px;
+          flex: 1;
         }
 
         .admin-name {
-          font-size: 0.8rem;
-          font-weight: 600;
-          color: #111827;
+          font-size: 0.85rem;
+          font-weight: 700;
+          color: #0f172a;
         }
 
         .admin-role {
-          font-size: 0.65rem;
-          color: #6b7280;
+          font-size: 0.7rem;
+          color: #64748b;
+          font-weight: 500;
         }
 
         /* Responsive */
@@ -523,11 +655,11 @@ const Sidebar = ({ language }) => {
             position: fixed;
             top: 0;
             left: 0;
-            width: 260px;
+            width: 280px;
             height: 100vh;
             z-index: 1000;
             transform: translateX(-100%);
-            transition: transform 0.25s ease;
+            transition: transform 0.3s ease-in-out;
             box-shadow: 2px 0 10px rgba(0,0,0,0.1);
           }
           
