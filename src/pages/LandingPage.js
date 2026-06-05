@@ -1,5 +1,5 @@
 // src/pages/LandingPage.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -49,163 +49,223 @@ try {
 const LandingPage = () => {
   const navigate = useNavigate();
   
-  // Language state
-  const [language, setLanguage] = useState('np');
+  // Language state with persistence
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
   // Image states for fallback
   const [heroImageError, setHeroImageError] = useState(false);
-  const [emailIconError, setEmailIconError] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   
   // State for dynamic public complaints from backend
   const [publicComplaints, setPublicComplaints] = useState([]);
+  const [complaintRegardingComplaints, setComplaintRegardingComplaints] = useState([]);
+  const [allComplaints, setAllComplaints] = useState([]);
   const [loadingComplaints, setLoadingComplaints] = useState(true);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
+  
+  // Toast notification state
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
-  // Fetch complaints from backend
+  // API URL
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+  // Save language preference
   useEffect(() => {
-    fetchPublicComplaints();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchPublicComplaints, 30000);
-    return () => clearInterval(interval);
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Show toast notification
+  const showToast = useCallback((message, type = 'error', duration = 5000) => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: '' });
+    }, duration);
   }, []);
 
-  const fetchPublicComplaints = async () => {
+  // Fetch all complaints from both tables
+  const fetchAllComplaints = useCallback(async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/complaints');
-      if (response.data.success) {
-        setPublicComplaints(response.data.data);
-      } else {
-        setPublicComplaints(getStaticComplaints());
+      setLoadingComplaints(true);
+      
+      // Fetch regular complaints
+      const regularResponse = await axios.get(`${API_URL}/complaints/public`);
+      
+      // Fetch complaint regarding
+      const regardingResponse = await axios.get(`${API_URL}/admin/complaints/regarding?status=all`);
+      
+      let regularComplaints = [];
+      let regardingComplaints = [];
+      
+      // Process regular complaints
+      if (regularResponse.data.success && regularResponse.data.data) {
+        regularComplaints = regularResponse.data.data.map(complaint => ({
+          id: complaint.id,
+          name: complaint.name,
+          nameEn: complaint.name,
+          complaint: complaint.description,
+          complaintEn: complaint.description,
+          date: formatDateFromBackend(complaint.created_at),
+          dateEn: formatDateFromBackend(complaint.created_at),
+          status: getStatusInNepali(complaint.status),
+          statusEn: getStatusInEnglish(complaint.status),
+          phone: complaint.phone,
+          email: complaint.email,
+          category: complaint.nature_of_complaint,
+          categoryEn: complaint.nature_of_complaint,
+          priority: complaint.priority,
+          complaintNumber: complaint.complaint_number,
+          submittedDate: complaint.created_at,
+          address: complaint.street_address,
+          landmark: complaint.landmark,
+          assignedTo: complaint.assigned_to,
+          resolution: complaint.resolution,
+          type: 'regular'
+        }));
       }
+      
+      // Process complaint regarding
+      if (regardingResponse.data.success && regardingResponse.data.data) {
+        regardingComplaints = regardingResponse.data.data.map(complaint => ({
+          id: complaint.id,
+          name: complaint.name,
+          nameEn: complaint.name,
+          complaint: complaint.description,
+          complaintEn: complaint.description,
+          date: formatDateFromBackend(complaint.created_at),
+          dateEn: formatDateFromBackend(complaint.created_at),
+          status: getStatusInNepali(complaint.status),
+          statusEn: getStatusInEnglish(complaint.status),
+          phone: complaint.phone,
+          email: complaint.email,
+          category: complaint.complaint_type,
+          categoryEn: complaint.complaint_type,
+          priority: complaint.priority,
+          complaintNumber: complaint.complaint_number,
+          submittedDate: complaint.created_at,
+          subject: complaint.subject,
+          address: complaint.address,
+          landmark: complaint.landmark,
+          preferredContact: complaint.preferred_contact,
+          referenceNumber: complaint.reference_number,
+          assignedTo: complaint.assigned_to,
+          resolution: complaint.resolution,
+          type: 'regarding'
+        }));
+      }
+      
+      setPublicComplaints(regularComplaints);
+      setComplaintRegardingComplaints(regardingComplaints);
+      
+      // Combine all complaints
+      const combined = [...regularComplaints, ...regardingComplaints];
+      combined.sort((a, b) => new Date(b.submittedDate) - new Date(a.submittedDate));
+      setAllComplaints(combined);
+      
     } catch (error) {
       console.error('Error fetching complaints:', error);
-      setPublicComplaints(getStaticComplaints());
+      showToast('Failed to load complaints. Please try again later.', 'error');
+      setAllComplaints([]);
     } finally {
       setLoadingComplaints(false);
     }
+  }, [API_URL, showToast]);
+
+  // Get complaints to display based on active tab
+  const getComplaintsToDisplay = () => {
+    if (activeTab === 'all') return allComplaints;
+    if (activeTab === 'regular') return publicComplaints;
+    if (activeTab === 'regarding') return complaintRegardingComplaints;
+    return allComplaints;
   };
 
-  // Static fallback data for complaints
-  const getStaticComplaints = () => {
-    return [
-      { 
-        id: 1, 
-        name: 'राम बहादुर', 
-        nameEn: 'Ram Bahadur', 
-        complaint: 'इन्टरनेट जडान समस्या - २ दिन देखि इन्टरनेट चलिरहेको छैन। कृपया समस्या समाधान गरिदिनुहोस्।', 
-        complaintEn: 'Internet connection issue - Internet not working for 2 days. Please resolve the issue.', 
-        date: '२०८०-०१-१५', 
-        dateEn: '2024-01-15', 
-        status: 'प्रगतिमा', 
-        statusEn: 'In Progress',
-        phone: '9841234567',
-        email: 'ram@example.com',
-        category: 'इन्टरनेट सेवा',
-        priority: 'उच्च',
-        complaintNumber: 'NTC-20240115-001',
-        submittedDate: '2024-01-15T10:30:00Z',
-        address: 'काठमाडौं महानगरपालिका, वडा नं. १५',
-        landmark: 'भद्रकाली प्लाजा नजिक',
-        assignedTo: 'प्राविधिक टोली'
-      },
-      { 
-        id: 2, 
-        name: 'सीता शर्मा', 
-        nameEn: 'Sita Sharma', 
-        complaint: 'रु. ५०० को रिचार्ज गरेको तर ब्यालेन्स नआएको। ट्रान्जेक्सन ID: NTC123456', 
-        complaintEn: 'Recharged Rs. 500 but balance not credited. Transaction ID: NTC123456', 
-        date: '२०८०-०१-१८', 
-        dateEn: '2024-01-18', 
-        status: 'समाधान भयो', 
-        statusEn: 'Resolved',
-        phone: '9847654321',
-        email: 'sita@example.com',
-        category: 'रिचार्ज',
-        priority: 'मध्यम',
-        complaintNumber: 'NTC-20240118-002',
-        submittedDate: '2024-01-18T14:20:00Z',
-        address: 'ललितपुर महानगरपालिका, वडा नं. ४',
-        resolution: 'रिचार्ज सफल भयो। ब्यालेन्स जम्मा गरियो।'
-      },
-      { 
-        id: 3, 
-        name: 'हरि प्रसाद', 
-        nameEn: 'Hari Prasad', 
-        complaint: 'नयाँ सिम कार्ड किनेको २४ घण्टा भयो तर सक्रिय भएन।', 
-        complaintEn: 'Bought new SIM card 24 hours ago but not activated yet.', 
-        date: '२०८०-०१-२०', 
-        dateEn: '2024-01-20', 
-        status: 'विचाराधीन', 
-        statusEn: 'Pending',
-        phone: '9812345678',
-        email: 'hari@example.com',
-        category: 'सिम सेवा',
-        priority: 'उच्च',
-        complaintNumber: 'NTC-20240120-003',
-        submittedDate: '2024-01-20T09:15:00Z',
-        address: 'भक्तपुर नगरपालिका, वडा नं. २'
-      },
-      { 
-        id: 4, 
-        name: 'गीता अधिकारी', 
-        nameEn: 'Gita Adhikari', 
-        complaint: 'गत महिनाको बिल मेरो घरबाहेक अर्कै ठेगानाबाट प्रयोग भएको देखाएको छ।', 
-        complaintEn: 'Last month\'s bill shows usage from a different location.', 
-        date: '२०८०-०१-२२', 
-        dateEn: '2024-01-22', 
-        status: 'प्रगतिमा', 
-        statusEn: 'In Progress',
-        phone: '9856789123',
-        email: 'gita@example.com',
-        category: 'बिलिङ',
-        priority: 'मध्यम',
-        complaintNumber: 'NTC-20240122-004',
-        submittedDate: '2024-01-22T16:45:00Z',
-        address: 'पोखरा महानगरपालिका, वडा नं. ८',
-        assignedTo: 'बिलिङ टोली'
-      },
-      { 
-        id: 5, 
-        name: 'विकास न्यौपाने', 
-        nameEn: 'Bikash Neupane', 
-        complaint: 'घरमा नेटवर्क सिग्नल छैन। नजिकको टावरबाट कभरेज नभएको।', 
-        complaintEn: 'No network signal at home. No coverage from nearby tower.', 
-        date: '२०८०-०१-२५', 
-        dateEn: '2024-01-25', 
-        status: 'समीक्षामा', 
-        statusEn: 'Under Review',
-        phone: '9865432109',
-        email: 'bikash@example.com',
-        category: 'नेटवर्क',
-        priority: 'उच्च',
-        complaintNumber: 'NTC-20240125-005',
-        submittedDate: '2024-01-25T11:00:00Z',
-        address: 'चितवन, भरतपुर महानगरपालिका, वडा नं. १२',
-        landmark: 'पुल्चोक चोक नजिक'
-      },
-    ];
+  // Helper function to format date from backend
+  const formatDateFromBackend = (dateString) => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '-';
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      return '-';
+    }
   };
+
+  // Helper function to convert status to Nepali
+  const getStatusInNepali = (status) => {
+    const statusMap = {
+      'pending': 'विचाराधीन',
+      'in-progress': 'प्रगतिमा',
+      'review': 'समीक्षामा',
+      'resolved': 'समाधान भयो',
+      'closed': 'बन्द',
+      'rejected': 'अस्वीकृत'
+    };
+    return statusMap[status] || status;
+  };
+
+  // Helper function to get status in English
+  const getStatusInEnglish = (status) => {
+    const statusMap = {
+      'pending': 'Pending',
+      'in-progress': 'In Progress',
+      'review': 'Under Review',
+      'resolved': 'Resolved',
+      'closed': 'Closed',
+      'rejected': 'Rejected'
+    };
+    return statusMap[status] || status;
+  };
+
+  useEffect(() => {
+    fetchAllComplaints();
+    const interval = setInterval(fetchAllComplaints, 30000);
+    return () => clearInterval(interval);
+  }, [fetchAllComplaints]);
 
   // Handle scroll for header effects
   useEffect(() => {
     const handleScroll = () => {
-      setScrollY(window.scrollY);
+      const currentScrollY = window.scrollY;
+      setScrollY(currentScrollY);
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsHeaderVisible(false);
+      } else {
+        setIsHeaderVisible(true);
+      }
+      setLastScrollY(currentScrollY);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [lastScrollY]);
+
+  // Close modal on escape key
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape' && showDetailsModal) {
+        setShowDetailsModal(false);
+        document.body.style.overflow = 'unset';
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showDetailsModal]);
 
   // Format date for display
-  const formatDate = (date) => {
+  const formatDate = useCallback((date) => {
     if (!date) return '-';
-    
     try {
       const dateObj = new Date(date);
       if (isNaN(dateObj.getTime())) return '-';
-      
       if (language === 'np') {
         return dateObj.toLocaleDateString('ne-NP', {
           year: 'numeric',
@@ -226,16 +286,14 @@ const LandingPage = () => {
     } catch (error) {
       return date;
     }
-  };
+  }, [language]);
 
   // Format date for table display
-  const formatTableDate = (date) => {
+  const formatTableDate = useCallback((date) => {
     if (!date) return '-';
-    
     try {
       const dateObj = new Date(date);
       if (isNaN(dateObj.getTime())) return '-';
-      
       if (language === 'np') {
         return dateObj.toLocaleDateString('ne-NP', {
           year: 'numeric',
@@ -252,68 +310,76 @@ const LandingPage = () => {
     } catch (error) {
       return date;
     }
-  };
+  }, [language]);
 
   // Function to view complaint details
-  const viewComplaintDetails = (complaint) => {
-    // Enhance complaint object with formatted dates
+  const viewComplaintDetails = useCallback((complaint) => {
     const enhancedComplaint = {
       ...complaint,
-      formattedSubmittedDate: complaint.submittedDate ? formatDate(complaint.submittedDate) : 
-                             complaint.created_at ? formatDate(complaint.created_at) :
-                             complaint.createdAt ? formatDate(complaint.createdAt) :
-                             complaint.date || complaint.dateEn || '-',
-      formattedUpdatedDate: complaint.updated_at ? formatDate(complaint.updated_at) :
-                            complaint.updatedAt ? formatDate(complaint.updatedAt) : '-'
+      formattedSubmittedDate: complaint.submittedDate ? formatDate(complaint.submittedDate) : '-',
+      formattedUpdatedDate: complaint.updated_at ? formatDate(complaint.updated_at) : '-'
     };
     setSelectedComplaint(enhancedComplaint);
     setShowDetailsModal(true);
-  };
+    document.body.style.overflow = 'hidden';
+  }, [formatDate]);
+
+  const closeModal = useCallback(() => {
+    setShowDetailsModal(false);
+    setSelectedComplaint(null);
+    document.body.style.overflow = 'unset';
+  }, []);
 
   const complaintChannels = [
-    { id: 'website', name: 'वेबसाइट पोर्टल', enName: 'Website Portal', icon: '🌐', isImage: false, color: '#1565c0', bgColor: '#e3f2fd' },
-    { id: 'phone', name: 'फोन', enName: 'Phone', icon: phoneIcon, isImage: true, fallback: '📞', color: '#42a5f5', bgColor: '#e3f2fd' },
-    { id: 'sms', name: 'एसएमएस', enName: 'SMS', icon: smsIcon, isImage: true, fallback: '💬', color: '#4caf50', bgColor: '#e8f5e9' },
-    { id: 'whatsapp', name: 'व्हाट्सएप', enName: 'WhatsApp', icon: whatsappIcon, isImage: true, fallback: '💬', color: '#25D366', bgColor: '#d4edda' },
+    { id: 'website', name: 'वेबसाइट पोर्टल', enName: 'Website Portal', icon: '🌐', isImage: false, color: '#1565c0', bgColor: '#e3f2fd', action: () => navigate('/submit-complaint') },
+    { id: 'phone', name: 'फोन', enName: 'Phone', icon: phoneIcon, isImage: true, fallback: '📞', color: '#42a5f5', bgColor: '#e3f2fd', contact: '198' },
+    { id: 'sms', name: 'एसएमएस', enName: 'SMS', icon: smsIcon, isImage: true, fallback: '💬', color: '#4caf50', bgColor: '#e8f5e9', contact: '988' },
+    { id: 'whatsapp', name: 'व्हाट्सएप', enName: 'WhatsApp', icon: whatsappIcon, isImage: true, fallback: '💬', color: '#25D366', bgColor: '#d4edda', contact: '9851234567' },
     { id: 'viber', name: 'भाइबर', enName: 'Viber', icon: viberIcon, isImage: true, fallback: '📱', color: '#7360f2', bgColor: '#e8e0f5' },
-    { id: 'email', name: 'इमेल', enName: 'Email', icon: emailIcon, isImage: true, fallback: '✉️', color: '#ea4335', bgColor: '#fce4ec' },
+    { id: 'email', name: 'इमेल', enName: 'Email', icon: emailIcon, isImage: true, fallback: '✉️', color: '#ea4335', bgColor: '#fce4ec', action: () => window.location.href = 'mailto:coo@ntc.net.np' },
   ];
 
-  const originalPublicComplaints = [
-    { id: 1, name: 'राम बहादुर', nameEn: 'Ram Bahadur', complaint: 'इन्टरनेट जडान समस्या', complaintEn: 'Internet connection issue', date: '२०८०-०१-१५', dateEn: '2024-01-15', status: 'प्रगतिमा', statusEn: 'In Progress' },
-    { id: 2, name: 'सीता शर्मा', nameEn: 'Sita Sharma', complaint: 'रिचार्ज नभएको', complaintEn: 'Recharge not credited', date: '२०८०-०१-१८', dateEn: '2024-01-18', status: 'समाधान भयो', statusEn: 'Resolved' },
-    { id: 3, name: 'हरि प्रसाद', nameEn: 'Hari Prasad', complaint: 'सिम क्रियाशील नभएको', complaintEn: 'SIM not activated', date: '२०८०-०१-२०', dateEn: '2024-01-20', status: 'विचाराधीन', statusEn: 'Pending' },
-    { id: 4, name: 'गीता अधिकारी', nameEn: 'Gita Adhikari', complaint: 'बिलिङ त्रुटि', complaintEn: 'Billing error', date: '२०८०-०१-२२', dateEn: '2024-01-22', status: 'प्रगतिमा', statusEn: 'In Progress' },
-    { id: 5, name: 'विकास न्यौपाने', nameEn: 'Bikash Neupane', complaint: 'सिग्नल समस्या', complaintEn: 'Signal issue', date: '२०८०-०१-२५', dateEn: '2024-01-25', status: 'समीक्षामा', statusEn: 'Under Review' },
-  ];
+  // Update status counts based on actual data
+  const getUpdatedStatusCounts = () => {
+    const total = allComplaints.length;
+    const pending = allComplaints.filter(c => c.status === 'विचाराधीन' || c.status === 'Pending').length;
+    const resolved = allComplaints.filter(c => c.status === 'समाधान भयो' || c.status === 'Resolved').length;
+    
+    const counts = [...statusCounts[language]];
+    counts[0].count = total.toLocaleString();
+    counts[1].count = pending.toLocaleString();
+    counts[2].count = resolved.toLocaleString();
+    
+    return counts;
+  };
 
   const statusCounts = {
     np: [
-      { title: 'हालसम्म दर्ता भएका कुल गुनासोहरू', count: '1,00,387', range: '(पछिल्लो २४ घण्टामा: +१२५)' },
-      { title: 'समीक्षा भई कारबाहीको पर्खाइमा रहेका गुनासोहरू', count: '15,154', range: '(पछिल्लो २४ घण्टामा: +४२)' },
-      { title: 'सहायता टोलीद्वारा हालसम्म समाधान नभएका गुनासोहरू', count: '75,306', range: '(पछिल्लो २४ घण्टामा: -१८)' },
+      { title: 'हालसम्म दर्ता भएका कुल गुनासोहरू', count: '0', range: '(पछिल्लो २४ घण्टामा: ०)' },
+      { title: 'समीक्षा भई कारबाहीको पर्खाइमा रहेका गुनासोहरू', count: '0', range: '(पछिल्लो २४ घण्टामा: ०)' },
+      { title: 'सहायता टोलीद्वारा हालसम्म समाधान भएका गुनासोहरू', count: '0', range: '(पछिल्लो २४ घण्टामा: ०)' },
     ],
     en: [
-      { title: 'Total complaints registered to date', count: '100,387', range: '(Last 24h: +125)' },
-      { title: 'Complaints reviewed but awaiting action', count: '15,154', range: '(Last 24h: +42)' },
-      { title: 'Complaints not yet resolved by support team', count: '75,306', range: '(Last 24h: -18)' },
+      { title: 'Total complaints registered to date', count: '0', range: '(Last 24h: 0)' },
+      { title: 'Complaints reviewed but awaiting action', count: '0', range: '(Last 24h: 0)' },
+      { title: 'Complaints resolved by support team', count: '0', range: '(Last 24h: 0)' },
     ],
   };
 
   const latestComplaints = [
-    { category: 'सिम कार्ड गुनासो', enCategory: 'SIM Card Complaints', date: '२०८०-०१-१२', enDate: '2024-01-12' },
-    { category: 'इन्टरनेट सेवा गुनासो', enCategory: 'Internet Service Complaints', date: '२०८०-०१-१२', enDate: '2024-01-12' },
-    { category: 'रिचार्ज र ब्यालेन्स समस्या', enCategory: 'Recharge & Balance Issues', date: '२०८०-०१-१२', enDate: '2024-01-12' },
-    { category: 'सेवा सक्रियता/निष्क्रियता', enCategory: 'Service Activation/Deactivation', date: '२०८०-०२-३०', enDate: '2024-02-28' },
+    { category: 'सिम कार्ड गुनासो', enCategory: 'SIM Card Complaints', date: '२०८०-०१-१२', enDate: '2024-01-12', count: '१२५' },
+    { category: 'इन्टरनेट सेवा गुनासो', enCategory: 'Internet Service Complaints', date: '२०८०-०१-१२', enDate: '2024-01-12', count: '२३४' },
+    { category: 'रिचार्ज र ब्यालेन्स समस्या', enCategory: 'Recharge & Balance Issues', date: '२०८०-०१-१२', enDate: '2024-01-12', count: '३४५' },
+    { category: 'सेवा सक्रियता/निष्क्रियता', enCategory: 'Service Activation/Deactivation', date: '२०८०-०२-३०', enDate: '2024-02-28', count: '८९' },
   ];
 
   const channelStats = [
-    { name: 'वेबसाइट पोर्टल', enName: 'Website Portal', percentage: 45.788, color: '#1565c0' },
-    { name: 'कल सेन्टर', enName: 'Call Center', percentage: 3.099, color: '#42a5f5' },
-    { name: 'व्हाट्सएप सपोर्ट', enName: 'WhatsApp Support', percentage: 2.581, color: '#25D366' },
-    { name: 'इमेल सपोर्ट', enName: 'Email Support', percentage: 1.697, color: '#ea4335' },
-    { name: 'भाइबर', enName: 'Viber', percentage: 0.588, color: '#7360f2' },
-    { name: 'निवेदन पत्र', enName: 'Application Letter', percentage: 0.312, color: '#e67e22' },
+    { name: 'वेबसाइट पोर्टल', enName: 'Website Portal', percentage: 45.788, color: '#1565c0', change: '+5.2%' },
+    { name: 'कल सेन्टर', enName: 'Call Center', percentage: 32.099, color: '#42a5f5', change: '+2.1%' },
+    { name: 'व्हाट्सएप सपोर्ट', enName: 'WhatsApp Support', percentage: 12.581, color: '#25D366', change: '+8.3%' },
+    { name: 'इमेल सपोर्ट', enName: 'Email Support', percentage: 5.697, color: '#ea4335', change: '-1.2%' },
+    { name: 'भाइबर', enName: 'Viber', percentage: 2.588, color: '#7360f2', change: '+0.8%' },
+    { name: 'निवेदन पत्र', enName: 'Application Letter', percentage: 1.312, color: '#e67e22', change: '-0.5%' },
   ];
 
   const content = {
@@ -336,6 +402,9 @@ const LandingPage = () => {
       complaintRegarding: 'गुनासो सम्बन्धी',
       channelsTitle: 'गुनासोको लागि उपलब्ध च्यानलहरू:',
       publicComplaintsTitle: 'सार्वजनिक रूपमा दर्ता गरिएका गुनासोहरू',
+      allComplaints: 'सबै गुनासोहरू',
+      regularComplaints: 'साधारण गुनासोहरू',
+      regardingComplaints: 'गुनासो सम्बन्धी',
       latestStatusTitle: 'गुनासो ट्र्याकिङ प्रणालीबाट प्राप्त नवीनतम स्थिति',
       complaintId: 'क्र.स.',
       complainantName: 'उजुरीकर्ताको नाम',
@@ -343,7 +412,7 @@ const LandingPage = () => {
       complaintDate: 'मिति',
       complaintStatus: 'स्थिति',
       viewDetails: 'विवरण हेर्नुहोस्',
-      statsTitle: 'गुनासो ट्र्याकिङ प्रणालीद्वारा प्राप्त गुनासोहरूको नवीनतम स्थिति',
+      statsTitle: 'गुनासो प्राप्तिका मुख्य माध्यमहरू',
       links: 'लिङ्कहरू:',
       complaints: 'गुनासोहरू',
       policy: 'नीति',
@@ -353,8 +422,8 @@ const LandingPage = () => {
       email: 'इमेल',
       address: 'ठेगाना',
       phone: 'फोन',
-      netcomSignalComplaints: 'नेटकम र सिग्नल गुनासोहरू',
-      netcomSignalText: 'नेटकम र सिग्नल गुनासोहरू एनटीसी गुनासो पोर्टलमा दर्ता गरिएका छन्।',
+      netcomSignalComplaints: 'नेटवर्क र सिग्नल गुनासोहरू',
+      netcomSignalText: 'नेटवर्क र सिग्नल सम्बन्धी गुनासोहरूको तथ्याङ्क',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
       loading: 'लोड हुँदै...',
@@ -373,7 +442,11 @@ const LandingPage = () => {
       complainantInfo: 'उजुरीकर्ताको जानकारी',
       complaintInfo: 'गुनासो जानकारी',
       addressInfo: 'ठेगाना जानकारी',
-      dateInfo: 'मिति जानकारी'
+      dateInfo: 'मिति जानकारी',
+      subject: 'विषय',
+      noComplaints: 'हाल कुनै गुनासोहरू छैनन्',
+      refreshData: 'ताजा डाटा',
+      contactNow: 'सम्पर्क गर्नुहोस्'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -394,6 +467,9 @@ const LandingPage = () => {
       complaintRegarding: 'Complaint Regarding',
       channelsTitle: 'Channels available for complaint:',
       publicComplaintsTitle: 'Publicly Registered Complaints',
+      allComplaints: 'All Complaints',
+      regularComplaints: 'Regular Complaints',
+      regardingComplaints: 'Complaint Regarding',
       latestStatusTitle: 'Latest Status from Complaint Tracking System',
       complaintId: 'S.No.',
       complainantName: 'Complainant Name',
@@ -401,7 +477,7 @@ const LandingPage = () => {
       complaintDate: 'Date',
       complaintStatus: 'Status',
       viewDetails: 'View Details',
-      statsTitle: 'Latest status of complaints received',
+      statsTitle: 'Main Complaint Channels',
       links: 'LINKS:',
       complaints: 'Complaints',
       policy: 'Policy',
@@ -411,8 +487,8 @@ const LandingPage = () => {
       email: 'Email',
       address: 'Address',
       phone: 'Phone',
-      netcomSignalComplaints: 'Netcom & Signal Complaints',
-      netcomSignalText: 'Netcom & Signal Complaints registered on NTC portal.',
+      netcomSignalComplaints: 'Network & Signal Complaints',
+      netcomSignalText: 'Statistics of network and signal related complaints',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
       loading: 'Loading...',
@@ -431,19 +507,24 @@ const LandingPage = () => {
       complainantInfo: 'Complainant Information',
       complaintInfo: 'Complaint Information',
       addressInfo: 'Address Information',
-      dateInfo: 'Date Information'
+      dateInfo: 'Date Information',
+      subject: 'Subject',
+      noComplaints: 'No complaints found',
+      refreshData: 'Refresh Data',
+      contactNow: 'Contact Now'
     },
   };
 
   const t = content[language];
-  const currentStatusCounts = statusCounts[language];
+  const currentStatusCounts = getUpdatedStatusCounts();
+  const complaintsToShow = getComplaintsToDisplay();
 
-  const handleLanguageChange = (lang) => {
+  const handleLanguageChange = useCallback((lang) => {
     setLanguage(lang);
     setShowLanguageDropdown(false);
-  };
+  }, []);
 
-  const scrollToSection = (sectionId) => {
+  const scrollToSection = useCallback((sectionId) => {
     const element = document.getElementById(sectionId);
     if (element) {
       const headerOffset = 195;
@@ -451,9 +532,9 @@ const LandingPage = () => {
       const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
       window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
     }
-  };
+  }, []);
 
-  const getStatusClass = (status) => {
+  const getStatusClass = useCallback((status) => {
     const statusMap = {
       'प्रगतिमा': 'status-progress',
       'In Progress': 'status-progress',
@@ -469,57 +550,74 @@ const LandingPage = () => {
       'Rejected': 'status-rejected'
     };
     return statusMap[status] || 'status-pending';
-  };
+  }, []);
 
-  const getStatusText = (status, statusEn) => {
+  const getStatusText = useCallback((status, statusEn) => {
     if (language === 'np') {
       return status;
     }
     return statusEn || status;
-  };
+  }, [language]);
+
+  const manualRefresh = useCallback(async () => {
+    setLoadingComplaints(true);
+    await fetchAllComplaints();
+    showToast(t.refreshData, 'success', 2000);
+  }, [fetchAllComplaints, showToast, t.refreshData]);
 
   // Function to display complaints with view details button
   const displayComplaints = () => {
     if (loadingComplaints) {
       return (
         <tr>
-          <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
+          <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
+            <div className="loading-spinner"></div>
             {t.loading}
           </td>
         </tr>
       );
     }
     
-    const complaintsToShow = publicComplaints.length > 0 ? publicComplaints : originalPublicComplaints;
-    
     if (complaintsToShow.length === 0) {
       return (
         <tr>
-          <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
-            {language === 'np' ? 'हाल कुनै गुनासोहरू छैनन्' : 'No complaints found'}
+          <td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>
+            {t.noComplaints}
           </td>
         </tr>
       );
     }
     
-    return complaintsToShow.slice(0, 10).map((complaint) => {
-      let displayDate = complaint.submittedDate ? formatTableDate(complaint.submittedDate) : 
-                       complaint.created_at ? formatTableDate(complaint.created_at) :
-                       complaint.createdAt ? formatTableDate(complaint.createdAt) :
-                       complaint.date || complaint.dateEn || '-';
+    return complaintsToShow.slice(0, 10).map((complaint, index) => {
+      const displayDate = complaint.submittedDate ? formatTableDate(complaint.submittedDate) : '-';
       
       return (
-        <tr key={complaint.id}>
-          <td>{complaint.id}</td>
-          <td>{language === 'np' ? complaint.name : (complaint.nameEn || complaint.name)}</td>
-          <td>{language === 'np' ? (complaint.complaint || complaint.description || '-').substring(0, 50) + ((complaint.complaint || complaint.description || '').length > 50 ? '...' : '') : (complaint.complaintEn || complaint.complaint || complaint.description || '-').substring(0, 50) + ((complaint.complaintEn || complaint.complaint || complaint.description || '').length > 50 ? '...' : '')}</td>
-          <td>{displayDate}</td>
-          <td>
+        <tr key={`${complaint.type}-${complaint.id}`} className="complaint-row">
+          <td data-label={t.complaintId}>{index + 1}</td>
+          <td data-label={t.complainantName}>
+            <div className="complainant-info">
+              <span className="complainant-name">{language === 'np' ? complaint.name : complaint.nameEn}</span>
+              {complaint.phone && <span className="complainant-phone">📞 {complaint.phone}</span>}
+            </div>
+          </td>
+          <td data-label={t.complaintDetails}>
+            <div className="complaint-preview">
+              {(language === 'np' ? complaint.complaint : complaint.complaintEn).substring(0, 60)}
+              {(language === 'np' ? complaint.complaint : complaint.complaintEn).length > 60 ? '...' : ''}
+            </div>
+           </td>
+          <td data-label={t.complaintDate}>{displayDate}</td>
+          <td data-label={t.complaintStatus}>
             <span className={`status-badge ${getStatusClass(complaint.status)}`}>
               {getStatusText(complaint.status, complaint.statusEn)}
             </span>
           </td>
-          <td>
+          <td data-label={t.category}>
+            <span className="category-badge">
+              {language === 'np' ? complaint.category : complaint.categoryEn}
+            </span>
+          </td>
+          <td data-label={t.viewDetails}>
             <button 
               className="view-details-btn"
               onClick={() => viewComplaintDetails(complaint)}
@@ -570,10 +668,28 @@ const LandingPage = () => {
     );
   };
 
+  // Get trend icon
+  const getTrendIcon = (trend) => {
+    if (trend === 'up') return '📈';
+    if (trend === 'down') return '📉';
+    return '➡️';
+  };
+
   return (
     <div className="landing-page">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
       {/* HEADER 1 - Top Bar */}
-      <div className="header-1">
+      <div className={`header-1 ${!isHeaderVisible ? 'header-hidden' : ''}`}>
         <div className="container-1">
           <div className="header-left">
             <div className="we-are-here">
@@ -624,7 +740,7 @@ const LandingPage = () => {
       </div>
 
       {/* HEADER 2 - Department Level with Logos */}
-      <div className="header-2">
+      <div className={`header-2 ${!isHeaderVisible ? 'header-hidden' : ''}`}>
         <div className="container-2">
           <div className="logo-left">
             <LogoImage src={ntcLogo} alt="NTC Logo" fallback="📡" className="ntc-logo" />
@@ -640,7 +756,7 @@ const LandingPage = () => {
       </div>
 
       {/* HEADER 3 - Navigation Bar */}
-      <div className="header-3">
+      <div className={`header-3 ${!isHeaderVisible ? 'header-hidden' : ''}`}>
         <div className="container-3">
           <div className="nav-menu-left">
             <button onClick={() => scrollToSection('home')} className="nav-btn">
@@ -672,11 +788,17 @@ const LandingPage = () => {
               <p>{t.heroText}</p>
               <div className="hero-quote">✨ {t.heroQuote} ✨</div>
               <div className="hero-buttons">
-                <button className="btn-primary" onClick={() => navigate('/submit-complaint')}>📝 {t.submitComplaint}</button>
-                <button className="btn-secondary" onClick={() => navigate('/track-complaint')}>🔍 {t.trackComplaint}</button>
+                <button className="btn-primary" onClick={() => navigate('/submit-complaint')}>
+                  <span>📝</span> {t.submitComplaint}
+                </button>
+                <button className="btn-secondary" onClick={() => navigate('/track-complaint')}>
+                  <span>🔍</span> {t.trackComplaint}
+                </button>
               </div>
               <div className="complaint-regarding-container">
-                <button className="btn-complaint-regarding" onClick={() => navigate('/complaint-regarding')}>📋 {t.complaintRegarding}</button>
+                <button className="btn-complaint-regarding" onClick={() => navigate('/complaint-regarding')}>
+                  <span>📋</span> {t.complaintRegarding}
+                </button>
               </div>
             </div>
             <div className="hero-right">
@@ -701,11 +823,17 @@ const LandingPage = () => {
             <h3 className="channels-title">{t.channelsTitle}</h3>
             <div className="channels-list">
               {complaintChannels.map((channel, index) => (
-                <div key={index} className="channel-item">
+                <div 
+                  key={index} 
+                  className="channel-item"
+                  onClick={channel.action}
+                  style={{ cursor: channel.action ? 'pointer' : 'default' }}
+                >
                   <div className="channel-icon-wrapper" style={{ backgroundColor: channel.bgColor }}>
                     <ChannelIcon channel={channel} />
                   </div>
                   <span className="channel-name">{language === 'np' ? channel.name : channel.enName}</span>
+                  {channel.contact && <span className="channel-contact">{channel.contact}</span>}
                 </div>
               ))}
             </div>
@@ -715,7 +843,32 @@ const LandingPage = () => {
         {/* Public Complaints Table and Latest Status Side by Side */}
         <div className="stats-public-container">
           <div className="public-complaints-card">
-            <h3>📋 {t.publicComplaintsTitle}</h3>
+            <div className="card-header">
+              <h3>📋 {t.publicComplaintsTitle}</h3>
+              <div className="tab-buttons">
+                <button 
+                  className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('all')}
+                >
+                  {t.allComplaints}
+                </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'regular' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('regular')}
+                >
+                  {t.regularComplaints}
+                </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'regarding' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('regarding')}
+                >
+                  {t.regardingComplaints}
+                </button>
+              </div>
+              <button onClick={manualRefresh} className="refresh-btn" title={t.refreshData}>
+                🔄 {t.refreshData}
+              </button>
+            </div>
             <div className="table-wrapper">
               <table className="complaints-table">
                 <thead>
@@ -725,6 +878,7 @@ const LandingPage = () => {
                     <th>{t.complaintDetails}</th>
                     <th>{t.complaintDate}</th>
                     <th>{t.complaintStatus}</th>
+                    <th>{t.category}</th>
                     <th>{t.viewDetails}</th>
                   </tr>
                 </thead>
@@ -740,7 +894,8 @@ const LandingPage = () => {
             {currentStatusCounts.map((item, idx) => (
               <div key={idx} className="status-item">
                 <div className="status-title">{item.title}</div>
-                <div className="status-number">{item.count} <span className="status-range">{item.range}</span></div>
+                <div className="status-number">{item.count}</div>
+                <div className="status-range">{item.range}</div>
               </div>
             ))}
           </div>
@@ -755,9 +910,16 @@ const LandingPage = () => {
                 <div key={index} className="stat-card">
                   <div className="stat-info">
                     <span className="stat-name">{language === 'np' ? stat.name : stat.enName}</span>
-                    <span className="stat-percentage">{stat.percentage}%</span>
+                    <div className="stat-right">
+                      <span className="stat-percentage">{stat.percentage}%</span>
+                      <span className={`stat-change ${stat.change.startsWith('+') ? 'positive' : 'negative'}`}>
+                        {stat.change}
+                      </span>
+                    </div>
                   </div>
-                  <div className="stat-bar" style={{ width: `${Math.min(stat.percentage * 2.2, 100)}%`, backgroundColor: stat.color }} />
+                  <div className="stat-bar-wrapper">
+                    <div className="stat-bar" style={{ width: `${Math.min(stat.percentage * 2, 100)}%`, backgroundColor: stat.color }} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -770,7 +932,7 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* Netcom & Signal Complaints Section */}
+        {/* Network & Signal Complaints Section */}
         <div className="signal-section">
           <div className="signal-container">
             <div className="signal-card">
@@ -779,8 +941,13 @@ const LandingPage = () => {
               <div className="complaint-list">
                 {latestComplaints.map((complaint, idx) => (
                   <div key={idx} className="complaint-item">
-                    <span className="complaint-category">{language === 'np' ? complaint.category : complaint.enCategory}</span>
-                    <span className="complaint-date">{language === 'np' ? complaint.date : complaint.enDate}</span>
+                    <span className="complaint-category">
+                      {getTrendIcon('up')} {language === 'np' ? complaint.category : complaint.enCategory}
+                    </span>
+                    <div className="complaint-meta">
+                      <span className="complaint-count">📊 {complaint.count}</span>
+                      <span className="complaint-date">📅 {language === 'np' ? complaint.date : complaint.enDate}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -794,6 +961,12 @@ const LandingPage = () => {
                 <p><strong>📍 {t.address}:</strong> {t.departmentAddress}</p>
                 <p><strong>📞 {t.phone}:</strong> {t.contactNumber}</p>
               </div>
+              <div className="support-hours">
+                <span>🕐 {language === 'np' ? 'सेवा समय: २४/७' : 'Support Hours: 24/7'}</span>
+              </div>
+              <button className="contact-now-btn" onClick={() => window.location.href = 'tel:198'}>
+                📞 {t.contactNow}
+              </button>
             </div>
           </div>
         </div>
@@ -811,11 +984,11 @@ const LandingPage = () => {
 
       {/* Complaint Details Modal */}
       {showDetailsModal && selectedComplaint && (
-        <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
+        <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>📋 {language === 'np' ? 'गुनासोको विस्तृत विवरण' : 'Complaint Details'}</h3>
-              <button className="modal-close" onClick={() => setShowDetailsModal(false)}>✕</button>
+              <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
             <div className="modal-body">
               {/* Complaint Information Section */}
@@ -823,12 +996,18 @@ const LandingPage = () => {
                 <h4 className="section-subtitle">📌 {t.complaintInfo}</h4>
                 <div className="detail-row">
                   <span className="detail-label">{t.complaintNumber}:</span>
-                  <span className="detail-value">{selectedComplaint.complaintNumber || `NTC-${selectedComplaint.id}`}</span>
+                  <span className="detail-value">{selectedComplaint.complaintNumber}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">{t.category}:</span>
-                  <span className="detail-value">{selectedComplaint.category || (language === 'np' ? 'सामान्य' : 'General')}</span>
+                  <span className="detail-value">{language === 'np' ? selectedComplaint.category : selectedComplaint.categoryEn}</span>
                 </div>
+                {selectedComplaint.subject && (
+                  <div className="detail-row">
+                    <span className="detail-label">{t.subject}:</span>
+                    <span className="detail-value">{selectedComplaint.subject}</span>
+                  </div>
+                )}
                 <div className="detail-row">
                   <span className="detail-label">{t.priority}:</span>
                   <span className={`detail-value ${selectedComplaint.priority === 'उच्च' || selectedComplaint.priority === 'High' ? 'priority-high' : selectedComplaint.priority === 'मध्यम' || selectedComplaint.priority === 'Medium' ? 'priority-medium' : 'priority-low'}`}>
@@ -848,11 +1027,11 @@ const LandingPage = () => {
                 <h4 className="section-subtitle">👤 {t.complainantInfo}</h4>
                 <div className="detail-row">
                   <span className="detail-label">{t.complainantName}:</span>
-                  <span className="detail-value">{language === 'np' ? selectedComplaint.name : (selectedComplaint.nameEn || selectedComplaint.name)}</span>
+                  <span className="detail-value">{language === 'np' ? selectedComplaint.name : selectedComplaint.nameEn}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">{t.phoneNumber}:</span>
-                  <span className="detail-value">{selectedComplaint.phone || selectedComplaint.phoneNumber || 'N/A'}</span>
+                  <span className="detail-value">{selectedComplaint.phone || 'N/A'}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">{t.emailAddress}:</span>
@@ -882,9 +1061,10 @@ const LandingPage = () => {
               {/* Complaint Description Section */}
               <div className="detail-section">
                 <h4 className="section-subtitle">📝 {t.description}</h4>
-                <div className="detail-row">
-                  <span className="detail-label">{t.complaintDetails}:</span>
-                  <span className="detail-value complaint-text">{language === 'np' ? (selectedComplaint.complaint || selectedComplaint.description || '-') : (selectedComplaint.complaintEn || selectedComplaint.complaint || selectedComplaint.description || '-')}</span>
+                <div className="detail-row full-width">
+                  <span className="detail-value complaint-text">
+                    {language === 'np' ? selectedComplaint.complaint : selectedComplaint.complaintEn}
+                  </span>
                 </div>
               </div>
 
@@ -907,8 +1087,7 @@ const LandingPage = () => {
               {selectedComplaint.resolution && (
                 <div className="detail-section">
                   <h4 className="section-subtitle">✅ {t.resolution}</h4>
-                  <div className="detail-row">
-                    <span className="detail-label">{t.resolution}:</span>
+                  <div className="detail-row full-width">
                     <span className="detail-value complaint-text">{selectedComplaint.resolution}</span>
                   </div>
                 </div>
@@ -924,9 +1103,31 @@ const LandingPage = () => {
                   </div>
                 </div>
               )}
+
+              {/* Reference Number for Complaint Regarding */}
+              {selectedComplaint.referenceNumber && (
+                <div className="detail-section">
+                  <h4 className="section-subtitle">📌 {t.referenceNo}</h4>
+                  <div className="detail-row">
+                    <span className="detail-label">{t.referenceNo}:</span>
+                    <span className="detail-value">{selectedComplaint.referenceNumber}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Preferred Contact for Complaint Regarding */}
+              {selectedComplaint.preferredContact && (
+                <div className="detail-section">
+                  <h4 className="section-subtitle">📞 {t.preferredContact}</h4>
+                  <div className="detail-row">
+                    <span className="detail-label">{t.preferredContact}:</span>
+                    <span className="detail-value">{selectedComplaint.preferredContact}</span>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="modal-footer">
-              <button className="modal-btn-close" onClick={() => setShowDetailsModal(false)}>
+              <button className="modal-btn-close" onClick={closeModal}>
                 {t.close}
               </button>
             </div>
@@ -943,9 +1144,58 @@ const LandingPage = () => {
 
         .landing-page {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
-          background: #f5f7fa;
+          background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
           min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* Header Hide/Show Animation */
+        .header-1, .header-2, .header-3 {
+          transition: transform 0.3s ease-in-out;
+        }
+        
+        .header-hidden {
+          transform: translateY(-100%);
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 200px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 350px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         /* HEADER 1 - Top Bar */
@@ -972,12 +1222,7 @@ const LandingPage = () => {
           gap: 20px;
         }
 
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
+        .header-left { display: flex; align-items: center; gap: 16px; }
         .we-are-here {
           display: flex;
           align-items: center;
@@ -987,26 +1232,10 @@ const LandingPage = () => {
           border-radius: 40px;
           font-weight: 500;
         }
+        .quote-text { font-size: 0.9rem; letter-spacing: 0.5px; font-weight: 600; }
 
-        .quote-text {
-          font-size: 0.9rem;
-          letter-spacing: 0.5px;
-          font-weight: 600;
-        }
-
-        .header-right {
-          display: flex;
-          align-items: center;
-          gap: 25px;
-          flex-wrap: wrap;
-        }
-
-        .contact-info-group {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-        }
-
+        .header-right { display: flex; align-items: center; gap: 25px; flex-wrap: wrap; }
+        .contact-info-group { display: flex; align-items: center; gap: 15px; }
         .contact-info-item {
           display: flex;
           align-items: center;
@@ -1017,12 +1246,7 @@ const LandingPage = () => {
           border-radius: 30px;
           transition: all 0.3s ease;
         }
-
-        .contact-info-item:hover {
-          background: rgba(255,255,255,0.25);
-          transform: translateY(-1px);
-        }
-
+        .contact-info-item:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px); }
         .contact-icon { font-size: 0.85rem; }
         .contact-text { font-size: 0.75rem; font-weight: 500; }
         .contact-icon-image { width: 14px; height: 14px; object-fit: contain; }
@@ -1174,6 +1398,7 @@ const LandingPage = () => {
 
         /* Main Content */
         .main-content {
+          flex: 1;
           padding-top: 195px;
         }
 
@@ -1194,66 +1419,28 @@ const LandingPage = () => {
           flex-wrap: wrap;
         }
 
-        .hero-left {
-          flex: 1;
-          min-width: 320px;
-        }
+        .hero-left { flex: 1; min-width: 320px; }
+        .hero-icon { font-size: 3rem; margin-bottom: 20px; }
+        .hero-left h2 { font-size: 1.8rem; color: #0d47a1; margin-bottom: 20px; line-height: 1.4; }
+        .hero-left p { font-size: 1.1rem; color: #2c4e6e; margin-bottom: 20px; line-height: 1.6; }
+        .hero-quote { font-size: 1.2rem; font-weight: 600; color: #1565c0; margin-bottom: 30px; font-style: italic; }
 
-        .hero-icon {
-          font-size: 3rem;
-          margin-bottom: 20px;
-        }
-
-        .hero-left h2 {
-          font-size: 1.8rem;
-          color: #0d47a1;
-          margin-bottom: 20px;
-          line-height: 1.4;
-        }
-
-        .hero-left p {
-          font-size: 1.1rem;
-          color: #2c4e6e;
-          margin-bottom: 20px;
-          line-height: 1.6;
-        }
-
-        .hero-quote {
-          font-size: 1.2rem;
-          font-weight: 600;
-          color: #1565c0;
-          margin-bottom: 30px;
-          font-style: italic;
-        }
-
-        .hero-buttons {
-          display: flex;
-          gap: 20px;
-          flex-wrap: wrap;
-          margin-bottom: 20px;
-        }
-
+        .hero-buttons { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
         .btn-primary, .btn-secondary {
           padding: 14px 32px;
           border-radius: 40px;
           font-weight: 600;
           cursor: pointer;
-          transition: 0.3s;
+          transition: all 0.3s ease;
           border: none;
           font-size: 1rem;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
         }
-
-        .btn-primary {
-          background: #1565c0;
-          color: white;
-        }
+        .btn-primary { background: #1565c0; color: white; }
         .btn-primary:hover { background: #0d47a1; transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.15); }
-
-        .btn-secondary {
-          background: white;
-          color: #1565c0;
-          border: 2px solid #1565c0;
-        }
+        .btn-secondary { background: white; color: #1565c0; border: 2px solid #1565c0; }
         .btn-secondary:hover { background: #1565c0; color: white; transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.15); }
 
         .complaint-regarding-container { margin-top: 15px; text-align: left; }
@@ -1262,7 +1449,7 @@ const LandingPage = () => {
           border-radius: 50px;
           font-weight: 700;
           cursor: pointer;
-          transition: 0.3s;
+          transition: all 0.3s ease;
           border: 2px solid #1565c0;
           font-size: 1.1rem;
           background: white;
@@ -1321,14 +1508,14 @@ const LandingPage = () => {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 12px;
+          gap: 8px;
           padding: 20px;
           background: #f8fafc;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
           transition: all 0.3s ease;
           cursor: default;
-          min-width: 100px;
+          min-width: 110px;
         }
         .channel-item:hover {
           transform: translateY(-4px);
@@ -1336,18 +1523,11 @@ const LandingPage = () => {
           border-color: #1565c0;
           background: linear-gradient(135deg, #ffffff, #e3f2fd);
         }
-        .channel-icon-wrapper {
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.3s ease;
-        }
+        .channel-icon-wrapper { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
         .channel-icon-image { width: 35px; height: 35px; object-fit: contain; }
         .channel-emoji { font-size: 2rem; }
         .channel-name { font-size: 0.85rem; font-weight: 600; color: #1a2c3e; text-align: center; }
+        .channel-contact { font-size: 0.65rem; color: #1565c0; font-weight: 500; margin-top: 4px; }
 
         /* Public Complaints and Latest Status Container */
         .stats-public-container {
@@ -1358,6 +1538,7 @@ const LandingPage = () => {
           grid-template-columns: 1fr 1fr;
           gap: 32px;
         }
+
         .public-complaints-card, .latest-status-card {
           background: white;
           border-radius: 20px;
@@ -1365,18 +1546,82 @@ const LandingPage = () => {
           box-shadow: 0 2px 12px rgba(0,0,0,0.08);
           border: 1px solid #e8e8e8;
         }
+
+        .card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .tab-buttons {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .tab-btn {
+          padding: 6px 16px;
+          border-radius: 20px;
+          border: 1px solid #e0e0e0;
+          background: white;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          font-size: 0.8rem;
+        }
+
+        .tab-btn.active {
+          background: #1565c0;
+          color: white;
+          border-color: #1565c0;
+        }
+
         .public-complaints-card h3, .latest-status-card h3 {
           font-size: 1.3rem;
           color: #0d47a1;
-          margin-bottom: 20px;
+          margin: 0;
           border-left: 4px solid #1565c0;
           padding-left: 16px;
         }
+
+        .refresh-btn {
+          background: #1565c0;
+          color: white;
+          border: none;
+          padding: 6px 14px;
+          border-radius: 20px;
+          cursor: pointer;
+          font-size: 0.75rem;
+          transition: all 0.3s ease;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .refresh-btn:hover { background: #0d47a1; transform: translateY(-1px); }
+
         .table-wrapper { overflow-x: auto; }
         .complaints-table { width: 100%; border-collapse: collapse; }
         .complaints-table th, .complaints-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
         .complaints-table th { background: #f5f7fa; font-weight: 600; color: #0d47a1; }
-        .complaints-table tr:hover { background: #f8fafc; }
+        .complaint-row:hover { background: #f8fafc; }
+
+        .complainant-info { display: flex; flex-direction: column; gap: 4px; }
+        .complainant-name { font-weight: 500; }
+        .complainant-phone { font-size: 0.7rem; color: #6c8196; }
+
+        .complaint-preview { font-size: 0.85rem; color: #333; line-height: 1.4; }
+
+        .category-badge {
+          display: inline-block;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 0.7rem;
+          background: #e3f2fd;
+          color: #1565c0;
+        }
+
         .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
         .status-progress { background: #fff3cd; color: #856404; }
         .status-resolved { background: #d4edda; color: #155724; }
@@ -1384,13 +1629,19 @@ const LandingPage = () => {
         .status-review { background: #fff3cd; color: #856404; }
         .status-closed { background: #e0e0e0; color: #555; }
         .status-rejected { background: #f8d7da; color: #c62828; }
-        
-        .status-item { background: #f5f7fa; padding: 16px; border-radius: 12px; margin-bottom: 16px; }
-        .status-title { font-weight: 500; margin-bottom: 8px; color: #1a2c3e; }
-        .status-number { font-size: 1.3rem; font-weight: 700; color: #1565c0; }
-        .status-range { font-size: 0.75rem; font-weight: normal; color: #6c8196; }
 
-        /* View Details Button */
+        .status-item {
+          background: #f5f7fa;
+          padding: 16px;
+          border-radius: 12px;
+          margin-bottom: 16px;
+          transition: all 0.3s ease;
+        }
+        .status-item:hover { transform: translateX(4px); background: #e8edf5; }
+        .status-title { font-weight: 500; margin-bottom: 8px; color: #1a2c3e; }
+        .status-number { font-size: 1.5rem; font-weight: 700; color: #1565c0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .status-range { font-size: 0.75rem; font-weight: normal; color: #6c8196; margin-top: 4px; }
+
         .view-details-btn {
           background: linear-gradient(135deg, #1565c0, #0d47a1);
           color: white;
@@ -1402,10 +1653,130 @@ const LandingPage = () => {
           transition: all 0.3s ease;
           white-space: nowrap;
         }
-        .view-details-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(21,101,192,0.3);
+        .view-details-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(21,101,192,0.3); }
+
+        .loading-spinner {
+          width: 20px;
+          height: 20px;
+          border: 2px solid #e0e0e0;
+          border-top-color: #1565c0;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+          display: inline-block;
+          margin-right: 8px;
+          vertical-align: middle;
         }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Statistics */
+        .statistics {
+          background: white;
+          padding: 48px 24px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .statistics h3 { text-align: center; margin-bottom: 32px; color: #0d47a1; font-size: 1.3rem; }
+        .stats-grid { display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; }
+        .stat-card { background: #f5f7fa; border-radius: 12px; overflow: hidden; }
+        .stat-bar-wrapper { height: 8px; background: #e0e0e0; }
+        .stat-bar { height: 8px; transition: width 0.5s ease; }
+        .stat-info {
+          padding: 12px 16px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-weight: 500;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .stat-right { display: flex; align-items: center; gap: 12px; }
+        .stat-percentage { font-weight: 700; color: #0d47a1; }
+        .stat-change { font-size: 0.7rem; font-weight: 500; }
+        .stat-change.positive { color: #10b981; }
+        .stat-change.negative { color: #ef4444; }
+        .quick-links { text-align: center; padding-top: 20px; border-top: 1px solid #e0e0e0; }
+        .quick-links span { font-weight: 600; margin-right: 16px; color: #1565c0; }
+        .quick-links button {
+          background: none;
+          border: none;
+          color: #1565c0;
+          margin: 0 8px;
+          cursor: pointer;
+          font-weight: 500;
+          transition: color 0.3s;
+        }
+        .quick-links button:hover { color: #0d47a1; text-decoration: underline; }
+
+        /* Signal Section */
+        .signal-section {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 24px 48px;
+        }
+        .signal-container { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+        .signal-card, .contact-card {
+          background: white;
+          border-radius: 20px;
+          padding: 28px;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+          border: 1px solid #e8e8e8;
+          transition: all 0.3s ease;
+        }
+        .signal-card:hover, .contact-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+        .signal-card h3, .contact-card h3 {
+          font-size: 1.3rem;
+          color: #0d47a1;
+          margin-bottom: 20px;
+          border-left: 4px solid #1565c0;
+          padding-left: 16px;
+        }
+        .complaint-list { margin-top: 20px; }
+        .complaint-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 0;
+          border-bottom: 1px solid #e0e0e0;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .complaint-item:last-child { border-bottom: none; }
+        .complaint-category { font-weight: 500; color: #1a2c3e; }
+        .complaint-meta { display: flex; gap: 16px; align-items: center; }
+        .complaint-count { font-size: 0.75rem; color: #1565c0; font-weight: 500; }
+        .complaint-date { color: #6c8196; font-size: 0.75rem; }
+
+        .contact-details { line-height: 2; }
+        .contact-details p { margin: 12px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .contact-card-email-icon { width: 14px; height: 14px; object-fit: contain; }
+
+        .support-hours {
+          margin-top: 20px;
+          padding-top: 16px;
+          border-top: 1px solid #e0e0e0;
+          text-align: center;
+          font-size: 0.85rem;
+          font-weight: 500;
+          color: #1565c0;
+        }
+
+        .contact-now-btn {
+          width: 100%;
+          margin-top: 16px;
+          padding: 12px;
+          background: #1565c0;
+          color: white;
+          border: none;
+          border-radius: 40px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        .contact-now-btn:hover { background: #0d47a1; transform: translateY(-2px); }
 
         /* Modal Styles */
         .modal-overlay {
@@ -1425,9 +1796,9 @@ const LandingPage = () => {
         .modal-content {
           background: white;
           border-radius: 24px;
-          max-width: 600px;
+          max-width: 650px;
           width: 90%;
-          max-height: 80vh;
+          max-height: 85vh;
           overflow-y: auto;
           animation: slideUp 0.3s ease;
         }
@@ -1441,13 +1812,12 @@ const LandingPage = () => {
           background: linear-gradient(135deg, #1565c0, #0d47a1);
           color: white;
           border-radius: 24px 24px 0 0;
+          position: sticky;
+          top: 0;
+          z-index: 10;
         }
 
-        .modal-header h3 {
-          margin: 0;
-          font-size: 1.2rem;
-        }
-
+        .modal-header h3 { margin: 0; font-size: 1.2rem; }
         .modal-close {
           background: none;
           border: none;
@@ -1458,19 +1828,11 @@ const LandingPage = () => {
           border-radius: 50%;
           transition: all 0.3s ease;
         }
+        .modal-close:hover { background: rgba(255,255,255,0.2); }
 
-        .modal-close:hover {
-          background: rgba(255,255,255,0.2);
-        }
-
-        .modal-body {
-          padding: 24px;
-        }
-
-        .detail-section {
-          margin-bottom: 20px;
-        }
-
+        .modal-body { padding: 24px; }
+        .detail-section { margin-bottom: 24px; }
+        .detail-section:last-child { margin-bottom: 0; }
         .section-subtitle {
           font-size: 1rem;
           font-weight: 600;
@@ -1480,49 +1842,23 @@ const LandingPage = () => {
           border-bottom: 2px solid #e0e0e0;
         }
 
-        .detail-row {
-          display: flex;
-          margin-bottom: 12px;
-        }
-
-        .detail-label {
-          width: 35%;
-          font-weight: 600;
-          color: #0d47a1;
-        }
-
-        .detail-value {
-          width: 65%;
-          color: #333;
-        }
-
-        .complaint-text {
-          line-height: 1.5;
-          white-space: pre-wrap;
-        }
-
-        .priority-high {
-          color: #c62828;
-          font-weight: 600;
-        }
-
-        .priority-medium {
-          color: #f57c00;
-          font-weight: 600;
-        }
-
-        .priority-low {
-          color: #2e7d32;
-          font-weight: 600;
-        }
+        .detail-grid { display: flex; flex-direction: column; gap: 10px; }
+        .detail-row { display: flex; margin-bottom: 8px; flex-wrap: wrap; }
+        .detail-label { width: 35%; font-weight: 600; color: #0d47a1; }
+        .detail-value { width: 65%; color: #333; word-break: break-word; }
+        .detail-row.full-width .detail-value { width: 100%; }
+        .complaint-text { line-height: 1.5; white-space: pre-wrap; background: #f8fafc; padding: 12px; border-radius: 8px; }
 
         .modal-footer {
           padding: 16px 24px;
           border-top: 1px solid #e0e0e0;
           display: flex;
           justify-content: flex-end;
+          position: sticky;
+          bottom: 0;
+          background: white;
+          border-radius: 0 0 24px 24px;
         }
-
         .modal-btn-close {
           background: #f0f0f0;
           color: #666;
@@ -1532,84 +1868,17 @@ const LandingPage = () => {
           cursor: pointer;
           transition: all 0.3s ease;
         }
+        .modal-btn-close:hover { background: #e0e0e0; }
 
-        .modal-btn-close:hover {
-          background: #e0e0e0;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-          from {
-            transform: translateY(50px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-
-        /* Statistics */
-        .statistics {
-          background: white;
-          padding: 48px 24px;
-        }
-        .container { max-width: 1000px; margin: 0 auto; }
-        .statistics h3 { text-align: center; margin-bottom: 32px; color: #0d47a1; font-size: 1.3rem; }
-        .stats-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
-        .stat-card { background: #f5f7fa; border-radius: 12px; overflow: hidden; }
-        .stat-bar { height: 8px; transition: width 0.5s; }
-        .stat-info { padding: 12px 16px; display: flex; justify-content: space-between; font-weight: 500; }
-        .quick-links { text-align: center; padding-top: 20px; border-top: 1px solid #e0e0e0; }
-        .quick-links span { font-weight: 600; margin-right: 16px; color: #1565c0; }
-        .quick-links button { background: none; border: none; color: #1565c0; margin: 0 8px; cursor: pointer; font-weight: 500; }
-        .quick-links button:hover { text-decoration: underline; }
-
-        /* Signal Section */
-        .signal-section {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 0 24px 48px;
-        }
-        .signal-container { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
-        .signal-card, .contact-card {
-          background: white;
-          border-radius: 20px;
-          padding: 28px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-          border: 1px solid #e8e8e8;
-        }
-        .signal-card h3, .contact-card h3 {
-          font-size: 1.3rem;
-          color: #0d47a1;
-          margin-bottom: 20px;
-          border-left: 4px solid #1565c0;
-          padding-left: 16px;
-        }
-        .complaint-list { margin-top: 20px; }
-        .complaint-item {
-          display: flex;
-          justify-content: space-between;
-          padding: 12px 0;
-          border-bottom: 1px solid #e0e0e0;
-        }
-        .complaint-item:last-child { border-bottom: none; }
-        .complaint-category { font-weight: 500; color: #1a2c3e; }
-        .complaint-date { color: #6c8196; font-size: 0.85rem; }
-        .contact-details { line-height: 2; }
-        .contact-details p { margin: 10px 0; }
-        .contact-card-email-icon { width: 14px; height: 14px; object-fit: contain; vertical-align: middle; margin-right: 2px; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
         /* Footer */
         .footer {
           background: #0d2b5e;
           color: white;
           padding: 20px 24px;
-          margin-top: 0;
+          margin-top: 40px;
           text-align: center;
         }
         .footer-content { max-width: 1200px; margin: 0 auto; }
@@ -1625,16 +1894,17 @@ const LandingPage = () => {
           .hero-buttons { justify-content: center; }
           .complaint-regarding-container { text-align: center; }
           .hero-right { justify-content: center; margin-top: 30px; }
+          .channels-list { gap: 16px; }
         }
 
         @media (max-width: 768px) {
           .main-content { padding-top: 280px; }
           .hero { padding: 40px 20px; }
-          .hero-left h2 { fontSize: 1.3rem; }
-          .hero-left p { fontSize: 0.95rem; }
+          .hero-left h2 { font-size: 1.3rem; }
+          .hero-left p { font-size: 0.95rem; }
           .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; padding: 0 20px; }
           .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
-          .contact-info-group { flex-direction: column; }
+          .contact-info-group { flex-direction: column; gap: 8px; }
           .logo-left, .logo-right { display: none; }
           .dept-text-center { flex: 1; }
           .channel-item { min-width: 80px; padding: 15px; }
@@ -1647,16 +1917,23 @@ const LandingPage = () => {
           .detail-row { flex-direction: column; }
           .detail-label { width: 100%; margin-bottom: 5px; }
           .detail-value { width: 100%; }
+          .complaint-item { flex-direction: column; align-items: flex-start; }
+          .complaint-meta { width: 100%; justify-content: space-between; }
+          .modal-content { max-width: 95%; margin: 10px; }
+          .toast-notification { top: auto; bottom: 20px; right: 20px; left: 20px; max-width: calc(100% - 40px); }
+          .tab-buttons { width: 100%; justify-content: center; }
         }
 
         @media (max-width: 480px) {
           .main-content { padding-top: 320px; }
-          .hero-buttons { flex-direction: column; align-items: center; }
+          .hero-buttons { flex-direction: column; align-items: center; width: 100%; }
           .btn-primary, .btn-secondary, .btn-complaint-regarding { width: 100%; justify-content: center; }
-          .complaints-table th, .complaints-table td { padding: 8px; font-size: 0.75rem; }
           .channels-list { gap: 12px; }
           .channel-item { min-width: 70px; padding: 10px; }
           .view-details-btn { font-size: 0.6rem; padding: 4px 8px; }
+          .status-number { font-size: 1.2rem; }
+          .card-header { flex-direction: column; align-items: flex-start; }
+          .tab-buttons { justify-content: flex-start; }
         }
       `}</style>
     </div>

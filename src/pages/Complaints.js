@@ -989,8 +989,6 @@ const Complaints = () => {
         </div>
       )}
 
- 
-
       <style jsx>{`
         * {
           margin: 0;

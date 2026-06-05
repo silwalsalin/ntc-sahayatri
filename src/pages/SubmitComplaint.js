@@ -1,7 +1,7 @@
 // src/pages/SubmitComplaint.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import complaintService from '../services/complaintService';
+import axios from 'axios';
 
 // Try to import local images with fallback
 let ntcLogo, govLogo, heroImage;
@@ -34,6 +34,9 @@ const SubmitComplaint = () => {
   // Success state to show message without leaving page
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState(null);
+  
+  // Toast notification state
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   // State for complaint form
   const [formData, setFormData] = useState({
@@ -52,11 +55,23 @@ const SubmitComplaint = () => {
   // File upload state
   const [selectedFile, setSelectedFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  // Complete Nepal Location Data with all 77 districts and their municipalities
+  // API URL from environment or default
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: '' });
+    }, 5000);
+  };
+
+  // Complete Nepal Location Data with all 77 districts
   const locationData = {
     province1: { 
-      np: 'प्रदेश नं. १', 
+      np: 'कोशी प्रदेश', 
       en: 'Koshi Province', 
       districts: {
         'taplejung': { np: 'ताप्लेजुङ', en: 'Taplejung', municipalities: ['फुङलिङ नगरपालिका', 'सिदिङ्वा गाउँपालिका', 'मैवाखोला गाउँपालिका', 'मिक्वाखोला गाउँपालिका', 'आठराई त्रिवेणी गाउँपालिका', 'सिरीजङ्घा गाउँपालिका', 'पाथीभरा याङवरक गाउँपालिका'] },
@@ -93,7 +108,7 @@ const SubmitComplaint = () => {
       np: 'बागमती प्रदेश', 
       en: 'Bagmati Province', 
       districts: {
-        'kathmandu': { np: 'काठमाडौं', en: 'Kathmandu', municipalities: ['काठमाडौं महानगरपालिका', 'कीर्तिपुर नगरपालिका', 'टोखा नगरपालिका', 'तारकेश्वर नगरपालिका', 'चन्द्रागिरी नगरपालिका', 'नागार्जुन नगरपालिका', 'गोकर्णेश्वर नगरपालिका', 'बुढानीलकण्ठ नगरपालिका', 'डाँछी गाउँपालिका', 'शंखरापुर गाउँपालिका', 'कागेश्वरी मनोहरा नगरपालिका', 'बालाजु नगरपालिका'] },
+        'kathmandu': { np: 'काठमाडौं', en: 'Kathmandu', municipalities: ['काठमाडौं महानगरपालिका', 'कीर्तिपुर नगरपालिका', 'टोखा नगरपालिका', 'तारकेश्वर नगरपालिका', 'चन्द्रागिरी नगरपालिका', 'नागार्जुन नगरपालिका', 'गोकर्णेश्वर नगरपालिका', 'बुढानीलकण्ठ नगरपालिका', 'डाँछी गाउँपालिका', 'शंखरापुर गाउँपालिका', 'कागेश्वरी मनोहरा नगरपालिका'] },
         'lalitpur': { np: 'ललितपुर', en: 'Lalitpur', municipalities: ['ललितपुर महानगरपालिका', 'गोदावरी नगरपालिका', 'महालक्ष्मी नगरपालिका', 'बज्रबाराही गाउँपालिका', 'बागमती गाउँपालिका', 'कोन्ज्योसोम गाउँपालिका'] },
         'bhaktapur': { np: 'भक्तपुर', en: 'Bhaktapur', municipalities: ['भक्तपुर नगरपालिका', 'मध्यपुर थिमी नगरपालिका', 'सूर्यविनायक नगरपालिका', 'चाँगुनारायण नगरपालिका'] },
         'kavrepalanchok': { np: 'काभ्रेपलान्चोक', en: 'Kavrepalanchok', municipalities: ['बनेपा नगरपालिका', 'धुलिखेल नगरपालिका', 'पनौती नगरपालिका', 'नमोबुद्ध नगरपालिका', 'मण्डनदेउपुर नगरपालिका', 'खानीखोला गाउँपालिका', 'रोशी गाउँपालिका', 'बेथानचोक गाउँपालिका', 'तेमाल गाउँपालिका', 'महाभारत गाउँपालिका', 'भुम्लु गाउँपालिका'] },
@@ -251,7 +266,10 @@ const SubmitComplaint = () => {
       submitFailed: '❌ उजुरी दर्ता गर्न असफल। कृपया पछि प्रयास गर्नुहोस्।',
       close: 'बन्द गर्नुहोस्',
       trackNow: 'ट्र्याक गर्नुहोस्',
-      enterStreetAddress: 'टोल/गाउँको नाम प्रविष्ट गर्नुहोस्'
+      enterStreetAddress: 'टोल/गाउँको नाम प्रविष्ट गर्नुहोस्',
+      uploading: 'अपलोड हुँदै...',
+      uploadComplete: 'अपलोड पूरा भयो',
+      connectionError: 'सर्भरमा जडान हुन सकेन। कृपया पछि प्रयास गर्नुहोस्।'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -307,7 +325,10 @@ const SubmitComplaint = () => {
       submitFailed: '❌ Failed to submit complaint. Please try again later.',
       close: 'Close',
       trackNow: 'Track Now',
-      enterStreetAddress: 'Enter tole/village name'
+      enterStreetAddress: 'Enter tole/village name',
+      uploading: 'Uploading...',
+      uploadComplete: 'Upload complete',
+      connectionError: 'Cannot connect to server. Please try again later.'
     }
   };
 
@@ -336,7 +357,14 @@ const SubmitComplaint = () => {
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('File size should be less than 5MB', 'error');
+        return;
+      }
+      setSelectedFile(file);
+      setUploadProgress(0);
     }
   };
 
@@ -355,55 +383,99 @@ const SubmitComplaint = () => {
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setSelectedFile(e.dataTransfer.files[0]);
+      const file = e.dataTransfer.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('File size should be less than 5MB', 'error');
+        return;
+      }
+      setSelectedFile(file);
+      setUploadProgress(0);
     }
   };
 
   const handleSubmitComplaint = async (e) => {
     e.preventDefault();
     
+    // Validation checks
     if (!formData.natureOfComplaint) {
-      alert(language === 'np' ? '❌ कृपया उजुरीको प्रकृति चयन गर्नुहोस्।' : '❌ Please select nature of complaint.');
+      showToast(language === 'np' ? 'कृपया उजुरीको प्रकृति चयन गर्नुहोस्।' : 'Please select nature of complaint.', 'error');
       return;
     }
     
     if (!formData.name) {
-      alert(language === 'np' ? '❌ कृपया पुरा नाम भर्नुहोस्।' : '❌ Please enter your name.');
+      showToast(language === 'np' ? 'कृपया पुरा नाम भर्नुहोस्।' : 'Please enter your name.', 'error');
       return;
     }
     
     if (!formData.email || !formData.phone) {
-      alert(language === 'np' ? '❌ कृपया इमेल र मोबाइल नम्बर भर्नुहोस्।' : '❌ Please enter email and mobile number.');
+      showToast(language === 'np' ? 'कृपया इमेल र मोबाइल नम्बर भर्नुहोस्।' : 'Please enter email and mobile number.', 'error');
+      return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      showToast(language === 'np' ? 'कृपया मान्य इमेल ठेगाना प्रविष्ट गर्नुहोस्।' : 'Please enter a valid email address.', 'error');
+      return;
+    }
+    
+    // Validate phone number (Nepal format)
+    const phoneRegex = /^[9][7-8][0-9]{8}$/;
+    if (!phoneRegex.test(formData.phone)) {
+      showToast(language === 'np' ? 'कृपया मान्य मोबाइल नम्बर प्रविष्ट गर्नुहोस् (९८XXXXXXXX)' : 'Please enter a valid mobile number (98XXXXXXXX)', 'error');
       return;
     }
     
     if (!formData.description) {
-      alert(language === 'np' ? '📝 कृपया उजुरीको विवरण भर्नुहोस्।' : '📝 Please describe your complaint.');
+      showToast(language === 'np' ? 'कृपया उजुरीको विवरण भर्नुहोस्।' : 'Please describe your complaint.', 'error');
       return;
     }
 
     setIsSubmitting(true);
+    setUploadProgress(0);
 
     try {
-      const complaintData = {
-        natureOfComplaint: formData.natureOfComplaint,
-        name: formData.name,
-        state: formData.state,
-        district: formData.district,
-        municipality: formData.municipality,
-        wardNo: formData.wardNo,
-        streetAddress: formData.streetAddress,
-        email: formData.email,
-        phone: formData.phone,
-        description: formData.description
-      };
+      // Create FormData for file upload
+      const formDataToSend = new FormData();
       
-      const response = await complaintService.submitComplaint(complaintData);
+      // Add all form fields
+      Object.keys(formData).forEach(key => {
+        if (formData[key]) {
+          formDataToSend.append(key, formData[key]);
+        }
+      });
       
-      if (response.success) {
-        setSuccessData(response.data);
+      // Add file if selected
+      if (selectedFile) {
+        formDataToSend.append('attachment', selectedFile);
+      }
+      
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+      
+      const response = await axios.post(`${API_URL}/complaints`, formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 30000 // 30 second timeout
+      });
+      
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      if (response.data.success) {
+        setSuccessData(response.data.data);
         setShowSuccess(true);
         
+        // Reset form
         setFormData({
           natureOfComplaint: '',
           name: '',
@@ -417,13 +489,30 @@ const SubmitComplaint = () => {
           description: ''
         });
         setSelectedFile(null);
+        setUploadProgress(0);
+        
+        // Clear file input
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) fileInput.value = '';
+        
+        showToast(t.submitSuccess, 'success');
       } else {
-        throw new Error(response.message || 'Submission failed');
+        throw new Error(response.data.message || 'Submission failed');
       }
       
     } catch (error) {
       console.error('Submission error:', error);
-      alert(t.submitFailed);
+      
+      let errorMessage = t.submitFailed;
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = language === 'np' ? 'सर्भरले समयमा प्रतिक्रिया दिएन। कृपया पछि प्रयास गर्नुहोस्।' : 'Server timeout. Please try again later.';
+      } else if (error.response) {
+        errorMessage = error.response.data?.message || t.submitFailed;
+      } else if (error.request) {
+        errorMessage = t.connectionError;
+      }
+      
+      showToast(errorMessage, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -453,6 +542,17 @@ const SubmitComplaint = () => {
 
   return (
     <div className="submit-complaint-page">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
       {/* HEADER 1 - Top Bar */}
       <div className="header-1">
         <div className="container-1">
@@ -504,28 +604,18 @@ const SubmitComplaint = () => {
         </div>
       </div>
 
-      {/* HEADER 2 - Department Level with Logos */}
+      {/* HEADER 2 - Department Level */}
       <div className="header-2">
         <div className="container-2">
           <div className="logo-left">
-            <LogoImage 
-              src={ntcLogo} 
-              alt="NTC Logo" 
-              fallback="📡"
-              className="ntc-logo"
-            />
+            <LogoImage src={ntcLogo} alt="NTC Logo" fallback="📡" className="ntc-logo" />
           </div>
           <div className="dept-text-center">
             <div className="dept-name">{t.departmentName}</div>
             <div className="dept-address">{t.departmentAddress}</div>
           </div>
           <div className="logo-right">
-            <LogoImage 
-              src={govLogo} 
-              alt="Government Logo" 
-              fallback="🇳🇵"
-              className="gov-logo"
-            />
+            <LogoImage src={govLogo} alt="Government Logo" fallback="🇳🇵" className="gov-logo" />
           </div>
         </div>
       </div>
@@ -722,12 +812,21 @@ const SubmitComplaint = () => {
                       id="fileInput" 
                       onChange={handleFileChange} 
                       style={{ display: 'none' }} 
+                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                     />
                   </div>
                   {selectedFile && (
                     <div className="selected-file">
                       <span>📄 {selectedFile.name}</span>
-                      <button type="button" onClick={() => setSelectedFile(null)}>✕</button>
+                      {isSubmitting && uploadProgress < 100 && (
+                        <div className="upload-progress">
+                          <div className="progress-bar" style={{ width: `${uploadProgress}%` }}></div>
+                          <span className="progress-text">{uploadProgress}% {t.uploading}</span>
+                        </div>
+                      )}
+                      {!isSubmitting && (
+                        <button type="button" onClick={() => setSelectedFile(null)}>✕</button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -762,7 +861,7 @@ const SubmitComplaint = () => {
         </div>
       </div>
 
-      {/* Success Modal - stays on same page */}
+      {/* Success Modal */}
       {showSuccess && successData && (
         <div className="success-modal-overlay">
           <div className="success-modal">
@@ -789,8 +888,6 @@ const SubmitComplaint = () => {
         </div>
       )}
 
-   
-
       <style jsx>{`
         * {
           margin: 0;
@@ -807,7 +904,62 @@ const SubmitComplaint = () => {
           flex-direction: column;
         }
 
-        /* HEADER 1 - Top Bar */
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 200px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 350px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Upload Progress */
+        .upload-progress {
+          margin-top: 8px;
+          width: 100%;
+        }
+        .progress-bar {
+          height: 4px;
+          background: #1565c0;
+          border-radius: 2px;
+          transition: width 0.3s ease;
+        }
+        .progress-text {
+          font-size: 0.7rem;
+          color: #1565c0;
+          margin-left: 8px;
+        }
+
+        /* HEADER 1 */
         .header-1 {
           position: fixed;
           top: 0;
@@ -831,12 +983,7 @@ const SubmitComplaint = () => {
           gap: 20px;
         }
 
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
+        .header-left { display: flex; align-items: center; gap: 16px; }
         .we-are-here {
           display: flex;
           align-items: center;
@@ -846,26 +993,10 @@ const SubmitComplaint = () => {
           border-radius: 40px;
           font-weight: 500;
         }
+        .quote-text { font-size: 0.9rem; letter-spacing: 0.5px; font-weight: 600; }
 
-        .quote-text {
-          font-size: 0.9rem;
-          letter-spacing: 0.5px;
-          font-weight: 600;
-        }
-
-        .header-right {
-          display: flex;
-          align-items: center;
-          gap: 25px;
-          flex-wrap: wrap;
-        }
-
-        .contact-info-group {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-        }
-
+        .header-right { display: flex; align-items: center; gap: 25px; flex-wrap: wrap; }
+        .contact-info-group { display: flex; align-items: center; gap: 15px; }
         .contact-info-item {
           display: flex;
           align-items: center;
@@ -876,12 +1007,7 @@ const SubmitComplaint = () => {
           border-radius: 30px;
           transition: all 0.3s ease;
         }
-
-        .contact-info-item:hover {
-          background: rgba(255,255,255,0.25);
-          transform: translateY(-1px);
-        }
-
+        .contact-info-item:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px); }
         .contact-icon { font-size: 0.85rem; }
         .contact-text { font-size: 0.75rem; font-weight: 500; }
 
@@ -932,7 +1058,7 @@ const SubmitComplaint = () => {
         .dropdown-item.active { background: #1565c0; color: white; }
         .lang-flag { font-size: 1rem; }
 
-        /* HEADER 2 - Department Level */
+        /* HEADER 2 */
         .header-2 {
           position: fixed;
           top: 55px;
@@ -972,7 +1098,7 @@ const SubmitComplaint = () => {
         .dept-name { font-size: 1rem; font-weight: 700; color: #0d47a1; letter-spacing: 1px; }
         .dept-address { font-size: 0.75rem; opacity: 0.7; color: #555; margin-top: 3px; }
 
-        /* HEADER 3 - Navigation Bar */
+        /* HEADER 3 */
         .header-3 {
           position: fixed;
           top: 119px;
@@ -1254,15 +1380,8 @@ const SubmitComplaint = () => {
         .footer-content p { margin: 5px 0; font-size: 0.85rem; }
         .copyright { opacity: 0.7; font-size: 0.75rem; }
 
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-          from { transform: translateY(50px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
         /* Responsive */
         @media (max-width: 768px) {

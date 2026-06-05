@@ -1,696 +1,1073 @@
 // backend/server.js
 const express = require('express');
 const cors = require('cors');
-const { Op } = require('sequelize');
-const { sequelize, testConnection } = require('./config/database');
-const { syncDatabase } = require('./models');
-const Complaint = require('./models/Complaint');
-const Admin = require('./models/Admin');
-const Staff = require('./models/Staff');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+require('dotenv').config();
 
-// Note: bcryptjs is optional - we'll handle both cases
-let bcrypt;
-try {
-    bcrypt = require('bcryptjs');
-} catch (e) {
-    console.log('⚠️ bcryptjs not installed, using plain text password comparison');
-    bcrypt = null;
-}
-
-// Create Express app
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
+    credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ========== HEALTH CHECK ENDPOINT ==========
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Server is running' });
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
 });
 
-// ========== SUBMIT COMPLAINT ==========
-app.post('/api/complaints/submit', async (req, res) => {
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only PDF, JPG, PNG, DOC files are allowed.'));
+        }
+    }
+});
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(uploadDir));
+
+// Database setup
+const sqlite3 = require('sqlite3').verbose();
+const dbPath = path.join(__dirname, 'database', 'complaints.db');
+
+// Ensure database directory exists
+const dbDir = path.join(__dirname, 'database');
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+}
+
+// Create database connection
+const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error('Error opening database:', err.message);
+    } else {
+        console.log('Connected to SQLite database at:', dbPath);
+        initializeDatabase();
+    }
+});
+
+// Initialize database tables
+function initializeDatabase() {
+    // Regular Complaints Table
+    const createComplaintsTable = `
+        CREATE TABLE IF NOT EXISTS complaints (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            complaint_number TEXT UNIQUE NOT NULL,
+            complaint_number_np TEXT UNIQUE NOT NULL,
+            tracking_password TEXT NOT NULL,
+            nature_of_complaint TEXT NOT NULL,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            state TEXT,
+            district TEXT,
+            municipality TEXT,
+            ward_no TEXT,
+            street_address TEXT,
+            description TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            priority TEXT DEFAULT 'medium',
+            assigned_to TEXT,
+            resolution TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            resolved_at DATETIME
+        )
+    `;
+
+    // Regular Complaints Attachments Table
+    const createAttachmentsTable = `
+        CREATE TABLE IF NOT EXISTS attachments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            complaint_id INTEGER NOT NULL,
+            filename TEXT NOT NULL,
+            original_name TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            file_size INTEGER,
+            mime_type TEXT,
+            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (complaint_id) REFERENCES complaints(id) ON DELETE CASCADE
+        )
+    `;
+
+    // Complaint Regarding Table
+    const createComplaintRegardingTable = `
+        CREATE TABLE IF NOT EXISTS complaint_regarding (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            complaint_number TEXT UNIQUE NOT NULL,
+            complaint_number_np TEXT UNIQUE NOT NULL,
+            tracking_password TEXT NOT NULL,
+            complaint_type TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            description TEXT NOT NULL,
+            priority TEXT DEFAULT 'medium',
+            name TEXT NOT NULL,
+            email TEXT,
+            phone TEXT NOT NULL,
+            address TEXT,
+            landmark TEXT,
+            preferred_contact TEXT DEFAULT 'phone',
+            reference_number TEXT,
+            status TEXT DEFAULT 'pending',
+            assigned_to TEXT,
+            resolution TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            resolved_at DATETIME
+        )
+    `;
+
+    // Complaint Regarding Attachments Table
+    const createComplaintRegardingAttachmentsTable = `
+        CREATE TABLE IF NOT EXISTS complaint_regarding_attachments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            complaint_id INTEGER NOT NULL,
+            filename TEXT NOT NULL,
+            original_name TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            file_size INTEGER,
+            mime_type TEXT,
+            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (complaint_id) REFERENCES complaint_regarding(id) ON DELETE CASCADE
+        )
+    `;
+
+    // Status History Table for Regular Complaints
+    const createStatusHistoryTable = `
+        CREATE TABLE IF NOT EXISTS complaint_status_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            complaint_id INTEGER NOT NULL,
+            old_status TEXT,
+            new_status TEXT NOT NULL,
+            changed_by TEXT,
+            notes TEXT,
+            changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (complaint_id) REFERENCES complaints(id) ON DELETE CASCADE
+        )
+    `;
+
+    // Status History Table for Complaint Regarding
+    const createComplaintRegardingStatusHistoryTable = `
+        CREATE TABLE IF NOT EXISTS complaint_regarding_status_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            complaint_id INTEGER NOT NULL,
+            old_status TEXT,
+            new_status TEXT NOT NULL,
+            changed_by TEXT,
+            notes TEXT,
+            changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (complaint_id) REFERENCES complaint_regarding(id) ON DELETE CASCADE
+        )
+    `;
+
+    // Execute all table creations
+    db.run(createComplaintsTable, (err) => {
+        if (err) console.error('Error creating complaints table:', err);
+        else console.log('✓ Complaints table ready');
+    });
+
+    db.run(createAttachmentsTable, (err) => {
+        if (err) console.error('Error creating attachments table:', err);
+        else console.log('✓ Attachments table ready');
+    });
+
+    db.run(createComplaintRegardingTable, (err) => {
+        if (err) console.error('Error creating complaint_regarding table:', err);
+        else console.log('✓ Complaint Regarding table ready');
+    });
+
+    db.run(createComplaintRegardingAttachmentsTable, (err) => {
+        if (err) console.error('Error creating complaint_regarding_attachments table:', err);
+        else console.log('✓ Complaint Regarding Attachments table ready');
+    });
+
+    db.run(createStatusHistoryTable, (err) => {
+        if (err) console.error('Error creating status history table:', err);
+        else console.log('✓ Status history table ready');
+    });
+
+    db.run(createComplaintRegardingStatusHistoryTable, (err) => {
+        if (err) console.error('Error creating complaint_regarding_status_history table:', err);
+        else console.log('✓ Complaint Regarding Status History table ready');
+    });
+}
+
+// Helper functions
+function generateComplaintNumber() {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `NTC-${year}${month}${day}${hours}${minutes}${seconds}-${random}`;
+}
+
+function generateComplaintNumberNp() {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `एनटीसी-${year}${month}${day}${hours}${minutes}${seconds}-${random}`;
+}
+
+function generateTrackingPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let password = '';
+    for (let i = 0; i < 8; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+}
+
+// ==================== REGULAR COMPLAINTS API ROUTES ====================
+
+// Submit regular complaint
+app.post('/api/complaints', upload.single('attachment'), (req, res) => {
     try {
-        const {
-            natureOfComplaint,
-            name,
-            description,
-            email,
-            phone,
-            state,
-            district,
-            municipality,
-            wardNo,
-            streetAddress,
-            subject,
-            priority,
-            address,
-            landmark,
-            preferredContact,
-            referenceNumber,
-            complaintCategory
-        } = req.body;
+        console.log('Received regular complaint submission:', req.body);
         
-        console.log('📝 Received complaint:', { name, email, phone, complaintCategory });
+        const complaintData = req.body;
+        const file = req.file;
         
-        if (!name || !phone || !description) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Name, phone, and description are required' 
+        // Validate required fields
+        if (!complaintData.natureOfComplaint || !complaintData.name || !complaintData.email || !complaintData.phone || !complaintData.description) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields'
             });
         }
         
-        const timestamp = Date.now();
-        const randomNum = Math.floor(Math.random() * 1000);
-        const complaintNumber = `NTC-${timestamp}-${randomNum}`;
-        const complaintNumberNp = `एनटीसी-${timestamp}-${randomNum}`;
-        const trackingPassword = Math.floor(Math.random() * 9000 + 1000).toString();
+        const complaintNumber = generateComplaintNumber();
+        const complaintNumberNp = generateComplaintNumberNp();
+        const trackingPassword = generateTrackingPassword();
         
-        let complaintData = {
+        const sql = `
+            INSERT INTO complaints (
+                complaint_number, complaint_number_np, tracking_password,
+                nature_of_complaint, name, email, phone, state, district,
+                municipality, ward_no, street_address, description, priority
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        
+        const params = [
             complaintNumber,
             complaintNumberNp,
-            name,
-            email: email || '',
-            phone,
-            description,
             trackingPassword,
-            status: 'Pending',
-            statusNp: 'विचाराधीन',
-            submittedDate: new Date()
-        };
+            complaintData.natureOfComplaint,
+            complaintData.name,
+            complaintData.email,
+            complaintData.phone,
+            complaintData.state || null,
+            complaintData.district || null,
+            complaintData.municipality || null,
+            complaintData.wardNo || null,
+            complaintData.streetAddress || null,
+            complaintData.description,
+            complaintData.priority || 'medium'
+        ];
         
-        if (complaintCategory === 'complaint_regarding') {
-            complaintData = {
-                ...complaintData,
-                complaintCategory: 'complaint_regarding',
-                natureOfComplaint: natureOfComplaint || '',
-                subject: subject || '',
-                priority: priority || 'medium',
-                address: address || '',
-                landmark: landmark || '',
-                preferredContact: preferredContact || 'phone',
-                referenceNumber: referenceNumber || ''
-            };
-        } else {
-            complaintData = {
-                ...complaintData,
-                complaintCategory: 'general',
-                natureOfComplaint: natureOfComplaint || '',
-                state: state || '',
-                district: district || '',
-                municipality: municipality || '',
-                wardNo: wardNo || '',
-                streetAddress: streetAddress || ''
-            };
-        }
-        
-        const complaint = await Complaint.create(complaintData);
-        
-        console.log('✅ Complaint saved with ID:', complaint.id);
-        
-        res.status(201).json({
-            success: true,
-            message: 'Complaint submitted successfully',
-            data: {
-                id: complaint.id,
-                complaintNumber,
-                complaintNumberNp,
-                trackingPassword,
-                status: 'Pending'
+        db.run(sql, params, function(err) {
+            if (err) {
+                console.error('Database insert error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to save complaint',
+                    error: err.message
+                });
             }
+            
+            const complaintId = this.lastID;
+            
+            if (file) {
+                const attachSql = `
+                    INSERT INTO attachments (complaint_id, filename, original_name, file_path, file_size, mime_type)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                `;
+                db.run(attachSql, [
+                    complaintId,
+                    file.filename,
+                    file.originalname,
+                    file.path,
+                    file.size,
+                    file.mimetype
+                ]);
+            }
+            
+            res.status(201).json({
+                success: true,
+                data: {
+                    id: complaintId,
+                    complaintNumber,
+                    complaintNumberNp,
+                    trackingPassword
+                },
+                message: 'Complaint submitted successfully'
+            });
         });
         
     } catch (error) {
-        console.error('❌ Error submitting complaint:', error);
-        res.status(500).json({ 
-            success: false, 
+        console.error('Error submitting complaint:', error);
+        res.status(500).json({
+            success: false,
             message: 'Failed to submit complaint',
-            error: error.message 
+            error: error.message
         });
     }
 });
 
-// ========== GET ALL COMPLAINTS ==========
-app.get('/api/complaints', async (req, res) => {
+// Get public complaints (limited info)
+app.get('/api/complaints/public', (req, res) => {
     try {
-        const complaints = await Complaint.findAll({
-            order: [['submittedDate', 'DESC']]
+        const limit = parseInt(req.query.limit) || 10;
+        const sql = `
+            SELECT id, name, email, phone, description, status, priority, 
+                   complaint_number, created_at
+            FROM complaints 
+            ORDER BY created_at DESC
+            LIMIT ?
+        `;
+        
+        db.all(sql, [limit], (err, rows) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to fetch complaints',
+                    error: err.message
+                });
+            }
+            
+            res.json({
+                success: true,
+                data: rows || [],
+                count: rows ? rows.length : 0
+            });
         });
-        res.json({ success: true, data: complaints });
+        
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        console.error('Error fetching public complaints:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch complaints',
+            error: error.message
+        });
     }
 });
 
-// ========== TRACK COMPLAINT ==========
-app.get('/api/complaints/track/:id', async (req, res) => {
+// Track complaint by number and password
+app.post('/api/complaints/track', (req, res) => {
     try {
-        const { id } = req.params;
-        const { password } = req.query;
+        const { complaintNumber, password } = req.body;
         
-        let complaint;
-        if (!isNaN(id)) {
-            complaint = await Complaint.findByPk(parseInt(id));
-        } else {
-            complaint = await Complaint.findOne({ where: { complaintNumber: id } });
+        if (!complaintNumber || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Complaint number and password are required'
+            });
         }
         
-        if (!complaint) {
-            return res.status(404).json({ success: false, message: 'Complaint not found' });
-        }
+        const sql = `
+            SELECT * FROM complaints 
+            WHERE (complaint_number = ? OR complaint_number_np = ?) 
+            AND tracking_password = ?
+        `;
         
-        if (password && complaint.trackingPassword !== password) {
-            return res.status(403).json({ success: false, message: 'Invalid tracking password' });
-        }
+        db.get(sql, [complaintNumber, complaintNumber, password], (err, row) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to track complaint',
+                    error: err.message
+                });
+            }
+            
+            if (!row) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Invalid complaint number or password'
+                });
+            }
+            
+            // Remove sensitive information
+            delete row.tracking_password;
+            
+            res.json({
+                success: true,
+                data: row
+            });
+        });
         
-        res.json({ success: true, data: complaint });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        console.error('Error tracking complaint:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to track complaint',
+            error: error.message
+        });
     }
 });
 
-// ========== UPDATE COMPLAINT STATUS ==========
-app.put('/api/complaints/:id', async (req, res) => {
+// Get complaint statistics
+app.get('/api/complaints/stats', (req, res) => {
     try {
-        const complaint = await Complaint.findByPk(req.params.id);
-        if (!complaint) {
-            return res.status(404).json({ success: false, error: 'Complaint not found' });
+        const sql = `
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = 'in-progress' THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN status = 'review' THEN 1 ELSE 0 END) as review,
+                SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved
+            FROM complaints
+        `;
+        
+        db.get(sql, [], (err, row) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to fetch statistics',
+                    error: err.message
+                });
+            }
+            
+            res.json({
+                success: true,
+                data: row || {}
+            });
+        });
+        
+    } catch (error) {
+        console.error('Error fetching statistics:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch statistics',
+            error: error.message
+        });
+    }
+});
+
+// ==================== COMPLAINT REGARDING API ROUTES ====================
+
+// Submit complaint regarding
+app.post('/api/complaints/regarding', upload.array('attachments', 5), (req, res) => {
+    try {
+        console.log('Received complaint regarding submission:', req.body);
+        
+        const complaintData = req.body;
+        const files = req.files || [];
+        
+        // Validate required fields
+        if (!complaintData.complaintType || !complaintData.subject || !complaintData.name || !complaintData.phone || !complaintData.description) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields: complaintType, subject, name, phone, description are required'
+            });
         }
         
+        const complaintNumber = generateComplaintNumber();
+        const complaintNumberNp = generateComplaintNumberNp();
+        const trackingPassword = generateTrackingPassword();
+        
+        const sql = `
+            INSERT INTO complaint_regarding (
+                complaint_number, complaint_number_np, tracking_password,
+                complaint_type, subject, description, priority, name, email, phone,
+                address, landmark, preferred_contact, reference_number
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        
+        const params = [
+            complaintNumber,
+            complaintNumberNp,
+            trackingPassword,
+            complaintData.complaintType,
+            complaintData.subject,
+            complaintData.description,
+            complaintData.priority || 'medium',
+            complaintData.name,
+            complaintData.email || null,
+            complaintData.phone,
+            complaintData.address || null,
+            complaintData.landmark || null,
+            complaintData.preferredContact || 'phone',
+            complaintData.referenceNumber || null
+        ];
+        
+        db.run(sql, params, function(err) {
+            if (err) {
+                console.error('Database insert error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to save complaint to database',
+                    error: err.message
+                });
+            }
+            
+            const complaintId = this.lastID;
+            
+            // Save attachments
+            if (files && files.length > 0) {
+                files.forEach(file => {
+                    const attachSql = `
+                        INSERT INTO complaint_regarding_attachments 
+                        (complaint_id, filename, original_name, file_path, file_size, mime_type)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    `;
+                    db.run(attachSql, [
+                        complaintId,
+                        file.filename,
+                        file.originalname,
+                        file.path,
+                        file.size,
+                        file.mimetype
+                    ]);
+                });
+            }
+            
+            res.status(201).json({
+                success: true,
+                data: {
+                    id: complaintId,
+                    complaintNumber,
+                    complaintNumberNp,
+                    trackingPassword
+                },
+                message: 'Complaint submitted successfully'
+            });
+        });
+        
+    } catch (error) {
+        console.error('Error submitting complaint:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to submit complaint',
+            error: error.message
+        });
+    }
+});
+
+// Get all complaints regarding (Admin)
+app.get('/api/admin/complaints/regarding', (req, res) => {
+    try {
+        let sql = `
+            SELECT id, complaint_number, complaint_number_np, name, email, phone,
+                   subject, complaint_type, priority, status, created_at, resolved_at,
+                   reference_number, preferred_contact, description, address, landmark
+            FROM complaint_regarding
+            WHERE 1=1
+        `;
+        const params = [];
+        
+        if (req.query.status && req.query.status !== 'all') {
+            sql += ' AND status = ?';
+            params.push(req.query.status);
+        }
+        
+        if (req.query.priority && req.query.priority !== 'all') {
+            sql += ' AND priority = ?';
+            params.push(req.query.priority);
+        }
+        
+        if (req.query.complaintType && req.query.complaintType !== 'all') {
+            sql += ' AND complaint_type = ?';
+            params.push(req.query.complaintType);
+        }
+        
+        if (req.query.search) {
+            sql += ` AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR complaint_number LIKE ? OR subject LIKE ?)`;
+            const searchTerm = `%${req.query.search}%`;
+            params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        }
+        
+        sql += ' ORDER BY created_at DESC';
+        
+        db.all(sql, params, (err, rows) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to fetch complaints',
+                    error: err.message
+                });
+            }
+            
+            res.json({
+                success: true,
+                data: rows || [],
+                count: rows ? rows.length : 0
+            });
+        });
+        
+    } catch (error) {
+        console.error('Error fetching complaints:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch complaints',
+            error: error.message
+        });
+    }
+});
+
+// Get single complaint regarding by ID
+app.get('/api/admin/complaints/regarding/:id', (req, res) => {
+    try {
+        const sql = `SELECT * FROM complaint_regarding WHERE id = ?`;
+        
+        db.get(sql, [req.params.id], (err, row) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to fetch complaint',
+                    error: err.message
+                });
+            }
+            
+            if (!row) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Complaint not found'
+                });
+            }
+            
+            res.json({
+                success: true,
+                data: row
+            });
+        });
+        
+    } catch (error) {
+        console.error('Error fetching complaint:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch complaint',
+            error: error.message
+        });
+    }
+});
+
+// Update complaint regarding status
+app.patch('/api/admin/complaints/regarding/:id/status', (req, res) => {
+    try {
         const { status, resolution } = req.body;
         
-        if (status) {
-            complaint.status = status;
-            const statusMap = {
-                'Pending': 'विचाराधीन',
-                'In Progress': 'प्रगतिमा',
-                'Resolved': 'समाधान भयो',
-                'Closed': 'बन्द',
-                'Rejected': 'अस्वीकृत'
-            };
-            complaint.statusNp = statusMap[status] || complaint.statusNp;
-        }
-        
-        if (resolution) complaint.resolution = resolution;
-        if (status === 'Resolved' && !complaint.resolvedDate) {
-            complaint.resolvedDate = new Date();
-        }
-        
-        await complaint.save();
-        res.json({ success: true, message: 'Complaint updated successfully', data: complaint });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ========== GET STATISTICS ==========
-app.get('/api/statistics', async (req, res) => {
-    try {
-        const total = await Complaint.count();
-        const pending = await Complaint.count({ where: { status: 'Pending' } });
-        const inProgress = await Complaint.count({ where: { status: 'In Progress' } });
-        const resolved = await Complaint.count({ where: { status: 'Resolved' } });
-        
-        res.json({
-            success: true,
-            total,
-            pending,
-            inProgress,
-            resolved,
-            resolutionRate: total > 0 ? ((resolved / total) * 100).toFixed(2) : 0
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ========== ADMIN AUTHENTICATION ==========
-
-// Admin Login endpoint
-app.post('/api/admin/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        
-        console.log('📝 Admin login attempt:', email);
-        
-        if (!email || !password) {
+        if (!status) {
             return res.status(400).json({
                 success: false,
-                message: 'Email and password are required'
+                message: 'Status is required'
             });
         }
         
-        const admin = await Admin.findOne({
-            where: {
-                [Op.or]: [
-                    { email: email },
-                    { username: email }
-                ],
-                isActive: true
-            }
-        });
+        const updateFields = ['status = ?', 'updated_at = CURRENT_TIMESTAMP'];
+        const params = [status];
         
-        if (!admin) {
-            console.log('❌ Admin not found:', email);
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password'
+        if (resolution) {
+            updateFields.push('resolution = ?');
+            params.push(resolution);
+        }
+        
+        if (status === 'resolved') {
+            updateFields.push('resolved_at = CURRENT_TIMESTAMP');
+        }
+        
+        params.push(req.params.id);
+        
+        const sql = `UPDATE complaint_regarding SET ${updateFields.join(', ')} WHERE id = ?`;
+        
+        db.run(sql, params, function(err) {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to update status',
+                    error: err.message
+                });
+            }
+            
+            if (this.changes === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Complaint not found'
+                });
+            }
+            
+            res.json({
+                success: true,
+                message: 'Status updated successfully'
             });
-        }
-        
-        // Check password (support both plain text and bcrypt)
-        let isPasswordValid = false;
-        if (admin.password.startsWith('$2a$') || admin.password.startsWith('$2b$')) {
-            if (bcrypt) {
-                isPasswordValid = await bcrypt.compare(password, admin.password);
-            } else {
-                isPasswordValid = false;
-            }
-        } else {
-            isPasswordValid = admin.password === password;
-        }
-        
-        if (!isPasswordValid) {
-            console.log('❌ Invalid password for:', email);
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password'
-            });
-        }
-        
-        await admin.update({ lastLogin: new Date() });
-        const token = Buffer.from(`${admin.id}-${Date.now()}`).toString('base64');
-        
-        console.log('✅ Admin login successful:', admin.email);
-        
-        res.json({
-            success: true,
-            message: 'Login successful',
-            token: token,
-            user: {
-                id: admin.id,
-                email: admin.email,
-                username: admin.username,
-                fullName: admin.fullName,
-                role: admin.role || 'admin'
-            }
         });
         
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('Error updating status:', error);
         res.status(500).json({
             success: false,
-            message: 'Login failed. Please try again.'
+            message: 'Failed to update status',
+            error: error.message
         });
     }
 });
 
-// Admin Logout endpoint
-app.post('/api/admin/logout', async (req, res) => {
-    res.json({ success: true, message: 'Logout successful' });
-});
-
-// ========== STAFF AUTHENTICATION ==========
-
-// Staff Login endpoint
-app.post('/api/staff/login', async (req, res) => {
+// Delete complaint regarding
+app.delete('/api/admin/complaints/regarding/:id', (req, res) => {
     try {
-        const { email, password } = req.body;
+        const sql = `DELETE FROM complaint_regarding WHERE id = ?`;
         
-        console.log('📝 Staff login attempt:', email);
-        
-        if (!email || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email and password are required'
-            });
-        }
-        
-        const staff = await Staff.findOne({
-            where: {
-                [Op.or]: [
-                    { email: email },
-                    { username: email }
-                ],
-                isActive: true
+        db.run(sql, [req.params.id], function(err) {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to delete complaint',
+                    error: err.message
+                });
             }
-        });
-        
-        if (!staff) {
-            console.log('❌ Staff not found:', email);
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password'
-            });
-        }
-        
-        // Check password (support both plain text and bcrypt)
-        let isPasswordValid = false;
-        if (staff.password && (staff.password.startsWith('$2a$') || staff.password.startsWith('$2b$'))) {
-            if (bcrypt) {
-                isPasswordValid = await bcrypt.compare(password, staff.password);
-            } else {
-                isPasswordValid = false;
+            
+            if (this.changes === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Complaint not found'
+                });
             }
-        } else {
-            isPasswordValid = staff.password === password;
-        }
-        
-        if (!isPasswordValid) {
-            console.log('❌ Invalid password for staff:', email);
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password'
+            
+            res.json({
+                success: true,
+                message: 'Complaint deleted successfully'
             });
-        }
-        
-        await staff.update({ lastLogin: new Date() });
-        const token = Buffer.from(`${staff.id}-${Date.now()}`).toString('base64');
-        
-        console.log('✅ Staff login successful:', staff.email);
-        
-        res.json({
-            success: true,
-            message: 'Login successful',
-            token: token,
-            user: {
-                id: staff.id,
-                email: staff.email,
-                username: staff.username,
-                fullName: staff.fullName,
-                role: staff.role || 'staff',
-                department: staff.department,
-                phone: staff.phone
-            }
         });
         
     } catch (error) {
-        console.error('Staff login error:', error);
+        console.error('Error deleting complaint:', error);
         res.status(500).json({
             success: false,
-            message: 'Login failed. Please try again.'
+            message: 'Failed to delete complaint',
+            error: error.message
         });
     }
 });
 
-// Staff Logout endpoint
-app.post('/api/staff/logout', async (req, res) => {
-    res.json({ success: true, message: 'Logout successful' });
-});
-
-// ========== STAFF MANAGEMENT (Admin only) ==========
-
-// Get all staff members
-app.get('/api/admin/staff', async (req, res) => {
+// Get complaint regarding statistics
+app.get('/api/complaints/regarding/stats', (req, res) => {
     try {
-        const staff = await Staff.findAll({
-            attributes: ['id', 'username', 'email', 'fullName', 'phone', 'department', 'role', 'isActive', 'lastLogin'],
-            order: [['createdAt', 'DESC']]
-        });
-        res.json({ success: true, data: staff });
-    } catch (error) {
-        console.error('Error fetching staff:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// Create new staff member (Admin only)
-app.post('/api/admin/staff', async (req, res) => {
-    try {
-        const { username, email, password, fullName, phone, department } = req.body;
+        const sql = `
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = 'in-progress' THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN status = 'review' THEN 1 ELSE 0 END) as review,
+                SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved,
+                SUM(CASE WHEN priority = 'high' THEN 1 ELSE 0 END) as high_priority,
+                SUM(CASE WHEN priority = 'medium' THEN 1 ELSE 0 END) as medium_priority,
+                SUM(CASE WHEN priority = 'low' THEN 1 ELSE 0 END) as low_priority
+            FROM complaint_regarding
+        `;
         
-        // Check if staff already exists
-        const existingStaff = await Staff.findOne({
-            where: {
-                [Op.or]: [
-                    { email: email },
-                    { username: username }
-                ]
+        db.get(sql, [], (err, row) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to fetch statistics',
+                    error: err.message
+                });
             }
+            
+            res.json({
+                success: true,
+                data: row || {}
+            });
         });
         
-        if (existingStaff) {
+    } catch (error) {
+        console.error('Error fetching statistics:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch statistics',
+            error: error.message
+        });
+    }
+});
+
+// ==================== ADMIN ROUTES FOR REGULAR COMPLAINTS ====================
+
+// Get all regular complaints (Admin)
+app.get('/api/admin/complaints', (req, res) => {
+    try {
+        let sql = `
+            SELECT id, complaint_number, complaint_number_np, name, email, phone,
+                   nature_of_complaint, priority, status, created_at, resolved_at,
+                   description
+            FROM complaints
+            WHERE 1=1
+        `;
+        const params = [];
+        
+        if (req.query.status && req.query.status !== 'all') {
+            sql += ' AND status = ?';
+            params.push(req.query.status);
+        }
+        
+        if (req.query.priority && req.query.priority !== 'all') {
+            sql += ' AND priority = ?';
+            params.push(req.query.priority);
+        }
+        
+        if (req.query.search) {
+            sql += ` AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR complaint_number LIKE ?)`;
+            const searchTerm = `%${req.query.search}%`;
+            params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+        }
+        
+        sql += ' ORDER BY created_at DESC';
+        
+        db.all(sql, params, (err, rows) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to fetch complaints',
+                    error: err.message
+                });
+            }
+            
+            res.json({
+                success: true,
+                data: rows || [],
+                count: rows ? rows.length : 0
+            });
+        });
+        
+    } catch (error) {
+        console.error('Error fetching complaints:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch complaints',
+            error: error.message
+        });
+    }
+});
+
+// Get single regular complaint by ID
+app.get('/api/admin/complaints/:id', (req, res) => {
+    try {
+        const sql = `SELECT * FROM complaints WHERE id = ?`;
+        
+        db.get(sql, [req.params.id], (err, row) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to fetch complaint',
+                    error: err.message
+                });
+            }
+            
+            if (!row) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Complaint not found'
+                });
+            }
+            
+            res.json({
+                success: true,
+                data: row
+            });
+        });
+        
+    } catch (error) {
+        console.error('Error fetching complaint:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch complaint',
+            error: error.message
+        });
+    }
+});
+
+// Update regular complaint status
+app.patch('/api/admin/complaints/:id/status', (req, res) => {
+    try {
+        const { status, resolution } = req.body;
+        
+        if (!status) {
             return res.status(400).json({
                 success: false,
-                message: 'Staff with this email or username already exists'
+                message: 'Status is required'
             });
         }
         
-        // Hash password if bcrypt is available
-        let finalPassword = password;
-        if (bcrypt) {
-            finalPassword = await bcrypt.hash(password, 10);
+        const updateFields = ['status = ?', 'updated_at = CURRENT_TIMESTAMP'];
+        const params = [status];
+        
+        if (resolution) {
+            updateFields.push('resolution = ?');
+            params.push(resolution);
         }
         
-        const staff = await Staff.create({
-            username,
-            email,
-            password: finalPassword,
-            fullName,
-            phone,
-            department: department || 'General',
-            role: 'staff',
-            isActive: true
-        });
+        if (status === 'resolved') {
+            updateFields.push('resolved_at = CURRENT_TIMESTAMP');
+        }
         
-        res.json({
-            success: true,
-            message: 'Staff member created successfully',
-            data: {
-                id: staff.id,
-                username: staff.username,
-                email: staff.email,
-                fullName: staff.fullName
+        params.push(req.params.id);
+        
+        const sql = `UPDATE complaints SET ${updateFields.join(', ')} WHERE id = ?`;
+        
+        db.run(sql, params, function(err) {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to update status',
+                    error: err.message
+                });
             }
-        });
-        
-    } catch (error) {
-        console.error('Error creating staff:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// Update staff member
-app.put('/api/admin/staff/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { fullName, phone, department, isActive } = req.body;
-        
-        const staff = await Staff.findByPk(id);
-        if (!staff) {
-            return res.status(404).json({ success: false, message: 'Staff not found' });
-        }
-        
-        await staff.update({
-            fullName: fullName || staff.fullName,
-            phone: phone || staff.phone,
-            department: department || staff.department,
-            isActive: isActive !== undefined ? isActive : staff.isActive
-        });
-        
-        res.json({
-            success: true,
-            message: 'Staff updated successfully',
-            data: staff
-        });
-        
-    } catch (error) {
-        console.error('Error updating staff:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// Delete staff member
-app.delete('/api/admin/staff/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        const staff = await Staff.findByPk(id);
-        if (!staff) {
-            return res.status(404).json({ success: false, message: 'Staff not found' });
-        }
-        
-        await staff.destroy();
-        res.json({ success: true, message: 'Staff deleted successfully' });
-        
-    } catch (error) {
-        console.error('Error deleting staff:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ========== STAFF DASHBOARD ENDPOINTS ==========
-
-// Get staff statistics
-app.get('/api/staff/stats', async (req, res) => {
-    try {
-        const token = req.headers.authorization?.split(' ')[1];
-        if (!token) {
-            return res.status(401).json({ success: false, message: 'Unauthorized' });
-        }
-        
-        // Decode token to get staff ID
-        const staffId = parseInt(Buffer.from(token, 'base64').toString().split('-')[0]);
-        const staff = await Staff.findByPk(staffId);
-        
-        if (!staff) {
-            return res.status(404).json({ success: false, message: 'Staff not found' });
-        }
-        
-        // Get assigned complaints
-        const assignedComplaints = await Complaint.findAll({
-            where: { assignedTo: staff.email }
-        });
-        
-        const totalAssigned = assignedComplaints.length;
-        const pending = assignedComplaints.filter(c => c.status === 'Pending').length;
-        const inProgress = assignedComplaints.filter(c => c.status === 'In Progress').length;
-        const resolved = assignedComplaints.filter(c => c.status === 'Resolved').length;
-        
-        res.json({
-            success: true,
-            data: {
-                totalAssigned,
-                pending,
-                inProgress,
-                resolved,
-                completionRate: totalAssigned > 0 ? (resolved / totalAssigned) * 100 : 0
+            
+            if (this.changes === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Complaint not found'
+                });
             }
-        });
-        
-    } catch (error) {
-        console.error('Error fetching staff stats:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// Get assigned complaints for staff
-app.get('/api/staff/complaints', async (req, res) => {
-    try {
-        const token = req.headers.authorization?.split(' ')[1];
-        if (!token) {
-            return res.status(401).json({ success: false, message: 'Unauthorized' });
-        }
-        
-        const staffId = parseInt(Buffer.from(token, 'base64').toString().split('-')[0]);
-        const staff = await Staff.findByPk(staffId);
-        
-        if (!staff) {
-            return res.status(404).json({ success: false, message: 'Staff not found' });
-        }
-        
-        const complaints = await Complaint.findAll({
-            where: { assignedTo: staff.email },
-            order: [['submittedDate', 'DESC']]
-        });
-        
-        res.json({ success: true, data: complaints });
-        
-    } catch (error) {
-        console.error('Error fetching assigned complaints:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// Update complaint status (staff)
-app.patch('/api/staff/complaints/:id/status', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status, feedback, satisfactionRating } = req.body;
-        
-        const complaint = await Complaint.findByPk(id);
-        if (!complaint) {
-            return res.status(404).json({ success: false, message: 'Complaint not found' });
-        }
-        
-        complaint.status = status;
-        const statusMap = {
-            'Pending': 'विचाराधीन',
-            'In Progress': 'प्रगतिमा',
-            'Resolved': 'समाधान भयो',
-            'Closed': 'बन्द'
-        };
-        complaint.statusNp = statusMap[status] || complaint.statusNp;
-        
-        if (feedback) complaint.feedback = feedback;
-        if (satisfactionRating) complaint.satisfactionRating = satisfactionRating;
-        
-        if (status === 'Resolved' && !complaint.resolvedDate) {
-            complaint.resolvedDate = new Date();
-            // Calculate resolution days
-            const submitted = new Date(complaint.submittedDate);
-            const resolved = new Date();
-            complaint.resolutionDays = Math.ceil((resolved - submitted) / (1000 * 60 * 60 * 24));
-        }
-        
-        await complaint.save();
-        
-        res.json({ success: true, message: 'Complaint status updated', data: complaint });
-        
-    } catch (error) {
-        console.error('Error updating complaint status:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ========== START SERVER ==========
-const startServer = async () => {
-    try {
-        await testConnection();
-        await syncDatabase();
-        
-        // Create default admin if not exists
-        const adminCount = await Admin.count();
-        if (adminCount === 0) {
-            await Admin.create({
-                username: 'admin',
-                email: 'admin@ntc.com',
-                password: 'admin123', // Plain text password
-                fullName: 'Administrator',
-                role: 'admin',
-                isActive: true
+            
+            res.json({
+                success: true,
+                message: 'Status updated successfully'
             });
-            console.log('✅ Default admin user created: admin@ntc.com / admin123');
-        }
-        
-        // Create default staff if not exists
-        const staffCount = await Staff.count();
-        if (staffCount === 0) {
-            let staffPassword = 'staff123';
-            if (bcrypt) {
-                staffPassword = await bcrypt.hash('staff123', 10);
-            }
-            await Staff.create({
-                username: 'staff',
-                email: 'staff@ntc.com',
-                password: staffPassword,
-                fullName: 'Staff User',
-                phone: '9841000001',
-                department: 'Customer Support',
-                role: 'staff',
-                isActive: true
-            });
-            console.log('✅ Default staff user created: staff@ntc.com / staff123');
-        }
-        
-        app.listen(PORT, () => {
-            console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-            console.log(`📡 API: http://localhost:${PORT}/api`);
-            console.log(`\n🔐 Admin Login Credentials:`);
-            console.log(`   📧 Email: admin@ntc.com`);
-            console.log(`   🔑 Password: admin123`);
-            console.log(`\n👥 Staff Login Credentials:`);
-            console.log(`   📧 Email: staff@ntc.com`);
-            console.log(`   🔑 Password: staff123`);
-            console.log(`\n✅ Ready to accept requests!\n`);
         });
+        
     } catch (error) {
-        console.error('Failed to start server:', error);
-        process.exit(1);
+        console.error('Error updating status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update status',
+            error: error.message
+        });
     }
-};
+});
 
-startServer();
+// Delete regular complaint
+app.delete('/api/admin/complaints/:id', (req, res) => {
+    try {
+        const sql = `DELETE FROM complaints WHERE id = ?`;
+        
+        db.run(sql, [req.params.id], function(err) {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to delete complaint',
+                    error: err.message
+                });
+            }
+            
+            if (this.changes === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Complaint not found'
+                });
+            }
+            
+            res.json({
+                success: true,
+                message: 'Complaint deleted successfully'
+            });
+        });
+        
+    } catch (error) {
+        console.error('Error deleting complaint:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete complaint',
+            error: error.message
+        });
+    }
+});
+
+// ==================== HEALTH CHECK ====================
+
+app.get('/api/health', (req, res) => {
+    res.json({
+        success: true,
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        message: 'Server is running'
+    });
+});
+
+// ==================== ERROR HANDLING ====================
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Server error:', err);
+    
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'FILE_TOO_LARGE') {
+            return res.status(400).json({
+                success: false,
+                message: 'File is too large. Maximum size is 5MB.'
+            });
+        }
+        return res.status(400).json({
+            success: false,
+            message: err.message
+        });
+    }
+    
+    res.status(500).json({
+        success: false,
+        message: err.message || 'Internal server error'
+    });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+    res.status(404).json({
+        success: false,
+        message: `Cannot find ${req.originalUrl} on this server`
+    });
+});
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`=================================`);
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📡 API available at http://localhost:${PORT}/api`);
+    console.log(`💚 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`📋 Regular Complaints API: http://localhost:${PORT}/api/complaints`);
+    console.log(`📋 Complaint Regarding API: http://localhost:${PORT}/api/complaints/regarding`);
+    console.log(`=================================`);
+});
+
+module.exports = app;

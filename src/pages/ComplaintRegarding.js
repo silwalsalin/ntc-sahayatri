@@ -1,7 +1,7 @@
 // src/pages/ComplaintRegarding.js
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import complaintService from '../services/complaintService';
+import axios from 'axios';
 
 // Try to import local images with fallback
 let ntcLogo, govLogo;
@@ -25,7 +25,6 @@ const ComplaintRegarding = () => {
 
   // Loading states
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   
   // Success modal state
   const [showSuccess, setShowSuccess] = useState(false);
@@ -44,10 +43,6 @@ const ComplaintRegarding = () => {
   
   // Toast notification state
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
-  
-  // Auto-save state
-  const [autoSaveStatus, setAutoSaveStatus] = useState('');
-  const autoSaveTimerRef = useRef(null);
 
   // State for complaint form
   const [formData, setFormData] = useState({
@@ -65,7 +60,7 @@ const ComplaintRegarding = () => {
 
   // File upload state
   const [selectedFiles, setSelectedFiles] = useState([]);
-  const [uploadProgress, setUploadProgress] = useState({});
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -73,96 +68,10 @@ const ComplaintRegarding = () => {
   // File input ref
   const fileInputRef = useRef(null);
   
-  // Form ref for auto-save
-  const formRef = useRef(null);
+  // API URL
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-  // Load saved form data from localStorage on mount
-  useEffect(() => {
-    loadSavedFormData();
-    generateReferenceNumber();
-    
-    // Add beforeunload listener for unsaved changes
-    const handleBeforeUnload = (e) => {
-      if (hasUnsavedChanges()) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    };
-  }, []);
-
-  // Auto-save form data
-  useEffect(() => {
-    if (formData.complaintType || formData.name || formData.description) {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-      autoSaveTimerRef.current = setTimeout(() => {
-        saveFormData();
-      }, 3000);
-    }
-  }, [formData, selectedFiles]);
-
-  // Check if there are unsaved changes
-  const hasUnsavedChanges = () => {
-    const savedData = localStorage.getItem('complaint_regarding_form');
-    if (!savedData) return false;
-    
-    const parsedData = JSON.parse(savedData);
-    const currentFormString = JSON.stringify({
-      formData,
-      selectedFiles: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
-    });
-    const savedFormString = JSON.stringify({
-      formData: parsedData.formData,
-      selectedFiles: parsedData.selectedFiles || []
-    });
-    
-    return currentFormString !== savedFormString;
-  };
-
-  // Save form data to localStorage
-  const saveFormData = () => {
-    const saveData = {
-      formData,
-      selectedFiles: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type, lastModified: f.lastModified })),
-      timestamp: new Date().toISOString()
-    };
-    localStorage.setItem('complaint_regarding_form', JSON.stringify(saveData));
-    setAutoSaveStatus('saved');
-    setTimeout(() => setAutoSaveStatus(''), 2000);
-  };
-
-  // Load saved form data from localStorage
-  const loadSavedFormData = () => {
-    const saved = localStorage.getItem('complaint_regarding_form');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      const savedTime = new Date(parsed.timestamp);
-      const now = new Date();
-      const hoursDiff = (now - savedTime) / (1000 * 60 * 60);
-      
-      // Only load if less than 24 hours old
-      if (hoursDiff < 24) {
-        setFormData(parsed.formData);
-        setDescriptionCharCount(parsed.formData.description?.length || 0);
-        // Note: Actual file objects can't be restored, only metadata
-        showToast(
-          language === 'np' ? 'पहिलेको फारम डाटा पुनर्स्थापित गरियो' : 'Previous form data restored',
-          'info'
-        );
-      }
-    }
-  };
-
-  // Clear saved form data
-  const clearSavedFormData = () => {
-    localStorage.removeItem('complaint_regarding_form');
-  };
-
+  // Generate reference number
   const generateReferenceNumber = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -176,7 +85,11 @@ const ComplaintRegarding = () => {
     setReferenceNumber(ref);
   };
 
-  // Show toast notification with auto-dismiss
+  useEffect(() => {
+    generateReferenceNumber();
+  }, []);
+
+  // Show toast notification
   const showToast = useCallback((message, type = 'success', duration = 5000) => {
     setToast({ show: true, message, type });
     setTimeout(() => {
@@ -184,106 +97,113 @@ const ComplaintRegarding = () => {
     }, duration);
   }, []);
 
-  // Subject options based on complaint type with categories
+  // Subject options based on complaint type
   const getSubjectOptions = () => {
     const commonSubjects = {
       np: {
-        service: {
-          connectivity: ['इन्टरनेट जडान समस्या', 'ढिलो इन्टरनेट स्पीड', 'वाइफाइ जडान समस्या'],
-          call: ['फोन कल ड्रप हुने', 'कल जोडिन नसक्नु', 'भिडियो कल समस्या', 'अन्तर्राष्ट्रिय कल समस्या'],
-          messaging: ['एसएमएस नपठिएको', 'एमएमएस समस्या', 'बल्क एसएमएस समस्या'],
-          service: ['सेवा नभएको', 'सेवा विच्छेद', 'नयाँ जडानको लागि अनुरोध', 'सेवा स्थानान्तरण', 'सेवा स्तरको गुणस्तर']
-        },
-        billing: {
-          charges: ['बढी बिल आएको', 'पैसा कट्टी भएको', 'डबल चार्ज', 'अन्तर्राष्ट्रिय रोमिङ बिल'],
-          recharge: ['रिचार्ज नभएको', 'अटो रिचार्ज समस्या', 'प्रोमो प्याकेज सक्रिय नहुनु'],
-          package: ['प्याकेज बिलिङ त्रुटि', 'डाटा प्याकेज समस्या', 'भ्वाइस प्याकेज समस्या'],
-          invoice: ['बिल नआएको', 'बिल विवरणमा त्रुटि', 'डिजिटल बिल समस्या']
-        },
-        technical: {
-          website: ['वेबसाइट काम नगर्ने', 'पेज लोड नहुने', 'फारम सबमिट नहुने'],
-          app: ['एप क्र्याश हुने', 'एप डाउनलोड समस्या', 'एप अपडेट समस्या', 'एपमा लगइन समस्या'],
-          account: ['पासवर्ड रिसेट समस्या', 'दुई-चरण प्रमाणीकरण समस्या', 'खाता ब्लक भएको'],
-          system: ['सफ्टवेयर त्रुटि', 'डाटा ढिलो', 'नेटवर्क सेटिङ समस्या', 'अपडेट पछि समस्या']
-        },
-        network: {
-          coverage: ['नेटवर्क नभएको', 'सिग्नल कमजोर', 'कभरेज समस्या', 'टावर डाउन समस्या'],
-          speed: ['डाटा स्पीड घट्नु', '४जी/५जी समस्या', 'भीडभाडमा नेटवर्क नचल्नु'],
-          roaming: ['रोमिङ समस्या', 'विदेशमा रोमिङ', 'रोमिङ प्याकेज सक्रिय नहुनु'],
-          stability: ['नेटवर्क स्थिरता', 'बारम्बार नेटवर्क जाने-आउने', 'भोल्टेज समस्या']
-        },
-        other: {
-          feedback: ['सेवा प्रतिक्रिया', 'सुझाव', 'प्रशंसा'],
-          staff: ['कर्मचारी व्यवहार', 'शाखा सेवा', 'कल सेन्टर सेवा'],
-          general: ['अन्य समस्या', 'प्रश्न', 'जानकारी', 'नयाँ सेवाको अनुरोध'],
-          website: ['वेबसाइट सुझाव', 'पोर्टल समस्या', 'डिजिटल सेवा समस्या']
-        }
+        service: [
+          'इन्टरनेट जडान समस्या', 
+          'फोन कल ड्रप हुने', 
+          'ढिलो इन्टरनेट स्पीड', 
+          'सेवा नभएको', 
+          'सेवा विच्छेद',
+          'नयाँ जडानको लागि अनुरोध',
+          'सेवा स्थानान्तरण',
+          'सेवा स्तरको गुणस्तर'
+        ],
+        billing: [
+          'बढी बिल आएको', 
+          'बिल नआएको', 
+          'रिचार्ज नभएको', 
+          'पैसा कट्टी भएको', 
+          'डबल चार्ज',
+          'बिल विवरणमा त्रुटि',
+          'अटो रिचार्ज समस्या',
+          'प्याकेज बिलिङ त्रुटि'
+        ],
+        technical: [
+          'वेबसाइट काम नगर्ने', 
+          'एप क्र्याश हुने', 
+          'लगइन समस्या', 
+          'डाटा ढिलो', 
+          'सफ्टवेयर त्रुटि',
+          'पासवर्ड रिसेट समस्या',
+          'दुई-चरण प्रमाणीकरण समस्या'
+        ],
+        network: [
+          'नेटवर्क नभएको', 
+          'सिग्नल कमजोर', 
+          'कभरेज समस्या', 
+          'रोमिङ समस्या', 
+          '४जी/५जी समस्या',
+          'नेटवर्क स्थिरता',
+          'डाटा स्पीड घट्नु'
+        ],
+        other: [
+          'अन्य समस्या', 
+          'सुझाव', 
+          'गुनासो', 
+          'प्रश्न', 
+          'जानकारी',
+          'सेवा प्रतिक्रिया',
+          'कर्मचारी व्यवहार'
+        ]
       },
       en: {
-        service: {
-          connectivity: ['Internet Connection Issue', 'Slow Internet Speed', 'WiFi Connection Issue'],
-          call: ['Call Drop Problem', 'Call Not Connecting', 'Video Call Issue', 'International Call Issue'],
-          messaging: ['SMS Not Sending', 'MMS Issue', 'Bulk SMS Problem'],
-          service: ['Service Not Working', 'Service Disruption', 'New Connection Request', 'Service Transfer Request', 'Service Quality Issue']
-        },
-        billing: {
-          charges: ['Excessive Billing', 'Wrong Deduction', 'Double Charge', 'International Roaming Bill'],
-          recharge: ['Recharge Not Credited', 'Auto Recharge Issue', 'Promo Package Not Activating'],
-          package: ['Package Billing Error', 'Data Package Issue', 'Voice Package Issue'],
-          invoice: ['Bill Not Received', 'Bill Detail Error', 'Digital Bill Issue']
-        },
-        technical: {
-          website: ['Website Not Working', 'Page Not Loading', 'Form Not Submitting'],
-          app: ['App Crashes', 'App Download Issue', 'App Update Problem', 'App Login Issue'],
-          account: ['Password Reset Issue', 'Two-Factor Authentication Issue', 'Account Blocked'],
-          system: ['Software Bug', 'Data Delay', 'Network Settings Issue', 'Post-Update Problem']
-        },
-        network: {
-          coverage: ['No Network', 'Weak Signal', 'Coverage Issue', 'Tower Down Issue'],
-          speed: ['Data Speed Dropping', '4G/5G Issue', 'Network in Crowded Areas'],
-          roaming: ['Roaming Problem', 'International Roaming', 'Roaming Package Not Activating'],
-          stability: ['Network Stability', 'Frequent Network Drops', 'Voltage Issue']
-        },
-        other: {
-          feedback: ['Service Feedback', 'Suggestion', 'Appreciation'],
-          staff: ['Staff Behavior', 'Branch Service', 'Call Center Service'],
-          general: ['Other Issue', 'Inquiry', 'Information Request', 'New Service Request'],
-          website: ['Website Suggestion', 'Portal Issue', 'Digital Service Issue']
-        }
+        service: [
+          'Internet Connection Issue', 
+          'Call Drop Problem', 
+          'Slow Internet Speed', 
+          'Service Not Working', 
+          'Service Disruption',
+          'New Connection Request',
+          'Service Transfer Request',
+          'Service Quality Issue'
+        ],
+        billing: [
+          'Excessive Billing', 
+          'Bill Not Received', 
+          'Recharge Not Credited', 
+          'Wrong Deduction', 
+          'Double Charge',
+          'Bill Detail Error',
+          'Auto Recharge Issue',
+          'Package Billing Error'
+        ],
+        technical: [
+          'Website Not Working', 
+          'App Crashes', 
+          'Login Issue', 
+          'Data Delay', 
+          'Software Bug',
+          'Password Reset Issue',
+          'Two-Factor Authentication Issue'
+        ],
+        network: [
+          'No Network', 
+          'Weak Signal', 
+          'Coverage Issue', 
+          'Roaming Problem', 
+          '4G/5G Issue',
+          'Network Stability',
+          'Data Speed Dropping'
+        ],
+        other: [
+          'Other Issue', 
+          'Suggestion', 
+          'General Complaint', 
+          'Inquiry', 
+          'Information Request',
+          'Service Feedback',
+          'Staff Behavior'
+        ]
       }
     };
     
     const type = formData.complaintType || 'other';
     const lang = language === 'np' ? 'np' : 'en';
-    const categories = commonSubjects[lang][type];
-    
-    // Flatten categories into array of options with category grouping
-    const options = [];
-    for (const [category, items] of Object.entries(categories)) {
-      options.push(...items.map(item => ({ value: item, category })));
-    }
+    const options = commonSubjects[lang][type] || commonSubjects[lang].other;
     return options;
-  };
-
-  // Get category label for display
-  const getCategoryLabel = (category) => {
-    const labels = {
-      np: {
-        connectivity: 'कनेक्टिभिटी', call: 'कल', messaging: 'सन्देश', service: 'सेवा',
-        charges: 'शुल्क', recharge: 'रिचार्ज', package: 'प्याकेज', invoice: 'इनभ्वाइस',
-        website: 'वेबसाइट', app: 'एप', account: 'खाता', system: 'प्रणाली',
-        coverage: 'कभरेज', speed: 'स्पीड', roaming: 'रोमिङ', stability: 'स्थिरता',
-        feedback: 'प्रतिक्रिया', staff: 'कर्मचारी', general: 'सामान्य'
-      },
-      en: {
-        connectivity: 'Connectivity', call: 'Call', messaging: 'Messaging', service: 'Service',
-        charges: 'Charges', recharge: 'Recharge', package: 'Package', invoice: 'Invoice',
-        website: 'Website', app: 'App', account: 'Account', system: 'System',
-        coverage: 'Coverage', speed: 'Speed', roaming: 'Roaming', stability: 'Stability',
-        feedback: 'Feedback', staff: 'Staff', general: 'General'
-      }
-    };
-    return labels[language][category] || category;
   };
 
   const content = {
@@ -326,7 +246,7 @@ const ComplaintRegarding = () => {
       address: 'ठेगाना',
       enterAddress: 'आफ्नो ठेगाना प्रविष्ट गर्नुहोस्',
       landmark: 'नजिकैको चिन्ह',
-      enterLandmark: 'नजिकैको प्रख्यात स्थान (जस्तै: गणेश मन्दिर, सरकारी कार्यालय)',
+      enterLandmark: 'नजिकैको प्रख्यात स्थान',
       preferredContact: 'सम्पर्कको माध्यम',
       contactPhone: 'फोन कल',
       contactEmail: 'इमेल',
@@ -366,19 +286,10 @@ const ComplaintRegarding = () => {
       formErrors: 'कृपया फारममा भएका त्रुटिहरू सच्याउनुहोस्',
       resetSuccess: 'फारम सफलतापूर्वक खाली गरियो',
       fileRemoved: 'फाइल हटाइयो',
-      helpText: 'सहायता',
       requiredFieldsInfo: 'तारांकित (*) चिन्ह लगाइएका फिल्डहरू अनिवार्य छन्',
-      autoSaved: 'स्वतः सुरक्षित',
-      typing: 'टाइप गर्दै...',
-      recommended: 'सिफारिस गरिएको',
-      preview: 'पूर्वावलोकन',
-      edit: 'सम्पादन',
       copyReference: 'सन्दर्भ नम्बर प्रतिलिपि गर्नुहोस्',
       copied: 'प्रतिलिपि गरियो!',
-      uploadProgress: 'अपलोड प्रगति',
-      processing: 'प्रक्रियामा छ...',
-      tryAgain: 'पुन: प्रयास गर्नुहोस्',
-      viewDetails: 'विवरण हेर्नुहोस्'
+      connectionError: 'सर्भरमा जडान हुन सकेन। कृपया पछि प्रयास गर्नुहोस्।'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -419,7 +330,7 @@ const ComplaintRegarding = () => {
       address: 'Address',
       enterAddress: 'Enter your address',
       landmark: 'Nearby Landmark',
-      enterLandmark: 'Nearby famous place (e.g., Ganesh Temple, Government Office)',
+      enterLandmark: 'Nearby famous place',
       preferredContact: 'Preferred Contact Method',
       contactPhone: 'Phone Call',
       contactEmail: 'Email',
@@ -459,31 +370,22 @@ const ComplaintRegarding = () => {
       formErrors: 'Please fix the errors in the form',
       resetSuccess: 'Form cleared successfully',
       fileRemoved: 'File removed',
-      helpText: 'Help',
       requiredFieldsInfo: 'Fields marked with (*) are required',
-      autoSaved: 'Auto saved',
-      typing: 'Typing...',
-      recommended: 'Recommended',
-      preview: 'Preview',
-      edit: 'Edit',
       copyReference: 'Copy reference number',
       copied: 'Copied!',
-      uploadProgress: 'Upload progress',
-      processing: 'Processing...',
-      tryAgain: 'Try again',
-      viewDetails: 'View details'
+      connectionError: 'Cannot connect to server. Please try again later.'
     }
   };
 
   const t = content[language];
 
-  // Validate phone number (Nepal format with more options)
+  // Validate phone number
   const validatePhoneNumber = (phone) => {
     const phoneRegex = /^(98|97|96)[0-9]{8}$/;
     return phoneRegex.test(phone);
   };
 
-  // Validate email with domain check
+  // Validate email
   const validateEmail = (email) => {
     if (!email) return true;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -493,7 +395,7 @@ const ComplaintRegarding = () => {
   // Validate file
   const validateFile = (file) => {
     const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 5 * 1024 * 1024;
     
     if (!validTypes.includes(file.type)) {
       return { valid: false, error: t.invalidFileType };
@@ -515,7 +417,6 @@ const ComplaintRegarding = () => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
-    setAutoSaveStatus('typing');
   };
 
   const handleBlur = (field) => {
@@ -538,18 +439,6 @@ const ComplaintRegarding = () => {
         const validation = validateFile(file);
         if (validation.valid) {
           validFiles.push(file);
-          // Simulate upload progress
-          setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
-          const interval = setInterval(() => {
-            setUploadProgress(prev => {
-              const current = prev[file.name] || 0;
-              if (current >= 100) {
-                clearInterval(interval);
-                return prev;
-              }
-              return { ...prev, [file.name]: Math.min(current + 10, 100) };
-            });
-          }, 200);
         } else {
           newErrors.push(validation.error);
         }
@@ -612,13 +501,7 @@ const ComplaintRegarding = () => {
   };
 
   const removeFile = (index) => {
-    const file = selectedFiles[index];
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    setUploadProgress(prev => {
-      const newProgress = { ...prev };
-      delete newProgress[file.name];
-      return newProgress;
-    });
     showToast(t.fileRemoved, 'info');
   };
 
@@ -641,12 +524,10 @@ const ComplaintRegarding = () => {
         preferredContact: 'phone'
       });
       setSelectedFiles([]);
-      setUploadProgress({});
       setErrors({});
       setTouched({});
       setDescriptionCharCount(0);
       generateReferenceNumber();
-      clearSavedFormData();
       showToast(t.resetSuccess, 'success');
     }
   };
@@ -688,6 +569,11 @@ const ComplaintRegarding = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const copyReferenceNumber = () => {
+    navigator.clipboard.writeText(referenceNumber);
+    showToast(t.copied, 'success', 1500);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmissionAttempted(true);
@@ -699,8 +585,6 @@ const ComplaintRegarding = () => {
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           element.focus();
-          element.classList.add('error-shake');
-          setTimeout(() => element.classList.remove('error-shake'), 500);
         }
       }
       showToast(t.formErrors, 'error');
@@ -708,34 +592,57 @@ const ComplaintRegarding = () => {
     }
 
     setIsSubmitting(true);
-    setIsLoading(true);
+    setUploadProgress(0);
 
     try {
-      // Prepare data for backend
-      const complaintData = {
-        natureOfComplaint: formData.complaintType,
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        email: formData.email || null,
-        phone: formData.phone,
-        subject: formData.subject,
-        priority: formData.priority,
-        address: formData.address || null,
-        landmark: formData.landmark || null,
-        preferredContact: formData.preferredContact,
-        referenceNumber: referenceNumber,
-        complaintCategory: 'complaint_regarding',
-        submissionDate: new Date().toISOString(),
-        files: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
-      };
+      // Create FormData for file uploads
+      const formDataToSend = new FormData();
       
-      const response = await complaintService.submitComplaint(complaintData);
+      // Add all form fields
+      formDataToSend.append('complaintType', formData.complaintType);
+      formDataToSend.append('subject', formData.subject);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('priority', formData.priority);
+      formDataToSend.append('name', formData.name.trim());
+      formDataToSend.append('email', formData.email || '');
+      formDataToSend.append('phone', formData.phone);
+      formDataToSend.append('address', formData.address || '');
+      formDataToSend.append('landmark', formData.landmark || '');
+      formDataToSend.append('preferredContact', formData.preferredContact);
+      formDataToSend.append('referenceNumber', referenceNumber);
       
-      if (response.success) {
-        setSuccessData(response.data);
+      // Add files if selected
+      selectedFiles.forEach(file => {
+        formDataToSend.append('attachments', file);
+      });
+      
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+      
+      // Send data to backend
+      const response = await axios.post(`${API_URL}/complaints/regarding`, formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 30000
+      });
+      
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      if (response.data.success) {
+        setSuccessData(response.data.data);
         setShowSuccess(true);
         
-        // Reset form and clear saved data
+        // Reset form
         setFormData({
           complaintType: '',
           subject: '',
@@ -749,36 +656,42 @@ const ComplaintRegarding = () => {
           preferredContact: 'phone'
         });
         setSelectedFiles([]);
-        setUploadProgress({});
         setErrors({});
         setTouched({});
         setDescriptionCharCount(0);
         setSubmissionAttempted(false);
-        clearSavedFormData();
         generateReferenceNumber();
+        
+        // Clear file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
         
         showToast(t.successMessage, 'success');
       } else {
-        throw new Error(response.message || 'Submission failed');
+        throw new Error(response.data.message || 'Submission failed');
       }
       
     } catch (error) {
       console.error('Submission error:', error);
-      showToast(t.submitFailed, 'error');
+      let errorMessage = t.submitFailed;
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = language === 'np' ? 'सर्भरले समयमा प्रतिक्रिया दिएन। कृपया पछि प्रयास गर्नुहोस्।' : 'Server timeout. Please try again later.';
+      } else if (error.response) {
+        errorMessage = error.response.data?.message || t.submitFailed;
+      } else if (error.request) {
+        errorMessage = t.connectionError;
+      }
+      showToast(errorMessage, 'error');
     } finally {
       setIsSubmitting(false);
-      setIsLoading(false);
     }
   };
 
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
     setShowLanguageDropdown(false);
-  };
-
-  const copyReferenceNumber = () => {
-    navigator.clipboard.writeText(referenceNumber);
-    showToast(t.copied, 'success', 1500);
+    showToast(lang === 'np' ? 'भाषा नेपालीमा परिवर्तन गरियो' : 'Language changed to English', 'info', 2000);
   };
 
   const LogoImage = ({ src, alt, fallback, className }) => {
@@ -798,17 +711,6 @@ const ComplaintRegarding = () => {
     );
   };
 
-  // Get subject option groups
-  const getSubjectGroups = () => {
-    const options = getSubjectOptions();
-    const groups = {};
-    options.forEach(opt => {
-      if (!groups[opt.category]) groups[opt.category] = [];
-      groups[opt.category].push(opt.value);
-    });
-    return groups;
-  };
-
   return (
     <div className="complaint-regarding-page">
       {/* Toast Notification */}
@@ -819,14 +721,6 @@ const ComplaintRegarding = () => {
           </span>
           <span className="toast-message">{toast.message}</span>
           <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
-        </div>
-      )}
-
-      {/* Auto-save indicator */}
-      {autoSaveStatus && (
-        <div className="auto-save-indicator">
-          {autoSaveStatus === 'saved' && <span>💾 {t.autoSaved}</span>}
-          {autoSaveStatus === 'typing' && <span>✏️ {t.typing}</span>}
         </div>
       )}
 
@@ -947,7 +841,7 @@ const ComplaintRegarding = () => {
               </div>
             </div>
             
-            <form onSubmit={handleSubmit} className="complaint-form" ref={formRef} noValidate>
+            <form onSubmit={handleSubmit} className="complaint-form" noValidate>
               {/* Complaint Type */}
               <div className="form-section">
                 <h3 className="section-title">
@@ -978,7 +872,7 @@ const ComplaintRegarding = () => {
                   <div className="error-message-field">{errors.complaintType}</div>}
               </div>
 
-              {/* Subject - Dropdown with Categories */}
+              {/* Subject - Dropdown */}
               <div className="form-section">
                 <h3 className="section-title">
                   {t.subject} <span className="required-star">*</span>
@@ -994,14 +888,10 @@ const ComplaintRegarding = () => {
                     className={submissionAttempted && errors.subject ? 'error-input' : ''}
                   >
                     <option value="">{t.selectSubject}</option>
-                    {Object.entries(getSubjectGroups()).map(([category, items]) => (
-                      <optgroup key={category} label={`— ${getCategoryLabel(category)} —`}>
-                        {items.map((item, idx) => (
-                          <option key={idx} value={item}>
-                            {item}
-                          </option>
-                        ))}
-                      </optgroup>
+                    {getSubjectOptions().map((option, index) => (
+                      <option key={index} value={option}>
+                        {option}
+                      </option>
                     ))}
                   </select>
                   {!formData.complaintType && (
@@ -1037,9 +927,6 @@ const ComplaintRegarding = () => {
                       {descriptionCharCount > 0 && descriptionCharCount < minDescriptionChars && 
                         ` (${minDescriptionChars - descriptionCharCount} ${language === 'np' ? 'अक्षर थप्नुहोस्' : 'more characters needed'})`}
                     </span>
-                    {descriptionCharCount >= minDescriptionChars && descriptionCharCount < 50 && (
-                      <span className="char-recommended">✓ {t.recommended}</span>
-                    )}
                   </div>
                   {submissionAttempted && (touched.description || errors.description) && errors.description && 
                     <div className="error-message-field">{errors.description}</div>}
@@ -1197,9 +1084,9 @@ const ComplaintRegarding = () => {
                         <div className="file-info">
                           <span className="file-name">{file.name}</span>
                           <span className="file-size">({(file.size / 1024).toFixed(2)} KB)</span>
-                          {uploadProgress[file.name] && uploadProgress[file.name] < 100 && (
+                          {isSubmitting && uploadProgress < 100 && (
                             <div className="upload-progress">
-                              <div className="progress-bar" style={{ width: `${uploadProgress[file.name]}%` }}></div>
+                              <div className="progress-bar" style={{ width: `${uploadProgress}%` }}></div>
                             </div>
                           )}
                         </div>
@@ -1273,7 +1160,15 @@ const ComplaintRegarding = () => {
         </div>
       )}
 
-    
+      {/* Footer */}
+      <footer className="footer">
+        <div className="footer-content">
+          <div className="footer-copyright">
+            <p>{t.footerTagline}</p>
+            <p className="copyright-text">{t.copyright}</p>
+          </div>
+        </div>
+      </footer>
 
       <style jsx>{`
         * {
@@ -1308,20 +1203,9 @@ const ComplaintRegarding = () => {
           max-width: 350px;
         }
         
-        .toast-notification.success {
-          border-left: 4px solid #10b981;
-          background: #ecfdf5;
-        }
-        
-        .toast-notification.error {
-          border-left: 4px solid #ef4444;
-          background: #fef2f2;
-        }
-        
-        .toast-notification.info {
-          border-left: 4px solid #3b82f6;
-          background: #eff6ff;
-        }
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
         
         .toast-icon { font-size: 1.2rem; }
         .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
@@ -1334,42 +1218,22 @@ const ComplaintRegarding = () => {
           padding: 0 4px;
         }
         .toast-close:hover { color: #666; }
-        
+
         @keyframes slideInRight {
           from { transform: translateX(100%); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
         }
 
-        /* Auto-save Indicator */
-        .auto-save-indicator {
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          z-index: 2000;
-          background: #10b981;
-          color: white;
-          padding: 6px 12px;
-          border-radius: 20px;
-          font-size: 0.7rem;
-          animation: fadeInOut 2s ease;
+        /* Upload Progress */
+        .upload-progress {
+          margin-top: 8px;
+          width: 100%;
         }
-        
-        @keyframes fadeInOut {
-          0% { opacity: 0; transform: translateY(10px); }
-          15% { opacity: 1; transform: translateY(0); }
-          85% { opacity: 1; transform: translateY(0); }
-          100% { opacity: 0; transform: translateY(-10px); }
-        }
-
-        /* Error Shake Animation */
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-5px); }
-          75% { transform: translateX(5px); }
-        }
-        
-        .error-shake {
-          animation: shake 0.3s ease-in-out;
+        .progress-bar {
+          height: 4px;
+          background: #1565c0;
+          border-radius: 2px;
+          transition: width 0.3s ease;
         }
 
         /* HEADER 1 - Top Bar */
@@ -1649,11 +1513,8 @@ const ComplaintRegarding = () => {
           font-size: 0.7rem;
           margin-top: 5px;
           color: #888;
-          display: flex;
-          justify-content: space-between;
         }
         .char-warning { color: #f57c00; }
-        .char-recommended { color: #10b981; }
         .estimated-time, .max-files { font-size: 0.7rem; color: #2e7d32; margin-top: 5px; }
         .max-files { color: #1565c0; }
 
@@ -1778,8 +1639,6 @@ const ComplaintRegarding = () => {
         .file-info { flex: 1; }
         .file-name { font-size: 0.85rem; word-break: break-all; display: block; }
         .file-size { font-size: 0.7rem; color: #888; }
-        .upload-progress { margin-top: 4px; height: 3px; background: #e0e0e0; border-radius: 3px; overflow: hidden; }
-        .progress-bar { height: 100%; background: #1565c0; transition: width 0.3s ease; }
         .remove-file {
           background: none;
           border: none;
@@ -1951,7 +1810,6 @@ const ComplaintRegarding = () => {
           .modal-buttons { flex-direction: column; }
           .form-buttons { flex-direction: column; }
           .toast-notification { top: auto; bottom: 20px; right: 20px; left: 20px; max-width: calc(100% - 40px); }
-          .auto-save-indicator { bottom: 10px; right: 10px; font-size: 0.6rem; }
         }
 
         @media (max-width: 480px) {
