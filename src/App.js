@@ -101,7 +101,7 @@ function App() {
           <Route path="/staff/contact" element={<StaffContact />} />
           <Route path="/admin-profile" element={<AdminProfile />} />
         
-                  </Routes>
+         </Routes>
       </div>
     </Router>
   );
