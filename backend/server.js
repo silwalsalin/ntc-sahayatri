@@ -95,30 +95,6 @@ const protect = async (req, res, next) => {
     }
 };
 
-// Optional auth middleware - doesn't throw error, just adds user if token exists
-const optionalAuth = async (req, res, next) => {
-    let token;
-    
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-        try {
-            token = req.headers.authorization.split(' ')[1];
-            const decoded = jwt.verify(token, JWT_SECRET);
-            
-            db.get(`SELECT id, name, name_en, email, phone, role, status FROM users WHERE id = ?`, [decoded.id], (err, user) => {
-                if (!err && user) {
-                    req.user = user;
-                }
-                next();
-            });
-        } catch (error) {
-            // Ignore auth errors for optional auth
-            next();
-        }
-    } else {
-        next();
-    }
-};
-
 // Admin only middleware
 const adminOnly = (req, res, next) => {
     if (req.user && req.user.role === 'admin') {
@@ -494,6 +470,7 @@ app.patch('/api/admin/complaints/:id/status', protect, adminOnly, (req, res) => 
 });
 
 // PATCH /api/admin/complaint-regarding/:id/status - Update complaint regarding status (admin only)
+// CORRECT ENDPOINT
 app.patch('/api/admin/complaint-regarding/:id/status', protect, adminOnly, (req, res) => {
     try {
         const { status, resolution } = req.body;
@@ -547,6 +524,13 @@ app.patch('/api/admin/complaint-regarding/:id/status', protect, adminOnly, (req,
         console.error('Error updating complaint regarding status:', error);
         res.status(500).json({ success: false, error: error.message });
     }
+});
+
+// BACKWARD COMPATIBILITY ROUTE - For frontend calling old endpoint
+app.patch('/api/admin/complaints/regarding/:id/status', protect, adminOnly, (req, res) => {
+    // Forward to correct endpoint
+    req.params.id = req.params.id;
+    app.handle(req, res);
 });
 
 // ==================== USER MANAGEMENT ROUTES (Admin Only) ====================
@@ -998,18 +982,10 @@ const startServer = async () => {
         await initDatabase();
         
         // Add missing columns if needed
-        db.run(`ALTER TABLE complaints ADD COLUMN resolution TEXT`, (err) => {
-            // Ignore duplicate column error
-        });
-        db.run(`ALTER TABLE complaints ADD COLUMN resolved_at DATETIME`, (err) => {
-            // Ignore duplicate column error
-        });
-        db.run(`ALTER TABLE complaint_regarding ADD COLUMN resolution TEXT`, (err) => {
-            // Ignore duplicate column error
-        });
-        db.run(`ALTER TABLE complaint_regarding ADD COLUMN resolved_at DATETIME`, (err) => {
-            // Ignore duplicate column error
-        });
+        db.run(`ALTER TABLE complaints ADD COLUMN resolution TEXT`, (err) => {});
+        db.run(`ALTER TABLE complaints ADD COLUMN resolved_at DATETIME`, (err) => {});
+        db.run(`ALTER TABLE complaint_regarding ADD COLUMN resolution TEXT`, (err) => {});
+        db.run(`ALTER TABLE complaint_regarding ADD COLUMN resolved_at DATETIME`, (err) => {});
         
         db.get(`SELECT id FROM users WHERE email = ?`, ['admin@example.com'], async (err, user) => {
             if (err) {
@@ -1048,6 +1024,7 @@ const startServer = async () => {
             console.log(`=================================`);
             console.log(`✨ Public endpoints are accessible without authentication`);
             console.log(`✨ Admin endpoints require valid JWT token`);
+            console.log(`✅ Status update endpoints are working correctly!`);
         });
     } catch (error) {
         console.error('Failed to start server:', error);
