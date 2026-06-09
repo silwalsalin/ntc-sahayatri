@@ -82,7 +82,8 @@ const protect = async (req, res, next) => {
                 next();
             });
         } catch (error) {
-            if (token) {
+            // Silently fail for public routes - don't log "jwt malformed" errors
+            if (token && error.message !== 'jwt malformed') {
                 console.error('Auth error:', error.message);
             }
             return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
@@ -91,6 +92,30 @@ const protect = async (req, res, next) => {
     
     if (!token) {
         return res.status(401).json({ success: false, message: 'Not authorized, no token' });
+    }
+};
+
+// Optional auth middleware - doesn't throw error, just adds user if token exists
+const optionalAuth = async (req, res, next) => {
+    let token;
+    
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+            token = req.headers.authorization.split(' ')[1];
+            const decoded = jwt.verify(token, JWT_SECRET);
+            
+            db.get(`SELECT id, name, name_en, email, phone, role, status FROM users WHERE id = ?`, [decoded.id], (err, user) => {
+                if (!err && user) {
+                    req.user = user;
+                }
+                next();
+            });
+        } catch (error) {
+            // Ignore auth errors for optional auth
+            next();
+        }
+    } else {
+        next();
     }
 };
 
@@ -469,7 +494,6 @@ app.patch('/api/admin/complaints/:id/status', protect, adminOnly, (req, res) => 
 });
 
 // PATCH /api/admin/complaint-regarding/:id/status - Update complaint regarding status (admin only)
-// FIXED: This is the correct endpoint - singular "complaint-regarding"
 app.patch('/api/admin/complaint-regarding/:id/status', protect, adminOnly, (req, res) => {
     try {
         const { status, resolution } = req.body;
@@ -975,24 +999,16 @@ const startServer = async () => {
         
         // Add missing columns if needed
         db.run(`ALTER TABLE complaints ADD COLUMN resolution TEXT`, (err) => {
-            if (err && !err.message.includes('duplicate column name')) {
-                // Column already exists or error
-            }
+            // Ignore duplicate column error
         });
         db.run(`ALTER TABLE complaints ADD COLUMN resolved_at DATETIME`, (err) => {
-            if (err && !err.message.includes('duplicate column name')) {
-                // Column already exists or error
-            }
+            // Ignore duplicate column error
         });
         db.run(`ALTER TABLE complaint_regarding ADD COLUMN resolution TEXT`, (err) => {
-            if (err && !err.message.includes('duplicate column name')) {
-                // Column already exists or error
-            }
+            // Ignore duplicate column error
         });
         db.run(`ALTER TABLE complaint_regarding ADD COLUMN resolved_at DATETIME`, (err) => {
-            if (err && !err.message.includes('duplicate column name')) {
-                // Column already exists or error
-            }
+            // Ignore duplicate column error
         });
         
         db.get(`SELECT id FROM users WHERE email = ?`, ['admin@example.com'], async (err, user) => {
@@ -1030,6 +1046,8 @@ const startServer = async () => {
             console.log(`📝 Admin Complaint Status: PATCH /api/admin/complaints/:id/status`);
             console.log(`📝 Admin Complaint Regarding Status: PATCH /api/admin/complaint-regarding/:id/status`);
             console.log(`=================================`);
+            console.log(`✨ Public endpoints are accessible without authentication`);
+            console.log(`✨ Admin endpoints require valid JWT token`);
         });
     } catch (error) {
         console.error('Failed to start server:', error);
