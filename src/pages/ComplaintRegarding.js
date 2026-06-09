@@ -20,7 +20,9 @@ const ComplaintRegarding = () => {
   const navigate = useNavigate();
   
   // Language state
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
   // Loading states
@@ -70,6 +72,11 @@ const ComplaintRegarding = () => {
   
   // API URL
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
 
   // Generate reference number
   const generateReferenceNumber = () => {
@@ -627,8 +634,8 @@ const ComplaintRegarding = () => {
         });
       }, 200);
       
-      // Send data to backend
-      const response = await axios.post(`${API_URL}/complaints/regarding`, formDataToSend, {
+      // FIXED: Use correct endpoint - /api/complaint-regarding (singular, hyphenated)
+      const response = await axios.post(`${API_URL}/complaint-regarding`, formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

@@ -248,18 +248,41 @@ const AdminComplaints = () => {
     }
   };
 
-  // Update complaint status
+  // Update complaint status - FIXED VERSION
   const updateComplaintStatus = async (complaintId, newStatusValue, complaintType) => {
+    if (!complaintId || !newStatusValue) {
+      showToast('Invalid complaint ID or status', 'error');
+      return;
+    }
+    
     setUpdatingStatus(true);
     try {
       const token = localStorage.getItem('adminToken');
-      const statusMap = {
-        'pending': 'pending',
-        'in-progress': 'in-progress',
-        'resolved': 'resolved',
-        'review': 'review'
-      };
+      if (!token) {
+        showToast('Authentication token not found', 'error');
+        return;
+      }
       
+      // Map status values for backend
+      let backendStatus;
+      switch (newStatusValue) {
+        case 'pending':
+          backendStatus = 'pending';
+          break;
+        case 'in-progress':
+          backendStatus = 'in-progress';
+          break;
+        case 'review':
+          backendStatus = 'review';
+          break;
+        case 'resolved':
+          backendStatus = 'resolved';
+          break;
+        default:
+          backendStatus = 'pending';
+      }
+      
+      // Determine endpoint based on complaint type
       let endpoint;
       if (complaintType === 'regular') {
         endpoint = `${API_URL}/admin/complaints/${complaintId}/status`;
@@ -267,17 +290,24 @@ const AdminComplaints = () => {
         endpoint = `${API_URL}/admin/complaints/regarding/${complaintId}/status`;
       }
       
+      console.log('Updating status:', { endpoint, complaintId, newStatusValue, backendStatus, complaintType });
+      
       const response = await axios.patch(
         endpoint,
-        { status: statusMap[newStatusValue] },
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        { status: backendStatus },
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
       );
       
       if (response.data.success) {
         // Update local state
         const updateComplaint = (complaint) => 
           complaint.complaintId === complaintId 
-            ? { ...complaint, status: newStatusValue, rawStatus: statusMap[newStatusValue] }
+            ? { ...complaint, status: newStatusValue, rawStatus: backendStatus }
             : complaint;
         
         setRegularComplaints(prev => prev.map(updateComplaint));
@@ -293,9 +323,21 @@ const AdminComplaints = () => {
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      showToast(language === 'np' 
+      let errorMessage = language === 'np' 
         ? 'स्थिति अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
-        : 'Failed to update status. Please try again.', 'error');
+        : 'Failed to update status. Please try again.';
+      
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMessage = language === 'np' 
+            ? 'प्रमाणीकरण असफल। कृपया पुन: लगइन गर्नुहोस्।' 
+            : 'Authentication failed. Please login again.';
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+      }
+      
+      showToast(errorMessage, 'error');
     } finally {
       setUpdatingStatus(false);
     }
@@ -381,7 +423,9 @@ const AdminComplaints = () => {
       regarding: 'सम्बन्धी',
       complaintInfo: 'गुनासो जानकारी',
       complainantInfo: 'उजुरीकर्ताको जानकारी',
-      statusInfo: 'स्थिति जानकारी'
+      statusInfo: 'स्थिति जानकारी',
+      updateSuccess: 'स्थिति सफलतापूर्वक अपडेट गरियो',
+      updateError: 'स्थिति अपडेट गर्न असफल'
     },
     en: {
       complaintsManagement: 'Complaints Management',
@@ -446,7 +490,9 @@ const AdminComplaints = () => {
       regarding: 'Regarding',
       complaintInfo: 'Complaint Information',
       complainantInfo: 'Complainant Information',
-      statusInfo: 'Status Information'
+      statusInfo: 'Status Information',
+      updateSuccess: 'Status updated successfully',
+      updateError: 'Failed to update status'
     }
   };
 
@@ -582,9 +628,9 @@ const AdminComplaints = () => {
   };
 
   const handleStatusUpdate = () => {
-    if (selectedComplaint && newStatus !== selectedComplaint.status) {
+    if (selectedComplaint && newStatus && newStatus !== selectedComplaint.status) {
       updateComplaintStatus(selectedComplaint.complaintId, newStatus, selectedComplaint.type);
-    } else {
+    } else if (newStatus === selectedComplaint?.status) {
       closeStatusModal();
     }
   };
