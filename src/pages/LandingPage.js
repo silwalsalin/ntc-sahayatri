@@ -62,8 +62,8 @@ const LandingPage = () => {
   const [lastScrollY, setLastScrollY] = useState(0);
   
   // State for dynamic public complaints from backend
-  const [publicComplaints, setPublicComplaints] = useState([]);
-  const [complaintRegardingComplaints, setComplaintRegardingComplaints] = useState([]);
+  const [regularComplaints, setRegularComplaints] = useState([]);
+  const [regardingComplaints, setRegardingComplaints] = useState([]);
   const [allComplaints, setAllComplaints] = useState([]);
   const [loadingComplaints, setLoadingComplaints] = useState(true);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -82,108 +82,12 @@ const LandingPage = () => {
   }, [language]);
 
   // Show toast notification
-  const showToast = useCallback((message, type = 'error', duration = 5000) => {
+  const showToast = useCallback((message, type = 'info', duration = 5000) => {
     setToast({ show: true, message, type });
     setTimeout(() => {
       setToast({ show: false, message: '', type: '' });
     }, duration);
   }, []);
-
-  // Fetch all complaints from both tables
-  const fetchAllComplaints = useCallback(async () => {
-    try {
-      setLoadingComplaints(true);
-      
-      // Fetch regular complaints
-      const regularResponse = await axios.get(`${API_URL}/complaints/public`);
-      
-      // Fetch complaint regarding
-      const regardingResponse = await axios.get(`${API_URL}/admin/complaints/regarding?status=all`);
-      
-      let regularComplaints = [];
-      let regardingComplaints = [];
-      
-      // Process regular complaints
-      if (regularResponse.data.success && regularResponse.data.data) {
-        regularComplaints = regularResponse.data.data.map(complaint => ({
-          id: complaint.id,
-          name: complaint.name,
-          nameEn: complaint.name,
-          complaint: complaint.description,
-          complaintEn: complaint.description,
-          date: formatDateFromBackend(complaint.created_at),
-          dateEn: formatDateFromBackend(complaint.created_at),
-          status: getStatusInNepali(complaint.status),
-          statusEn: getStatusInEnglish(complaint.status),
-          phone: complaint.phone,
-          email: complaint.email,
-          category: complaint.nature_of_complaint,
-          categoryEn: complaint.nature_of_complaint,
-          priority: complaint.priority,
-          complaintNumber: complaint.complaint_number,
-          submittedDate: complaint.created_at,
-          address: complaint.street_address,
-          landmark: complaint.landmark,
-          assignedTo: complaint.assigned_to,
-          resolution: complaint.resolution,
-          type: 'regular'
-        }));
-      }
-      
-      // Process complaint regarding
-      if (regardingResponse.data.success && regardingResponse.data.data) {
-        regardingComplaints = regardingResponse.data.data.map(complaint => ({
-          id: complaint.id,
-          name: complaint.name,
-          nameEn: complaint.name,
-          complaint: complaint.description,
-          complaintEn: complaint.description,
-          date: formatDateFromBackend(complaint.created_at),
-          dateEn: formatDateFromBackend(complaint.created_at),
-          status: getStatusInNepali(complaint.status),
-          statusEn: getStatusInEnglish(complaint.status),
-          phone: complaint.phone,
-          email: complaint.email,
-          category: complaint.complaint_type,
-          categoryEn: complaint.complaint_type,
-          priority: complaint.priority,
-          complaintNumber: complaint.complaint_number,
-          submittedDate: complaint.created_at,
-          subject: complaint.subject,
-          address: complaint.address,
-          landmark: complaint.landmark,
-          preferredContact: complaint.preferred_contact,
-          referenceNumber: complaint.reference_number,
-          assignedTo: complaint.assigned_to,
-          resolution: complaint.resolution,
-          type: 'regarding'
-        }));
-      }
-      
-      setPublicComplaints(regularComplaints);
-      setComplaintRegardingComplaints(regardingComplaints);
-      
-      // Combine all complaints
-      const combined = [...regularComplaints, ...regardingComplaints];
-      combined.sort((a, b) => new Date(b.submittedDate) - new Date(a.submittedDate));
-      setAllComplaints(combined);
-      
-    } catch (error) {
-      console.error('Error fetching complaints:', error);
-      showToast('Failed to load complaints. Please try again later.', 'error');
-      setAllComplaints([]);
-    } finally {
-      setLoadingComplaints(false);
-    }
-  }, [API_URL, showToast]);
-
-  // Get complaints to display based on active tab
-  const getComplaintsToDisplay = () => {
-    if (activeTab === 'all') return allComplaints;
-    if (activeTab === 'regular') return publicComplaints;
-    if (activeTab === 'regarding') return complaintRegardingComplaints;
-    return allComplaints;
-  };
 
   // Helper function to format date from backend
   const formatDateFromBackend = (dateString) => {
@@ -205,12 +109,13 @@ const LandingPage = () => {
     const statusMap = {
       'pending': 'विचाराधीन',
       'in-progress': 'प्रगतिमा',
+      'inprogress': 'प्रगतिमा',
       'review': 'समीक्षामा',
       'resolved': 'समाधान भयो',
       'closed': 'बन्द',
       'rejected': 'अस्वीकृत'
     };
-    return statusMap[status] || status;
+    return statusMap[status?.toLowerCase()] || status || 'विचाराधीन';
   };
 
   // Helper function to get status in English
@@ -218,12 +123,111 @@ const LandingPage = () => {
     const statusMap = {
       'pending': 'Pending',
       'in-progress': 'In Progress',
+      'inprogress': 'In Progress',
       'review': 'Under Review',
       'resolved': 'Resolved',
       'closed': 'Closed',
       'rejected': 'Rejected'
     };
-    return statusMap[status] || status;
+    return statusMap[status?.toLowerCase()] || status || 'Pending';
+  };
+
+  // Fetch all complaints from both tables
+  const fetchAllComplaints = useCallback(async () => {
+    try {
+      setLoadingComplaints(true);
+      
+      // Fetch regular complaints from public endpoint
+      const regularResponse = await axios.get(`${API_URL}/complaints/public`);
+      
+      // Fetch complaint regarding from public endpoint
+      const regardingResponse = await axios.get(`${API_URL}/complaints/regarding/public`);
+      
+      let regularData = [];
+      let regardingData = [];
+      
+      // Process regular complaints
+      if (regularResponse.data.success && Array.isArray(regularResponse.data.data)) {
+        regularData = regularResponse.data.data.map(complaint => ({
+          id: complaint.id,
+          name: complaint.name || 'N/A',
+          nameEn: complaint.name || 'N/A',
+          complaint: complaint.description || 'No description',
+          complaintEn: complaint.description || 'No description',
+          date: formatDateFromBackend(complaint.created_at),
+          dateEn: formatDateFromBackend(complaint.created_at),
+          status: getStatusInNepali(complaint.status),
+          statusEn: getStatusInEnglish(complaint.status),
+          phone: complaint.phone || 'N/A',
+          email: complaint.email || 'N/A',
+          category: complaint.nature_of_complaint || 'general',
+          categoryEn: complaint.nature_of_complaint || 'General',
+          priority: complaint.priority || 'medium',
+          complaintNumber: complaint.complaint_number || `NTC-${complaint.id}`,
+          submittedDate: complaint.created_at,
+          address: complaint.street_address || null,
+          landmark: complaint.landmark || null,
+          assignedTo: complaint.assigned_to || null,
+          resolution: complaint.resolution || null,
+          type: 'regular'
+        }));
+      }
+      
+      // Process complaint regarding
+      if (regardingResponse.data.success && Array.isArray(regardingResponse.data.data)) {
+        regardingData = regardingResponse.data.data.map(complaint => ({
+          id: complaint.id,
+          name: complaint.name || 'N/A',
+          nameEn: complaint.name || 'N/A',
+          complaint: complaint.description || 'No description',
+          complaintEn: complaint.description || 'No description',
+          date: formatDateFromBackend(complaint.created_at),
+          dateEn: formatDateFromBackend(complaint.created_at),
+          status: getStatusInNepali(complaint.status),
+          statusEn: getStatusInEnglish(complaint.status),
+          phone: complaint.phone || 'N/A',
+          email: complaint.email || 'N/A',
+          category: complaint.complaint_type || 'general',
+          categoryEn: complaint.complaint_type || 'General',
+          priority: complaint.priority || 'medium',
+          complaintNumber: complaint.complaint_number || `CR-${complaint.id}`,
+          submittedDate: complaint.created_at,
+          subject: complaint.subject || null,
+          address: complaint.address || null,
+          landmark: complaint.landmark || null,
+          preferredContact: complaint.preferred_contact || null,
+          referenceNumber: complaint.reference_number || null,
+          assignedTo: complaint.assigned_to || null,
+          resolution: complaint.resolution || null,
+          type: 'regarding'
+        }));
+      }
+      
+      setRegularComplaints(regularData);
+      setRegardingComplaints(regardingData);
+      
+      // Combine all complaints and sort by date (newest first)
+      const combined = [...regularData, ...regardingData];
+      combined.sort((a, b) => new Date(b.submittedDate) - new Date(a.submittedDate));
+      setAllComplaints(combined);
+      
+    } catch (error) {
+      console.error('Error fetching complaints:', error);
+      showToast('Failed to load complaints. Please try again later.', 'error');
+      setAllComplaints([]);
+      setRegularComplaints([]);
+      setRegardingComplaints([]);
+    } finally {
+      setLoadingComplaints(false);
+    }
+  }, [API_URL, showToast]);
+
+  // Get complaints to display based on active tab
+  const getComplaintsToDisplay = () => {
+    if (activeTab === 'all') return allComplaints;
+    if (activeTab === 'regular') return regularComplaints;
+    if (activeTab === 'regarding') return regardingComplaints;
+    return allComplaints;
   };
 
   useEffect(() => {
@@ -597,15 +601,22 @@ const LandingPage = () => {
           <td data-label={t.complainantName}>
             <div className="complainant-info">
               <span className="complainant-name">{language === 'np' ? complaint.name : complaint.nameEn}</span>
-              {complaint.phone && <span className="complainant-phone">📞 {complaint.phone}</span>}
+              {complaint.phone && complaint.phone !== 'N/A' && <span className="complainant-phone">📞 {complaint.phone}</span>}
             </div>
           </td>
           <td data-label={t.complaintDetails}>
             <div className="complaint-preview">
-              {(language === 'np' ? complaint.complaint : complaint.complaintEn).substring(0, 60)}
-              {(language === 'np' ? complaint.complaint : complaint.complaintEn).length > 60 ? '...' : ''}
+              {language === 'np' 
+                ? (complaint.complaint || 'No description').substring(0, 60)
+                : (complaint.complaintEn || complaint.complaint || 'No description').substring(0, 60)}
+              {((language === 'np' ? complaint.complaint : complaint.complaintEn)?.length > 60 ? '...' : '')}
             </div>
-           </td>
+            {complaint.subject && (
+              <div className="complaint-subject">
+                📌 {language === 'np' ? 'विषय:' : 'Subject:'} {complaint.subject}
+              </div>
+            )}
+          </td>
           <td data-label={t.complaintDate}>{displayDate}</td>
           <td data-label={t.complaintStatus}>
             <span className={`status-badge ${getStatusClass(complaint.status)}`}>
@@ -1136,6 +1147,7 @@ const LandingPage = () => {
       )}
 
       <style jsx>{`
+        /* All your existing styles remain the same */
         * {
           margin: 0;
           padding: 0;
@@ -1612,6 +1624,7 @@ const LandingPage = () => {
         .complainant-phone { font-size: 0.7rem; color: #6c8196; }
 
         .complaint-preview { font-size: 0.85rem; color: #333; line-height: 1.4; }
+        .complaint-subject { font-size: 0.7rem; color: #1565c0; margin-top: 4px; }
 
         .category-badge {
           display: inline-block;

@@ -1,5 +1,5 @@
 // src/pages/AdminComplaintsPending.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../components/Header';
@@ -9,107 +9,45 @@ const AdminComplaintsPending = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
   const [loading, setLoading] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [newStatus, setNewStatus] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   // State for complaints from backend
-  const [complaints, setComplaints] = useState([]);
+  const [regularComplaints, setRegularComplaints] = useState([]);
+  const [regardingComplaints, setRegardingComplaints] = useState([]);
+  const [allPendingComplaints, setAllPendingComplaints] = useState([]);
   const [backendStatus, setBackendStatus] = useState('checking');
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
-  // Fetch pending complaints from backend
-  const fetchPendingComplaints = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('adminToken');
-      const response = await axios.get('http://localhost:5000/api/complaints', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.data.success && Array.isArray(response.data.data)) {
-        // Filter only pending complaints and transform data
-        const pendingComplaints = response.data.data
-          .filter(complaint => {
-            const status = complaint.status || complaint.statusNp;
-            return status === 'Pending' || status === 'विचाराधीन' || status === 'pending';
-          })
-          .map(complaint => ({
-            id: complaint.id,
-            ticketId: complaint.complaintNumber || `NTC-${complaint.id}`,
-            name: complaint.name || 'N/A',
-            enName: complaint.nameEn || complaint.name || 'N/A',
-            email: complaint.email || 'N/A',
-            phone: complaint.phone || 'N/A',
-            category: complaint.category || complaint.natureOfComplaint || 'general',
-            category_np: complaint.categoryNp || complaint.natureOfComplaint || 'सामान्य',
-            category_en: complaint.category || complaint.natureOfComplaint || 'General',
-            subCategory: complaint.subject || 'general',
-            description: complaint.complaint || complaint.description || 'N/A',
-            enDescription: complaint.complaintEn || complaint.complaint || complaint.description || 'N/A',
-            status: 'pending',
-            date: complaint.date || formatNepaliDate(complaint.submittedDate),
-            enDate: complaint.enDate || formatEnglishDate(complaint.submittedDate),
-            channel: complaint.channel || 'वेबसाइट पोर्टल',
-            enChannel: complaint.enChannel || 'Website Portal',
-            priority: mapPriority(complaint.priority),
-            assignedTo: complaint.assignedTo || (language === 'np' ? 'प्रशासक' : 'Administrator'),
-            enAssignedTo: complaint.enAssignedTo || 'Administrator',
-            daysPending: calculateDaysPending(complaint.submittedDate),
-            resolvedDate: null,
-            submittedDate: complaint.submittedDate,
-            referenceNumber: complaint.referenceNumber,
-            landmark: complaint.landmark,
-            address: complaint.address,
-            preferredContact: complaint.preferredContact
-          }));
-        
-        setComplaints(pendingComplaints);
-        setBackendStatus('connected');
-      } else {
-        console.warn('Invalid response format:', response.data);
-        setComplaints(getSamplePendingComplaints());
-        setBackendStatus('disconnected');
-      }
-    } catch (error) {
-      console.error('Error fetching complaints:', error);
-      setComplaints(getSamplePendingComplaints());
-      setBackendStatus('disconnected');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+  // Show toast notification
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  }, []);
 
   // Calculate days pending
   const calculateDaysPending = (submittedDate) => {
     if (!submittedDate) return 1;
-    const submitted = new Date(submittedDate);
-    const today = new Date();
-    const diffTime = Math.abs(today - submitted);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 1;
-  };
-
-  // Map priority from backend to component priority
-  const mapPriority = (priority) => {
-    if (!priority) return 'medium';
-    const priorityMap = {
-      'High': 'high',
-      'high': 'high',
-      'Medium': 'medium',
-      'medium': 'medium',
-      'Low': 'low',
-      'low': 'low',
-      'Urgent': 'high',
-      'urgent': 'high',
-      'उच्च': 'high',
-      'मध्यम': 'medium',
-      'न्यून': 'low'
-    };
-    return priorityMap[priority] || 'medium';
+    try {
+      const submitted = new Date(submittedDate);
+      const today = new Date();
+      const diffTime = Math.abs(today - submitted);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays > 0 ? diffDays : 1;
+    } catch (error) {
+      return 1;
+    }
   };
 
   // Format date to Nepali format
@@ -139,82 +77,438 @@ const AdminComplaintsPending = () => {
     }
   };
 
-  // Get sample pending complaints as fallback
-  const getSamplePendingComplaints = () => {
-    return [
-      { 
-        id: 1, 
-        ticketId: 'NTC-2024-003', 
-        name: 'हरि प्रसाद', 
-        enName: 'Hari Prasad',
-        email: 'hari@example.com',
-        phone: '9823456789',
-        category: 'activation',
-        category_np: 'सक्रियता',
-        category_en: 'Activation',
-        subCategory: 'sim-deactivation',
-        description: 'सिम डिएक्टिभेसन अनुरोध प्रक्रिया भएन',
-        enDescription: 'SIM deactivation request not processed',
-        status: 'pending',
-        date: '२०८०-०१-२५',
-        enDate: '2024-01-25',
-        channel: 'कल सेन्टर',
-        enChannel: 'Call Center',
-        priority: 'low',
-        assignedTo: 'ग्राहक सेवा',
-        enAssignedTo: 'Customer Service',
-        daysPending: 15,
-        resolvedDate: null
-      },
-      { 
-        id: 2, 
-        ticketId: 'NTC-2024-007', 
-        name: 'सरिता गिरी', 
-        enName: 'Sarita Giri',
-        email: 'sarita@example.com',
-        phone: '9845678901',
-        category: 'network',
-        category_np: 'नेटवर्क',
-        category_en: 'Network',
-        subCategory: 'no-coverage',
-        description: 'घरमा नेटवर्क नै छैन',
-        enDescription: 'No network coverage at home',
-        status: 'pending',
-        date: '२०८०-०२-०५',
-        enDate: '2024-02-05',
-        channel: 'फोन',
-        enChannel: 'Phone',
-        priority: 'high',
-        assignedTo: 'नेटवर्क टोली',
-        enAssignedTo: 'Network Team',
-        daysPending: 8,
-        resolvedDate: null
-      },
-      { 
-        id: 3, 
-        ticketId: 'NTC-2024-011', 
-        name: 'विनोद कुमार', 
-        enName: 'Binod Kumar',
-        email: 'binod@example.com',
-        phone: '9812345987',
-        category: 'billing',
-        category_np: 'बिलिङ',
-        category_en: 'Billing',
-        subCategory: 'wrong-charge',
-        description: 'बिलमा गलत शुल्क लागेको',
-        enDescription: 'Wrong charges applied in bill',
-        status: 'pending',
-        date: '२०८०-०२-१५',
-        enDate: '2024-02-15',
-        channel: 'इमेल',
-        enChannel: 'Email',
-        priority: 'medium',
-        assignedTo: 'बिलिङ टोली',
-        enAssignedTo: 'Billing Team',
-        daysPending: 5,
-        resolvedDate: null
+  // Map priority from backend to component priority
+  const mapPriority = (priority) => {
+    if (!priority) return 'medium';
+    const priorityMap = {
+      'high': 'high',
+      'High': 'high',
+      'Urgent': 'high',
+      'urgent': 'high',
+      'medium': 'medium',
+      'Medium': 'medium',
+      'low': 'low',
+      'Low': 'low',
+      'उच्च': 'high',
+      'मध्यम': 'medium',
+      'न्यून': 'low'
+    };
+    return priorityMap[priority] || 'medium';
+  };
+
+  // Helper function to convert status to Nepali
+  const getStatusInNepali = (status) => {
+    const statusMap = {
+      'pending': 'विचाराधीन',
+      'in-progress': 'प्रगतिमा',
+      'inprogress': 'प्रगतिमा',
+      'review': 'समीक्षामा',
+      'resolved': 'समाधान भयो',
+      'closed': 'बन्द',
+      'rejected': 'अस्वीकृत'
+    };
+    return statusMap[status?.toLowerCase()] || status || 'विचाराधीन';
+  };
+
+  // Check if complaint is pending
+  const isPending = (status) => {
+    const pendingStatuses = ['pending', 'Pending', 'विचाराधीन', 'PENDING'];
+    return pendingStatuses.includes(status);
+  };
+
+  // Fetch all pending complaints from both tables
+  const fetchPendingComplaints = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      
+      let regularData = [];
+      let regardingData = [];
+      
+      // Fetch regular complaints
+      try {
+        const regularResponse = await axios.get(`${API_URL}/complaints/public`, { headers });
+        if (regularResponse.data.success && Array.isArray(regularResponse.data.data)) {
+          regularData = regularResponse.data.data
+            .filter(complaint => isPending(complaint.status))
+            .map(complaint => transformRegularComplaint(complaint));
+        }
+      } catch (error) {
+        console.error('Error fetching regular complaints:', error);
       }
-    ];
+      
+      // Fetch complaint regarding
+      try {
+        const regardingResponse = await axios.get(`${API_URL}/complaints/regarding/public`, { headers });
+        if (regardingResponse.data.success && Array.isArray(regardingResponse.data.data)) {
+          regardingData = regardingResponse.data.data
+            .filter(complaint => isPending(complaint.status))
+            .map(complaint => transformRegardingComplaint(complaint));
+        }
+      } catch (error) {
+        console.error('Error fetching regarding complaints:', error);
+      }
+      
+      setRegularComplaints(regularData);
+      setRegardingComplaints(regardingData);
+      
+      // Combine all pending complaints
+      const combined = [...regularData, ...regardingData];
+      combined.sort((a, b) => b.daysPending - a.daysPending);
+      setAllPendingComplaints(combined);
+      
+      if (regularData.length > 0 || regardingData.length > 0) {
+        setBackendStatus('connected');
+      } else {
+        setBackendStatus('connected');
+        setAllPendingComplaints([]);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching pending complaints:', error);
+      setBackendStatus('disconnected');
+      setAllPendingComplaints([]);
+      setRegularComplaints([]);
+      setRegardingComplaints([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [API_URL]);
+
+  // Transform regular complaint data
+  const transformRegularComplaint = (complaint) => ({
+    id: complaint.id,
+    complaintId: complaint.id,
+    ticketId: complaint.complaint_number || `NTC-${complaint.id}`,
+    name: complaint.name || 'N/A',
+    enName: complaint.name || 'N/A',
+    email: complaint.email || 'N/A',
+    phone: complaint.phone || 'N/A',
+    category: complaint.nature_of_complaint || 'general',
+    category_np: getCategoryNepali(complaint.nature_of_complaint),
+    category_en: complaint.nature_of_complaint || 'General',
+    subject: null,
+    description: complaint.description || 'N/A',
+    enDescription: complaint.description || 'N/A',
+    status: 'pending',
+    rawStatus: complaint.status,
+    date: formatNepaliDate(complaint.created_at),
+    enDate: formatEnglishDate(complaint.created_at),
+    channel: 'वेबसाइट पोर्टल',
+    enChannel: 'Website Portal',
+    priority: mapPriority(complaint.priority),
+    assignedTo: complaint.assigned_to || (language === 'np' ? 'प्रशासक' : 'Administrator'),
+    enAssignedTo: complaint.assigned_to || 'Administrator',
+    daysPending: calculateDaysPending(complaint.created_at),
+    submittedDate: complaint.created_at,
+    referenceNumber: null,
+    landmark: complaint.landmark || null,
+    address: complaint.street_address || null,
+    preferredContact: null,
+    type: 'regular'
+  });
+
+  // Transform complaint regarding data
+  const transformRegardingComplaint = (complaint) => ({
+    id: complaint.id,
+    complaintId: complaint.id,
+    ticketId: complaint.complaint_number || `CR-${complaint.id}`,
+    name: complaint.name || 'N/A',
+    enName: complaint.name || 'N/A',
+    email: complaint.email || 'N/A',
+    phone: complaint.phone || 'N/A',
+    category: complaint.complaint_type || 'general',
+    category_np: getCategoryNepali(complaint.complaint_type),
+    category_en: complaint.complaint_type || 'General',
+    subject: complaint.subject || null,
+    description: complaint.description || 'N/A',
+    enDescription: complaint.description || 'N/A',
+    status: 'pending',
+    rawStatus: complaint.status,
+    date: formatNepaliDate(complaint.created_at),
+    enDate: formatEnglishDate(complaint.created_at),
+    channel: complaint.preferred_contact === 'phone' ? 'फोन' : complaint.preferred_contact === 'email' ? 'इमेल' : 'एसएमएस',
+    enChannel: complaint.preferred_contact === 'phone' ? 'Phone' : complaint.preferred_contact === 'email' ? 'Email' : 'SMS',
+    priority: mapPriority(complaint.priority),
+    assignedTo: complaint.assigned_to || (language === 'np' ? 'प्रशासक' : 'Administrator'),
+    enAssignedTo: complaint.assigned_to || 'Administrator',
+    daysPending: calculateDaysPending(complaint.created_at),
+    submittedDate: complaint.created_at,
+    referenceNumber: complaint.reference_number || null,
+    landmark: complaint.landmark || null,
+    address: complaint.address || null,
+    preferredContact: complaint.preferred_contact || null,
+    type: 'regarding'
+  });
+
+  // Get category Nepali translation
+  const getCategoryNepali = (category) => {
+    const categories = {
+      'service': 'सेवा समस्या',
+      'billing': 'बिलिङ समस्या',
+      'technical': 'प्राविधिक समस्या',
+      'network': 'नेटवर्क समस्या',
+      'signal': 'सिग्नल समस्या',
+      'recharge': 'रिचार्ज समस्या',
+      'activation': 'सक्रियता समस्या',
+      'internet': 'इन्टरनेट सेवा',
+      'general': 'सामान्य',
+      'other': 'अन्य'
+    };
+    return categories[category] || 'सामान्य';
+  };
+
+  // Update complaint status
+  const updateComplaintStatus = async (complaintId, newStatusValue, complaintType) => {
+    setUpdatingStatus(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const statusMap = {
+        'pending': 'pending',
+        'in-progress': 'in-progress',
+        'resolved': 'resolved',
+        'review': 'review'
+      };
+      
+      let endpoint;
+      if (complaintType === 'regular') {
+        endpoint = `${API_URL}/admin/complaints/${complaintId}/status`;
+      } else {
+        endpoint = `${API_URL}/admin/complaints/regarding/${complaintId}/status`;
+      }
+      
+      const response = await axios.patch(
+        endpoint,
+        { status: statusMap[newStatusValue] },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      
+      if (response.data.success) {
+        // Remove from pending list
+        setAllPendingComplaints(prev => prev.filter(c => c.complaintId !== complaintId));
+        setRegularComplaints(prev => prev.filter(c => c.complaintId !== complaintId));
+        setRegardingComplaints(prev => prev.filter(c => c.complaintId !== complaintId));
+        
+        showToast(language === 'np' ? 'स्थिति सफलतापूर्वक अपडेट गरियो' : 'Status updated successfully', 'success');
+        setShowStatusModal(false);
+        setSelectedComplaint(null);
+      } else {
+        throw new Error(response.data.message || 'Failed to update status');
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      showToast(language === 'np' 
+        ? 'स्थिति अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
+        : 'Failed to update status. Please try again.', 'error');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  // Process complaint (move to in-progress)
+  const processComplaint = (complaint) => {
+    setSelectedComplaint(complaint);
+    setNewStatus('in-progress');
+    setShowStatusModal(true);
+  };
+
+  // Check authentication and fetch data
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    const user = localStorage.getItem('adminUser');
+    if (!token || !user) {
+      navigate('/admin-login');
+    } else {
+      fetchPendingComplaints();
+    }
+  }, [navigate, fetchPendingComplaints]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, priorityFilter, categoryFilter, typeFilter]);
+
+  const content = {
+    np: {
+      pendingComplaints: 'विचाराधीन गुनासोहरू',
+      managePending: 'विचाराधीन गुनासो व्यवस्थापन',
+      searchPlaceholder: 'टिकेट नम्बर, नाम वा फोन नम्बरले खोज्नुहोस्...',
+      filterByPriority: 'प्राथमिकता अनुसार फिल्टर',
+      filterByCategory: 'प्रकार अनुसार फिल्टर',
+      filterByType: 'गुनासो प्रकार',
+      allTypes: 'सबै प्रकार',
+      regularComplaints: 'साधारण गुनासो',
+      regardingComplaints: 'गुनासो सम्बन्धी',
+      ticketId: 'टिकेट नम्बर',
+      complainant: 'उजुरीकर्ता',
+      category: 'प्रकार',
+      date: 'मिति',
+      daysPending: 'दिन बाँकी',
+      status: 'स्थिति',
+      priority: 'प्राथमिकता',
+      actions: 'कार्यहरू',
+      viewDetails: 'विवरण हेर्नुहोस्',
+      processNow: 'प्रक्रिया सुरु गर्नुहोस्',
+      updateStatus: 'स्थिति अपडेट गर्नुहोस्',
+      complaintDetails: 'गुनासोको विवरण',
+      description: 'विवरण',
+      channel: 'च्यानल',
+      email: 'इमेल',
+      phone: 'फोन',
+      registeredDate: 'दर्ता मिति',
+      assignedTo: 'तोकिएको टोली',
+      close: 'बन्द गर्नुहोस्',
+      all: 'सबै',
+      high: 'उच्च',
+      medium: 'मध्यम',
+      low: 'न्यून',
+      previous: 'अघिल्लो',
+      next: 'अर्को',
+      page: 'पृष्ठ',
+      of: 'को',
+      noComplaintsFound: 'कुनै विचाराधीन गुनासो फेला परेन',
+      tryAdjustingFilters: 'कृपया फिल्टर समायोजन गर्नुहोस्',
+      totalPending: 'जम्मा विचाराधीन',
+      urgentAttention: 'तत्काल ध्यान दिनुहोस्',
+      loading: 'लोड हुँदै...',
+      refresh: 'रिफ्रेस',
+      updateStatusTitle: 'स्थिति अपडेट गर्नुहोस्',
+      selectNewStatus: 'नयाँ स्थिति चयन गर्नुहोस्',
+      cancel: 'रद्द गर्नुहोस्',
+      update: 'अपडेट गर्नुहोस्',
+      updating: 'अपडेट हुँदै...',
+      referenceNo: 'सन्दर्भ नम्बर',
+      landmark: 'नजिकैको चिन्ह',
+      address: 'ठेगाना',
+      preferredContact: 'सम्पर्कको माध्यम',
+      subject: 'विषय',
+      complaintInfo: 'गुनासो जानकारी',
+      complainantInfo: 'उजुरीकर्ताको जानकारी',
+      addressInfo: 'ठेगाना जानकारी',
+      dateInfo: 'मिति जानकारी'
+    },
+    en: {
+      pendingComplaints: 'Pending Complaints',
+      managePending: 'Manage Pending Complaints',
+      searchPlaceholder: 'Search by ticket number, name or phone...',
+      filterByPriority: 'Filter by Priority',
+      filterByCategory: 'Filter by Category',
+      filterByType: 'Complaint Type',
+      allTypes: 'All Types',
+      regularComplaints: 'Regular Complaints',
+      regardingComplaints: 'Complaint Regarding',
+      ticketId: 'Ticket ID',
+      complainant: 'Complainant',
+      category: 'Category',
+      date: 'Date',
+      daysPending: 'Days Pending',
+      status: 'Status',
+      priority: 'Priority',
+      actions: 'Actions',
+      viewDetails: 'View Details',
+      processNow: 'Start Process',
+      updateStatus: 'Update Status',
+      complaintDetails: 'Complaint Details',
+      description: 'Description',
+      channel: 'Channel',
+      email: 'Email',
+      phone: 'Phone',
+      registeredDate: 'Registered Date',
+      assignedTo: 'Assigned To',
+      close: 'Close',
+      all: 'All',
+      high: 'High',
+      medium: 'Medium',
+      low: 'Low',
+      previous: 'Previous',
+      next: 'Next',
+      page: 'Page',
+      of: 'of',
+      noComplaintsFound: 'No pending complaints found',
+      tryAdjustingFilters: 'Please try adjusting your filters',
+      totalPending: 'Total Pending',
+      urgentAttention: 'Requires Urgent Attention',
+      loading: 'Loading...',
+      refresh: 'Refresh',
+      updateStatusTitle: 'Update Status',
+      selectNewStatus: 'Select New Status',
+      cancel: 'Cancel',
+      update: 'Update',
+      updating: 'Updating...',
+      referenceNo: 'Reference Number',
+      landmark: 'Landmark',
+      address: 'Address',
+      preferredContact: 'Preferred Contact',
+      subject: 'Subject',
+      complaintInfo: 'Complaint Information',
+      complainantInfo: 'Complainant Information',
+      addressInfo: 'Address Information',
+      dateInfo: 'Date Information'
+    }
+  };
+
+  const t = content[language];
+
+  const getPriorityClass = (priority) => {
+    const classes = { high: 'priority-high', medium: 'priority-medium', low: 'priority-low' };
+    return classes[priority] || 'priority-medium';
+  };
+
+  const getPriorityText = (priority) => {
+    const texts = {
+      np: { high: 'उच्च', medium: 'मध्यम', low: 'न्यून' },
+      en: { high: 'High', medium: 'Medium', low: 'Low' }
+    };
+    return texts[language][priority] || priority;
+  };
+
+  const getCategoryText = (complaint) => {
+    return language === 'np' ? complaint.category_np : complaint.category_en;
+  };
+
+  const getDate = (complaint) => {
+    return language === 'np' ? complaint.date : complaint.enDate;
+  };
+
+  const getChannel = (complaint) => {
+    return language === 'np' ? complaint.channel : complaint.enChannel;
+  };
+
+  const getAssignedTo = (complaint) => {
+    return language === 'np' ? complaint.assignedTo : complaint.enAssignedTo;
+  };
+
+  const getComplaintTypeText = (complaint) => {
+    if (language === 'np') {
+      return complaint.type === 'regular' ? 'साधारण' : 'सम्बन्धी';
+    }
+    return complaint.type === 'regular' ? 'Regular' : 'Regarding';
+  };
+
+  const getComplaintTypeClass = (complaint) => {
+    return complaint.type === 'regular' ? 'type-regular' : 'type-regarding';
+  };
+
+  const getUrgencyClass = (days) => {
+    if (days >= 10) return 'urgency-critical';
+    if (days >= 5) return 'urgency-high';
+    if (days >= 3) return 'urgency-medium';
+    return 'urgency-low';
+  };
+
+  const getUrgencyText = (days) => {
+    if (language === 'np') {
+      if (days >= 10) return 'गम्भीर';
+      if (days >= 5) return 'अति आवश्यक';
+      if (days >= 3) return 'आवश्यक';
+      return 'सामान्य';
+    } else {
+      if (days >= 10) return 'Critical';
+      if (days >= 5) return 'Urgent';
+      if (days >= 3) return 'Important';
+      return 'Normal';
+    }
   };
 
   // Categories for filter
@@ -245,155 +539,10 @@ const AdminComplaintsPending = () => {
     }
   };
 
-  // Check authentication
-  useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    const user = localStorage.getItem('adminUser');
-    if (!token || !user) {
-      navigate('/admin-login');
-    } else {
-      fetchPendingComplaints();
-    }
-  }, [navigate]);
-
-  const content = {
-    np: {
-      pendingComplaints: 'विचाराधीन गुनासोहरू',
-      managePending: 'विचाराधीन गुनासो व्यवस्थापन',
-      searchPlaceholder: 'टिकेट नम्बर, नाम वा फोन नम्बरले खोज्नुहोस्...',
-      filterByPriority: 'प्राथमिकता अनुसार फिल्टर',
-      filterByCategory: 'प्रकार अनुसार फिल्टर',
-      ticketId: 'टिकेट नम्बर',
-      complainant: 'उजुरीकर्ता',
-      category: 'प्रकार',
-      date: 'मिति',
-      daysPending: 'दिन बाँकी',
-      status: 'स्थिति',
-      priority: 'प्राथमिकता',
-      actions: 'कार्यहरू',
-      viewDetails: 'विवरण हेर्नुहोस्',
-      processNow: 'अहिले प्रक्रिया गर्नुहोस्',
-      assignTeam: 'टोली तोक्नुहोस्',
-      complaintDetails: 'गुनासोको विवरण',
-      description: 'विवरण',
-      channel: 'च्यानल',
-      email: 'इमेल',
-      phone: 'फोन',
-      registeredDate: 'दर्ता मिति',
-      assignedTo: 'तोकिएको टोली',
-      close: 'बन्द गर्नुहोस्',
-      all: 'सबै',
-      high: 'उच्च',
-      medium: 'मध्यम',
-      low: 'न्यून',
-      previous: 'अघिल्लो',
-      next: 'अर्को',
-      page: 'पृष्ठ',
-      of: 'को',
-      noComplaintsFound: 'कुनै विचाराधीन गुनासो फेला परेन',
-      tryAdjustingFilters: 'कृपया फिल्टर समायोजन गर्नुहोस्',
-      totalPending: 'जम्मा विचाराधीन',
-      urgentAttention: 'तत्काल ध्यान दिनुहोस्',
-      loading: 'लोड हुँदै...',
-      refresh: 'रिफ्रेस'
-    },
-    en: {
-      pendingComplaints: 'Pending Complaints',
-      managePending: 'Manage Pending Complaints',
-      searchPlaceholder: 'Search by ticket number, name or phone...',
-      filterByPriority: 'Filter by Priority',
-      filterByCategory: 'Filter by Category',
-      ticketId: 'Ticket ID',
-      complainant: 'Complainant',
-      category: 'Category',
-      date: 'Date',
-      daysPending: 'Days Pending',
-      status: 'Status',
-      priority: 'Priority',
-      actions: 'Actions',
-      viewDetails: 'View Details',
-      processNow: 'Process Now',
-      assignTeam: 'Assign Team',
-      complaintDetails: 'Complaint Details',
-      description: 'Description',
-      channel: 'Channel',
-      email: 'Email',
-      phone: 'Phone',
-      registeredDate: 'Registered Date',
-      assignedTo: 'Assigned To',
-      close: 'Close',
-      all: 'All',
-      high: 'High',
-      medium: 'Medium',
-      low: 'Low',
-      previous: 'Previous',
-      next: 'Next',
-      page: 'Page',
-      of: 'of',
-      noComplaintsFound: 'No pending complaints found',
-      tryAdjustingFilters: 'Please try adjusting your filters',
-      totalPending: 'Total Pending',
-      urgentAttention: 'Requires Urgent Attention',
-      loading: 'Loading...',
-      refresh: 'Refresh'
-    }
-  };
-
-  const t = content[language];
   const categoriesObj = categories[language];
 
-  const getPriorityClass = (priority) => {
-    const classes = { high: 'priority-high', medium: 'priority-medium', low: 'priority-low' };
-    return classes[priority] || 'priority-medium';
-  };
-
-  const getPriorityText = (priority) => {
-    const texts = {
-      np: { high: 'उच्च', medium: 'मध्यम', low: 'न्यून' },
-      en: { high: 'High', medium: 'Medium', low: 'Low' }
-    };
-    return texts[language][priority] || priority;
-  };
-
-  const getCategoryText = (category) => {
-    return categoriesObj[category] || category;
-  };
-
-  const getDate = (complaint) => {
-    return language === 'np' ? complaint.date : complaint.enDate;
-  };
-
-  const getChannel = (complaint) => {
-    return language === 'np' ? complaint.channel : complaint.enChannel;
-  };
-
-  const getAssignedTo = (complaint) => {
-    return language === 'np' ? complaint.assignedTo : complaint.enAssignedTo;
-  };
-
-  const getUrgencyClass = (days) => {
-    if (days >= 10) return 'urgency-critical';
-    if (days >= 5) return 'urgency-high';
-    if (days >= 3) return 'urgency-medium';
-    return 'urgency-low';
-  };
-
-  const getUrgencyText = (days) => {
-    if (language === 'np') {
-      if (days >= 10) return 'गम्भीर';
-      if (days >= 5) return 'अति आवश्यक';
-      if (days >= 3) return 'आवश्यक';
-      return 'सामान्य';
-    } else {
-      if (days >= 10) return 'Critical';
-      if (days >= 5) return 'Urgent';
-      if (days >= 3) return 'Important';
-      return 'Normal';
-    }
-  };
-
   // Filter complaints
-  const filteredComplaints = complaints.filter(complaint => {
+  const filteredComplaints = allPendingComplaints.filter(complaint => {
     const searchMatch = searchTerm === '' || 
       complaint.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       complaint.enName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -402,8 +551,9 @@ const AdminComplaintsPending = () => {
     
     const priorityMatch = priorityFilter === 'all' || complaint.priority === priorityFilter;
     const categoryMatch = categoryFilter === 'all' || complaint.category === categoryFilter;
+    const typeMatch = typeFilter === 'all' || complaint.type === typeFilter;
     
-    return searchMatch && priorityMatch && categoryMatch;
+    return searchMatch && priorityMatch && categoryMatch && typeMatch;
   });
 
   // Pagination
@@ -423,11 +573,25 @@ const AdminComplaintsPending = () => {
     setSelectedComplaint(null);
   };
 
-  const processComplaint = (id) => {
-    setComplaints(prev => prev.map(complaint => 
-      complaint.id === id ? { ...complaint, status: 'in-progress' } : complaint
-    ));
-    alert(language === 'np' ? 'गुनासो प्रक्रियामा लगियो' : 'Complaint moved to in-progress');
+  const openStatusModal = (complaint) => {
+    setSelectedComplaint(complaint);
+    setNewStatus(complaint.status);
+    setShowStatusModal(true);
+    setShowModal(false);
+  };
+
+  const closeStatusModal = () => {
+    setShowStatusModal(false);
+    setSelectedComplaint(null);
+    setNewStatus('');
+  };
+
+  const handleStatusUpdate = () => {
+    if (selectedComplaint && newStatus !== selectedComplaint.status) {
+      updateComplaintStatus(selectedComplaint.complaintId, newStatus, selectedComplaint.type);
+    } else {
+      closeStatusModal();
+    }
   };
 
   // Refresh data
@@ -435,6 +599,16 @@ const AdminComplaintsPending = () => {
     setLoading(true);
     setCurrentPage(1);
     fetchPendingComplaints();
+    showToast(language === 'np' ? 'डाटा रिफ्रेस गरियो' : 'Data refreshed', 'info');
+  };
+
+  // Statistics
+  const stats = {
+    total: allPendingComplaints.length,
+    high: allPendingComplaints.filter(c => c.priority === 'high').length,
+    medium: allPendingComplaints.filter(c => c.priority === 'medium').length,
+    low: allPendingComplaints.filter(c => c.priority === 'low').length,
+    critical: allPendingComplaints.filter(c => c.daysPending >= 10).length
   };
 
   if (loading) {
@@ -448,18 +622,29 @@ const AdminComplaintsPending = () => {
 
   return (
     <div className="admin-pending-complaints">
-      <Header language={language} setLanguage={setLanguage} adminName="Admin" />
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
+      <Header language={language} setLanguage={setLanguage} adminName="Admin" userRole="admin" />
       
       {/* Backend Status Banner */}
       {backendStatus === 'disconnected' && (
         <div className="backend-warning">
-          ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।' : 'Backend server not connected. Showing sample data.'}
+          ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। कृपया सर्भर सुरु गर्नुहोस्।' : 'Backend server not connected. Please start the server.'}
         </div>
       )}
       
       <div className="dashboard-layout">
         <div className="sidebar-container">
-          <Sidebar language={language} />
+          <Sidebar language={language} userRole="admin" />
         </div>
         
         <div className="main-container">
@@ -471,12 +656,50 @@ const AdminComplaintsPending = () => {
               </div>
               <div className="pending-stats">
                 <div>
-                  <span className="pending-count">{complaints.length}</span>
+                  <span className="pending-count">{stats.total}</span>
                   <span className="pending-label">{t.totalPending}</span>
                 </div>
+                {stats.critical > 0 && (
+                  <div className="critical-alert">
+                    <span>⚠️ {stats.critical}</span>
+                    <span className="critical-label">{t.urgentAttention}</span>
+                  </div>
+                )}
                 <button className="refresh-btn-small" onClick={refreshData} title={t.refresh}>
                   🔄
                 </button>
+              </div>
+            </div>
+
+            {/* Statistics Cards */}
+            <div className="stats-row">
+              <div className="stat-card">
+                <div className="stat-card-icon high">🔴</div>
+                <div className="stat-card-info">
+                  <div className="stat-card-value">{stats.high}</div>
+                  <div className="stat-card-label">{t.high}</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-card-icon medium">🟡</div>
+                <div className="stat-card-info">
+                  <div className="stat-card-value">{stats.medium}</div>
+                  <div className="stat-card-label">{t.medium}</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-card-icon low">🟢</div>
+                <div className="stat-card-info">
+                  <div className="stat-card-value">{stats.low}</div>
+                  <div className="stat-card-label">{t.low}</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-card-icon critical">⚠️</div>
+                <div className="stat-card-info">
+                  <div className="stat-card-value">{stats.critical}</div>
+                  <div className="stat-card-label">{t.urgentAttention}</div>
+                </div>
               </div>
             </div>
 
@@ -490,8 +713,20 @@ const AdminComplaintsPending = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
+                {searchTerm && (
+                  <button className="clear-search" onClick={() => setSearchTerm('')}>✕</button>
+                )}
               </div>
               <div className="filter-group">
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.allTypes}</option>
+                  <option value="regular">{t.regularComplaints}</option>
+                  <option value="regarding">{t.regardingComplaints}</option>
+                </select>
                 <select
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
@@ -522,19 +757,27 @@ const AdminComplaintsPending = () => {
                     <th>{t.ticketId}</th>
                     <th>{t.complainant}</th>
                     <th>{t.category}</th>
+                    <th>{t.subject}</th>
                     <th>{t.date}</th>
                     <th>{t.daysPending}</th>
                     <th>{t.priority}</th>
+                    <th>{t.complaintType}</th>
                     <th>{t.actions}</th>
-                </tr>
+                  </tr>
                 </thead>
                 <tbody>
                   {paginatedComplaints.length > 0 ? (
-                    paginatedComplaints.map((complaint) => (
-                      <tr key={complaint.id} className={complaint.priority === 'high' ? 'high-priority-row' : ''}>
+                    paginatedComplaints.map((complaint, idx) => (
+                      <tr key={`${complaint.type}-${complaint.id}-${idx}`} className={complaint.priority === 'high' ? 'high-priority-row' : ''}>
                         <td className="ticket-id">{complaint.ticketId}</td>
-                        <td>{language === 'np' ? complaint.name : complaint.enName}</td>
-                        <td>{getCategoryText(complaint.category)}</td>
+                        <td>
+                          <div className="complainant-info">
+                            <strong>{language === 'np' ? complaint.name : complaint.enName}</strong>
+                            <small>{complaint.phone}</small>
+                          </div>
+                        </td>
+                        <td>{getCategoryText(complaint)}</td>
+                        <td>{complaint.subject || '-'}</td>
                         <td>{getDate(complaint)}</td>
                         <td>
                           <div className="days-pending">
@@ -550,11 +793,16 @@ const AdminComplaintsPending = () => {
                           </span>
                         </td>
                         <td>
+                          <span className={`type-badge ${getComplaintTypeClass(complaint)}`}>
+                            {getComplaintTypeText(complaint)}
+                          </span>
+                        </td>
+                        <td>
                           <div className="action-buttons">
                             <button className="view-btn" onClick={() => openModal(complaint)} title={t.viewDetails}>
                               👁️
                             </button>
-                            <button className="process-btn" onClick={() => processComplaint(complaint.id)}>
+                            <button className="process-btn" onClick={() => processComplaint(complaint)}>
                               ⚡ {t.processNow}
                             </button>
                           </div>
@@ -563,13 +811,13 @@ const AdminComplaintsPending = () => {
                     ))
                   ) : (
                     <tr className="no-data">
-                      <td colSpan="7">
+                      <td colSpan="9">
                         <div className="no-data-content">
                           <span className="no-data-icon">📭</span>
                           <p>{t.noComplaintsFound}</p>
                           <small>{t.tryAdjustingFilters}</small>
                         </div>
-                      </td>
+                       </td>
                     </tr>
                   )}
                 </tbody>
@@ -611,6 +859,127 @@ const AdminComplaintsPending = () => {
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
             <div className="modal-body">
+              <div className="detail-section">
+                <h4>📌 {t.complaintInfo}</h4>
+                <div className="detail-row">
+                  <label>{t.ticketId}:</label>
+                  <span>{selectedComplaint.ticketId}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.complaintType}:</label>
+                  <span className={`type-badge ${getComplaintTypeClass(selectedComplaint)}`}>
+                    {getComplaintTypeText(selectedComplaint)}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.category}:</label>
+                  <span>{getCategoryText(selectedComplaint)}</span>
+                </div>
+                {selectedComplaint.subject && (
+                  <div className="detail-row">
+                    <label>{t.subject}:</label>
+                    <span>{selectedComplaint.subject}</span>
+                  </div>
+                )}
+                {selectedComplaint.referenceNumber && (
+                  <div className="detail-row">
+                    <label>{t.referenceNo}:</label>
+                    <span>{selectedComplaint.referenceNumber}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="detail-section">
+                <h4>👤 {t.complainantInfo}</h4>
+                <div className="detail-row">
+                  <label>{t.complainant}:</label>
+                  <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.email}:</label>
+                  <span>{selectedComplaint.email}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.phone}:</label>
+                  <span>{selectedComplaint.phone}</span>
+                </div>
+                {selectedComplaint.address && (
+                  <div className="detail-row">
+                    <label>{t.address}:</label>
+                    <span>{selectedComplaint.address}</span>
+                  </div>
+                )}
+                {selectedComplaint.landmark && (
+                  <div className="detail-row">
+                    <label>{t.landmark}:</label>
+                    <span>{selectedComplaint.landmark}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="detail-section">
+                <h4>📝 {t.description}</h4>
+                <div className="detail-row full-width">
+                  <p>{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>📊 {t.statusInfo}</h4>
+                <div className="detail-row">
+                  <label>{t.priority}:</label>
+                  <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
+                    {getPriorityText(selectedComplaint.priority)}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.registeredDate}:</label>
+                  <span>{getDate(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.daysPending}:</label>
+                  <span className={`urgency-badge ${getUrgencyClass(selectedComplaint.daysPending)}`}>
+                    {selectedComplaint.daysPending} {language === 'np' ? 'दिन' : 'days'}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.channel}:</label>
+                  <span>{getChannel(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.assignedTo}:</label>
+                  <span>{getAssignedTo(selectedComplaint)}</span>
+                </div>
+                {selectedComplaint.preferredContact && (
+                  <div className="detail-row">
+                    <label>{t.preferredContact}:</label>
+                    <span>{selectedComplaint.preferredContact}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-process" onClick={() => {
+                setShowModal(false);
+                processComplaint(selectedComplaint);
+              }}>
+                ⚡ {t.processNow}
+              </button>
+              <button className="btn-close" onClick={closeModal}>{t.close}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Status Modal */}
+      {showStatusModal && selectedComplaint && (
+        <div className="modal-overlay" onClick={closeStatusModal}>
+          <div className="modal-content status-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>🔄 {t.updateStatusTitle}</h2>
+              <button className="modal-close" onClick={closeStatusModal}>✕</button>
+            </div>
+            <div className="modal-body">
               <div className="detail-row">
                 <label>{t.ticketId}:</label>
                 <span>{selectedComplaint.ticketId}</span>
@@ -620,54 +989,29 @@ const AdminComplaintsPending = () => {
                 <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
               </div>
               <div className="detail-row">
-                <label>{t.email}:</label>
-                <span>{selectedComplaint.email}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.phone}:</label>
-                <span>{selectedComplaint.phone}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.category}:</label>
-                <span>{getCategoryText(selectedComplaint.category)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.priority}:</label>
-                <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
-                  {getPriorityText(selectedComplaint.priority)}
-                </span>
-              </div>
-              <div className="detail-row">
-                <label>{t.registeredDate}:</label>
-                <span>{getDate(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.daysPending}:</label>
-                <span className={`urgency-badge ${getUrgencyClass(selectedComplaint.daysPending)}`}>
-                  {selectedComplaint.daysPending} {language === 'np' ? 'दिन' : 'days'}
-                </span>
-              </div>
-              <div className="detail-row">
-                <label>{t.channel}:</label>
-                <span>{getChannel(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.assignedTo}:</label>
-                <span>{getAssignedTo(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row full-width">
-                <label>{t.description}:</label>
-                <p>{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
+                <label>{t.selectNewStatus}:</label>
+                <select 
+                  value={newStatus} 
+                  onChange={(e) => setNewStatus(e.target.value)}
+                  className="status-select"
+                >
+                  <option value="in-progress">{t.inProgress || 'In Progress'}</option>
+                  <option value="review">{t.underReview || 'Under Review'}</option>
+                  <option value="resolved">{t.resolved || 'Resolved'}</option>
+                </select>
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-process" onClick={() => {
-                processComplaint(selectedComplaint.id);
-                closeModal();
-              }}>
-                ⚡ {t.processNow}
+              <button className="btn-cancel" onClick={closeStatusModal}>
+                {t.cancel}
               </button>
-              <button className="btn-close" onClick={closeModal}>{t.close}</button>
+              <button 
+                className="btn-update" 
+                onClick={handleStatusUpdate}
+                disabled={updatingStatus}
+              >
+                {updatingStatus ? t.updating : t.update}
+              </button>
             </div>
           </div>
         </div>
@@ -683,23 +1027,58 @@ const AdminComplaintsPending = () => {
         .admin-pending-complaints {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          height: 100vh;
-          width: 100%;
-          overflow: hidden;
-          position: relative;
+          min-height: 100vh;
+          overflow-x: hidden;
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 200px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 350px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         .backend-warning {
           position: fixed;
-          top: 195px;
+          top: 70px;
           left: 0;
           right: 0;
-          background: #ff9800;
+          background: #f59e0b;
           color: white;
-          padding: 8px;
+          padding: 10px;
           text-align: center;
           z-index: 100;
-          font-size: 0.8rem;
+          font-size: 0.85rem;
         }
 
         .loading-container {
@@ -727,39 +1106,34 @@ const AdminComplaintsPending = () => {
         /* Dashboard Layout */
         .dashboard-layout {
           display: flex;
-          height: calc(100vh - 195px);
-          margin-top: 195px;
+          min-height: calc(100vh - 70px);
+          margin-top: 70px;
           position: relative;
-          width: 100%;
-          overflow: hidden;
         }
 
-        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
-          top: 195px;
+          top: 70px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 195px);
+          height: calc(100vh - 70px);
           background: white;
           border-right: 1px solid #e2e8f0;
           z-index: 100;
           overflow-y: auto;
         }
 
-        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
           margin-left: 260px;
           width: calc(100% - 260px);
-          height: 100%;
-          overflow-y: auto;
-          overflow-x: hidden;
-          position: relative;
+          min-height: calc(100vh - 70px);
+          overflow-x: auto;
         }
 
         .main-container::-webkit-scrollbar {
           width: 8px;
+          height: 8px;
         }
 
         .main-container::-webkit-scrollbar-track {
@@ -772,13 +1146,8 @@ const AdminComplaintsPending = () => {
           border-radius: 10px;
         }
 
-        .main-container::-webkit-scrollbar-thumb:hover {
-          background: #2563eb;
-        }
-
         .content-wrapper {
           padding: 24px 32px;
-          min-height: 100%;
         }
 
         .page-header {
@@ -788,6 +1157,8 @@ const AdminComplaintsPending = () => {
           margin-bottom: 24px;
           padding-bottom: 16px;
           border-bottom: 2px solid #e2e8f0;
+          flex-wrap: wrap;
+          gap: 16px;
         }
 
         .page-header h1 {
@@ -803,13 +1174,12 @@ const AdminComplaintsPending = () => {
         }
 
         .pending-stats {
-          text-align: center;
+          display: flex;
+          align-items: center;
+          gap: 16px;
           padding: 8px 20px;
           background: linear-gradient(135deg, #fef3c7, #fde68a);
           border-radius: 12px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
         }
 
         .pending-count {
@@ -822,6 +1192,25 @@ const AdminComplaintsPending = () => {
           font-size: 0.7rem;
           color: #b45309;
           display: block;
+        }
+
+        .critical-alert {
+          text-align: center;
+          padding: 0 10px;
+          border-left: 1px solid #fcd34d;
+          border-right: 1px solid #fcd34d;
+        }
+
+        .critical-alert span:first-child {
+          font-size: 1.2rem;
+          font-weight: 700;
+          color: #dc2626;
+          display: block;
+        }
+
+        .critical-label {
+          font-size: 0.6rem;
+          color: #b45309;
         }
 
         .refresh-btn-small {
@@ -842,6 +1231,46 @@ const AdminComplaintsPending = () => {
           transform: rotate(180deg);
         }
 
+        /* Stats Row */
+        .stats-row {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+
+        .stat-card {
+          background: white;
+          border-radius: 12px;
+          padding: 16px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .stat-card-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.2rem;
+          background: #f8fafc;
+        }
+
+        .stat-card-value {
+          font-size: 1.3rem;
+          font-weight: 700;
+          color: #0f172a;
+        }
+
+        .stat-card-label {
+          font-size: 0.7rem;
+          color: #64748b;
+        }
+
         /* Filters */
         .filters-bar {
           display: flex;
@@ -853,11 +1282,13 @@ const AdminComplaintsPending = () => {
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
         }
 
         .search-box {
           flex: 1;
           position: relative;
+          min-width: 250px;
         }
 
         .search-icon {
@@ -883,9 +1314,22 @@ const AdminComplaintsPending = () => {
           box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
         }
 
+        .clear-search {
+          position: absolute;
+          right: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          font-size: 1rem;
+          cursor: pointer;
+          color: #9ca3af;
+        }
+
         .filter-group {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .filter-select {
@@ -895,11 +1339,6 @@ const AdminComplaintsPending = () => {
           font-size: 0.85rem;
           background: white;
           cursor: pointer;
-        }
-
-        .filter-select:focus {
-          outline: none;
-          border-color: #3b82f6;
         }
 
         /* Table */
@@ -913,6 +1352,7 @@ const AdminComplaintsPending = () => {
         .complaints-table {
           width: 100%;
           border-collapse: collapse;
+          min-width: 1000px;
         }
 
         .complaints-table th,
@@ -948,7 +1388,10 @@ const AdminComplaintsPending = () => {
           color: #3b82f6;
         }
 
-        .priority-badge {
+        .complainant-info strong { display: block; }
+        .complainant-info small { font-size: 0.7rem; color: #64748b; }
+
+        .priority-badge, .type-badge {
           display: inline-block;
           padding: 4px 12px;
           border-radius: 20px;
@@ -959,6 +1402,9 @@ const AdminComplaintsPending = () => {
         .priority-high { background: #fee2e2; color: #dc2626; }
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #e0e7ff; color: #4f46e5; }
+
+        .type-regular { background: #dbeafe; color: #1e40af; }
+        .type-regarding { background: #fef3c7; color: #92400e; }
 
         .days-pending {
           display: flex;
@@ -1098,7 +1544,10 @@ const AdminComplaintsPending = () => {
           width: 90%;
           max-height: 85vh;
           overflow-y: auto;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .status-modal {
+          max-width: 500px;
         }
 
         .modal-header {
@@ -1134,18 +1583,29 @@ const AdminComplaintsPending = () => {
           padding: 24px;
         }
 
+        .detail-section {
+          margin-bottom: 24px;
+        }
+
+        .detail-section h4 {
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #0f172a;
+          margin-bottom: 12px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        }
+
         .detail-row {
           display: flex;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid #f1f5f9;
+          margin-bottom: 12px;
+          flex-wrap: wrap;
         }
 
         .detail-row label {
           width: 130px;
           font-weight: 600;
           color: #0f172a;
-          flex-shrink: 0;
         }
 
         .detail-row span,
@@ -1163,6 +1623,14 @@ const AdminComplaintsPending = () => {
           margin-bottom: 8px;
         }
 
+        .status-select {
+          flex: 1;
+          padding: 8px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 0.9rem;
+        }
+
         .modal-footer {
           padding: 16px 24px;
           border-top: 1px solid #e2e8f0;
@@ -1174,100 +1642,84 @@ const AdminComplaintsPending = () => {
           background: white;
         }
 
+        .btn-process, .btn-close, .btn-cancel, .btn-update {
+          padding: 10px 24px;
+          border-radius: 10px;
+          cursor: pointer;
+          font-weight: 500;
+          border: none;
+        }
+
         .btn-process {
           background: linear-gradient(135deg, #10b981, #059669);
           color: white;
-          border: none;
-          padding: 10px 24px;
-          border-radius: 10px;
-          cursor: pointer;
-          font-weight: 500;
         }
 
-        .btn-process:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(16,185,129,0.3);
-        }
-
-        .btn-close {
+        .btn-close, .btn-cancel {
           background: #f1f5f9;
           color: #475569;
-          border: none;
-          padding: 10px 24px;
-          border-radius: 10px;
-          cursor: pointer;
-          font-weight: 500;
         }
 
-        .btn-close:hover {
+        .btn-update {
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
+          color: white;
+        }
+
+        .btn-update:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .btn-process:hover, .btn-update:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-close:hover, .btn-cancel:hover {
           background: #e2e8f0;
         }
 
         /* Responsive */
+        @media (max-width: 1200px) {
+          .stats-row {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
         @media (max-width: 768px) {
-          .admin-pending-complaints {
-            height: auto;
-            overflow: auto;
-          }
-          
-          .dashboard-layout {
-            flex-direction: column;
-            height: auto;
-            margin-top: 150px;
-            overflow: visible;
-          }
-          
           .sidebar-container {
-            position: relative;
-            top: 0;
-            width: 100%;
-            height: auto;
-            margin-bottom: 20px;
+            display: none;
           }
-          
           .main-container {
             margin-left: 0;
             width: 100%;
-            overflow-y: visible;
           }
-          
           .content-wrapper {
             padding: 16px;
           }
-          
           .filters-bar {
             flex-direction: column;
           }
-          
           .filter-group {
             width: 100%;
             flex-direction: column;
           }
-          
           .filter-select {
             width: 100%;
           }
-          
+          .stats-row {
+            grid-template-columns: 1fr;
+          }
           .page-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 12px;
           }
-          
           .action-buttons {
             flex-direction: column;
           }
-          
           .pending-stats {
-            flex-direction: column;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .complaints-table th,
-          .complaints-table td {
-            padding: 8px;
-            font-size: 0.7rem;
+            flex-wrap: wrap;
           }
           .detail-row {
             flex-direction: column;
@@ -1278,6 +1730,17 @@ const AdminComplaintsPending = () => {
           }
           .modal-footer {
             flex-direction: column;
+          }
+          .modal-footer button {
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .complaints-table th,
+          .complaints-table td {
+            padding: 8px;
+            font-size: 0.7rem;
           }
         }
       `}</style>

@@ -1,5 +1,5 @@
 // src/pages/AdminComplaintsResolved.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../components/Header';
@@ -12,15 +12,27 @@ const AdminComplaintsResolved = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [timeRangeFilter, setTimeRangeFilter] = useState('all');
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const itemsPerPage = 10;
 
   // State for complaints from backend
-  const [complaints, setComplaints] = useState([]);
+  const [regularComplaints, setRegularComplaints] = useState([]);
+  const [regardingComplaints, setRegardingComplaints] = useState([]);
+  const [allResolvedComplaints, setAllResolvedComplaints] = useState([]);
   const [backendStatus, setBackendStatus] = useState('checking');
+
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+  // Show toast notification
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  }, []);
 
   // Helper function to safely format dates
   const formatDate = (date, formatType = 'english') => {
@@ -59,14 +71,14 @@ const AdminComplaintsResolved = () => {
   const mapPriority = (priority) => {
     if (!priority) return 'medium';
     const priorityMap = {
-      'High': 'high',
       'high': 'high',
-      'Medium': 'medium',
-      'medium': 'medium',
-      'Low': 'low',
-      'low': 'low',
+      'High': 'high',
       'Urgent': 'high',
       'urgent': 'high',
+      'medium': 'medium',
+      'Medium': 'medium',
+      'low': 'low',
+      'Low': 'low',
       'उच्च': 'high',
       'मध्यम': 'medium',
       'न्यून': 'low'
@@ -74,157 +86,199 @@ const AdminComplaintsResolved = () => {
     return priorityMap[priority] || 'medium';
   };
 
-  // Get sample resolved complaints as fallback
-  const getSampleResolvedComplaints = () => {
-    const sampleSubmittedDate = '2024-01-20';
-    const sampleResolvedDate = '2024-01-22';
-    const sampleDays = calculateResolutionDays(sampleSubmittedDate, sampleResolvedDate);
-    
-    return [
-      { 
-        id: 1, 
-        ticketId: 'NTC-2024-002', 
-        name: 'सीता शर्मा', 
-        enName: 'Sita Sharma',
-        email: 'sita@example.com',
-        phone: '9812345678',
-        category: 'recharge',
-        category_np: 'रिचार्ज',
-        category_en: 'Recharge',
-        description: 'रु. ५०० रिचार्ज गरे पनि ब्यालेन्स अपडेट भएन',
-        enDescription: 'Recharged Rs. 500 but balance not updated',
-        status: 'resolved',
-        submittedDate: sampleSubmittedDate,
-        resolvedDate: sampleResolvedDate,
-        channel: 'व्हाट्सएप',
-        enChannel: 'WhatsApp',
-        priority: 'medium',
-        assignedTo: 'बिलिङ टोली',
-        enAssignedTo: 'Billing Team',
-        resolutionDays: sampleDays,
-        satisfactionRating: 5,
-        feedback: 'धेरै राम्रो सेवा, छिटो समाधान',
-        enFeedback: 'Very good service, quick resolution'
-      },
-      { 
-        id: 2, 
-        ticketId: 'NTC-2024-005', 
-        name: 'मिना काफ्ले', 
-        enName: 'Mina Kafle',
-        email: 'mina@example.com',
-        phone: '9841234567',
-        category: 'billing',
-        category_np: 'बिलिङ',
-        category_en: 'Billing',
-        description: 'गत महिनाको बिलमा गलत चार्ज',
-        enDescription: 'Wrong charge in last month bill',
-        status: 'resolved',
-        submittedDate: '2024-01-10',
-        resolvedDate: '2024-01-15',
-        channel: 'इमेल',
-        enChannel: 'Email',
-        priority: 'medium',
-        assignedTo: 'बिलिङ टोली',
-        enAssignedTo: 'Billing Team',
-        resolutionDays: calculateResolutionDays('2024-01-10', '2024-01-15'),
-        satisfactionRating: 4,
-        feedback: 'बिल समस्या समाधान भयो',
-        enFeedback: 'Billing issue resolved'
-      },
-      {
-        id: 3,
-        ticketId: 'NTC-2024-008',
-        name: 'राम प्रसाद',
-        enName: 'Ram Prasad',
-        email: 'ram@example.com',
-        phone: '9800000000',
-        category: 'network',
-        category_np: 'नेटवर्क',
-        category_en: 'Network',
-        description: 'घरमा नेटवर्क छैन',
-        enDescription: 'No network at home',
-        status: 'resolved',
-        submittedDate: '2024-01-05',
-        resolvedDate: '2024-01-08',
-        channel: 'फोन',
-        enChannel: 'Phone',
-        priority: 'high',
-        assignedTo: 'नेटवर्क टोली',
-        enAssignedTo: 'Network Team',
-        resolutionDays: calculateResolutionDays('2024-01-05', '2024-01-08'),
-        satisfactionRating: 3,
-        feedback: 'समस्या समाधान भयो तर ढिलो भयो',
-        enFeedback: 'Issue resolved but was delayed'
-      }
-    ];
+  // Helper function to convert status to Nepali
+  const getStatusInNepali = (status) => {
+    const statusMap = {
+      'pending': 'विचाराधीन',
+      'in-progress': 'प्रगतिमा',
+      'inprogress': 'प्रगतिमा',
+      'In Progress': 'प्रगतिमा',
+      'review': 'समीक्षामा',
+      'resolved': 'समाधान भयो',
+      'Resolved': 'समाधान भयो',
+      'closed': 'बन्द',
+      'rejected': 'अस्वीकृत'
+    };
+    return statusMap[status] || status || 'समाधान भयो';
   };
 
-  // Fetch resolved complaints from backend
-  const fetchResolvedComplaints = async () => {
+  // Check if complaint is resolved
+  const isResolved = (status) => {
+    const resolvedStatuses = ['resolved', 'Resolved', 'समाधान भयो', 'closed', 'Closed'];
+    return resolvedStatuses.includes(status);
+  };
+
+  // Fetch resolved complaints from both tables
+  const fetchResolvedComplaints = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get('http://localhost:5000/api/complaints', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       
-      if (response.data.success && Array.isArray(response.data.data)) {
-        const resolvedComplaints = response.data.data
-          .filter(complaint => {
-            const status = complaint.status || complaint.statusNp;
-            return status === 'Resolved' || status === 'समाधान भयो' || status === 'resolved';
-          })
-          .map(complaint => {
-            const submittedDate = complaint.submittedDate || complaint.createdAt || new Date().toISOString();
-            const resolvedDateVal = complaint.resolvedDate || complaint.updatedAt || submittedDate;
-            const resolutionDays = calculateResolutionDays(submittedDate, resolvedDateVal);
-            
-            return {
-              id: complaint.id,
-              ticketId: complaint.complaintNumber || `NTC-${complaint.id}`,
-              name: complaint.name || 'N/A',
-              enName: complaint.nameEn || complaint.name || 'N/A',
-              email: complaint.email || 'N/A',
-              phone: complaint.phone || 'N/A',
-              category: complaint.category || complaint.natureOfComplaint || 'general',
-              category_np: complaint.categoryNp || complaint.natureOfComplaint || 'सामान्य',
-              category_en: complaint.category || complaint.natureOfComplaint || 'General',
-              description: complaint.complaint || complaint.description || 'N/A',
-              enDescription: complaint.complaintEn || complaint.complaint || complaint.description || 'N/A',
-              status: 'resolved',
-              submittedDate: submittedDate,
-              resolvedDate: resolvedDateVal,
-              channel: complaint.channel || 'वेबसाइट पोर्टल',
-              enChannel: complaint.enChannel || 'Website Portal',
-              priority: mapPriority(complaint.priority),
-              assignedTo: complaint.assignedTo || (language === 'np' ? 'प्रशासक' : 'Administrator'),
-              enAssignedTo: complaint.enAssignedTo || 'Administrator',
-              resolutionDays: resolutionDays,
-              satisfactionRating: complaint.satisfactionRating || 4,
-              feedback: complaint.feedback || (language === 'np' ? 'समस्या समाधान भयो। धन्यवाद।' : 'Issue resolved. Thank you.'),
-              enFeedback: complaint.enFeedback || 'Issue resolved. Thank you.',
-              referenceNumber: complaint.referenceNumber,
-              landmark: complaint.landmark,
-              address: complaint.address,
-              preferredContact: complaint.preferredContact
-            };
-          });
-        
-        setComplaints(resolvedComplaints);
+      let regularData = [];
+      let regardingData = [];
+      
+      // Fetch regular complaints
+      try {
+        const regularResponse = await axios.get(`${API_URL}/complaints/public`, { headers });
+        if (regularResponse.data.success && Array.isArray(regularResponse.data.data)) {
+          regularData = regularResponse.data.data
+            .filter(complaint => isResolved(complaint.status))
+            .map(complaint => transformRegularComplaint(complaint));
+        }
+      } catch (error) {
+        console.error('Error fetching regular complaints:', error);
+      }
+      
+      // Fetch complaint regarding
+      try {
+        const regardingResponse = await axios.get(`${API_URL}/complaints/regarding/public`, { headers });
+        if (regardingResponse.data.success && Array.isArray(regardingResponse.data.data)) {
+          regardingData = regardingResponse.data.data
+            .filter(complaint => isResolved(complaint.status))
+            .map(complaint => transformRegardingComplaint(complaint));
+        }
+      } catch (error) {
+        console.error('Error fetching regarding complaints:', error);
+      }
+      
+      setRegularComplaints(regularData);
+      setRegardingComplaints(regardingData);
+      
+      // Combine all resolved complaints
+      const combined = [...regularData, ...regardingData];
+      combined.sort((a, b) => new Date(b.resolvedDate) - new Date(a.resolvedDate));
+      setAllResolvedComplaints(combined);
+      
+      if (regularData.length > 0 || regardingData.length > 0) {
         setBackendStatus('connected');
       } else {
-        console.warn('Invalid response format:', response.data);
-        setComplaints(getSampleResolvedComplaints());
-        setBackendStatus('disconnected');
+        setBackendStatus('connected');
       }
+      
     } catch (error) {
-      console.error('Error fetching complaints:', error);
-      setComplaints(getSampleResolvedComplaints());
+      console.error('Error fetching resolved complaints:', error);
       setBackendStatus('disconnected');
+      setAllResolvedComplaints([]);
     } finally {
       setLoading(false);
     }
+  }, [API_URL]);
+
+  // Transform regular complaint data
+  const transformRegularComplaint = (complaint) => {
+    const submittedDate = complaint.created_at || new Date().toISOString();
+    const resolvedDateVal = complaint.resolved_at || complaint.updated_at || submittedDate;
+    const resolutionDays = calculateResolutionDays(submittedDate, resolvedDateVal);
+    
+    return {
+      id: complaint.id,
+      complaintId: complaint.id,
+      ticketId: complaint.complaint_number || `NTC-${complaint.id}`,
+      name: complaint.name || 'N/A',
+      enName: complaint.name || 'N/A',
+      email: complaint.email || 'N/A',
+      phone: complaint.phone || 'N/A',
+      category: complaint.nature_of_complaint || 'general',
+      category_np: getCategoryNepali(complaint.nature_of_complaint),
+      category_en: complaint.nature_of_complaint || 'General',
+      subject: null,
+      description: complaint.description || 'N/A',
+      enDescription: complaint.description || 'N/A',
+      status: 'resolved',
+      rawStatus: complaint.status,
+      submittedDate: submittedDate,
+      resolvedDate: resolvedDateVal,
+      channel: 'वेबसाइट पोर्टल',
+      enChannel: 'Website Portal',
+      priority: mapPriority(complaint.priority),
+      assignedTo: complaint.assigned_to || (language === 'np' ? 'प्रशासक' : 'Administrator'),
+      enAssignedTo: complaint.assigned_to || 'Administrator',
+      resolutionDays: resolutionDays,
+      satisfactionRating: complaint.satisfaction_rating || 4,
+      feedback: complaint.resolution || (language === 'np' ? 'समस्या समाधान भयो। धन्यवाद।' : 'Issue resolved. Thank you.'),
+      enFeedback: complaint.resolution || 'Issue resolved. Thank you.',
+      referenceNumber: null,
+      landmark: complaint.landmark || null,
+      address: complaint.street_address || null,
+      preferredContact: null,
+      type: 'regular'
+    };
   };
+
+  // Transform complaint regarding data
+  const transformRegardingComplaint = (complaint) => {
+    const submittedDate = complaint.created_at || new Date().toISOString();
+    const resolvedDateVal = complaint.resolved_at || complaint.updated_at || submittedDate;
+    const resolutionDays = calculateResolutionDays(submittedDate, resolvedDateVal);
+    
+    return {
+      id: complaint.id,
+      complaintId: complaint.id,
+      ticketId: complaint.complaint_number || `CR-${complaint.id}`,
+      name: complaint.name || 'N/A',
+      enName: complaint.name || 'N/A',
+      email: complaint.email || 'N/A',
+      phone: complaint.phone || 'N/A',
+      category: complaint.complaint_type || 'general',
+      category_np: getCategoryNepali(complaint.complaint_type),
+      category_en: complaint.complaint_type || 'General',
+      subject: complaint.subject || null,
+      description: complaint.description || 'N/A',
+      enDescription: complaint.description || 'N/A',
+      status: 'resolved',
+      rawStatus: complaint.status,
+      submittedDate: submittedDate,
+      resolvedDate: resolvedDateVal,
+      channel: complaint.preferred_contact === 'phone' ? 'फोन' : complaint.preferred_contact === 'email' ? 'इमेल' : 'एसएमएस',
+      enChannel: complaint.preferred_contact === 'phone' ? 'Phone' : complaint.preferred_contact === 'email' ? 'Email' : 'SMS',
+      priority: mapPriority(complaint.priority),
+      assignedTo: complaint.assigned_to || (language === 'np' ? 'प्रशासक' : 'Administrator'),
+      enAssignedTo: complaint.assigned_to || 'Administrator',
+      resolutionDays: resolutionDays,
+      satisfactionRating: complaint.satisfaction_rating || 4,
+      feedback: complaint.resolution || (language === 'np' ? 'समस्या समाधान भयो। धन्यवाद।' : 'Issue resolved. Thank you.'),
+      enFeedback: complaint.resolution || 'Issue resolved. Thank you.',
+      referenceNumber: complaint.reference_number || null,
+      landmark: complaint.landmark || null,
+      address: complaint.address || null,
+      preferredContact: complaint.preferred_contact || null,
+      type: 'regarding'
+    };
+  };
+
+  // Get category Nepali translation
+  const getCategoryNepali = (category) => {
+    const categories = {
+      'service': 'सेवा समस्या',
+      'billing': 'बिलिङ समस्या',
+      'technical': 'प्राविधिक समस्या',
+      'network': 'नेटवर्क समस्या',
+      'signal': 'सिग्नल समस्या',
+      'recharge': 'रिचार्ज समस्या',
+      'activation': 'सक्रियता समस्या',
+      'internet': 'इन्टरनेट सेवा',
+      'general': 'सामान्य',
+      'other': 'अन्य'
+    };
+    return categories[category] || 'सामान्य';
+  };
+
+  // Check authentication and fetch data
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    const user = localStorage.getItem('adminUser');
+    if (!token || !user) {
+      navigate('/admin-login');
+    } else {
+      fetchResolvedComplaints();
+    }
+  }, [navigate, fetchResolvedComplaints]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, priorityFilter, categoryFilter, typeFilter, timeRangeFilter]);
 
   // Categories for filter
   const categories = {
@@ -260,26 +314,17 @@ const AdminComplaintsResolved = () => {
       all: 'सबै',
       lastWeek: 'पछिल्लो ७ दिन',
       lastMonth: 'पछिल्लो ३० दिन',
-      lastQuarter: 'पछिल्लो ९० दिन'
+      lastQuarter: 'पछिल्लो ९० दिन',
+      thisYear: 'यो वर्ष'
     },
     en: {
       all: 'All',
       lastWeek: 'Last 7 Days',
       lastMonth: 'Last 30 Days',
-      lastQuarter: 'Last 90 Days'
+      lastQuarter: 'Last 90 Days',
+      thisYear: 'This Year'
     }
   };
-
-  // Check authentication
-  useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    const user = localStorage.getItem('adminUser');
-    if (!token || !user) {
-      navigate('/admin-login');
-    } else {
-      fetchResolvedComplaints();
-    }
-  }, [navigate]);
 
   const content = {
     np: {
@@ -288,10 +333,15 @@ const AdminComplaintsResolved = () => {
       searchPlaceholder: 'टिकेट नम्बर, नाम वा फोन नम्बरले खोज्नुहोस्...',
       filterByPriority: 'प्राथमिकता अनुसार फिल्टर',
       filterByCategory: 'प्रकार अनुसार फिल्टर',
+      filterByType: 'गुनासो प्रकार',
       filterByTimeRange: 'समय अवधि अनुसार फिल्टर',
+      allTypes: 'सबै प्रकार',
+      regularComplaints: 'साधारण गुनासो',
+      regardingComplaints: 'गुनासो सम्बन्धी',
       ticketId: 'टिकेट नम्बर',
       complainant: 'उजुरीकर्ता',
       category: 'प्रकार',
+      subject: 'विषय',
       date: 'दर्ता मिति',
       resolvedDate: 'समाधान मिति',
       resolutionTime: 'समाधान समय',
@@ -329,7 +379,16 @@ const AdminComplaintsResolved = () => {
       average: 'सामान्य',
       poor: 'कमजोर',
       loading: 'लोड हुँदै...',
-      refresh: 'रिफ्रेस'
+      refresh: 'रिफ्रेस',
+      complaintInfo: 'गुनासो जानकारी',
+      complainantInfo: 'उजुरीकर्ताको जानकारी',
+      addressInfo: 'ठेगाना जानकारी',
+      dateInfo: 'मिति जानकारी',
+      referenceNo: 'सन्दर्भ नम्बर',
+      landmark: 'नजिकैको चिन्ह',
+      address: 'ठेगाना',
+      preferredContact: 'सम्पर्कको माध्यम',
+      resolution: 'समाधान विवरण'
     },
     en: {
       resolvedComplaints: 'Resolved Complaints',
@@ -337,10 +396,15 @@ const AdminComplaintsResolved = () => {
       searchPlaceholder: 'Search by ticket number, name or phone...',
       filterByPriority: 'Filter by Priority',
       filterByCategory: 'Filter by Category',
+      filterByType: 'Complaint Type',
       filterByTimeRange: 'Filter by Time Range',
+      allTypes: 'All Types',
+      regularComplaints: 'Regular Complaints',
+      regardingComplaints: 'Complaint Regarding',
       ticketId: 'Ticket ID',
       complainant: 'Complainant',
       category: 'Category',
+      subject: 'Subject',
       date: 'Registered Date',
       resolvedDate: 'Resolved Date',
       resolutionTime: 'Resolution Time',
@@ -378,7 +442,16 @@ const AdminComplaintsResolved = () => {
       average: 'Average',
       poor: 'Poor',
       loading: 'Loading...',
-      refresh: 'Refresh'
+      refresh: 'Refresh',
+      complaintInfo: 'Complaint Information',
+      complainantInfo: 'Complainant Information',
+      addressInfo: 'Address Information',
+      dateInfo: 'Date Information',
+      referenceNo: 'Reference Number',
+      landmark: 'Landmark',
+      address: 'Address',
+      preferredContact: 'Preferred Contact',
+      resolution: 'Resolution Details'
     }
   };
 
@@ -399,18 +472,16 @@ const AdminComplaintsResolved = () => {
     return texts[language][priority] || priority;
   };
 
-  const getCategoryText = (category) => {
-    return categoriesObj[category] || category;
+  const getCategoryText = (complaint) => {
+    return language === 'np' ? complaint.category_np : complaint.category_en;
   };
 
   const getDate = (complaint) => {
-    const dateToFormat = complaint.submittedDate || complaint.dateNp || complaint.dateEn;
-    return language === 'np' ? formatDate(dateToFormat, 'nepali') : formatDate(dateToFormat, 'english');
+    return language === 'np' ? formatDate(complaint.submittedDate, 'nepali') : formatDate(complaint.submittedDate, 'english');
   };
 
   const getResolvedDate = (complaint) => {
-    const dateToFormat = complaint.resolvedDate || complaint.resolvedDateEn || complaint.resolvedDateNp;
-    return language === 'np' ? formatDate(dateToFormat, 'nepali') : formatDate(dateToFormat, 'english');
+    return language === 'np' ? formatDate(complaint.resolvedDate, 'nepali') : formatDate(complaint.resolvedDate, 'english');
   };
 
   const getResolutionTime = (complaint) => {
@@ -419,15 +490,26 @@ const AdminComplaintsResolved = () => {
   };
 
   const getChannel = (complaint) => {
-    return language === 'np' ? (complaint.channel || 'वेबसाइट') : (complaint.enChannel || 'Website');
+    return language === 'np' ? complaint.channel : complaint.enChannel;
   };
 
   const getAssignedTo = (complaint) => {
-    return language === 'np' ? (complaint.assignedTo || 'प्रशासक') : (complaint.enAssignedTo || 'Administrator');
+    return language === 'np' ? complaint.assignedTo : complaint.enAssignedTo;
   };
 
   const getFeedback = (complaint) => {
-    return language === 'np' ? (complaint.feedback || 'कुनै प्रतिक्रिया छैन') : (complaint.enFeedback || 'No feedback provided');
+    return language === 'np' ? complaint.feedback : complaint.enFeedback;
+  };
+
+  const getComplaintTypeText = (complaint) => {
+    if (language === 'np') {
+      return complaint.type === 'regular' ? 'साधारण' : 'सम्बन्धी';
+    }
+    return complaint.type === 'regular' ? 'Regular' : 'Regarding';
+  };
+
+  const getComplaintTypeClass = (complaint) => {
+    return complaint.type === 'regular' ? 'type-regular' : 'type-regarding';
   };
 
   const getSatisfactionClass = (rating) => {
@@ -459,33 +541,35 @@ const AdminComplaintsResolved = () => {
       case 'lastQuarter':
         cutoffDate.setDate(now.getDate() - 90);
         break;
+      case 'thisYear':
+        cutoffDate = new Date(now.getFullYear(), 0, 1);
+        break;
       default:
         return complaintsList;
     }
     
     return complaintsList.filter(complaint => {
-      const resolvedDateStr = complaint.resolvedDate || complaint.resolvedDateEn;
-      if (!resolvedDateStr) return true;
-      const resolvedDate = new Date(resolvedDateStr);
+      const resolvedDate = new Date(complaint.resolvedDate);
       return resolvedDate >= cutoffDate;
     });
   };
 
   // Apply all filters
-  const filteredBySearchAndPriority = complaints.filter(complaint => {
+  const filteredBySearchAndFilters = allResolvedComplaints.filter(complaint => {
     const searchMatch = searchTerm === '' || 
-      (complaint.name && complaint.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (complaint.enName && complaint.enName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (complaint.ticketId && complaint.ticketId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (complaint.phone && complaint.phone.includes(searchTerm));
+      complaint.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      complaint.enName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      complaint.ticketId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      complaint.phone.includes(searchTerm);
     
     const priorityMatch = priorityFilter === 'all' || complaint.priority === priorityFilter;
     const categoryMatch = categoryFilter === 'all' || complaint.category === categoryFilter;
+    const typeMatch = typeFilter === 'all' || complaint.type === typeFilter;
     
-    return searchMatch && priorityMatch && categoryMatch;
+    return searchMatch && priorityMatch && categoryMatch && typeMatch;
   });
 
-  const filteredComplaints = getFilteredByTimeRange(filteredBySearchAndPriority);
+  const filteredComplaints = getFilteredByTimeRange(filteredBySearchAndFilters);
 
   // Calculate statistics
   const totalResolved = filteredComplaints.length;
@@ -495,6 +579,18 @@ const AdminComplaintsResolved = () => {
   const avgSatisfaction = totalResolved > 0 
     ? (filteredComplaints.reduce((sum, c) => sum + (c.satisfactionRating || 0), 0) / totalResolved).toFixed(1)
     : 0;
+
+  // Statistics by type
+  const stats = {
+    total: totalResolved,
+    regular: filteredComplaints.filter(c => c.type === 'regular').length,
+    regarding: filteredComplaints.filter(c => c.type === 'regarding').length,
+    high: filteredComplaints.filter(c => c.priority === 'high').length,
+    medium: filteredComplaints.filter(c => c.priority === 'medium').length,
+    low: filteredComplaints.filter(c => c.priority === 'low').length,
+    avgResolution: avgResolutionDays,
+    avgSatisfaction: avgSatisfaction
+  };
 
   // Pagination
   const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
@@ -518,6 +614,11 @@ const AdminComplaintsResolved = () => {
     setLoading(true);
     setCurrentPage(1);
     fetchResolvedComplaints();
+    showToast(language === 'np' ? 'डाटा रिफ्रेस गरियो' : 'Data refreshed', 'info');
+  };
+
+  const generateReport = () => {
+    showToast(language === 'np' ? 'रिपोर्ट तयार भइरहेको छ...' : 'Report is being generated...', 'info');
   };
 
   const renderStars = (rating) => {
@@ -543,18 +644,29 @@ const AdminComplaintsResolved = () => {
 
   return (
     <div className="admin-resolved-complaints">
-      <Header language={language} setLanguage={setLanguage} adminName="Admin" />
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
+      <Header language={language} setLanguage={setLanguage} adminName="Admin" userRole="admin" />
       
       {/* Backend Status Banner */}
       {backendStatus === 'disconnected' && (
         <div className="backend-warning">
-          ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।' : 'Backend server not connected. Showing sample data.'}
+          ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। कृपया सर्भर सुरु गर्नुहोस्।' : 'Backend server not connected. Please start the server.'}
         </div>
       )}
       
       <div className="dashboard-layout">
         <div className="sidebar-container">
-          <Sidebar language={language} />
+          <Sidebar language={language} userRole="admin" />
         </div>
         
         <div className="main-container">
@@ -568,7 +680,7 @@ const AdminComplaintsResolved = () => {
                 <button className="refresh-btn" onClick={refreshData}>
                   🔄 {t.refresh}
                 </button>
-                <button className="report-btn" onClick={() => alert(t.generateReport)}>
+                <button className="report-btn" onClick={generateReport}>
                   📊 {t.generateReport}
                 </button>
               </div>
@@ -579,21 +691,21 @@ const AdminComplaintsResolved = () => {
               <div className="stat-card">
                 <div className="stat-icon green">✅</div>
                 <div className="stat-info">
-                  <div className="stat-value">{totalResolved}</div>
+                  <div className="stat-value">{stats.total}</div>
                   <div className="stat-label">{t.totalResolved}</div>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon blue">⏱️</div>
                 <div className="stat-info">
-                  <div className="stat-value">{avgResolutionDays} {language === 'np' ? 'दिन' : 'days'}</div>
+                  <div className="stat-value">{stats.avgResolution} {language === 'np' ? 'दिन' : 'days'}</div>
                   <div className="stat-label">{t.avgResolutionTime}</div>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon orange">⭐</div>
                 <div className="stat-info">
-                  <div className="stat-value">{avgSatisfaction}/5</div>
+                  <div className="stat-value">{stats.avgSatisfaction}/5</div>
                   <div className="stat-label">{t.avgSatisfaction}</div>
                 </div>
               </div>
@@ -609,8 +721,20 @@ const AdminComplaintsResolved = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
+                {searchTerm && (
+                  <button className="clear-search" onClick={() => setSearchTerm('')}>✕</button>
+                )}
               </div>
               <div className="filter-group">
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.allTypes}</option>
+                  <option value="regular">{t.regularComplaints}</option>
+                  <option value="regarding">{t.regardingComplaints}</option>
+                </select>
                 <select
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
@@ -650,27 +774,40 @@ const AdminComplaintsResolved = () => {
                     <th>{t.ticketId}</th>
                     <th>{t.complainant}</th>
                     <th>{t.category}</th>
+                    <th>{t.subject}</th>
                     <th>{t.date}</th>
                     <th>{t.resolvedDate}</th>
                     <th>{t.resolutionTime}</th>
                     <th>{t.priority}</th>
+                    <th>{t.complaintType}</th>
                     <th>{t.satisfaction}</th>
                     <th>{t.actions}</th>
-                  </tr>
+                </tr>
                 </thead>
                 <tbody>
                   {paginatedComplaints.length > 0 ? (
-                    paginatedComplaints.map((complaint) => (
-                      <tr key={complaint.id}>
+                    paginatedComplaints.map((complaint, idx) => (
+                      <tr key={`${complaint.type}-${complaint.id}-${idx}`}>
                         <td className="ticket-id">{complaint.ticketId}</td>
-                        <td>{language === 'np' ? complaint.name : complaint.enName}</td>
-                        <td>{getCategoryText(complaint.category)}</td>
+                        <td>
+                          <div className="complainant-info">
+                            <strong>{language === 'np' ? complaint.name : complaint.enName}</strong>
+                            <small>{complaint.phone}</small>
+                          </div>
+                        </td>
+                        <td>{getCategoryText(complaint)}</td>
+                        <td>{complaint.subject || '-'}</td>
                         <td>{getDate(complaint)}</td>
                         <td>{getResolvedDate(complaint)}</td>
                         <td>{getResolutionTime(complaint)}</td>
                         <td>
                           <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
                             {getPriorityText(complaint.priority)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`type-badge ${getComplaintTypeClass(complaint)}`}>
+                            {getComplaintTypeText(complaint)}
                           </span>
                         </td>
                         <td>
@@ -690,7 +827,7 @@ const AdminComplaintsResolved = () => {
                     ))
                   ) : (
                     <tr className="no-data">
-                      <td colSpan="9">
+                      <td colSpan="11">
                         <div className="no-data-content">
                           <span className="no-data-icon">📭</span>
                           <p>{t.noComplaintsFound}</p>
@@ -738,68 +875,123 @@ const AdminComplaintsResolved = () => {
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="detail-row">
-                <label>{t.ticketId}:</label>
-                <span>{selectedComplaint.ticketId}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.complainant}:</label>
-                <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.email}:</label>
-                <span>{selectedComplaint.email}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.phone}:</label>
-                <span>{selectedComplaint.phone}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.category}:</label>
-                <span>{getCategoryText(selectedComplaint.category)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.priority}:</label>
-                <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
-                  {getPriorityText(selectedComplaint.priority)}
-                </span>
-              </div>
-              <div className="detail-row">
-                <label>{t.registeredDate}:</label>
-                <span>{getDate(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.resolvedDate}:</label>
-                <span>{getResolvedDate(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.resolutionTime}:</label>
-                <span>{getResolutionTime(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.channel}:</label>
-                <span>{getChannel(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.assignedTo}:</label>
-                <span>{getAssignedTo(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.satisfactionRating}:</label>
-                <div className="satisfaction-display">
-                  <div className="stars-large">{renderStars(selectedComplaint.satisfactionRating)}</div>
-                  <span className={`satisfaction-text ${getSatisfactionClass(selectedComplaint.satisfactionRating)}`}>
-                    {getSatisfactionText(selectedComplaint.satisfactionRating)}
+              <div className="detail-section">
+                <h4>📌 {t.complaintInfo}</h4>
+                <div className="detail-row">
+                  <label>{t.ticketId}:</label>
+                  <span>{selectedComplaint.ticketId}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.complaintType}:</label>
+                  <span className={`type-badge ${getComplaintTypeClass(selectedComplaint)}`}>
+                    {getComplaintTypeText(selectedComplaint)}
                   </span>
                 </div>
+                <div className="detail-row">
+                  <label>{t.category}:</label>
+                  <span>{getCategoryText(selectedComplaint)}</span>
+                </div>
+                {selectedComplaint.subject && (
+                  <div className="detail-row">
+                    <label>{t.subject}:</label>
+                    <span>{selectedComplaint.subject}</span>
+                  </div>
+                )}
+                {selectedComplaint.referenceNumber && (
+                  <div className="detail-row">
+                    <label>{t.referenceNo}:</label>
+                    <span>{selectedComplaint.referenceNumber}</span>
+                  </div>
+                )}
               </div>
-              <div className="detail-row full-width">
-                <label>{t.feedback}:</label>
-                <p className="feedback-text">"{getFeedback(selectedComplaint)}"</p>
+
+              <div className="detail-section">
+                <h4>👤 {t.complainantInfo}</h4>
+                <div className="detail-row">
+                  <label>{t.complainant}:</label>
+                  <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.email}:</label>
+                  <span>{selectedComplaint.email}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.phone}:</label>
+                  <span>{selectedComplaint.phone}</span>
+                </div>
+                {selectedComplaint.address && (
+                  <div className="detail-row">
+                    <label>{t.address}:</label>
+                    <span>{selectedComplaint.address}</span>
+                  </div>
+                )}
+                {selectedComplaint.landmark && (
+                  <div className="detail-row">
+                    <label>{t.landmark}:</label>
+                    <span>{selectedComplaint.landmark}</span>
+                  </div>
+                )}
               </div>
-              <div className="detail-row full-width">
-                <label>{t.description}:</label>
-                <p>{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
+
+              <div className="detail-section">
+                <h4>📝 {t.description}</h4>
+                <div className="detail-row full-width">
+                  <p>{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>📊 {t.resolution}</h4>
+                <div className="detail-row full-width">
+                  <p className="feedback-text">"{getFeedback(selectedComplaint)}"</p>
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>📅 {t.dateInfo}</h4>
+                <div className="detail-row">
+                  <label>{t.registeredDate}:</label>
+                  <span>{getDate(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.resolvedDate}:</label>
+                  <span>{getResolvedDate(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.resolutionTime}:</label>
+                  <span>{getResolutionTime(selectedComplaint)}</span>
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>⭐ {t.satisfactionRating}</h4>
+                <div className="detail-row">
+                  <label>{t.satisfactionRating}:</label>
+                  <div className="satisfaction-display">
+                    <div className="stars-large">{renderStars(selectedComplaint.satisfactionRating)}</div>
+                    <span className={`satisfaction-text ${getSatisfactionClass(selectedComplaint.satisfactionRating)}`}>
+                      {getSatisfactionText(selectedComplaint.satisfactionRating)} ({selectedComplaint.satisfactionRating}/5)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h4>📞 {t.channel}</h4>
+                <div className="detail-row">
+                  <label>{t.channel}:</label>
+                  <span>{getChannel(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.assignedTo}:</label>
+                  <span>{getAssignedTo(selectedComplaint)}</span>
+                </div>
+                {selectedComplaint.preferredContact && (
+                  <div className="detail-row">
+                    <label>{t.preferredContact}:</label>
+                    <span>{selectedComplaint.preferredContact}</span>
+                  </div>
+                )}
               </div>
             </div>
             <div className="modal-footer">
@@ -819,23 +1011,58 @@ const AdminComplaintsResolved = () => {
         .admin-resolved-complaints {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          height: 100vh;
-          width: 100%;
-          overflow: hidden;
-          position: relative;
+          min-height: 100vh;
+          overflow-x: hidden;
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 200px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 350px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         .backend-warning {
           position: fixed;
-          top: 195px;
+          top: 70px;
           left: 0;
           right: 0;
-          background: #ff9800;
+          background: #f59e0b;
           color: white;
-          padding: 8px;
+          padding: 10px;
           text-align: center;
           z-index: 100;
-          font-size: 0.8rem;
+          font-size: 0.85rem;
         }
 
         .loading-container {
@@ -863,39 +1090,34 @@ const AdminComplaintsResolved = () => {
         /* Dashboard Layout */
         .dashboard-layout {
           display: flex;
-          height: calc(100vh - 195px);
-          margin-top: 195px;
+          min-height: calc(100vh - 70px);
+          margin-top: 70px;
           position: relative;
-          width: 100%;
-          overflow: hidden;
         }
 
-        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
-          top: 195px;
+          top: 70px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 195px);
+          height: calc(100vh - 70px);
           background: white;
           border-right: 1px solid #e2e8f0;
           z-index: 100;
           overflow-y: auto;
         }
 
-        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
           margin-left: 260px;
           width: calc(100% - 260px);
-          height: 100%;
-          overflow-y: auto;
-          overflow-x: hidden;
-          position: relative;
+          min-height: calc(100vh - 70px);
+          overflow-x: auto;
         }
 
         .main-container::-webkit-scrollbar {
           width: 8px;
+          height: 8px;
         }
 
         .main-container::-webkit-scrollbar-track {
@@ -908,13 +1130,8 @@ const AdminComplaintsResolved = () => {
           border-radius: 10px;
         }
 
-        .main-container::-webkit-scrollbar-thumb:hover {
-          background: #2563eb;
-        }
-
         .content-wrapper {
           padding: 24px 32px;
-          min-height: 100%;
         }
 
         .page-header {
@@ -924,6 +1141,8 @@ const AdminComplaintsResolved = () => {
           margin-bottom: 24px;
           padding-bottom: 16px;
           border-bottom: 2px solid #e2e8f0;
+          flex-wrap: wrap;
+          gap: 16px;
         }
 
         .page-header h1 {
@@ -941,6 +1160,7 @@ const AdminComplaintsResolved = () => {
         .header-buttons {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .refresh-btn {
@@ -951,6 +1171,7 @@ const AdminComplaintsResolved = () => {
           cursor: pointer;
           font-weight: 500;
           color: #475569;
+          transition: all 0.2s;
         }
 
         .refresh-btn:hover {
@@ -967,6 +1188,7 @@ const AdminComplaintsResolved = () => {
           border-radius: 10px;
           cursor: pointer;
           font-weight: 500;
+          transition: all 0.2s;
         }
 
         .report-btn:hover {
@@ -990,6 +1212,7 @@ const AdminComplaintsResolved = () => {
           align-items: center;
           gap: 16px;
           border: 1px solid #e2e8f0;
+          transition: all 0.2s;
         }
 
         .stat-card:hover {
@@ -1026,11 +1249,13 @@ const AdminComplaintsResolved = () => {
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
         }
 
         .search-box {
           flex: 1;
           position: relative;
+          min-width: 250px;
         }
 
         .search-icon {
@@ -1056,9 +1281,22 @@ const AdminComplaintsResolved = () => {
           box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
         }
 
+        .clear-search {
+          position: absolute;
+          right: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          font-size: 1rem;
+          cursor: pointer;
+          color: #9ca3af;
+        }
+
         .filter-group {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .filter-select {
@@ -1081,6 +1319,7 @@ const AdminComplaintsResolved = () => {
         .complaints-table {
           width: 100%;
           border-collapse: collapse;
+          min-width: 1100px;
         }
 
         .complaints-table th,
@@ -1112,7 +1351,10 @@ const AdminComplaintsResolved = () => {
           color: #3b82f6;
         }
 
-        .priority-badge {
+        .complainant-info strong { display: block; }
+        .complainant-info small { font-size: 0.7rem; color: #64748b; }
+
+        .priority-badge, .type-badge {
           display: inline-block;
           padding: 4px 12px;
           border-radius: 20px;
@@ -1123,6 +1365,9 @@ const AdminComplaintsResolved = () => {
         .priority-high { background: #fee2e2; color: #dc2626; }
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #e0e7ff; color: #4f46e5; }
+
+        .type-regular { background: #dbeafe; color: #1e40af; }
+        .type-regarding { background: #fef3c7; color: #92400e; }
 
         .satisfaction-container {
           display: flex;
@@ -1156,13 +1401,14 @@ const AdminComplaintsResolved = () => {
           border-radius: 8px;
           cursor: pointer;
           font-size: 0.7rem;
+          transition: all 0.2s;
         }
 
         .view-btn:hover { background: #e2e8f0; }
 
         .no-data {
           text-align: center;
-          padding: 40px !important;
+          padding: 60px !important;
         }
 
         .no-data-content {
@@ -1192,6 +1438,7 @@ const AdminComplaintsResolved = () => {
           cursor: pointer;
           color: #475569;
           font-weight: 500;
+          transition: all 0.2s;
         }
 
         .pagination-btn:hover:not(:disabled) {
@@ -1232,7 +1479,6 @@ const AdminComplaintsResolved = () => {
           width: 90%;
           max-height: 85vh;
           overflow-y: auto;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
 
         .modal-header {
@@ -1266,18 +1512,29 @@ const AdminComplaintsResolved = () => {
           padding: 24px;
         }
 
+        .detail-section {
+          margin-bottom: 24px;
+        }
+
+        .detail-section h4 {
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #0f172a;
+          margin-bottom: 12px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        }
+
         .detail-row {
           display: flex;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid #f1f5f9;
+          margin-bottom: 12px;
+          flex-wrap: wrap;
         }
 
         .detail-row label {
           width: 130px;
           font-weight: 600;
           color: #0f172a;
-          flex-shrink: 0;
         }
 
         .detail-row span,
@@ -1321,7 +1578,8 @@ const AdminComplaintsResolved = () => {
         .modal-footer {
           padding: 16px 24px;
           border-top: 1px solid #e2e8f0;
-          text-align: right;
+          display: flex;
+          justify-content: flex-end;
           position: sticky;
           bottom: 0;
           background: white;
@@ -1335,68 +1593,50 @@ const AdminComplaintsResolved = () => {
           border-radius: 10px;
           cursor: pointer;
           font-weight: 500;
+          transition: all 0.2s;
         }
 
         .btn-close:hover { background: #e2e8f0; }
 
         /* Responsive */
         @media (max-width: 768px) {
-          .admin-resolved-complaints {
-            height: auto;
-            overflow: auto;
-          }
-          
-          .dashboard-layout {
-            flex-direction: column;
-            height: auto;
-            margin-top: 150px;
-            overflow: visible;
-          }
-          
           .sidebar-container {
-            position: relative;
-            top: 0;
-            width: 100%;
-            height: auto;
-            margin-bottom: 20px;
+            display: none;
           }
-          
           .main-container {
             margin-left: 0;
             width: 100%;
-            overflow-y: visible;
           }
-          
           .content-wrapper {
             padding: 16px;
           }
-          
           .stats-row {
             grid-template-columns: 1fr;
           }
-          
           .filters-bar {
             flex-direction: column;
           }
-          
           .filter-group {
             width: 100%;
             flex-direction: column;
           }
-          
           .filter-select {
             width: 100%;
           }
-          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 12px;
           }
-          
           .header-buttons {
             width: 100%;
+          }
+          .detail-row {
             flex-direction: column;
+          }
+          .detail-row label {
+            width: 100%;
+            margin-bottom: 4px;
           }
         }
 
@@ -1405,15 +1645,6 @@ const AdminComplaintsResolved = () => {
           .complaints-table td {
             padding: 8px;
             font-size: 0.7rem;
-          }
-          
-          .detail-row {
-            flex-direction: column;
-          }
-          
-          .detail-row label {
-            width: 100%;
-            margin-bottom: 4px;
           }
         }
       `}</style>

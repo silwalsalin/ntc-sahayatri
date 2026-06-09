@@ -22,6 +22,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 // Initialize database tables
 function initializeDatabase() {
+    // Regular Complaints Table
     const createComplaintsTable = `
         CREATE TABLE IF NOT EXISTS complaints (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,33 +49,7 @@ function initializeDatabase() {
         )
     `;
 
-    const createAttachmentsTable = `
-        CREATE TABLE IF NOT EXISTS attachments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            complaint_id INTEGER NOT NULL,
-            filename TEXT NOT NULL,
-            original_name TEXT NOT NULL,
-            file_path TEXT NOT NULL,
-            file_size INTEGER,
-            mime_type TEXT,
-            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (complaint_id) REFERENCES complaints(id) ON DELETE CASCADE
-        )
-    `;
-
-    const createStatusHistoryTable = `
-        CREATE TABLE IF NOT EXISTS complaint_status_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            complaint_id INTEGER NOT NULL,
-            old_status TEXT,
-            new_status TEXT NOT NULL,
-            changed_by TEXT,
-            notes TEXT,
-            changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (complaint_id) REFERENCES complaints(id) ON DELETE CASCADE
-        )
-    `;
-
+    // Complaint Regarding Table
     const createComplaintRegardingTable = `
         CREATE TABLE IF NOT EXISTS complaint_regarding (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,7 +76,22 @@ function initializeDatabase() {
         )
     `;
 
-    const createComplaintRegardingAttachments = `
+    // Attachments Tables
+    const createAttachmentsTable = `
+        CREATE TABLE IF NOT EXISTS attachments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            complaint_id INTEGER NOT NULL,
+            filename TEXT NOT NULL,
+            original_name TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            file_size INTEGER,
+            mime_type TEXT,
+            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (complaint_id) REFERENCES complaints(id) ON DELETE CASCADE
+        )
+    `;
+
+    const createComplaintRegardingAttachmentsTable = `
         CREATE TABLE IF NOT EXISTS complaint_regarding_attachments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             complaint_id INTEGER NOT NULL,
@@ -115,52 +105,30 @@ function initializeDatabase() {
         )
     `;
 
-    const createComplaintRegardingHistory = `
-        CREATE TABLE IF NOT EXISTS complaint_regarding_status_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            complaint_id INTEGER NOT NULL,
-            old_status TEXT,
-            new_status TEXT NOT NULL,
-            changed_by TEXT,
-            notes TEXT,
-            changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (complaint_id) REFERENCES complaint_regarding(id) ON DELETE CASCADE
-        )
-    `;
-
+    // Execute all table creations
     db.run(createComplaintsTable, (err) => {
         if (err) console.error('Error creating complaints table:', err);
-        else console.log('Complaints table ready');
-    });
-
-    db.run(createAttachmentsTable, (err) => {
-        if (err) console.error('Error creating attachments table:', err);
-        else console.log('Attachments table ready');
-    });
-
-    db.run(createStatusHistoryTable, (err) => {
-        if (err) console.error('Error creating status history table:', err);
-        else console.log('Status history table ready');
+        else console.log('✓ Complaints table ready');
     });
 
     db.run(createComplaintRegardingTable, (err) => {
         if (err) console.error('Error creating complaint_regarding table:', err);
-        else console.log('Complaint Regarding table ready');
+        else console.log('✓ Complaint Regarding table ready');
     });
 
-    db.run(createComplaintRegardingAttachments, (err) => {
+    db.run(createAttachmentsTable, (err) => {
+        if (err) console.error('Error creating attachments table:', err);
+        else console.log('✓ Attachments table ready');
+    });
+
+    db.run(createComplaintRegardingAttachmentsTable, (err) => {
         if (err) console.error('Error creating complaint_regarding_attachments table:', err);
-        else console.log('Complaint Regarding Attachments table ready');
-    });
-
-    db.run(createComplaintRegardingHistory, (err) => {
-        if (err) console.error('Error creating complaint_regarding_status_history table:', err);
-        else console.log('Complaint Regarding Status History table ready');
+        else console.log('✓ Complaint Regarding Attachments table ready');
     });
 }
 
 // Helper functions
-const generateComplaintNumber = () => {
+function generateComplaintNumber() {
     const date = new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -170,9 +138,9 @@ const generateComplaintNumber = () => {
     const seconds = String(date.getSeconds()).padStart(2, '0');
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     return `NTC-${year}${month}${day}${hours}${minutes}${seconds}-${random}`;
-};
+}
 
-const generateComplaintNumberNp = () => {
+function generateComplaintNumberNp() {
     const date = new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -182,16 +150,16 @@ const generateComplaintNumberNp = () => {
     const seconds = String(date.getSeconds()).padStart(2, '0');
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     return `एनटीसी-${year}${month}${day}${hours}${minutes}${seconds}-${random}`;
-};
+}
 
-const generateTrackingPassword = () => {
+function generateTrackingPassword() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let password = '';
     for (let i = 0; i < 8; i++) {
         password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return password;
-};
+}
 
 module.exports = {
     db,
