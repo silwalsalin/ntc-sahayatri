@@ -1,169 +1,154 @@
+// backend/database/db.js
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-// Ensure database directory exists
-const dbDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-}
+const dbPath = path.join(__dirname, 'complaints.db');
+const db = new sqlite3.Database(dbPath);
 
-const dbPath = path.join(dbDir, 'complaints.db');
+// Generate complaint number
+const generateComplaintNumber = () => {
+    const year = new Date().getFullYear();
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `NTC-${year}-${random}`;
+};
 
-// Create database connection
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Error opening database:', err.message);
-    } else {
-        console.log('Connected to SQLite database at:', dbPath);
-        initializeDatabase();
-    }
-});
+const generateComplaintNumberNp = () => {
+    const year = new Date().getFullYear() - 57;
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `नेपाल दूरसञ्चार-${year}-${random}`;
+};
+
+const generateTrackingPassword = () => {
+    return Math.random().toString(36).substring(2, 10).toUpperCase();
+};
 
 // Initialize database tables
-function initializeDatabase() {
-    // Regular Complaints Table
-    const createComplaintsTable = `
-        CREATE TABLE IF NOT EXISTS complaints (
+const initDatabase = () => {
+    return new Promise((resolve, reject) => {
+        // Create users table
+        db.run(`CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            complaint_number TEXT UNIQUE NOT NULL,
-            complaint_number_np TEXT UNIQUE NOT NULL,
-            tracking_password TEXT NOT NULL,
-            nature_of_complaint TEXT NOT NULL,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            state TEXT,
-            district TEXT,
-            municipality TEXT,
-            ward_no TEXT,
+            name VARCHAR(100) NOT NULL,
+            name_en VARCHAR(100) NOT NULL,
+            email VARCHAR(100) UNIQUE NOT NULL,
+            phone VARCHAR(15) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            role VARCHAR(20) DEFAULT 'user',
+            status VARCHAR(20) DEFAULT 'active',
+            last_login DATETIME,
+            created_by INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES users(id)
+        )`, (err) => {
+            if (err) {
+                console.error('Error creating users table:', err);
+                reject(err);
+            } else {
+                console.log('✅ Users table ready');
+            }
+        });
+
+        // Create complaints table
+        db.run(`CREATE TABLE IF NOT EXISTS complaints (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            complaint_number VARCHAR(50) UNIQUE NOT NULL,
+            complaint_number_np VARCHAR(50) UNIQUE NOT NULL,
+            tracking_password VARCHAR(20) NOT NULL,
+            nature_of_complaint VARCHAR(100) NOT NULL,
+            name VARCHAR(100) NOT NULL,
+            email VARCHAR(100),
+            phone VARCHAR(15),
+            state VARCHAR(50),
+            district VARCHAR(50),
+            municipality VARCHAR(50),
+            ward_no VARCHAR(10),
             street_address TEXT,
             description TEXT NOT NULL,
-            status TEXT DEFAULT 'pending',
-            priority TEXT DEFAULT 'medium',
-            assigned_to TEXT,
+            status VARCHAR(20) DEFAULT 'pending',
+            priority VARCHAR(20) DEFAULT 'medium',
             resolution TEXT,
+            resolved_at DATETIME,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            resolved_at DATETIME
-        )
-    `;
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`, (err) => {
+            if (err) {
+                console.error('Error creating complaints table:', err);
+                reject(err);
+            } else {
+                console.log('✅ Complaints table ready');
+            }
+        });
 
-    // Complaint Regarding Table
-    const createComplaintRegardingTable = `
-        CREATE TABLE IF NOT EXISTS complaint_regarding (
+        // Create complaint_regarding table
+        db.run(`CREATE TABLE IF NOT EXISTS complaint_regarding (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            complaint_number TEXT UNIQUE NOT NULL,
-            complaint_number_np TEXT UNIQUE NOT NULL,
-            tracking_password TEXT NOT NULL,
-            complaint_type TEXT NOT NULL,
-            subject TEXT NOT NULL,
+            complaint_number VARCHAR(50) UNIQUE NOT NULL,
+            complaint_number_np VARCHAR(50) UNIQUE NOT NULL,
+            tracking_password VARCHAR(20) NOT NULL,
+            complaint_type VARCHAR(50) NOT NULL,
+            subject VARCHAR(200) NOT NULL,
             description TEXT NOT NULL,
-            priority TEXT DEFAULT 'medium',
-            name TEXT NOT NULL,
-            email TEXT,
-            phone TEXT NOT NULL,
+            priority VARCHAR(20) DEFAULT 'medium',
+            name VARCHAR(100) NOT NULL,
+            email VARCHAR(100),
+            phone VARCHAR(15),
             address TEXT,
-            landmark TEXT,
-            preferred_contact TEXT DEFAULT 'phone',
-            reference_number TEXT,
-            status TEXT DEFAULT 'pending',
-            assigned_to TEXT,
+            landmark VARCHAR(100),
+            preferred_contact VARCHAR(20) DEFAULT 'phone',
+            reference_number VARCHAR(50),
+            status VARCHAR(20) DEFAULT 'pending',
             resolution TEXT,
+            resolved_at DATETIME,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            resolved_at DATETIME
-        )
-    `;
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`, (err) => {
+            if (err) {
+                console.error('Error creating complaint_regarding table:', err);
+                reject(err);
+            } else {
+                console.log('✅ Complaint regarding table ready');
+            }
+        });
 
-    // Attachments Tables
-    const createAttachmentsTable = `
-        CREATE TABLE IF NOT EXISTS attachments (
+        // Create complaint_regarding_attachments table
+        db.run(`CREATE TABLE IF NOT EXISTS complaint_regarding_attachments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             complaint_id INTEGER NOT NULL,
-            filename TEXT NOT NULL,
-            original_name TEXT NOT NULL,
-            file_path TEXT NOT NULL,
+            filename VARCHAR(255) NOT NULL,
+            original_name VARCHAR(255) NOT NULL,
+            file_path VARCHAR(500) NOT NULL,
             file_size INTEGER,
-            mime_type TEXT,
-            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (complaint_id) REFERENCES complaints(id) ON DELETE CASCADE
-        )
-    `;
-
-    const createComplaintRegardingAttachmentsTable = `
-        CREATE TABLE IF NOT EXISTS complaint_regarding_attachments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            complaint_id INTEGER NOT NULL,
-            filename TEXT NOT NULL,
-            original_name TEXT NOT NULL,
-            file_path TEXT NOT NULL,
-            file_size INTEGER,
-            mime_type TEXT,
+            mime_type VARCHAR(100),
             uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (complaint_id) REFERENCES complaint_regarding(id) ON DELETE CASCADE
-        )
-    `;
+        )`, (err) => {
+            if (err) {
+                console.error('Error creating attachments table:', err);
+                reject(err);
+            } else {
+                console.log('✅ Attachments table ready');
+            }
+        });
 
-    // Execute all table creations
-    db.run(createComplaintsTable, (err) => {
-        if (err) console.error('Error creating complaints table:', err);
-        else console.log('✓ Complaints table ready');
+        // Create indexes for better performance
+        db.run(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`, () => {});
+        db.run(`CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)`, () => {});
+        db.run(`CREATE INDEX IF NOT EXISTS idx_complaints_email ON complaints(email)`, () => {});
+        db.run(`CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status)`, () => {});
+        db.run(`CREATE INDEX IF NOT EXISTS idx_regarding_email ON complaint_regarding(email)`, () => {});
+        db.run(`CREATE INDEX IF NOT EXISTS idx_regarding_status ON complaint_regarding(status)`, () => {});
+
+        // Wait a bit for all tables to be created
+        setTimeout(() => resolve(), 1000);
     });
-
-    db.run(createComplaintRegardingTable, (err) => {
-        if (err) console.error('Error creating complaint_regarding table:', err);
-        else console.log('✓ Complaint Regarding table ready');
-    });
-
-    db.run(createAttachmentsTable, (err) => {
-        if (err) console.error('Error creating attachments table:', err);
-        else console.log('✓ Attachments table ready');
-    });
-
-    db.run(createComplaintRegardingAttachmentsTable, (err) => {
-        if (err) console.error('Error creating complaint_regarding_attachments table:', err);
-        else console.log('✓ Complaint Regarding Attachments table ready');
-    });
-}
-
-// Helper functions
-function generateComplaintNumber() {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `NTC-${year}${month}${day}${hours}${minutes}${seconds}-${random}`;
-}
-
-function generateComplaintNumberNp() {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `एनटीसी-${year}${month}${day}${hours}${minutes}${seconds}-${random}`;
-}
-
-function generateTrackingPassword() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let password = '';
-    for (let i = 0; i < 8; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
-}
+};
 
 module.exports = {
     db,
     generateComplaintNumber,
     generateComplaintNumberNp,
-    generateTrackingPassword
+    generateTrackingPassword,
+    initDatabase
 };
