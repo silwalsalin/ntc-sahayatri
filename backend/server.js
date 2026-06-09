@@ -13,8 +13,8 @@ const { db, generateComplaintNumber, generateComplaintNumberNp, generateTracking
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_this_in_production';
+// JWT Secret - Make sure this is consistent
+const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_this_in_production_2024';
 const JWT_EXPIRE = '7d';
 
 // Middleware
@@ -65,6 +65,15 @@ const generateToken = (id) => {
     return jwt.sign({ id }, JWT_SECRET, { expiresIn: JWT_EXPIRE });
 };
 
+// Verify Token middleware
+const verifyToken = (token) => {
+    try {
+        return jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+        return null;
+    }
+};
+
 // Protect middleware - For routes that require authentication
 const protect = async (req, res, next) => {
     let token;
@@ -72,26 +81,53 @@ const protect = async (req, res, next) => {
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         try {
             token = req.headers.authorization.split(' ')[1];
-            const decoded = jwt.verify(token, JWT_SECRET);
+            const decoded = verifyToken(token);
+            
+            if (!decoded) {
+                return res.status(401).json({ 
+                    success: false, 
+                    message: 'Invalid or expired token. Please login again.',
+                    code: 'TOKEN_EXPIRED'
+                });
+            }
             
             db.get(`SELECT id, name, name_en, email, phone, role, status FROM users WHERE id = ?`, [decoded.id], (err, user) => {
-                if (err || !user) {
-                    return res.status(401).json({ success: false, message: 'Not authorized' });
+                if (err) {
+                    return res.status(500).json({ success: false, message: 'Database error' });
+                }
+                if (!user) {
+                    return res.status(401).json({ 
+                        success: false, 
+                        message: 'User not found. Please login again.',
+                        code: 'USER_NOT_FOUND'
+                    });
+                }
+                if (user.status !== 'active') {
+                    return res.status(401).json({ 
+                        success: false, 
+                        message: `Your account is ${user.status}. Please contact admin.`,
+                        code: 'ACCOUNT_INACTIVE'
+                    });
                 }
                 req.user = user;
                 next();
             });
         } catch (error) {
-            // Silently fail for public routes - don't log "jwt malformed" errors
-            if (token && error.message !== 'jwt malformed') {
-                console.error('Auth error:', error.message);
-            }
-            return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
+            console.error('Auth error:', error.message);
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Authentication failed. Please login again.',
+                code: 'AUTH_FAILED'
+            });
         }
     }
     
     if (!token) {
-        return res.status(401).json({ success: false, message: 'Not authorized, no token' });
+        return res.status(401).json({ 
+            success: false, 
+            message: 'No token provided. Please login.',
+            code: 'NO_TOKEN'
+        });
     }
 };
 
@@ -100,7 +136,10 @@ const adminOnly = (req, res, next) => {
     if (req.user && req.user.role === 'admin') {
         next();
     } else {
-        res.status(403).json({ success: false, message: 'Access denied. Admin only.' });
+        res.status(403).json({ 
+            success: false, 
+            message: 'Access denied. Admin only.' 
+        });
     }
 };
 
@@ -109,7 +148,10 @@ const staffOrAdmin = (req, res, next) => {
     if (req.user && (req.user.role === 'admin' || req.user.role === 'staff')) {
         next();
     } else {
-        res.status(403).json({ success: false, message: 'Access denied. Staff or Admin only.' });
+        res.status(403).json({ 
+            success: false, 
+            message: 'Access denied. Staff or Admin only.' 
+        });
     }
 };
 
@@ -299,12 +341,14 @@ app.post('/api/auth/login', (req, res) => {
                 return res.status(401).json({ success: false, message: `Your account is ${user.status}. Please contact admin.` });
             }
             
+            // Update last login
             db.run(`UPDATE users SET last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [user.id]);
             
             const token = generateToken(user.id);
             
             res.json({
                 success: true,
+                message: 'Login successful',
                 data: {
                     id: user.id,
                     name: user.name,
@@ -312,6 +356,7 @@ app.post('/api/auth/login', (req, res) => {
                     email: user.email,
                     phone: user.phone,
                     role: user.role,
+                    status: user.status,
                     token
                 }
             });
@@ -322,9 +367,28 @@ app.post('/api/auth/login', (req, res) => {
     }
 });
 
+// POST /api/auth/logout - Logout user (client side should remove token)
+app.post('/api/auth/logout', (req, res) => {
+    res.json({ success: true, message: 'Logged out successfully' });
+});
+
 // GET /api/auth/me - Get current user (requires auth)
 app.get('/api/auth/me', protect, (req, res) => {
     res.json({ success: true, data: req.user });
+});
+
+// POST /api/auth/refresh - Refresh token
+app.post('/api/auth/refresh', protect, (req, res) => {
+    try {
+        const newToken = generateToken(req.user.id);
+        res.json({ 
+            success: true, 
+            token: newToken,
+            message: 'Token refreshed successfully'
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to refresh token' });
+    }
 });
 
 // ==================== ADMIN COMPLAINTS API (Auth Required) ====================
@@ -470,7 +534,6 @@ app.patch('/api/admin/complaints/:id/status', protect, adminOnly, (req, res) => 
 });
 
 // PATCH /api/admin/complaint-regarding/:id/status - Update complaint regarding status (admin only)
-// CORRECT ENDPOINT
 app.patch('/api/admin/complaint-regarding/:id/status', protect, adminOnly, (req, res) => {
     try {
         const { status, resolution } = req.body;
@@ -524,13 +587,6 @@ app.patch('/api/admin/complaint-regarding/:id/status', protect, adminOnly, (req,
         console.error('Error updating complaint regarding status:', error);
         res.status(500).json({ success: false, error: error.message });
     }
-});
-
-// BACKWARD COMPATIBILITY ROUTE - For frontend calling old endpoint
-app.patch('/api/admin/complaints/regarding/:id/status', protect, adminOnly, (req, res) => {
-    // Forward to correct endpoint
-    req.params.id = req.params.id;
-    app.handle(req, res);
 });
 
 // ==================== USER MANAGEMENT ROUTES (Admin Only) ====================
@@ -868,96 +924,6 @@ app.get('/api/users/stats/summary', protect, adminOnly, (req, res) => {
     }
 });
 
-// ==================== ADMIN COMBINED API ====================
-
-// GET /api/admin/all-complaints - Get all complaints from both tables (admin/staff only)
-app.get('/api/admin/all-complaints', protect, staffOrAdmin, (req, res) => {
-    try {
-        const { limit = 20, status, search } = req.query;
-        
-        let regularSql = `SELECT id, complaint_number, name, email, phone, description, status, priority, created_at, nature_of_complaint as category, 'regular' as type FROM complaints WHERE 1=1`;
-        let regardingSql = `SELECT id, complaint_number, name, email, phone, description, status, priority, created_at, complaint_type as category, subject, reference_number, address, landmark, preferred_contact, 'regarding' as type FROM complaint_regarding WHERE 1=1`;
-        
-        if (status && status !== 'all') {
-            regularSql += ` AND status = ?`;
-            regardingSql += ` AND status = ?`;
-        }
-        
-        if (search) {
-            regularSql += ` AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR complaint_number LIKE ?)`;
-            regardingSql += ` AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR complaint_number LIKE ? OR subject LIKE ?)`;
-        }
-        
-        Promise.all([
-            new Promise((resolve, reject) => {
-                db.all(regularSql + ` ORDER BY created_at DESC LIMIT ?`, (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows || []);
-                });
-            }),
-            new Promise((resolve, reject) => {
-                db.all(regardingSql + ` ORDER BY created_at DESC LIMIT ?`, (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows || []);
-                });
-            })
-        ]).then(([regularComplaints, regardingComplaints]) => {
-            const allComplaints = [...regularComplaints, ...regardingComplaints];
-            allComplaints.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            
-            res.json({
-                success: true,
-                data: allComplaints.slice(0, parseInt(limit)),
-                regularCount: regularComplaints.length,
-                regardingCount: regardingComplaints.length,
-                total: allComplaints.length
-            });
-        }).catch(error => {
-            res.status(500).json({ success: false, error: error.message });
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// GET /api/admin/stats - Get statistics from both tables (admin/staff only)
-app.get('/api/admin/stats', protect, staffOrAdmin, (req, res) => {
-    try {
-        Promise.all([
-            new Promise((resolve, reject) => {
-                db.get(`SELECT COUNT(*) as total, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending, SUM(CASE WHEN status = 'in-progress' THEN 1 ELSE 0 END) as in_progress, SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved FROM complaints`, (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row || { total: 0, pending: 0, in_progress: 0, resolved: 0 });
-                });
-            }),
-            new Promise((resolve, reject) => {
-                db.get(`SELECT COUNT(*) as total, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending, SUM(CASE WHEN status = 'in-progress' THEN 1 ELSE 0 END) as in_progress, SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved FROM complaint_regarding`, (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row || { total: 0, pending: 0, in_progress: 0, resolved: 0 });
-                });
-            })
-        ]).then(([regularStats, regardingStats]) => {
-            res.json({
-                success: true,
-                data: {
-                    regular: regularStats,
-                    regarding: regardingStats,
-                    combined: {
-                        total: (regularStats.total || 0) + (regardingStats.total || 0),
-                        pending: (regularStats.pending || 0) + (regardingStats.pending || 0),
-                        in_progress: (regularStats.in_progress || 0) + (regardingStats.in_progress || 0),
-                        resolved: (regularStats.resolved || 0) + (regardingStats.resolved || 0)
-                    }
-                }
-            });
-        }).catch(error => {
-            res.status(500).json({ success: false, error: error.message });
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
 // ==================== ERROR HANDLING ====================
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
@@ -987,6 +953,7 @@ const startServer = async () => {
         db.run(`ALTER TABLE complaint_regarding ADD COLUMN resolution TEXT`, (err) => {});
         db.run(`ALTER TABLE complaint_regarding ADD COLUMN resolved_at DATETIME`, (err) => {});
         
+        // Check if admin user exists, if not create one
         db.get(`SELECT id FROM users WHERE email = ?`, ['admin@example.com'], async (err, user) => {
             if (err) {
                 console.error('Error checking admin user:', err);
@@ -1021,10 +988,8 @@ const startServer = async () => {
             console.log(`📋 Public Complaint Regarding: http://localhost:${PORT}/api/complaints/regarding/public`);
             console.log(`📝 Admin Complaint Status: PATCH /api/admin/complaints/:id/status`);
             console.log(`📝 Admin Complaint Regarding Status: PATCH /api/admin/complaint-regarding/:id/status`);
+            console.log(`🔄 Token Refresh: POST /api/auth/refresh`);
             console.log(`=================================`);
-            console.log(`✨ Public endpoints are accessible without authentication`);
-            console.log(`✨ Admin endpoints require valid JWT token`);
-            console.log(`✅ Status update endpoints are working correctly!`);
         });
     } catch (error) {
         console.error('Failed to start server:', error);
