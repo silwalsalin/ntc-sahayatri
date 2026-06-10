@@ -380,7 +380,7 @@ const ResetPassword = () => {
             </form>
 
             <div className="back-links">
-              <button onClick={() => navigate('/admin-login')} className="btn-back-link">
+              <button onClick={() => navigate('/login')} className="btn-back-link">
                 ← {t.backToLogin}
               </button>
             

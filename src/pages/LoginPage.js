@@ -20,10 +20,11 @@ const LoginPage = () => {
   const navigate = useNavigate();
   
   // Language state
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-  const [userType, setUserType] = useState('admin'); // 'admin' or 'staff'
+  const [userType, setUserType] = useState('admin');
 
   // Login form state
   const [formData, setFormData] = useState({
@@ -36,15 +37,25 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
-  // Handle scroll for header effects
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+  // Save language preference
   useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Auto-hide success popup after 3 seconds
+  useEffect(() => {
+    if (showSuccessPopup) {
+      const timer = setTimeout(() => {
+        setShowSuccessPopup(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessPopup]);
 
   // Check if already logged in
   useEffect(() => {
@@ -91,15 +102,15 @@ const LoginPage = () => {
       loggingIn: 'लगइन हुँदैछ...',
       backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
       demoCredentials: 'डेमो प्रमाणपत्रहरू:',
-      adminUser: 'प्रशासक: admin@ntc.gov.np',
+      adminUser: 'प्रशासक: admin@example.com',
       adminPass: 'पासवर्ड: admin123',
-      staffUser: 'स्टाफ: staff@ntc.gov.np',
+      staffUser: 'स्टाफ: staff@example.com',
       staffPass: 'पासवर्ड: staff123',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
       loginSuccessAdmin: '✅ लगइन सफल! प्रशासक ड्यासबोर्डमा जाँदै...',
       loginSuccessStaff: '✅ लगइन सफल! स्टाफ ड्यासबोर्डमा जाँदै...',
-      loginError: '❌ अमान्य इमेल वा पासवर्ड।',
+      loginError: '❌ अमान्य इमेल वा पासवर्ड। कृपया पुन: प्रयास गर्नुहोस्।',
       requiredFields: 'कृपया इमेल र पासवर्ड भर्नुहोस्।',
       selectUserType: 'प्रयोगकर्ता प्रकार चयन गर्नुहोस्'
     },
@@ -128,15 +139,15 @@ const LoginPage = () => {
       loggingIn: 'Logging in...',
       backToHome: 'Back to Home',
       demoCredentials: 'Demo Credentials:',
-      adminUser: 'Admin: admin@ntc.gov.np',
+      adminUser: 'Admin: admin@example.com',
       adminPass: 'Password: admin123',
-      staffUser: 'Staff: staff@ntc.gov.np',
+      staffUser: 'Staff: staff@example.com',
       staffPass: 'Password: staff123',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
       loginSuccessAdmin: '✅ Login successful! Redirecting to Admin Dashboard...',
       loginSuccessStaff: '✅ Login successful! Redirecting to Staff Dashboard...',
-      loginError: '❌ Invalid email or password.',
+      loginError: '❌ Invalid email or password. Please try again.',
       requiredFields: 'Please enter email and password.',
       selectUserType: 'Select User Type'
     }
@@ -175,40 +186,22 @@ const LoginPage = () => {
     setError('');
 
     try {
-      // For demonstration, using mock authentication
-      // In production, replace with actual API call:
-      // const response = await axios.post('http://localhost:5000/api/auth/login', {
-      //   email: formData.email,
-      //   password: formData.password,
-      //   userType: userType
-      // });
+      // Make real API call to backend
+      const response = await axios.post(`${API_URL}/auth/login`, {
+        email: formData.email,
+        password: formData.password
+      });
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      let isValid = false;
-      let userData = null;
-
-      // Demo authentication based on user type
-      if (userType === 'admin') {
-        // Admin credentials
-        if (formData.email === 'admin@ntc.gov.np' && formData.password === 'admin123') {
-          isValid = true;
-          userData = {
-            id: 1,
-            name: 'Admin User',
-            email: formData.email,
-            role: 'admin',
-            department: 'Administration',
-            loginTime: new Date().toISOString()
-          };
-          
-          // Store admin session
-          localStorage.setItem('adminToken', 'dummy-admin-token-' + Date.now());
+      if (response.data.success) {
+        const { token, ...userData } = response.data.data;
+        
+        // Store session based on user role
+        if (userData.role === 'admin') {
+          localStorage.setItem('adminToken', token);
           localStorage.setItem('adminUser', JSON.stringify(userData));
           localStorage.setItem('userRole', 'admin');
-          localStorage.setItem('userName', 'Admin User');
-          localStorage.setItem('userEmail', formData.email);
+          localStorage.setItem('userName', userData.name);
+          localStorage.setItem('userEmail', userData.email);
           localStorage.setItem('isLoggedIn', 'true');
           
           if (formData.rememberMe) {
@@ -217,31 +210,22 @@ const LoginPage = () => {
             localStorage.removeItem('rememberedEmail');
           }
           
-          alert(t.loginSuccessAdmin);
-          navigate('/admin-dashboard');
-        }
-      } else if (userType === 'staff') {
-        // Staff credentials
-        if (formData.email === 'staff@ntc.gov.np' && formData.password === 'staff123') {
-          isValid = true;
-          userData = {
-            id: 2,
-            name: 'Ram Bahadur',
-            email: formData.email,
-            role: 'staff',
-            position: 'Technical Support',
-            department: 'Customer Support',
-            joinDate: '2023-01-15',
-            loginTime: new Date().toISOString()
-          };
+          // Show success popup message
+          setSuccessMessage(t.loginSuccessAdmin);
+          setShowSuccessPopup(true);
           
-          // Store staff session
-          localStorage.setItem('staffToken', 'dummy-staff-token-' + Date.now());
+          // Redirect after a short delay
+          setTimeout(() => {
+            navigate('/admin-dashboard');
+          }, 1500);
+          
+        } else if (userData.role === 'staff') {
+          localStorage.setItem('staffToken', token);
           localStorage.setItem('staffUser', JSON.stringify(userData));
           localStorage.setItem('staffRole', 'staff');
           localStorage.setItem('userRole', 'staff');
-          localStorage.setItem('userName', 'Ram Bahadur');
-          localStorage.setItem('userEmail', formData.email);
+          localStorage.setItem('userName', userData.name);
+          localStorage.setItem('userEmail', userData.email);
           localStorage.setItem('isLoggedIn', 'true');
           
           if (formData.rememberMe) {
@@ -250,19 +234,32 @@ const LoginPage = () => {
             localStorage.removeItem('rememberedEmail');
           }
           
-          alert(t.loginSuccessStaff);
-          navigate('/staff-dashboard');
+          // Show success popup message
+          setSuccessMessage(t.loginSuccessStaff);
+          setShowSuccessPopup(true);
+          
+          // Redirect after a short delay
+          setTimeout(() => {
+            navigate('/staff-dashboard');
+          }, 1500);
+          
+        } else {
+          setError(t.loginError);
+          setIsLoading(false);
         }
-      }
-      
-      if (!isValid) {
-        setError(t.loginError);
+      } else {
+        setError(response.data.message || t.loginError);
         setIsLoading(false);
       }
-      
     } catch (error) {
       console.error('Login error:', error);
-      setError(t.loginError);
+      if (error.response) {
+        setError(error.response.data?.message || t.loginError);
+      } else if (error.request) {
+        setError('Cannot connect to server. Please check if backend is running.');
+      } else {
+        setError(t.loginError);
+      }
       setIsLoading(false);
     }
   };
@@ -299,8 +296,18 @@ const LoginPage = () => {
 
   return (
     <div className="login-page">
+      {/* Success Popup Notification */}
+      {showSuccessPopup && (
+        <div className="success-popup">
+          <div className="success-popup-content">
+            <span className="success-icon">✅</span>
+            <span className="success-message">{successMessage}</span>
+          </div>
+        </div>
+      )}
+
       {/* HEADER 1 - Top Bar */}
-      <div className={`header-1 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
+      <div className="header-1">
         <div className="container-1">
           <div className="header-left">
             <div className="we-are-here">
@@ -351,7 +358,7 @@ const LoginPage = () => {
       </div>
 
       {/* HEADER 2 - Department Level with Logos */}
-      <div className={`header-2 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
+      <div className="header-2">
         <div className="container-2">
           <div className="logo-left">
             <LogoImage 
@@ -372,6 +379,22 @@ const LoginPage = () => {
               fallback="🇳🇵"
               className="gov-logo"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* HEADER 3 - Navigation Bar */}
+      <div className="header-3">
+        <div className="container-3">
+          <div className="nav-menu-left">
+            <button onClick={() => navigate('/')} className="nav-btn">
+              <span className="nav-icon">🏠</span>
+              <span className="nav-text">{t.home}</span>
+            </button>
+            <button onClick={() => navigate('/faqs')} className="nav-btn">
+              <span className="nav-icon">❓</span>
+              <span className="nav-text">{t.faqs}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -447,7 +470,7 @@ const LoginPage = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
                   >
-                    {showPassword ? "👁️" : "👁️‍🗨️"}
+                    {showPassword ? "🙈" : "👁️"}
                   </button>
                 </div>
               </div>
@@ -479,22 +502,7 @@ const LoginPage = () => {
               </button>
             </form>
 
-            {/* Demo Credentials */}
-            <div className="demo-credentials">
-              <div className="demo-title">{t.demoCredentials}</div>
-              <div className="demo-info">
-                <div className="demo-card">
-                  <div className="demo-role">👨‍💼 {t.adminLogin}</div>
-                  <code>admin@ntc.gov.np</code>
-                  <code>admin123</code>
-                </div>
-                <div className="demo-card">
-                  <div className="demo-role">👨‍💻 {t.staffLogin}</div>
-                  <code>staff@ntc.gov.np</code>
-                  <code>staff123</code>
-                </div>
-              </div>
-            </div>
+          
 
             <div className="back-to-home">
               <button onClick={() => navigate('/')} className="btn-back" disabled={isLoading}>
@@ -505,15 +513,7 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="footer-content">
-          <div className="footer-copyright">
-            <p>{t.footerTagline}</p>
-            <p className="copyright-text">{t.copyright}</p>
-          </div>
-        </div>
-      </footer>
+  
 
       <style jsx>{`
         * {
@@ -529,6 +529,48 @@ const LoginPage = () => {
           min-height: 100vh;
         }
 
+        /* Success Popup */
+        .success-popup {
+          position: fixed;
+          top: 200px;
+          right: 20px;
+          z-index: 10000;
+          animation: slideInRight 0.3s ease;
+        }
+
+        .success-popup-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: #d1fae5;
+          border-left: 4px solid #10b981;
+          padding: 12px 20px;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          max-width: 350px;
+        }
+
+        .success-icon {
+          font-size: 1.2rem;
+        }
+
+        .success-message {
+          font-size: 0.85rem;
+          color: #065f46;
+          flex: 1;
+        }
+
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+
         /* HEADER 1 - Top Bar */
         .header-1 {
           position: fixed;
@@ -538,13 +580,8 @@ const LoginPage = () => {
           background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
           color: white;
           padding: 10px 0;
-          z-index: 1040;
+          z-index: 1003;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-          transition: all 0.3s ease;
-        }
-
-        .header-1.header-scrolled {
-          padding: 6px 0;
         }
 
         .container-1 {
@@ -669,15 +706,9 @@ const LoginPage = () => {
           background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%);
           color: #1a2c3e;
           padding: 12px 0;
-          z-index: 1030;
+          z-index: 1002;
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
-          transition: all 0.3s ease;
-        }
-
-        .header-2.header-scrolled {
-          padding: 8px 0;
-          top: 45px;
         }
 
         .container-2 {
@@ -707,9 +738,62 @@ const LoginPage = () => {
         .dept-name { font-size: 1rem; font-weight: 700; color: #0d47a1; letter-spacing: 1px; }
         .dept-address { font-size: 0.75rem; opacity: 0.7; color: #555; margin-top: 3px; }
 
+        /* HEADER 3 - Navigation Bar */
+        .header-3 {
+          position: fixed;
+          top: 119px;
+          left: 0;
+          width: 100%;
+          background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+          color: white;
+          padding: 12px 0;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          z-index: 1001;
+        }
+
+        .container-3 {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 0 40px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 20px;
+        }
+
+        .nav-menu-left {
+          display: flex;
+          gap: 20px;
+          align-items: center;
+        }
+
+        .nav-btn {
+          background: transparent;
+          border: none;
+          color: white;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 8px 20px;
+          border-radius: 40px;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .nav-btn:hover {
+          background: rgba(255,255,255,0.15);
+          transform: translateY(-1px);
+        }
+
+        .nav-icon { font-size: 1.1rem; }
+        .nav-text { font-size: 0.95rem; }
+
         /* Main Content */
         .main-content {
-          padding-top: 155px;
+          padding-top: 195px;
           min-height: calc(100vh - 200px);
         }
 
@@ -835,7 +919,6 @@ const LoginPage = () => {
           outline: none;
           border-color: #1565c0;
           background: white;
-          box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
         }
 
         .form-group input:disabled {
@@ -970,7 +1053,11 @@ const LoginPage = () => {
           margin-bottom: 4px;
         }
 
-        .back-to-home { margin-top: 24px; text-align: center; }
+        .back-to-home {
+          margin-top: 24px;
+          text-align: center;
+        }
+
         .btn-back {
           background: transparent;
           border: 2px solid #1565c0;
@@ -982,34 +1069,44 @@ const LoginPage = () => {
           transition: all 0.3s ease;
           font-size: 0.9rem;
         }
-        .btn-back:hover:not(:disabled) { background: #1565c0; color: white; transform: translateY(-2px); }
-        .btn-back:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .footer {
-          background: #0d2b5e;
+        .btn-back:hover:not(:disabled) {
+          background: #1565c0;
           color: white;
-          padding: 20px 24px;
-          margin-top: 40px;
-          text-align: center;
+          transform: translateY(-2px);
         }
-        .footer-content { max-width: 1200px; margin: 0 auto; }
-        .footer-copyright { text-align: center; font-size: 0.7rem; opacity: 0.7; }
-        .copyright-text { margin-top: 5px; font-size: 0.65rem; }
+
+        .btn-back:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+
+        .copyright-text {
+          margin-top: 5px;
+          font-size: 0.65rem;
+        }
+
+        @media (max-width: 1024px) {
+          .login-container { padding: 40px 20px; }
+        }
 
         @media (max-width: 768px) {
-          .main-content { padding-top: 220px; }
+          .main-content { padding-top: 280px; }
           .login-card { padding: 32px 24px; }
           .login-header h2 { font-size: 1.5rem; }
           .demo-info { flex-direction: column; gap: 12px; }
-          .container-1, .container-2 { flex-direction: column; text-align: center; padding: 0 20px; }
-          .header-left, .header-right, .logo-left, .logo-right { justify-content: center; }
-          .contact-info-group { flex-direction: column; }
+          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; padding: 0 20px; }
+          .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
+          .contact-info-group { flex-direction: column; gap: 8px; }
           .logo-left, .logo-right { display: none; }
           .dept-text-center { flex: 1; }
+          .success-popup { top: auto; bottom: 20px; right: 20px; left: 20px; max-width: calc(100% - 40px); }
+          .success-popup-content { max-width: 100%; }
         }
 
         @media (max-width: 480px) {
-          .main-content { padding-top: 250px; }
+          .main-content { padding-top: 320px; }
           .login-card { padding: 24px 20px; }
           .form-options { flex-direction: column; gap: 12px; align-items: flex-start; }
           .user-type-toggle { flex-direction: column; border-radius: 16px; }
