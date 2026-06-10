@@ -207,6 +207,29 @@ CREATE TABLE IF NOT EXISTS settings_notifications (
   admin_phone VARCHAR(50),
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS `staff` (
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `username` VARCHAR(100) NOT NULL UNIQUE,
+    `email` VARCHAR(255) NOT NULL UNIQUE,
+    `password` VARCHAR(255) NOT NULL,
+    `fullName` VARCHAR(255) NOT NULL,
+    `phone` VARCHAR(20) NULL,
+    `department` VARCHAR(100) DEFAULT 'General',
+    `role` ENUM('staff', 'supervisor', 'manager') DEFAULT 'staff',
+    `status` ENUM('active', 'inactive', 'suspended') DEFAULT 'active',
+    `isActive` BOOLEAN DEFAULT TRUE,
+    `lastLogin` DATETIME NULL,
+    `profileImage` VARCHAR(500) NULL,
+    `address` TEXT NULL,
+    `hireDate` DATETIME NULL,
+    `createdBy` INT NULL,
+    `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_staff_email` (`email`),
+    INDEX `idx_staff_username` (`username`),
+    INDEX `idx_staff_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Create index for faster lookups
 CREATE INDEX idx_users_email ON users(email);
