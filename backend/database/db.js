@@ -132,6 +132,109 @@ const initDatabase = () => {
             }
         });
 
+        // Create settings tables
+        const createSettingsTables = `
+            -- General Settings Table
+            CREATE TABLE IF NOT EXISTS settings_general (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                site_name VARCHAR(255) DEFAULT 'NTC Sahayatri',
+                site_name_np VARCHAR(255) DEFAULT 'एनटीसी सहयात्री',
+                site_description TEXT DEFAULT 'Complaint Tracking System for Nepal Telecom',
+                site_description_np TEXT DEFAULT 'नेपाल दूरसञ्चारको लागि गुनासो ट्र्याकिङ प्रणाली',
+                site_email VARCHAR(255) DEFAULT 'support@ntc.com.np',
+                site_phone VARCHAR(50) DEFAULT '01-4960008',
+                site_address TEXT DEFAULT 'Bhadrakali Plaza, Kathmandu',
+                site_address_np TEXT DEFAULT 'भद्रकाली प्लाजा, काठमाडौं',
+                timezone VARCHAR(100) DEFAULT 'Asia/Kathmandu',
+                date_format VARCHAR(50) DEFAULT 'YYYY-MM-DD',
+                time_format VARCHAR(10) DEFAULT '24h',
+                default_language VARCHAR(5) DEFAULT 'np',
+                items_per_page INTEGER DEFAULT 10,
+                enable_registration BOOLEAN DEFAULT 1,
+                enable_public_complaints BOOLEAN DEFAULT 1,
+                maintenance_mode BOOLEAN DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Email Settings Table
+            CREATE TABLE IF NOT EXISTS settings_email (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                smtp_host VARCHAR(255) DEFAULT 'smtp.gmail.com',
+                smtp_port VARCHAR(10) DEFAULT '587',
+                smtp_user VARCHAR(255) DEFAULT '',
+                smtp_password VARCHAR(255) DEFAULT '',
+                smtp_encryption VARCHAR(50) DEFAULT 'tls',
+                from_email VARCHAR(255) DEFAULT 'notifications@ntc.com.np',
+                from_name VARCHAR(255) DEFAULT 'NTC Sahayatri',
+                from_name_np VARCHAR(255) DEFAULT 'एनटीसी सहयात्री',
+                send_complaint_confirmation BOOLEAN DEFAULT 1,
+                send_complaint_update BOOLEAN DEFAULT 1,
+                send_complaint_resolved BOOLEAN DEFAULT 1,
+                send_newsletter BOOLEAN DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Security Settings Table
+            CREATE TABLE IF NOT EXISTS settings_security (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_timeout INTEGER DEFAULT 30,
+                max_login_attempts INTEGER DEFAULT 5,
+                lockout_duration INTEGER DEFAULT 15,
+                password_expiry_days INTEGER DEFAULT 90,
+                min_password_length INTEGER DEFAULT 8,
+                require_uppercase BOOLEAN DEFAULT 1,
+                require_lowercase BOOLEAN DEFAULT 1,
+                require_numbers BOOLEAN DEFAULT 1,
+                require_special_chars BOOLEAN DEFAULT 1,
+                two_factor_auth BOOLEAN DEFAULT 0,
+                ip_whitelist TEXT DEFAULT '',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Backup Settings Table
+            CREATE TABLE IF NOT EXISTS settings_backup (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                auto_backup BOOLEAN DEFAULT 1,
+                backup_frequency VARCHAR(20) DEFAULT 'daily',
+                backup_time VARCHAR(10) DEFAULT '02:00',
+                backup_retention INTEGER DEFAULT 30,
+                backup_location VARCHAR(500) DEFAULT '/backups/',
+                last_backup DATETIME,
+                last_backup_size VARCHAR(50),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Notification Settings Table
+            CREATE TABLE IF NOT EXISTS settings_notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email_notifications BOOLEAN DEFAULT 1,
+                sms_notifications BOOLEAN DEFAULT 0,
+                push_notifications BOOLEAN DEFAULT 1,
+                notify_new_complaint BOOLEAN DEFAULT 1,
+                notify_complaint_update BOOLEAN DEFAULT 1,
+                notify_complaint_resolved BOOLEAN DEFAULT 1,
+                notify_new_user BOOLEAN DEFAULT 1,
+                notify_system_update BOOLEAN DEFAULT 1,
+                admin_email VARCHAR(255) DEFAULT '',
+                admin_phone VARCHAR(50) DEFAULT '',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `;
+
+        // Execute settings tables creation
+        db.exec(createSettingsTables, (err) => {
+            if (err) {
+                console.error('Error creating settings tables:', err);
+            } else {
+                console.log('✅ Settings tables ready');
+            }
+        });
+
         // Create indexes for better performance
         db.run(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`, () => {});
         db.run(`CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)`, () => {});

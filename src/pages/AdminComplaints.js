@@ -248,7 +248,7 @@ const AdminComplaints = () => {
     }
   };
 
-  // Update complaint status - FIXED VERSION
+  // FIXED: Update complaint status - CORRECT ENDPOINT WITH PROPER ID HANDLING
   const updateComplaintStatus = async (complaintId, newStatusValue, complaintType) => {
     if (!complaintId || !newStatusValue) {
       showToast('Invalid complaint ID or status', 'error');
@@ -282,12 +282,12 @@ const AdminComplaints = () => {
           backendStatus = 'pending';
       }
       
-      // Determine endpoint based on complaint type
+      // CORRECT ENDPOINTS
       let endpoint;
       if (complaintType === 'regular') {
         endpoint = `${API_URL}/admin/complaints/${complaintId}/status`;
       } else {
-        endpoint = `${API_URL}/admin/complaints/regarding/${complaintId}/status`;
+        endpoint = `${API_URL}/admin/complaint-regarding/${complaintId}/status`;
       }
       
       console.log('Updating status:', { endpoint, complaintId, newStatusValue, backendStatus, complaintType });
@@ -304,11 +304,19 @@ const AdminComplaints = () => {
       );
       
       if (response.data.success) {
-        // Update local state
-        const updateComplaint = (complaint) => 
-          complaint.complaintId === complaintId 
-            ? { ...complaint, status: newStatusValue, rawStatus: backendStatus }
-            : complaint;
+        // Update local state - FIXED: Properly identify complaints by ID
+        const updateComplaint = (complaint) => {
+          // Check both id and complaintId fields
+          const complaintIdToCheck = complaint.id || complaint.complaintId;
+          if (complaintIdToCheck === complaintId) {
+            return { 
+              ...complaint, 
+              status: newStatusValue, 
+              rawStatus: backendStatus 
+            };
+          }
+          return complaint;
+        };
         
         setRegularComplaints(prev => prev.map(updateComplaint));
         setRegardingComplaints(prev => prev.map(updateComplaint));
@@ -332,6 +340,14 @@ const AdminComplaints = () => {
           errorMessage = language === 'np' 
             ? 'प्रमाणीकरण असफल। कृपया पुन: लगइन गर्नुहोस्।' 
             : 'Authentication failed. Please login again.';
+        } else if (error.response.status === 404) {
+          errorMessage = language === 'np'
+            ? 'एपीआई एन्डपोइन्ट फेला परेन। कृपया प्रणाली प्रशासकलाई सम्पर्क गर्नुहोस्।'
+            : 'API endpoint not found. Please contact system administrator.';
+        } else if (error.response.status === 500) {
+          errorMessage = language === 'np'
+            ? 'सर्भर त्रुटि। कृपया पछि पुन: प्रयास गर्नुहोस्।'
+            : 'Server error. Please try again later.';
         } else if (error.response.data?.message) {
           errorMessage = error.response.data.message;
         }
@@ -614,6 +630,7 @@ const AdminComplaints = () => {
     setSelectedComplaint(null);
   };
 
+  // FIXED: Open status modal with proper complaint data
   const openStatusModal = (complaint) => {
     setSelectedComplaint(complaint);
     setNewStatus(complaint.status);
@@ -627,9 +644,16 @@ const AdminComplaints = () => {
     setNewStatus('');
   };
 
+  // FIXED: Handle status update with proper ID extraction
   const handleStatusUpdate = () => {
     if (selectedComplaint && newStatus && newStatus !== selectedComplaint.status) {
-      updateComplaintStatus(selectedComplaint.complaintId, newStatus, selectedComplaint.type);
+      // Get the correct ID (either id or complaintId)
+      const complaintId = selectedComplaint.id || selectedComplaint.complaintId;
+      if (!complaintId) {
+        showToast('Invalid complaint ID', 'error');
+        return;
+      }
+      updateComplaintStatus(complaintId, newStatus, selectedComplaint.type);
     } else if (newStatus === selectedComplaint?.status) {
       closeStatusModal();
     }

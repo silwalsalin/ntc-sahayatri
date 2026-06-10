@@ -1,6 +1,7 @@
 // src/pages/AdminSettingsGeneral.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 
@@ -11,6 +12,7 @@ const AdminSettingsGeneral = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   // General Settings State
   const [generalSettings, setGeneralSettings] = useState({
@@ -36,7 +38,7 @@ const AdminSettingsGeneral = () => {
   const [emailSettings, setEmailSettings] = useState({
     smtpHost: 'smtp.gmail.com',
     smtpPort: '587',
-    smtpUser: 'noreply@ntc.com.np',
+    smtpUser: '',
     smtpPassword: '',
     smtpEncryption: 'tls',
     fromEmail: 'notifications@ntc.com.np',
@@ -70,8 +72,8 @@ const AdminSettingsGeneral = () => {
     backupTime: '02:00',
     backupRetention: 30,
     backupLocation: '/backups/',
-    lastBackup: '2024-02-25 10:30:00',
-    lastBackupSize: '245 MB'
+    lastBackup: '',
+    lastBackupSize: ''
   });
 
   // Notification Settings State
@@ -84,20 +86,322 @@ const AdminSettingsGeneral = () => {
     notifyComplaintResolved: true,
     notifyNewUser: true,
     notifySystemUpdate: true,
-    adminEmail: 'admin@ntc.com.np',
-    adminPhone: '9841000001'
+    adminEmail: '',
+    adminPhone: ''
   });
 
-  // Check authentication
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+  // Helper function to get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('token') || localStorage.getItem('adminToken');
+  };
+
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
+
+  // Fetch all settings from backend
+  const fetchSettings = async () => {
+    try {
+      setLoading(true);
+      const token = getAuthToken();
+      
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+      
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      // Fetch general settings
+      try {
+        const generalResponse = await axios.get(`${API_URL}/settings/general`, { headers });
+        if (generalResponse.data.success && generalResponse.data.data) {
+          setGeneralSettings(prev => ({ ...prev, ...generalResponse.data.data }));
+          console.log('✅ General settings loaded');
+        }
+      } catch (error) {
+        console.error('Error fetching general settings:', error.response?.data || error.message);
+      }
+
+      // Fetch email settings
+      try {
+        const emailResponse = await axios.get(`${API_URL}/settings/email`, { headers });
+        if (emailResponse.data.success && emailResponse.data.data) {
+          setEmailSettings(prev => ({ ...prev, ...emailResponse.data.data }));
+          console.log('✅ Email settings loaded');
+        }
+      } catch (error) {
+        console.error('Error fetching email settings:', error.response?.data || error.message);
+      }
+
+      // Fetch security settings
+      try {
+        const securityResponse = await axios.get(`${API_URL}/settings/security`, { headers });
+        if (securityResponse.data.success && securityResponse.data.data) {
+          setSecuritySettings(prev => ({ ...prev, ...securityResponse.data.data }));
+          console.log('✅ Security settings loaded');
+        }
+      } catch (error) {
+        console.error('Error fetching security settings:', error.response?.data || error.message);
+      }
+
+      // Fetch backup settings
+      try {
+        const backupResponse = await axios.get(`${API_URL}/settings/backup`, { headers });
+        if (backupResponse.data.success && backupResponse.data.data) {
+          setBackupSettings(prev => ({ ...prev, ...backupResponse.data.data }));
+          console.log('✅ Backup settings loaded');
+        }
+      } catch (error) {
+        console.error('Error fetching backup settings:', error.response?.data || error.message);
+      }
+
+      // Fetch notification settings
+      try {
+        const notificationResponse = await axios.get(`${API_URL}/settings/notifications`, { headers });
+        if (notificationResponse.data.success && notificationResponse.data.data) {
+          setNotificationSettings(prev => ({ ...prev, ...notificationResponse.data.data }));
+          console.log('✅ Notification settings loaded');
+        }
+      } catch (error) {
+        console.error('Error fetching notification settings:', error.response?.data || error.message);
+      }
+
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      showToast(language === 'np' ? 'सेटिङ्स लोड गर्न असफल। पूर्वनिर्धारित मान प्रयोग गरिँदै।' : 'Failed to load settings. Using defaults.', 'error');
+    } finally {
+      setTimeout(() => setLoading(false), 500);
+    }
+  };
+
+  // Save all settings to backend
+  const saveSettings = async (section, data) => {
+    try {
+      const token = getAuthToken();
+      
+      if (!token) {
+        console.error('No auth token found');
+        return false;
+      }
+      
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      let endpoint = '';
+      switch (section) {
+        case 'general':
+          endpoint = `${API_URL}/settings/general`;
+          break;
+        case 'email':
+          endpoint = `${API_URL}/settings/email`;
+          break;
+        case 'security':
+          endpoint = `${API_URL}/settings/security`;
+          break;
+        case 'backup':
+          endpoint = `${API_URL}/settings/backup`;
+          break;
+        case 'notifications':
+          endpoint = `${API_URL}/settings/notifications`;
+          break;
+        default:
+          return false;
+      }
+
+      console.log(`Saving ${section} settings to:`, endpoint);
+      const response = await axios.put(endpoint, data, { headers });
+      
+      if (response.data.success) {
+        console.log(`✅ ${section} settings saved successfully`);
+        return true;
+      } else {
+        console.error(`❌ Failed to save ${section} settings:`, response.data.message);
+        return false;
+      }
+    } catch (error) {
+      console.error(`Error saving ${section} settings:`, error.response?.data || error.message);
+      return false;
+    }
+  };
+
+  // Save all settings
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    setSaveSuccess(false);
+
+    try {
+      // Save all sections
+      const results = await Promise.all([
+        saveSettings('general', generalSettings),
+        saveSettings('email', emailSettings),
+        saveSettings('security', securitySettings),
+        saveSettings('backup', backupSettings),
+        saveSettings('notifications', notificationSettings)
+      ]);
+
+      const allSaved = results.every(result => result === true);
+      
+      if (allSaved) {
+        setSaveSuccess(true);
+        showToast(language === 'np' ? 'सेटिङ्स सफलतापूर्वक सुरक्षित गरियो' : 'Settings saved successfully', 'success');
+        setTimeout(() => setSaveSuccess(false), 3000);
+        // Refresh settings to confirm save
+        await fetchSettings();
+      } else {
+        const failedCount = results.filter(r => r === false).length;
+        showToast(
+          language === 'np' 
+            ? `${failedCount} सेटिङ्स सुरक्षित गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।` 
+            : `Failed to save ${failedCount} settings. Please try again.`, 
+          'error'
+        );
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      showToast(language === 'np' ? 'सेटिङ्स सुरक्षित गर्न असफल' : 'Failed to save settings', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Handle manual backup
+  const handleManualBackup = async () => {
+    try {
+      const token = getAuthToken();
+      
+      if (!token) {
+        showToast(language === 'np' ? 'प्रमाणीकरण त्रुटि। कृपया पुन: लगइन गर्नुहोस्।' : 'Authentication error. Please login again.', 'error');
+        return;
+      }
+      
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await axios.post(`${API_URL}/settings/backup/now`, {}, { headers });
+      
+      if (response.data.success) {
+        showToast(language === 'np' ? 'ब्याकअप सफलतापूर्वक पूरा भयो' : 'Backup completed successfully', 'success');
+        // Update last backup info
+        if (response.data.data) {
+          setBackupSettings(prev => ({
+            ...prev,
+            lastBackup: response.data.data.lastBackup,
+            lastBackupSize: response.data.data.size
+          }));
+        }
+      } else {
+        showToast(language === 'np' ? 'ब्याकअप असफल' : 'Backup failed', 'error');
+      }
+    } catch (error) {
+      console.error('Error creating backup:', error);
+      showToast(language === 'np' ? 'ब्याकअप सिर्जना गर्न असफल' : 'Failed to create backup', 'error');
+    }
+  };
+
+  // Handle test email
+  const handleTestEmail = async () => {
+    try {
+      const token = getAuthToken();
+      
+      if (!token) {
+        showToast(language === 'np' ? 'प्रमाणीकरण त्रुटि। कृपया पुन: लगइन गर्नुहोस्।' : 'Authentication error. Please login again.', 'error');
+        return;
+      }
+      
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      const testEmailTo = notificationSettings.adminEmail || emailSettings.fromEmail || 'admin@example.com';
+      
+      const response = await axios.post(`${API_URL}/settings/email/test`, {
+        to: testEmailTo,
+        subject: language === 'np' ? 'एनटीसी सहयात्रीबाट परीक्षण इमेल' : 'Test Email from NTC Sahayatri',
+        message: language === 'np' 
+          ? 'यो एनटीसी सहयात्री प्रणालीबाट एउटा परीक्षण इमेल हो। तपाईंको इमेल सेटिङ्स सही रूपमा कन्फिगर गरिएको छ।'
+          : 'This is a test email from NTC Sahayatri system. Your email settings are configured correctly.'
+      }, { headers });
+      
+      if (response.data.success) {
+        showToast(language === 'np' ? `परीक्षण इमेल ${testEmailTo} मा सफलतापूर्वक पठाइयो` : `Test email sent successfully to ${testEmailTo}`, 'success');
+      } else {
+        showToast(language === 'np' ? 'परीक्षण इमेल पठाउन असफल' : 'Failed to send test email', 'error');
+      }
+    } catch (error) {
+      console.error('Error sending test email:', error);
+      showToast(language === 'np' ? 'परीक्षण इमेल पठाउन असफल' : 'Failed to send test email', 'error');
+    }
+  };
+
+  // Check authentication and fetch settings
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    const user = localStorage.getItem('adminUser');
+    const token = getAuthToken();
+    const user = localStorage.getItem('adminUser') || localStorage.getItem('user');
+    
     if (!token || !user) {
       navigate('/admin-login');
     } else {
-      setTimeout(() => setLoading(false), 500);
+      fetchSettings();
     }
   }, [navigate]);
+
+  // Handle general settings change
+  const handleGeneralChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setGeneralSettings(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  // Handle email settings change
+  const handleEmailChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setEmailSettings(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  // Handle security settings change
+  const handleSecurityChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setSecuritySettings(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  // Handle backup settings change
+  const handleBackupChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setBackupSettings(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  // Handle notification settings change
+  const handleNotificationChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setNotificationSettings(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
 
   const content = {
     np: {
@@ -174,7 +478,12 @@ const AdminSettingsGeneral = () => {
       testEmail: 'परीक्षण इमेल पठाउनुहोस्',
       backupNow: 'अहिले ब्याकअप गर्नुहोस्',
       english: 'अंग्रेजी',
-      nepali: 'नेपाली'
+      nepali: 'नेपाली',
+      general: 'साधारण',
+      email: 'इमेल',
+      security: 'सुरक्षा',
+      backup: 'ब्याकअप',
+      notifications: 'सूचनाहरू'
     },
     en: {
       settings: 'Settings',
@@ -250,84 +559,23 @@ const AdminSettingsGeneral = () => {
       testEmail: 'Send Test Email',
       backupNow: 'Backup Now',
       english: 'English',
-      nepali: 'Nepali'
+      nepali: 'Nepali',
+      general: 'General',
+      email: 'Email',
+      security: 'Security',
+      backup: 'Backup',
+      notifications: 'Notifications'
     }
   };
 
   const t = content[language];
 
-  // Handle general settings change
-  const handleGeneralChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setGeneralSettings(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  // Handle email settings change
-  const handleEmailChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setEmailSettings(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  // Handle security settings change
-  const handleSecurityChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setSecuritySettings(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  // Handle backup settings change
-  const handleBackupChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setBackupSettings(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  // Handle notification settings change
-  const handleNotificationChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setNotificationSettings(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  // Save all settings
-  const handleSaveSettings = async () => {
-    setSaving(true);
-    setSaveSuccess(false);
-    
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setSaving(false);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
-    alert(t.saveSuccess);
-  };
-
-  const handleManualBackup = () => {
-    alert(t.backupNow);
-  };
-
-  const handleTestEmail = () => {
-    alert(t.testEmail);
-  };
-
   const tabs = [
-    { id: 'general', label: t.generalSettings, icon: '⚙️' },
-    { id: 'email', label: t.emailSettings, icon: '✉️' },
-    { id: 'security', label: t.securitySettings, icon: '🔒' },
-    { id: 'backup', label: t.backupSettings, icon: '💾' },
-    { id: 'notifications', label: t.notificationSettings, icon: '🔔' }
+    { id: 'general', label: t.general, icon: '⚙️' },
+    { id: 'email', label: t.email, icon: '✉️' },
+    { id: 'security', label: t.security, icon: '🔒' },
+    { id: 'backup', label: t.backup, icon: '💾' },
+    { id: 'notifications', label: t.notifications, icon: '🔔' }
   ];
 
   if (loading) {
@@ -341,6 +589,17 @@ const AdminSettingsGeneral = () => {
 
   return (
     <div className="admin-settings">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
       <div className="dashboard-layout">
@@ -782,6 +1041,7 @@ const AdminSettingsGeneral = () => {
                       rows="3"
                       placeholder="192.168.1.1&#10;10.0.0.1&#10;172.16.0.1"
                     />
+                    <small>Enter one IP address per line</small>
                   </div>
                 </div>
               </div>
@@ -845,16 +1105,18 @@ const AdminSettingsGeneral = () => {
                     </div>
                   </div>
 
-                  <div className="backup-info">
-                    <div className="info-row">
-                      <span className="info-label">{t.lastBackup}:</span>
-                      <span className="info-value">{backupSettings.lastBackup}</span>
+                  {(backupSettings.lastBackup || backupSettings.lastBackupSize) && (
+                    <div className="backup-info">
+                      <div className="info-row">
+                        <span className="info-label">{t.lastBackup}:</span>
+                        <span className="info-value">{backupSettings.lastBackup || 'N/A'}</span>
+                      </div>
+                      <div className="info-row">
+                        <span className="info-label">{t.lastBackupSize}:</span>
+                        <span className="info-value">{backupSettings.lastBackupSize || 'N/A'}</span>
+                      </div>
                     </div>
-                    <div className="info-row">
-                      <span className="info-label">{t.lastBackupSize}:</span>
-                      <span className="info-value">{backupSettings.lastBackupSize}</span>
-                    </div>
-                  </div>
+                  )}
 
                   <button className="manual-backup-btn" onClick={handleManualBackup}>
                     💾 {t.backupNow}
@@ -899,23 +1161,25 @@ const AdminSettingsGeneral = () => {
                     </label>
                   </div>
 
-                  <div className="form-group">
-                    <label>{t.adminEmail}</label>
-                    <input
-                      type="email"
-                      name="adminEmail"
-                      value={notificationSettings.adminEmail}
-                      onChange={handleNotificationChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t.adminPhone}</label>
-                    <input
-                      type="text"
-                      name="adminPhone"
-                      value={notificationSettings.adminPhone}
-                      onChange={handleNotificationChange}
-                    />
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>{t.adminEmail}</label>
+                      <input
+                        type="email"
+                        name="adminEmail"
+                        value={notificationSettings.adminEmail}
+                        onChange={handleNotificationChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t.adminPhone}</label>
+                      <input
+                        type="text"
+                        name="adminPhone"
+                        value={notificationSettings.adminPhone}
+                        onChange={handleNotificationChange}
+                      />
+                    </div>
                   </div>
 
                   <div className="checkbox-group">
@@ -988,6 +1252,43 @@ const AdminSettingsGeneral = () => {
           position: relative;
         }
 
+        .toast-notification {
+          position: fixed;
+          top: 200px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 350px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+
         .loading-container {
           display: flex;
           flex-direction: column;
@@ -1010,7 +1311,6 @@ const AdminSettingsGeneral = () => {
           to { transform: rotate(360deg); }
         }
 
-        /* Dashboard Layout */
         .dashboard-layout {
           display: flex;
           height: calc(100vh - 195px);
@@ -1020,7 +1320,6 @@ const AdminSettingsGeneral = () => {
           overflow: hidden;
         }
 
-        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -1033,7 +1332,6 @@ const AdminSettingsGeneral = () => {
           overflow-y: auto;
         }
 
-        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
           margin-left: 260px;
@@ -1056,10 +1354,6 @@ const AdminSettingsGeneral = () => {
         .main-container::-webkit-scrollbar-thumb {
           background: #3b82f6;
           border-radius: 10px;
-        }
-
-        .main-container::-webkit-scrollbar-thumb:hover {
-          background: #2563eb;
         }
 
         .content-wrapper {
@@ -1227,6 +1521,12 @@ const AdminSettingsGeneral = () => {
           box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
         }
 
+        .form-group small {
+          font-size: 0.7rem;
+          color: #64748b;
+          margin-top: 4px;
+        }
+
         .checkbox-group {
           display: flex;
           flex-wrap: wrap;
@@ -1291,7 +1591,6 @@ const AdminSettingsGeneral = () => {
           color: #0f172a;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
           .admin-settings {
             height: auto;
@@ -1354,6 +1653,11 @@ const AdminSettingsGeneral = () => {
         @media (max-width: 480px) {
           .settings-card {
             padding: 20px;
+          }
+          
+          .info-row {
+            flex-direction: column;
+            gap: 4px;
           }
         }
       `}</style>

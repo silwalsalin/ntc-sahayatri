@@ -1,6 +1,7 @@
 // src/pages/AdminNotifications.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 
@@ -15,6 +16,12 @@ const AdminNotifications = () => {
   const [showSendModal, setShowSendModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [backendStatus, setBackendStatus] = useState('checking');
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
+
+  // State for notifications
+  const [notifications, setNotifications] = useState([]);
+  const [readNotifications, setReadNotifications] = useState(new Set());
 
   // Send notification form state
   const [sendNotification, setSendNotification] = useState({
@@ -30,252 +37,285 @@ const AdminNotifications = () => {
 
   const [formErrors, setFormErrors] = useState({});
 
-  // Sample notifications data
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: 'नयाँ गुनासो दर्ता',
-      enTitle: 'New Complaint Registered',
-      message: 'रमेश केसीबाट नयाँ गुनासो प्राप्त भएको छ। कृपया समीक्षा गर्नुहोस्।',
-      enMessage: 'New complaint received from Ramesh KC. Please review.',
-      type: 'complaint',
-      type_np: 'गुनासो',
-      type_en: 'Complaint',
-      status: 'unread',
-      status_np: 'नपढिएको',
-      status_en: 'Unread',
-      date: '२०८०-०२-२५',
-      enDate: '2024-02-25',
-      time: '१०:३०',
-      enTime: '10:30',
-      sender: 'प्रणाली',
-      enSender: 'System',
-      priority: 'high',
-      icon: '📋',
-      link: '/admin-complaints/1'
-    },
-    {
-      id: 2,
-      title: 'गुनासो समाधान',
-      enTitle: 'Complaint Resolved',
-      message: 'NTC-2024-002 टिकेट नम्बरको गुनासो सफलतापूर्वक समाधान भएको छ।',
-      enMessage: 'Complaint with ticket number NTC-2024-002 has been successfully resolved.',
-      type: 'update',
-      type_np: 'अपडेट',
-      type_en: 'Update',
-      status: 'read',
-      status_np: 'पढिएको',
-      status_en: 'Read',
-      date: '२०८०-०२-२४',
-      enDate: '2024-02-24',
-      time: '१४:१५',
-      enTime: '14:15',
-      sender: 'प्रशासक',
-      enSender: 'Admin',
-      priority: 'medium',
-      icon: '✅',
-      link: '/admin-complaints/resolved'
-    },
-    {
-      id: 3,
-      title: 'नयाँ प्रयोगकर्ता दर्ता',
-      enTitle: 'New User Registered',
-      message: 'सीता शर्मा नामक नयाँ प्रयोगकर्ता प्रणालीमा दर्ता भएको छ।',
-      enMessage: 'New user Sita Sharma has registered on the system.',
-      type: 'user',
-      type_np: 'प्रयोगकर्ता',
-      type_en: 'User',
-      status: 'unread',
-      status_np: 'नपढिएको',
-      status_en: 'Unread',
-      date: '२०८०-०२-२३',
-      enDate: '2024-02-23',
-      time: '०९:४५',
-      enTime: '09:45',
-      sender: 'प्रणाली',
-      enSender: 'System',
-      priority: 'low',
-      icon: '👤',
-      link: '/admin-users'
-    },
-    {
-      id: 4,
-      title: 'रिपोर्ट तयार',
-      enTitle: 'Report Ready',
-      message: 'मासिक गुनासो रिपोर्ट तयार भएको छ। डाउनलोड गर्नुहोस्।',
-      enMessage: 'Monthly complaint report is ready. Please download.',
-      type: 'report',
-      type_np: 'रिपोर्ट',
-      type_en: 'Report',
-      status: 'read',
-      status_np: 'पढिएको',
-      status_en: 'Read',
-      date: '२०८०-०२-२२',
-      enDate: '2024-02-22',
-      time: '१६:२०',
-      enTime: '16:20',
-      sender: 'प्रणाली',
-      enSender: 'System',
-      priority: 'medium',
-      icon: '📊',
-      link: '/admin-reports/complaints'
-    },
-    {
-      id: 5,
-      title: 'उच्च प्राथमिकता गुनासो',
-      enTitle: 'High Priority Complaint',
-      message: 'NTC-2024-005 टिकेट नम्बरको गुनासोलाई उच्च प्राथमिकता दिइएको छ।',
-      enMessage: 'Complaint with ticket number NTC-2024-005 has been marked as high priority.',
-      type: 'complaint',
-      type_np: 'गुनासो',
-      type_en: 'Complaint',
-      status: 'unread',
-      status_np: 'नपढिएको',
-      status_en: 'Unread',
-      date: '२०८०-०२-२१',
-      enDate: '2024-02-21',
-      time: '११:००',
-      enTime: '11:00',
-      sender: 'प्रणाली',
-      enSender: 'System',
-      priority: 'high',
-      icon: '🔴',
-      link: '/admin-complaints/pending'
-    },
-    {
-      id: 6,
-      title: 'प्रणाली अपडेट',
-      enTitle: 'System Update',
-      message: 'प्रणालीमा नयाँ सुविधाहरू थपिएका छन्। विवरणको लागि कृपया हेर्नुहोस्।',
-      enMessage: 'New features have been added to the system. Please check for details.',
-      type: 'system',
-      type_np: 'प्रणाली',
-      type_en: 'System',
-      status: 'read',
-      status_np: 'पढिएको',
-      status_en: 'Read',
-      date: '२०८०-०२-२०',
-      enDate: '2024-02-20',
-      time: '०८:००',
-      enTime: '08:00',
-      sender: 'प्रशासक',
-      enSender: 'Admin',
-      priority: 'low',
-      icon: '🔄',
-      link: '/admin-dashboard'
-    },
-    {
-      id: 7,
-      title: 'समय सीमा नजिकियो',
-      enTitle: 'Deadline Approaching',
-      message: 'NTC-2024-003 टिकेट नम्बरको गुनासोको समय सीमा नजिकिएको छ।',
-      enMessage: 'Deadline for complaint ticket NTC-2024-003 is approaching.',
-      type: 'reminder',
-      type_np: 'सम्झना',
-      type_en: 'Reminder',
-      status: 'unread',
-      status_np: 'नपढिएको',
-      status_en: 'Unread',
-      date: '२०८०-०२-१९',
-      enDate: '2024-02-19',
-      time: '१५:३०',
-      enTime: '15:30',
-      sender: 'प्रणाली',
-      enSender: 'System',
-      priority: 'high',
-      icon: '⏰',
-      link: '/admin-complaints/in-progress'
-    },
-    {
-      id: 8,
-      title: 'प्रतिक्रिया प्राप्त',
-      enTitle: 'Feedback Received',
-      message: 'NTC-2024-002 टिकेट नम्बरको गुनासोमा प्रयोगकर्ताबाट प्रतिक्रिया प्राप्त भएको छ।',
-      enMessage: 'Feedback received from user for complaint ticket NTC-2024-002.',
-      type: 'feedback',
-      type_np: 'प्रतिक्रिया',
-      type_en: 'Feedback',
-      status: 'read',
-      status_np: 'पढिएको',
-      status_en: 'Read',
-      date: '२०८०-०२-१८',
-      enDate: '2024-02-18',
-      time: '१३:१०',
-      enTime: '13:10',
-      sender: 'प्रणाली',
-      enSender: 'System',
-      priority: 'medium',
-      icon: '💬',
-      link: '/admin-complaints/resolved'
-    }
-  ]);
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-  // Notification types for filter
-  const notificationTypes = {
-    np: {
-      all: 'सबै प्रकार',
-      complaint: 'गुनासो',
-      update: 'अपडेट',
-      user: 'प्रयोगकर्ता',
-      report: 'रिपोर्ट',
-      system: 'प्रणाली',
-      reminder: 'सम्झना',
-      feedback: 'प्रतिक्रिया',
-      general: 'साधारण'
-    },
-    en: {
-      all: 'All Types',
-      complaint: 'Complaint',
-      update: 'Update',
-      user: 'User',
-      report: 'Report',
-      system: 'System',
-      reminder: 'Reminder',
-      feedback: 'Feedback',
-      general: 'General'
+  // Helper function to get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('token') || localStorage.getItem('adminToken');
+  };
+
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
+
+  // Format date to Nepali format
+  const formatNepaliDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      const year = d.getFullYear() - 57;
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      return '-';
     }
   };
 
-  // Status options for filter
-  const statusOptions = {
-    np: {
-      all: 'सबै स्थिति',
-      read: 'पढिएको',
-      unread: 'नपढिएको'
-    },
-    en: {
-      all: 'All Status',
-      read: 'Read',
-      unread: 'Unread'
+  // Format date to English format
+  const formatEnglishDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      return d.toISOString().split('T')[0];
+    } catch (error) {
+      return '-';
     }
   };
 
-  // Recipient options
-  const recipientOptions = {
-    np: {
-      all: 'सबै प्रयोगकर्ता',
-      admin: 'प्रशासक',
-      staff: 'कर्मचारी',
-      specific: 'विशेष प्रयोगकर्ता'
-    },
-    en: {
-      all: 'All Users',
-      admin: 'Admins',
-      staff: 'Staff',
-      specific: 'Specific Users'
+  // Format time
+  const formatTime = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (error) {
+      return '-';
     }
   };
 
-  // Check authentication
+  // Fetch complaints and create notifications
+  const fetchComplaintsAndCreateNotifications = async () => {
+    try {
+      const token = getAuthToken();
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Fetch regular complaints
+      let regularComplaints = [];
+      let regardingComplaints = [];
+      
+      try {
+        const regularResponse = await axios.get(`${API_URL}/complaints`, { headers });
+        if (regularResponse.data.success && Array.isArray(regularResponse.data.data)) {
+          regularComplaints = regularResponse.data.data;
+        }
+      } catch (error) {
+        console.error('Error fetching regular complaints:', error);
+      }
+      
+      // Fetch complaint regarding
+      try {
+        const regardingResponse = await axios.get(`${API_URL}/complaint-regarding`, { headers });
+        if (regardingResponse.data.success && Array.isArray(regardingResponse.data.data)) {
+          regardingComplaints = regardingResponse.data.data;
+        }
+      } catch (error) {
+        console.error('Error fetching regarding complaints:', error);
+      }
+      
+      const allComplaints = [...regularComplaints, ...regardingComplaints];
+      
+      // Create notifications from complaints
+      const complaintNotifications = allComplaints.map(complaint => {
+        const isRegular = complaint.nature_of_complaint !== undefined;
+        const complaintType = isRegular ? 'complaint' : 'complaint-regarding';
+        const complaintTypeLabel = isRegular ? 
+          (language === 'np' ? 'साधारण गुनासो' : 'Regular Complaint') : 
+          (language === 'np' ? 'गुनासो सम्बन्धी' : 'Complaint Regarding');
+        
+        let status = 'unread';
+        let priority = 'medium';
+        
+        // Set priority based on complaint priority
+        if (complaint.priority === 'high' || complaint.priority === 'urgent') {
+          priority = 'high';
+        } else if (complaint.priority === 'low') {
+          priority = 'low';
+        }
+        
+        // Generate notification title and message
+        let title = '';
+        let enTitle = '';
+        let message = '';
+        let enMessage = '';
+        let icon = '📋';
+        
+        if (complaint.status === 'pending' || complaint.status === 'Pending') {
+          title = `नयाँ गुनासो: ${complaint.complaint_number || `#${complaint.id}`}`;
+          enTitle = `New Complaint: ${complaint.complaint_number || `#${complaint.id}`}`;
+          message = `${complaint.name || 'प्रयोगकर्ता'} बाट नयाँ गुनासो प्राप्त भएको छ। कृपया समीक्षा गर्नुहोस्।`;
+          enMessage = `New complaint received from ${complaint.name || 'user'}. Please review.`;
+          icon = '🆕';
+          status = 'unread';
+        } else if (complaint.status === 'resolved' || complaint.status === 'Resolved') {
+          title = `गुनासो समाधान: ${complaint.complaint_number || `#${complaint.id}`}`;
+          enTitle = `Complaint Resolved: ${complaint.complaint_number || `#${complaint.id}`}`;
+          message = `टिकेट नम्बर ${complaint.complaint_number} को गुनासो सफलतापूर्वक समाधान भएको छ।`;
+          enMessage = `Complaint with ticket number ${complaint.complaint_number} has been successfully resolved.`;
+          icon = '✅';
+        } else if (complaint.status === 'in-progress' || complaint.status === 'In Progress') {
+          title = `गुनासो प्रगतिमा: ${complaint.complaint_number || `#${complaint.id}`}`;
+          enTitle = `Complaint In Progress: ${complaint.complaint_number || `#${complaint.id}`}`;
+          message = `टिकेट नम्बर ${complaint.complaint_number} को गुनासो प्रगतिमा छ।`;
+          enMessage = `Complaint with ticket number ${complaint.complaint_number} is in progress.`;
+          icon = '🔄';
+        } else {
+          title = `गुनासो अपडेट: ${complaint.complaint_number || `#${complaint.id}`}`;
+          enTitle = `Complaint Update: ${complaint.complaint_number || `#${complaint.id}`}`;
+          message = `टिकेट नम्बर ${complaint.complaint_number} को गुनासोमा अपडेट भएको छ। वर्तमान स्थिति: ${complaint.status}`;
+          enMessage = `Complaint with ticket number ${complaint.complaint_number} has been updated. Current status: ${complaint.status}`;
+          icon = '📝';
+        }
+        
+        return {
+          id: `comp_${complaint.id}_${complaintType}`,
+          originalId: complaint.id,
+          title: title,
+          enTitle: enTitle,
+          message: message,
+          enMessage: enMessage,
+          type: complaintType,
+          type_np: complaintTypeLabel,
+          type_en: complaintTypeLabel,
+          status: status,
+          status_np: status === 'unread' ? 'नपढिएको' : 'पढिएको',
+          status_en: status === 'unread' ? 'Unread' : 'Read',
+          date: formatNepaliDate(complaint.created_at),
+          enDate: formatEnglishDate(complaint.created_at),
+          time: formatTime(complaint.created_at),
+          enTime: formatTime(complaint.created_at),
+          sender: complaint.name || 'प्रयोगकर्ता',
+          enSender: complaint.name || 'User',
+          priority: priority,
+          icon: icon,
+          link: `/admin-complaints/${complaint.id}`,
+          complaintData: complaint,
+          createdAt: complaint.created_at
+        };
+      });
+      
+      // Sort by date (newest first)
+      complaintNotifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      // Load read status from localStorage
+      const savedReadNotifications = localStorage.getItem('readNotifications');
+      if (savedReadNotifications) {
+        setReadNotifications(new Set(JSON.parse(savedReadNotifications)));
+      }
+      
+      setNotifications(complaintNotifications);
+      setBackendStatus('connected');
+      
+    } catch (error) {
+      console.error('Error fetching complaints:', error);
+      setBackendStatus('disconnected');
+      // Load sample notifications if backend is not available
+      loadSampleNotifications();
+    } finally {
+      setTimeout(() => setLoading(false), 500);
+    }
+  };
+
+  // Load sample notifications for demonstration
+  const loadSampleNotifications = () => {
+    const sampleNotifications = [
+      {
+        id: 1,
+        originalId: 101,
+        title: 'नयाँ गुनासो: NTC-2024-001',
+        enTitle: 'New Complaint: NTC-2024-001',
+        message: 'राम बहादुर बाट नयाँ गुनासो प्राप्त भएको छ। कृपया समीक्षा गर्नुहोस्।',
+        enMessage: 'New complaint received from Ram Bahadur. Please review.',
+        type: 'complaint',
+        type_np: 'साधारण गुनासो',
+        type_en: 'Regular Complaint',
+        status: 'unread',
+        status_np: 'नपढिएको',
+        status_en: 'Unread',
+        date: formatNepaliDate(new Date()),
+        enDate: formatEnglishDate(new Date()),
+        time: formatTime(new Date()),
+        enTime: formatTime(new Date()),
+        sender: 'राम बहादुर',
+        enSender: 'Ram Bahadur',
+        priority: 'high',
+        icon: '🆕',
+        link: '/admin-complaints/101',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 2,
+        originalId: 102,
+        title: 'गुनासो समाधान: NTC-2024-002',
+        enTitle: 'Complaint Resolved: NTC-2024-002',
+        message: 'टिकेट नम्बर NTC-2024-002 को गुनासो सफलतापूर्वक समाधान भएको छ।',
+        enMessage: 'Complaint with ticket number NTC-2024-002 has been successfully resolved.',
+        type: 'complaint',
+        type_np: 'साधारण गुनासो',
+        type_en: 'Regular Complaint',
+        status: 'read',
+        status_np: 'पढिएको',
+        status_en: 'Read',
+        date: formatNepaliDate(new Date(Date.now() - 86400000)),
+        enDate: formatEnglishDate(new Date(Date.now() - 86400000)),
+        time: formatTime(new Date(Date.now() - 86400000)),
+        enTime: formatTime(new Date(Date.now() - 86400000)),
+        sender: 'प्रणाली',
+        enSender: 'System',
+        priority: 'medium',
+        icon: '✅',
+        link: '/admin-complaints/102',
+        createdAt: new Date(Date.now() - 86400000).toISOString()
+      },
+      {
+        id: 3,
+        originalId: 201,
+        title: 'नयाँ गुनासो: CR-2024-001',
+        enTitle: 'New Complaint: CR-2024-001',
+        message: 'सीता शर्मा बाट नयाँ गुनासो (सम्बन्धी) प्राप्त भएको छ।',
+        enMessage: 'New regarding complaint received from Sita Sharma.',
+        type: 'complaint-regarding',
+        type_np: 'गुनासो सम्बन्धी',
+        type_en: 'Complaint Regarding',
+        status: 'unread',
+        status_np: 'नपढिएको',
+        status_en: 'Unread',
+        date: formatNepaliDate(new Date(Date.now() - 172800000)),
+        enDate: formatEnglishDate(new Date(Date.now() - 172800000)),
+        time: formatTime(new Date(Date.now() - 172800000)),
+        enTime: formatTime(new Date(Date.now() - 172800000)),
+        sender: 'सीता शर्मा',
+        enSender: 'Sita Sharma',
+        priority: 'high',
+        icon: '🆕',
+        link: '/admin-complaints/201',
+        createdAt: new Date(Date.now() - 172800000).toISOString()
+      }
+    ];
+    
+    setNotifications(sampleNotifications);
+    setBackendStatus('disconnected');
+  };
+
+  // Check authentication and fetch data
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    const user = localStorage.getItem('adminUser');
+    const token = getAuthToken();
+    const user = localStorage.getItem('adminUser') || localStorage.getItem('user');
     if (!token || !user) {
       navigate('/admin-login');
     } else {
-      setTimeout(() => setLoading(false), 500);
+      fetchComplaintsAndCreateNotifications();
     }
   }, [navigate]);
+
+  // Save read status to localStorage
+  useEffect(() => {
+    localStorage.setItem('readNotifications', JSON.stringify([...readNotifications]));
+  }, [readNotifications]);
 
   const content = {
     np: {
@@ -318,7 +358,11 @@ const AdminNotifications = () => {
       fillRequiredFields: 'कृपया सबै आवश्यक फिल्डहरू भर्नुहोस्',
       markReadSuccess: 'सूचना पढिएको रूपमा चिन्ह लगाइयो',
       deleteSuccess: 'सूचना सफलतापूर्वक हटाइयो',
-      loading: 'लोड हुँदैछ...'
+      loading: 'लोड हुँदैछ...',
+      complaintDetails: 'गुनासो विवरण',
+      ticketNumber: 'टिकेट नम्बर',
+      complainant: 'उजुरीकर्ता',
+      viewComplaint: 'गुनासो हेर्नुहोस्'
     },
     en: {
       notifications: 'Notifications',
@@ -360,14 +404,42 @@ const AdminNotifications = () => {
       fillRequiredFields: 'Please fill all required fields',
       markReadSuccess: 'Notification marked as read',
       deleteSuccess: 'Notification deleted successfully',
-      loading: 'Loading...'
+      loading: 'Loading...',
+      complaintDetails: 'Complaint Details',
+      ticketNumber: 'Ticket Number',
+      complainant: 'Complainant',
+      viewComplaint: 'View Complaint'
     }
   };
 
   const t = content[language];
-  const typesObj = notificationTypes[language];
-  const statusesObj = statusOptions[language];
-  const recipientsObj = recipientOptions[language];
+  const typesObj = {
+    np: {
+      all: 'सबै प्रकार',
+      complaint: 'साधारण गुनासो',
+      'complaint-regarding': 'गुनासो सम्बन्धी',
+      general: 'साधारण'
+    },
+    en: {
+      all: 'All Types',
+      complaint: 'Regular Complaint',
+      'complaint-regarding': 'Complaint Regarding',
+      general: 'General'
+    }
+  }[language];
+
+  const statusesObj = {
+    np: {
+      all: 'सबै स्थिति',
+      read: 'पढिएको',
+      unread: 'नपढिएको'
+    },
+    en: {
+      all: 'All Status',
+      read: 'Read',
+      unread: 'Unread'
+    }
+  }[language];
 
   const getPriorityClass = (priority) => {
     const classes = { high: 'priority-high', medium: 'priority-medium', low: 'priority-low' };
@@ -383,7 +455,9 @@ const AdminNotifications = () => {
   };
 
   const getTypeText = (type) => {
-    return typesObj[type] || type;
+    if (type === 'complaint') return typesObj.complaint;
+    if (type === 'complaint-regarding') return typesObj['complaint-regarding'];
+    return typesObj.general || type;
   };
 
   const getStatusText = (status) => {
@@ -414,16 +488,28 @@ const AdminNotifications = () => {
     return language === 'np' ? notification.message : notification.enMessage;
   };
 
+  // Check if notification is read
+  const isRead = (notificationId) => {
+    return readNotifications.has(notificationId);
+  };
+
+  // Get notification status with local read tracking
+  const getNotificationStatus = (notification) => {
+    if (isRead(notification.id)) return 'read';
+    return notification.status;
+  };
+
   // Filter notifications
   const filteredNotifications = notifications.filter(notification => {
+    const notificationStatus = getNotificationStatus(notification);
     const typeMatch = filterType === 'all' || notification.type === filterType;
-    const statusMatch = filterStatus === 'all' || notification.status === filterStatus;
+    const statusMatch = filterStatus === 'all' || notificationStatus === filterStatus;
     return typeMatch && statusMatch;
   });
 
   // Statistics
   const totalNotifications = filteredNotifications.length;
-  const unreadCount = filteredNotifications.filter(n => n.status === 'unread').length;
+  const unreadCount = filteredNotifications.filter(n => getNotificationStatus(n) === 'unread').length;
 
   // Pagination
   const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage);
@@ -436,7 +522,7 @@ const AdminNotifications = () => {
     setSelectedNotification(notification);
     setShowModal(true);
     // Mark as read when opened
-    if (notification.status === 'unread') {
+    if (!isRead(notification.id)) {
       markAsRead(notification.id);
     }
   };
@@ -477,35 +563,29 @@ const AdminNotifications = () => {
   };
 
   const markAsRead = (id) => {
-    setNotifications(prev => prev.map(notification =>
-      notification.id === id 
-        ? { ...notification, status: 'read', status_np: 'पढिएको', status_en: 'Read' }
-        : notification
-    ));
-    alert(t.markReadSuccess);
+    setReadNotifications(prev => new Set([...prev, id]));
+    showToast(t.markReadSuccess, 'success');
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(notification => ({
-      ...notification, 
-      status: 'read', 
-      status_np: 'पढिएको', 
-      status_en: 'Read'
-    })));
-    alert(t.markReadSuccess);
+    const allUnreadIds = notifications
+      .filter(n => !isRead(n.id))
+      .map(n => n.id);
+    setReadNotifications(prev => new Set([...prev, ...allUnreadIds]));
+    showToast(t.markReadSuccess, 'success');
   };
 
   const deleteNotification = (id) => {
     if (window.confirm(language === 'np' ? 'के तपाईं यो सूचना हटाउन निश्चित हुनुहुन्छ?' : 'Are you sure you want to delete this notification?')) {
       setNotifications(prev => prev.filter(notification => notification.id !== id));
-      alert(t.deleteSuccess);
+      showToast(t.deleteSuccess, 'success');
     }
   };
 
   const deleteAll = () => {
     if (window.confirm(language === 'np' ? 'के तपाईं सबै सूचनाहरू हटाउन निश्चित हुनुहुन्छ?' : 'Are you sure you want to delete all notifications?')) {
       setNotifications([]);
-      alert(t.deleteSuccess);
+      showToast(t.deleteSuccess, 'success');
     }
   };
 
@@ -533,7 +613,7 @@ const AdminNotifications = () => {
       return;
     }
     
-    const newId = notifications.length + 1;
+    const newId = Date.now();
     const now = new Date();
     const newNotification = {
       id: newId,
@@ -542,25 +622,32 @@ const AdminNotifications = () => {
       message: sendNotification.message,
       enMessage: sendNotification.enMessage,
       type: sendNotification.type,
-      type_np: typesObj[sendNotification.type] || sendNotification.type,
-      type_en: typesObj[sendNotification.type] || sendNotification.type,
+      type_np: sendNotification.type === 'general' ? 'साधारण' : sendNotification.type,
+      type_en: sendNotification.type === 'general' ? 'General' : sendNotification.type,
       status: 'unread',
       status_np: 'नपढिएको',
       status_en: 'Unread',
-      date: language === 'np' ? now.toLocaleDateString('ne-NP') : now.toLocaleDateString('en-US'),
-      enDate: now.toISOString().split('T')[0],
-      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      enTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: formatNepaliDate(now),
+      enDate: formatEnglishDate(now),
+      time: formatTime(now),
+      enTime: formatTime(now),
       sender: 'Admin',
       enSender: 'Admin',
       priority: sendNotification.priority,
       icon: sendNotification.type === 'general' ? '📢' : '📋',
-      link: '/admin-dashboard'
+      link: '/admin-dashboard',
+      createdAt: now.toISOString()
     };
     
     setNotifications(prev => [newNotification, ...prev]);
-    alert(t.notificationSent);
+    showToast(t.notificationSent, 'success');
     closeSendModal();
+  };
+
+  const refreshData = () => {
+    setLoading(true);
+    setCurrentPage(1);
+    fetchComplaintsAndCreateNotifications();
   };
 
   if (loading) {
@@ -574,7 +661,24 @@ const AdminNotifications = () => {
 
   return (
     <div className="admin-notifications">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
+      
+      {backendStatus === 'disconnected' && (
+        <div className="backend-warning">
+          ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।' : 'Backend server not connected. Showing sample data.'}
+        </div>
+      )}
       
       <div className="dashboard-layout">
         <div className="sidebar-container">
@@ -589,6 +693,9 @@ const AdminNotifications = () => {
                 <p>{t.manageNotifications}</p>
               </div>
               <div className="header-actions">
+                <button className="refresh-btn" onClick={refreshData}>
+                  🔄 {language === 'np' ? 'रिफ्रेस' : 'Refresh'}
+                </button>
                 <button className="send-btn" onClick={openSendModal}>
                   ✉️ {t.sendNotification}
                 </button>
@@ -627,9 +734,10 @@ const AdminNotifications = () => {
                   onChange={(e) => setFilterType(e.target.value)}
                   className="filter-select"
                 >
-                  {Object.entries(typesObj).map(([key, value]) => (
-                    <option key={key} value={key}>{value}</option>
-                  ))}
+                  <option value="all">{typesObj.all}</option>
+                  <option value="complaint">{typesObj.complaint}</option>
+                  <option value="complaint-regarding">{typesObj['complaint-regarding']}</option>
+                  <option value="general">{typesObj.general}</option>
                 </select>
               </div>
               <div className="filter-group">
@@ -638,9 +746,9 @@ const AdminNotifications = () => {
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="filter-select"
                 >
-                  {Object.entries(statusesObj).map(([key, value]) => (
-                    <option key={key} value={key}>{value}</option>
-                  ))}
+                  <option value="all">{statusesObj.all}</option>
+                  <option value="unread">{statusesObj.unread}</option>
+                  <option value="read">{statusesObj.read}</option>
                 </select>
               </div>
             </div>
@@ -648,53 +756,58 @@ const AdminNotifications = () => {
             {/* Notifications List */}
             <div className="notifications-list">
               {paginatedNotifications.length > 0 ? (
-                paginatedNotifications.map((notification) => (
-                  <div 
-                    key={notification.id} 
-                    className={`notification-item ${notification.status === 'unread' ? 'unread' : ''}`}
-                    onClick={() => openModal(notification)}
-                  >
-                    <div className="notification-icon">{notification.icon}</div>
-                    <div className="notification-content">
-                      <div className="notification-header">
-                        <h4 className="notification-title">{getTitle(notification)}</h4>
-                        <span className={`priority-badge ${getPriorityClass(notification.priority)}`}>
-                          {getPriorityText(notification.priority)}
-                        </span>
+                paginatedNotifications.map((notification) => {
+                  const isNotificationRead = isRead(notification.id);
+                  const notificationStatus = isNotificationRead ? 'read' : notification.status;
+                  
+                  return (
+                    <div 
+                      key={notification.id} 
+                      className={`notification-item ${notificationStatus === 'unread' ? 'unread' : ''}`}
+                      onClick={() => openModal(notification)}
+                    >
+                      <div className="notification-icon">{notification.icon}</div>
+                      <div className="notification-content">
+                        <div className="notification-header">
+                          <h4 className="notification-title">{getTitle(notification)}</h4>
+                          <span className={`priority-badge ${getPriorityClass(notification.priority)}`}>
+                            {getPriorityText(notification.priority)}
+                          </span>
+                        </div>
+                        <p className="notification-message">{getMessage(notification)}</p>
+                        <div className="notification-footer">
+                          <span className="notification-type">{getTypeText(notification.type)}</span>
+                          <span className="notification-sender">{getSender(notification)}</span>
+                          <span className="notification-time">{getDate(notification)} • {getTime(notification)}</span>
+                        </div>
                       </div>
-                      <p className="notification-message">{getMessage(notification)}</p>
-                      <div className="notification-footer">
-                        <span className="notification-type">{getTypeText(notification.type)}</span>
-                        <span className="notification-sender">{getSender(notification)}</span>
-                        <span className="notification-time">{getDate(notification)} • {getTime(notification)}</span>
-                      </div>
-                    </div>
-                    <div className="notification-actions">
-                      {notification.status === 'unread' && (
+                      <div className="notification-actions">
+                        {notificationStatus === 'unread' && (
+                          <button 
+                            className="mark-read-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markAsRead(notification.id);
+                            }}
+                            title={t.markAsRead}
+                          >
+                            ✓
+                          </button>
+                        )}
                         <button 
-                          className="mark-read-btn"
+                          className="delete-btn"
                           onClick={(e) => {
                             e.stopPropagation();
-                            markAsRead(notification.id);
+                            deleteNotification(notification.id);
                           }}
-                          title={t.markAsRead}
+                          title={t.deleteNotification}
                         >
-                          ✓
+                          🗑️
                         </button>
-                      )}
-                      <button 
-                        className="delete-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteNotification(notification.id);
-                        }}
-                        title={t.deleteNotification}
-                      >
-                        🗑️
-                      </button>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="no-data">
                   <div className="no-data-content">
@@ -751,8 +864,8 @@ const AdminNotifications = () => {
               </div>
               <div className="detail-row">
                 <label>{t.status}:</label>
-                <span className={`status-badge ${getStatusClass(selectedNotification.status)}`}>
-                  {getStatusText(selectedNotification.status)}
+                <span className={`status-badge ${getStatusClass(getNotificationStatus(selectedNotification))}`}>
+                  {getStatusText(getNotificationStatus(selectedNotification))}
                 </span>
               </div>
               <div className="detail-row">
@@ -777,8 +890,48 @@ const AdminNotifications = () => {
                 <label>{t.message}:</label>
                 <p className="message-text">{getMessage(selectedNotification)}</p>
               </div>
+              
+              {/* Complaint Details Section */}
+              {selectedNotification.complaintData && (
+                <div className="complaint-details-section">
+                  <div className="section-title">
+                    <h3>📋 {t.complaintDetails}</h3>
+                  </div>
+                  <div className="detail-row">
+                    <label>{t.ticketNumber}:</label>
+                    <span>{selectedNotification.complaintData.complaint_number || `#${selectedNotification.complaintData.id}`}</span>
+                  </div>
+                  <div className="detail-row">
+                    <label>{t.complainant}:</label>
+                    <span>{selectedNotification.complaintData.name}</span>
+                  </div>
+                  <div className="detail-row">
+                    <label>{t.email}:</label>
+                    <span>{selectedNotification.complaintData.email}</span>
+                  </div>
+                  <div className="detail-row">
+                    <label>{t.phone}:</label>
+                    <span>{selectedNotification.complaintData.phone}</span>
+                  </div>
+                  <div className="detail-row full-width">
+                    <label>{t.description}:</label>
+                    <p>{selectedNotification.complaintData.description}</p>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="modal-footer">
+              {selectedNotification.link && (
+                <button 
+                  className="btn-view"
+                  onClick={() => {
+                    navigate(selectedNotification.link);
+                    closeModal();
+                  }}
+                >
+                  👁️ {t.viewComplaint}
+                </button>
+              )}
               <button className="btn-close" onClick={closeModal}>{t.close}</button>
             </div>
           </div>
@@ -848,8 +1001,6 @@ const AdminNotifications = () => {
                   <select name="type" value={sendNotification.type} onChange={handleSendInputChange}>
                     <option value="general">{typesObj.general}</option>
                     <option value="complaint">{typesObj.complaint}</option>
-                    <option value="update">{typesObj.update}</option>
-                    <option value="reminder">{typesObj.reminder}</option>
                   </select>
                 </div>
                 <div className="form-group half">
@@ -860,31 +1011,6 @@ const AdminNotifications = () => {
                     <option value="low">{t.low}</option>
                   </select>
                 </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group half">
-                  <label>{t.recipientType}</label>
-                  <select name="recipientType" value={sendNotification.recipientType} onChange={handleSendInputChange}>
-                    <option value="all">{recipientsObj.all}</option>
-                    <option value="admin">{recipientsObj.admin}</option>
-                    <option value="staff">{recipientsObj.staff}</option>
-                    <option value="specific">{recipientsObj.specific}</option>
-                  </select>
-                </div>
-                {sendNotification.recipientType === 'specific' && (
-                  <div className="form-group half">
-                    <label>{t.recipients}</label>
-                    <input
-                      type="text"
-                      name="recipients"
-                      value={sendNotification.recipients}
-                      onChange={handleSendInputChange}
-                      placeholder="email1@example.com, email2@example.com"
-                      className={formErrors.recipients ? 'error' : ''}
-                    />
-                    {formErrors.recipients && <span className="error-text">{formErrors.recipients}</span>}
-                  </div>
-                )}
               </div>
             </div>
             <div className="modal-footer">
@@ -911,6 +1037,56 @@ const AdminNotifications = () => {
           position: relative;
         }
 
+        .toast-notification {
+          position: fixed;
+          top: 200px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 350px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+
+        .backend-warning {
+          position: fixed;
+          top: 195px;
+          left: 0;
+          right: 0;
+          background: #f59e0b;
+          color: white;
+          padding: 8px;
+          text-align: center;
+          z-index: 100;
+          font-size: 0.8rem;
+        }
+
         .loading-container {
           display: flex;
           flex-direction: column;
@@ -933,7 +1109,6 @@ const AdminNotifications = () => {
           to { transform: rotate(360deg); }
         }
 
-        /* Dashboard Layout */
         .dashboard-layout {
           display: flex;
           height: calc(100vh - 195px);
@@ -943,7 +1118,6 @@ const AdminNotifications = () => {
           overflow: hidden;
         }
 
-        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -956,7 +1130,6 @@ const AdminNotifications = () => {
           overflow-y: auto;
         }
 
-        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
           margin-left: 260px;
@@ -979,10 +1152,6 @@ const AdminNotifications = () => {
         .main-container::-webkit-scrollbar-thumb {
           background: #3b82f6;
           border-radius: 10px;
-        }
-
-        .main-container::-webkit-scrollbar-thumb:hover {
-          background: #2563eb;
         }
 
         .content-wrapper {
@@ -1017,6 +1186,22 @@ const AdminNotifications = () => {
           display: flex;
           gap: 12px;
           flex-wrap: wrap;
+        }
+
+        .refresh-btn {
+          background: white;
+          border: 1px solid #e2e8f0;
+          padding: 8px 16px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: 500;
+          color: #475569;
+        }
+
+        .refresh-btn:hover {
+          background: #f8fafc;
+          border-color: #3b82f6;
+          color: #3b82f6;
         }
 
         .send-btn, .mark-all-btn, .delete-all-btn {
@@ -1059,7 +1244,6 @@ const AdminNotifications = () => {
           box-shadow: 0 4px 12px rgba(239,68,68,0.3);
         }
 
-        /* Stats Cards */
         .stats-cards {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -1106,7 +1290,6 @@ const AdminNotifications = () => {
           margin-top: 4px;
         }
 
-        /* Filters */
         .filters-bar {
           display: flex;
           gap: 12px;
@@ -1123,7 +1306,6 @@ const AdminNotifications = () => {
           cursor: pointer;
         }
 
-        /* Notifications List */
         .notifications-list {
           display: flex;
           flex-direction: column;
@@ -1240,7 +1422,6 @@ const AdminNotifications = () => {
           color: #dc2626;
         }
 
-        /* Pagination */
         .pagination {
           display: flex;
           justify-content: center;
@@ -1295,7 +1476,6 @@ const AdminNotifications = () => {
           font-size: 3rem;
         }
 
-        /* Modal */
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -1313,7 +1493,7 @@ const AdminNotifications = () => {
         .modal-content {
           background: white;
           border-radius: 20px;
-          max-width: 550px;
+          max-width: 600px;
           width: 90%;
           max-height: 85vh;
           overflow-y: auto;
@@ -1401,6 +1581,18 @@ const AdminNotifications = () => {
         .status-unread { background: #dbeafe; color: #2563eb; }
         .status-read { background: #e2e8f0; color: #475569; }
 
+        .complaint-details-section {
+          margin-top: 20px;
+          padding-top: 16px;
+          border-top: 2px solid #e2e8f0;
+        }
+
+        .section-title h3 {
+          font-size: 1rem;
+          color: #0f172a;
+          margin-bottom: 16px;
+        }
+
         .form-group {
           margin-bottom: 20px;
         }
@@ -1485,7 +1677,7 @@ const AdminNotifications = () => {
           background: #e2e8f0;
         }
 
-        .btn-send, .btn-close {
+        .btn-send, .btn-close, .btn-view {
           background: linear-gradient(135deg, #3b82f6, #2563eb);
           color: white;
           border: none;
@@ -1495,12 +1687,15 @@ const AdminNotifications = () => {
           font-weight: 500;
         }
 
-        .btn-send:hover, .btn-close:hover {
+        .btn-view {
+          background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .btn-send:hover, .btn-close:hover, .btn-view:hover {
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(59,130,246,0.3);
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
           .admin-notifications {
             height: auto;
@@ -1541,7 +1736,7 @@ const AdminNotifications = () => {
             width: 100%;
           }
           
-          .send-btn, .mark-all-btn, .delete-all-btn {
+          .refresh-btn, .send-btn, .mark-all-btn, .delete-all-btn {
             flex: 1;
             text-align: center;
           }
@@ -1593,7 +1788,7 @@ const AdminNotifications = () => {
             flex-direction: column;
           }
           
-          .btn-cancel, .btn-send, .btn-close {
+          .btn-cancel, .btn-send, .btn-close, .btn-view {
             width: 100%;
           }
         }

@@ -21,7 +21,6 @@ const AdminUsers = () => {
 
   // State for users from backend
   const [users, setUsers] = useState([]);
-  const [allComplaints, setAllComplaints] = useState([]);
   const [backendStatus, setBackendStatus] = useState('checking');
 
   // New user form state
@@ -47,6 +46,358 @@ const AdminUsers = () => {
   });
 
   const [formErrors, setFormErrors] = useState({});
+
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+  // Helper function to get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('token') || localStorage.getItem('adminToken');
+  };
+
+  // Format date to Nepali format
+  const formatNepaliDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      const year = d.getFullYear() - 57;
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Format date to English format
+  const formatEnglishDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      return d.toISOString().split('T')[0];
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Fetch complaints from both endpoints
+  const fetchAllComplaints = async () => {
+    try {
+      const token = getAuthToken();
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Fetch regular complaints
+      let regularComplaints = [];
+      let regardingComplaints = [];
+      
+      try {
+        const regularResponse = await axios.get(`${API_URL}/complaints`, { headers });
+        if (regularResponse.data.success && Array.isArray(regularResponse.data.data)) {
+          regularComplaints = regularResponse.data.data;
+        }
+      } catch (error) {
+        console.error('Error fetching regular complaints:', error);
+      }
+      
+      // Fetch complaint regarding
+      try {
+        const regardingResponse = await axios.get(`${API_URL}/complaint-regarding`, { headers });
+        if (regardingResponse.data.success && Array.isArray(regardingResponse.data.data)) {
+          regardingComplaints = regardingResponse.data.data;
+        }
+      } catch (error) {
+        console.error('Error fetching regarding complaints:', error);
+      }
+      
+      return { regularComplaints, regardingComplaints };
+    } catch (error) {
+      console.error('Error fetching complaints:', error);
+      return { regularComplaints: [], regardingComplaints: [] };
+    }
+  };
+
+  // Extract unique users from complaints and fetch existing users
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const token = getAuthToken();
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Fetch all complaints
+      const { regularComplaints, regardingComplaints } = await fetchAllComplaints();
+      const allComplaints = [...regularComplaints, ...regardingComplaints];
+      
+      // Create a map of users from complaints
+      const complainantMap = new Map();
+      
+      allComplaints.forEach(complaint => {
+        const email = complaint.email;
+        if (email && !complainantMap.has(email)) {
+          complainantMap.set(email, {
+            name: complaint.name || 'N/A',
+            enName: complaint.name || 'N/A',
+            email: complaint.email,
+            phone: complaint.phone || 'N/A',
+            complaints: [],
+            role: 'user',
+            status: 'active',
+            complaintTypes: new Set()
+          });
+        }
+        
+        if (email && complainantMap.has(email)) {
+          const user = complainantMap.get(email);
+          user.complaints.push(complaint);
+          
+          // Track complaint types
+          if (complaint.nature_of_complaint) {
+            user.complaintTypes.add(complaint.nature_of_complaint);
+          }
+          if (complaint.complaint_type) {
+            user.complaintTypes.add(complaint.complaint_type);
+          }
+          
+          complainantMap.set(email, user);
+        }
+      });
+      
+      // Fetch existing users from database
+      let existingUsers = [];
+      try {
+        const usersResponse = await axios.get(`${API_URL}/users`, { headers });
+        if (usersResponse.data.success && Array.isArray(usersResponse.data.data)) {
+          existingUsers = usersResponse.data.data;
+        }
+      } catch (usersError) {
+        console.log('Users API error:', usersError);
+      }
+      
+      // Merge users from database with complainants
+      const mergedUsers = [];
+      const processedEmails = new Set();
+      
+      // First, add existing database users (including staff and admins)
+      existingUsers.forEach(user => {
+        processedEmails.add(user.email);
+        
+        // Find complaints for this user
+        const userComplaints = allComplaints.filter(c => c.email === user.email);
+        const totalComplaints = userComplaints.length;
+        const resolvedComplaints = userComplaints.filter(c => 
+          c.status === 'resolved' || c.status === 'Resolved' || c.status === 'closed' || c.status === 'Closed'
+        ).length;
+        
+        mergedUsers.push({
+          id: user.id,
+          name: user.name || 'N/A',
+          enName: user.name_en || user.name || 'N/A',
+          email: user.email,
+          phone: user.phone || 'N/A',
+          role: user.role || 'user',
+          role_np: user.role === 'user' ? 'प्रयोगकर्ता' : user.role === 'staff' ? 'कर्मचारी' : user.role === 'admin' ? 'प्रशासक' : 'प्रयोगकर्ता',
+          role_en: user.role === 'user' ? 'User' : user.role === 'staff' ? 'Staff' : user.role === 'admin' ? 'Admin' : 'User',
+          status: user.status || 'active',
+          status_np: user.status === 'active' ? 'सक्रिय' : user.status === 'inactive' ? 'निष्क्रिय' : user.status === 'suspended' ? 'निलम्बित' : 'सक्रिय',
+          status_en: user.status === 'active' ? 'Active' : user.status === 'inactive' ? 'Inactive' : user.status === 'suspended' ? 'Suspended' : 'Active',
+          registeredDate: formatNepaliDate(user.created_at || user.createdAt || new Date()),
+          enRegisteredDate: formatEnglishDate(user.created_at || user.createdAt || new Date()),
+          lastLogin: user.last_login ? formatNepaliDate(user.last_login) : '-',
+          enLastLogin: user.last_login ? formatEnglishDate(user.last_login) : '-',
+          complaintsCount: totalComplaints,
+          resolvedCount: resolvedComplaints,
+          complaints: userComplaints,
+          isSystemUser: true
+        });
+      });
+      
+      // Then, add complainants that aren't in the database (regular users only)
+      complainantMap.forEach((complainant, email) => {
+        if (!processedEmails.has(email)) {
+          const totalComplaints = complainant.complaints.length;
+          const resolvedComplaints = complainant.complaints.filter(c => 
+            c.status === 'resolved' || c.status === 'Resolved' || c.status === 'closed' || c.status === 'Closed'
+          ).length;
+          
+          mergedUsers.push({
+            id: `comp_${Date.now()}_${email.replace(/[^a-zA-Z0-9]/g, '')}`,
+            name: complainant.name,
+            enName: complainant.enName,
+            email: complainant.email,
+            phone: complainant.phone,
+            role: 'user',
+            role_np: 'प्रयोगकर्ता',
+            role_en: 'User',
+            status: 'active',
+            status_np: 'सक्रिय',
+            status_en: 'Active',
+            registeredDate: formatNepaliDate(new Date()),
+            enRegisteredDate: formatEnglishDate(new Date()),
+            lastLogin: '-',
+            enLastLogin: '-',
+            complaintsCount: totalComplaints,
+            resolvedCount: resolvedComplaints,
+            complaints: complainant.complaints,
+            isSystemUser: false
+          });
+        }
+      });
+      
+      // Sort users: Staff and Admins first, then by complaints count
+      mergedUsers.sort((a, b) => {
+        // Prioritize staff and admin
+        const rolePriority = (role) => {
+          if (role === 'admin') return 1;
+          if (role === 'staff') return 2;
+          return 3;
+        };
+        
+        const priorityA = rolePriority(a.role);
+        const priorityB = rolePriority(b.role);
+        
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+        
+        // If same role, sort by complaints count (descending)
+        return b.complaintsCount - a.complaintsCount;
+      });
+      
+      setUsers(mergedUsers);
+      setBackendStatus('connected');
+      
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setBackendStatus('disconnected');
+      // Show sample data if backend is not available
+      setUsers(getSampleUsersWithComplaints());
+    } finally {
+      setTimeout(() => setLoading(false), 500);
+    }
+  };
+
+  // Get sample users with complaint data for demonstration
+  const getSampleUsersWithComplaints = () => {
+    return [
+      {
+        id: 1,
+        name: 'प्रशासक',
+        enName: 'Admin User',
+        email: 'admin@example.com',
+        phone: '9800000000',
+        role: 'admin',
+        role_np: 'प्रशासक',
+        role_en: 'Admin',
+        status: 'active',
+        status_np: 'सक्रिय',
+        status_en: 'Active',
+        registeredDate: '२०८०-०१-०१',
+        enRegisteredDate: '2024-01-01',
+        lastLogin: '२०८०-०२-२५',
+        enLastLogin: '2024-02-25',
+        complaintsCount: 0,
+        resolvedCount: 0,
+        complaints: [],
+        isSystemUser: true
+      },
+      {
+        id: 2,
+        name: 'कर्मचारी',
+        enName: 'Staff Member',
+        email: 'staff@example.com',
+        phone: '9812345678',
+        role: 'staff',
+        role_np: 'कर्मचारी',
+        role_en: 'Staff',
+        status: 'active',
+        status_np: 'सक्रिय',
+        status_en: 'Active',
+        registeredDate: '२०८०-०१-०५',
+        enRegisteredDate: '2024-01-05',
+        lastLogin: '२०८०-०२-२४',
+        enLastLogin: '2024-02-24',
+        complaintsCount: 0,
+        resolvedCount: 0,
+        complaints: [],
+        isSystemUser: true
+      },
+      {
+        id: 3,
+        name: 'राम बहादुर',
+        enName: 'Ram Bahadur',
+        email: 'ram@example.com',
+        phone: '9841000001',
+        role: 'user',
+        role_np: 'प्रयोगकर्ता',
+        role_en: 'User',
+        status: 'active',
+        status_np: 'सक्रिय',
+        status_en: 'Active',
+        registeredDate: '२०८०-०१-१५',
+        enRegisteredDate: '2024-01-15',
+        lastLogin: '२०८०-०२-२०',
+        enLastLogin: '2024-02-20',
+        complaintsCount: 3,
+        resolvedCount: 2,
+        complaints: [
+          { id: 101, complaint_number: 'NTC-2024-001', status: 'Resolved', nature_of_complaint: 'Internet', created_at: '2024-01-10' },
+          { id: 102, complaint_number: 'NTC-2024-015', status: 'Resolved', nature_of_complaint: 'Billing', created_at: '2024-01-20' },
+          { id: 103, complaint_number: 'NTC-2024-028', status: 'Pending', nature_of_complaint: 'Network', created_at: '2024-02-01' }
+        ],
+        isSystemUser: true
+      },
+      {
+        id: 4,
+        name: 'सीता शर्मा',
+        enName: 'Sita Sharma',
+        email: 'sita@example.com',
+        phone: '9823456789',
+        role: 'user',
+        role_np: 'प्रयोगकर्ता',
+        role_en: 'User',
+        status: 'active',
+        status_np: 'सक्रिय',
+        status_en: 'Active',
+        registeredDate: '२०८०-०१-१८',
+        enRegisteredDate: '2024-01-18',
+        lastLogin: '२०८०-०२-२२',
+        enLastLogin: '2024-02-22',
+        complaintsCount: 5,
+        resolvedCount: 4,
+        complaints: [
+          { id: 104, complaint_number: 'NTC-2024-002', status: 'Resolved', nature_of_complaint: 'Recharge', created_at: '2024-01-12' },
+          { id: 105, complaint_number: 'NTC-2024-008', status: 'Resolved', nature_of_complaint: 'Internet', created_at: '2024-01-18' },
+          { id: 106, complaint_number: 'NTC-2024-012', status: 'Resolved', nature_of_complaint: 'Billing', created_at: '2024-01-22' },
+          { id: 107, complaint_number: 'NTC-2024-018', status: 'Resolved', complaint_type: 'Network', created_at: '2024-01-28' },
+          { id: 108, complaint_number: 'NTC-2024-025', status: 'Pending', complaint_type: 'Technical', created_at: '2024-02-05' }
+        ],
+        isSystemUser: true
+      },
+      {
+        id: 5,
+        name: 'हरि प्रसाद',
+        enName: 'Hari Prasad',
+        email: 'hari@example.com',
+        phone: '9845678901',
+        role: 'user',
+        role_np: 'प्रयोगकर्ता',
+        role_en: 'User',
+        status: 'inactive',
+        status_np: 'निष्क्रिय',
+        status_en: 'Inactive',
+        registeredDate: '२०८०-०१-२०',
+        enRegisteredDate: '2024-01-20',
+        lastLogin: '२०८०-०१-२५',
+        enLastLogin: '2024-01-25',
+        complaintsCount: 1,
+        resolvedCount: 1,
+        complaints: [
+          { id: 109, complaint_number: 'CR-2024-003', status: 'Resolved', complaint_type: 'Activation', created_at: '2024-01-15' }
+        ],
+        isSystemUser: true
+      }
+    ];
+  };
 
   // Role options
   const roles = {
@@ -80,321 +431,10 @@ const AdminUsers = () => {
     }
   };
 
-  // Format date to Nepali format
-  const formatNepaliDate = (date) => {
-    if (!date) return '-';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '-';
-      const year = d.getFullYear() - 57;
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    } catch (error) {
-      return '-';
-    }
-  };
-
-  // Format date to English format
-  const formatEnglishDate = (date) => {
-    if (!date) return '-';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '-';
-      return d.toISOString().split('T')[0];
-    } catch (error) {
-      return '-';
-    }
-  };
-
-  // Fetch complaints from backend to extract unique complainants
-  const fetchComplaints = async () => {
-    try {
-      const token = localStorage.getItem('adminToken');
-      const response = await axios.get('http://localhost:5000/api/complaints', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.data.success && Array.isArray(response.data.data)) {
-        setAllComplaints(response.data.data);
-        return response.data.data;
-      }
-      return [];
-    } catch (error) {
-      console.error('Error fetching complaints:', error);
-      return [];
-    }
-  };
-
-  // Extract unique users from complaints and fetch existing users
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('adminToken');
-      
-      const complaints = await fetchComplaints();
-      
-      const complainantMap = new Map();
-      
-      complaints.forEach(complaint => {
-        const email = complaint.email;
-        if (email && !complainantMap.has(email)) {
-          complainantMap.set(email, {
-            name: complaint.name || complaint.complainantName || 'N/A',
-            enName: complaint.nameEn || complaint.complainantNameEn || complaint.name || 'N/A',
-            email: complaint.email,
-            phone: complaint.phone || complaint.mobile || 'N/A',
-            complaints: [],
-            role: 'user',
-            status: 'active'
-          });
-        }
-        
-        if (email && complainantMap.has(email)) {
-          const user = complainantMap.get(email);
-          user.complaints.push(complaint);
-          complainantMap.set(email, user);
-        }
-      });
-      
-      let existingUsers = [];
-      try {
-        const usersResponse = await axios.get('http://localhost:5000/api/users', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (usersResponse.data.success && Array.isArray(usersResponse.data.data)) {
-          existingUsers = usersResponse.data.data;
-        }
-      } catch (usersError) {
-        console.log('Users API not available, using complainant data only');
-      }
-      
-      const mergedUsers = [];
-      const processedEmails = new Set();
-      
-      existingUsers.forEach(user => {
-        processedEmails.add(user.email);
-        
-        const userComplaints = complaints.filter(c => c.email === user.email);
-        const totalComplaints = userComplaints.length;
-        const resolvedComplaints = userComplaints.filter(c => 
-          c.status === 'Resolved' || c.status === 'समाधान भयो'
-        ).length;
-        
-        mergedUsers.push({
-          id: user.id,
-          name: user.name || user.fullName || 'N/A',
-          enName: user.nameEn || user.fullNameEn || user.name || 'N/A',
-          email: user.email,
-          phone: user.phone || 'N/A',
-          role: user.role || 'user',
-          role_np: user.role === 'user' ? 'प्रयोगकर्ता' : user.role === 'staff' ? 'कर्मचारी' : user.role === 'admin' ? 'प्रशासक' : 'प्रयोगकर्ता',
-          role_en: user.role === 'user' ? 'User' : user.role === 'staff' ? 'Staff' : user.role === 'admin' ? 'Admin' : 'User',
-          status: user.status || 'active',
-          status_np: user.status === 'active' ? 'सक्रिय' : user.status === 'inactive' ? 'निष्क्रिय' : user.status === 'suspended' ? 'निलम्बित' : 'सक्रिय',
-          status_en: user.status === 'active' ? 'Active' : user.status === 'inactive' ? 'Inactive' : user.status === 'suspended' ? 'Suspended' : 'Active',
-          registeredDate: formatNepaliDate(user.createdAt || user.registeredDate || new Date()),
-          enRegisteredDate: formatEnglishDate(user.createdAt || user.registeredDate || new Date()),
-          lastLogin: user.lastLogin ? formatNepaliDate(user.lastLogin) : '-',
-          enLastLogin: user.lastLogin ? formatEnglishDate(user.lastLogin) : '-',
-          complaintsCount: totalComplaints,
-          resolvedCount: resolvedComplaints,
-          complaints: userComplaints
-        });
-      });
-      
-      complainantMap.forEach((complainant, email) => {
-        if (!processedEmails.has(email)) {
-          const totalComplaints = complainant.complaints.length;
-          const resolvedComplaints = complainant.complaints.filter(c => 
-            c.status === 'Resolved' || c.status === 'समाधान भयो'
-          ).length;
-          
-          mergedUsers.push({
-            id: `comp_${Date.now()}_${email.replace(/[^a-zA-Z0-9]/g, '')}`,
-            name: complainant.name,
-            enName: complainant.enName,
-            email: complainant.email,
-            phone: complainant.phone,
-            role: 'user',
-            role_np: 'प्रयोगकर्ता',
-            role_en: 'User',
-            status: 'active',
-            status_np: 'सक्रिय',
-            status_en: 'Active',
-            registeredDate: formatNepaliDate(new Date()),
-            enRegisteredDate: formatEnglishDate(new Date()),
-            lastLogin: '-',
-            enLastLogin: '-',
-            complaintsCount: totalComplaints,
-            resolvedCount: resolvedComplaints,
-            complaints: complainant.complaints
-          });
-        }
-      });
-      
-      setUsers(mergedUsers);
-      setBackendStatus('connected');
-      
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setUsers(getSampleUsersWithComplaints());
-      setBackendStatus('disconnected');
-    } finally {
-      setTimeout(() => setLoading(false), 500);
-    }
-  };
-
-  // Get sample users with complaint data
-  const getSampleUsersWithComplaints = () => {
-    return [
-      {
-        id: 1,
-        name: 'राम बहादुर',
-        enName: 'Ram Bahadur',
-        email: 'ram@example.com',
-        phone: '9841000001',
-        role: 'user',
-        role_np: 'प्रयोगकर्ता',
-        role_en: 'User',
-        status: 'active',
-        status_np: 'सक्रिय',
-        status_en: 'Active',
-        registeredDate: '२०८०-०१-१५',
-        enRegisteredDate: '2024-01-15',
-        lastLogin: '२०८०-०२-२०',
-        enLastLogin: '2024-02-20',
-        complaintsCount: 3,
-        resolvedCount: 2,
-        complaints: [
-          { id: 101, complaintNumber: 'NTC-2024-001', status: 'Resolved', category: 'Internet', submittedDate: '2024-01-10' },
-          { id: 102, complaintNumber: 'NTC-2024-015', status: 'Resolved', category: 'Billing', submittedDate: '2024-01-20' },
-          { id: 103, complaintNumber: 'NTC-2024-028', status: 'Pending', category: 'Network', submittedDate: '2024-02-01' }
-        ]
-      },
-      {
-        id: 2,
-        name: 'सीता शर्मा',
-        enName: 'Sita Sharma',
-        email: 'sita@example.com',
-        phone: '9812345678',
-        role: 'user',
-        role_np: 'प्रयोगकर्ता',
-        role_en: 'User',
-        status: 'active',
-        status_np: 'सक्रिय',
-        status_en: 'Active',
-        registeredDate: '२०८०-०१-१८',
-        enRegisteredDate: '2024-01-18',
-        lastLogin: '२०८०-०२-२२',
-        enLastLogin: '2024-02-22',
-        complaintsCount: 5,
-        resolvedCount: 4,
-        complaints: [
-          { id: 104, complaintNumber: 'NTC-2024-002', status: 'Resolved', category: 'Recharge', submittedDate: '2024-01-12' },
-          { id: 105, complaintNumber: 'NTC-2024-008', status: 'Resolved', category: 'Internet', submittedDate: '2024-01-18' },
-          { id: 106, complaintNumber: 'NTC-2024-012', status: 'Resolved', category: 'Billing', submittedDate: '2024-01-22' },
-          { id: 107, complaintNumber: 'NTC-2024-018', status: 'Resolved', category: 'Network', submittedDate: '2024-01-28' },
-          { id: 108, complaintNumber: 'NTC-2024-025', status: 'Pending', category: 'Technical', submittedDate: '2024-02-05' }
-        ]
-      },
-      {
-        id: 3,
-        name: 'हरि प्रसाद',
-        enName: 'Hari Prasad',
-        email: 'hari@example.com',
-        phone: '9823456789',
-        role: 'user',
-        role_np: 'प्रयोगकर्ता',
-        role_en: 'User',
-        status: 'inactive',
-        status_np: 'निष्क्रिय',
-        status_en: 'Inactive',
-        registeredDate: '२०८०-०१-२०',
-        enRegisteredDate: '2024-01-20',
-        lastLogin: '२०८०-०१-२५',
-        enLastLogin: '2024-01-25',
-        complaintsCount: 1,
-        resolvedCount: 1,
-        complaints: [
-          { id: 109, complaintNumber: 'NTC-2024-003', status: 'Resolved', category: 'Activation', submittedDate: '2024-01-15' }
-        ]
-      },
-      {
-        id: 4,
-        name: 'गीता अधिकारी',
-        enName: 'Gita Adhikari',
-        email: 'gita@example.com',
-        phone: '9841567890',
-        role: 'user',
-        role_np: 'प्रयोगकर्ता',
-        role_en: 'User',
-        status: 'active',
-        status_np: 'सक्रिय',
-        status_en: 'Active',
-        registeredDate: '२०८०-०१-२२',
-        enRegisteredDate: '2024-01-22',
-        lastLogin: '२०८०-०२-२१',
-        enLastLogin: '2024-02-21',
-        complaintsCount: 2,
-        resolvedCount: 2,
-        complaints: [
-          { id: 110, complaintNumber: 'NTC-2024-005', status: 'Resolved', category: 'Signal', submittedDate: '2024-01-16' },
-          { id: 111, complaintNumber: 'NTC-2024-014', status: 'Resolved', category: 'Internet', submittedDate: '2024-01-24' }
-        ]
-      },
-      {
-        id: 5,
-        name: 'विकास न्यौपाने',
-        enName: 'Bikas Neupane',
-        email: 'bikas@example.com',
-        phone: '9847890123',
-        role: 'staff',
-        role_np: 'कर्मचारी',
-        role_en: 'Staff',
-        status: 'active',
-        status_np: 'सक्रिय',
-        status_en: 'Active',
-        registeredDate: '२०८०-०१-२५',
-        enRegisteredDate: '2024-01-25',
-        lastLogin: '२०८०-०२-२३',
-        enLastLogin: '2024-02-23',
-        complaintsCount: 0,
-        resolvedCount: 0,
-        complaints: []
-      },
-      {
-        id: 6,
-        name: 'मिना काफ्ले',
-        enName: 'Mina Kafle',
-        email: 'mina@example.com',
-        phone: '9841234567',
-        role: 'user',
-        role_np: 'प्रयोगकर्ता',
-        role_en: 'User',
-        status: 'active',
-        status_np: 'सक्रिय',
-        status_en: 'Active',
-        registeredDate: '२०८०-०१-१०',
-        enRegisteredDate: '2024-01-10',
-        lastLogin: '२०८०-०२-१९',
-        enLastLogin: '2024-02-19',
-        complaintsCount: 4,
-        resolvedCount: 3,
-        complaints: [
-          { id: 112, complaintNumber: 'NTC-2024-004', status: 'Resolved', category: 'Recharge', submittedDate: '2024-01-14' },
-          { id: 113, complaintNumber: 'NTC-2024-009', status: 'Resolved', category: 'Billing', submittedDate: '2024-01-20' },
-          { id: 114, complaintNumber: 'NTC-2024-016', status: 'Resolved', category: 'Internet', submittedDate: '2024-01-26' },
-          { id: 115, complaintNumber: 'NTC-2024-022', status: 'Pending', category: 'Network', submittedDate: '2024-02-02' }
-        ]
-      }
-    ];
-  };
-
   // Check authentication
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    const user = localStorage.getItem('adminUser');
+    const token = getAuthToken();
+    const user = localStorage.getItem('adminUser') || localStorage.getItem('user');
     if (!token || !user) {
       navigate('/admin-login');
     } else {
@@ -457,7 +497,13 @@ const AdminUsers = () => {
       loading: 'लोड हुँदै...',
       refresh: 'रिफ्रेस',
       backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।',
-      viewUserComplaints: 'गुनासोहरू हेर्नुहोस्'
+      viewUserComplaints: 'गुनासोहरू हेर्नुहोस्',
+      complaintType: 'गुनासो प्रकार',
+      ticketId: 'टिकेट नम्बर',
+      regular: 'साधारण',
+      regarding: 'सम्बन्धी',
+      subject: 'विषय',
+      date: 'मिति'
     },
     en: {
       userManagement: 'User Management',
@@ -513,7 +559,13 @@ const AdminUsers = () => {
       loading: 'Loading...',
       refresh: 'Refresh',
       backendNotConnected: 'Backend server not connected. Showing sample data.',
-      viewUserComplaints: 'View Complaints'
+      viewUserComplaints: 'View Complaints',
+      complaintType: 'Complaint Type',
+      ticketId: 'Ticket ID',
+      regular: 'Regular',
+      regarding: 'Regarding',
+      subject: 'Subject',
+      date: 'Date'
     }
   };
 
@@ -538,6 +590,15 @@ const AdminUsers = () => {
     return classes[status] || 'status-inactive';
   };
 
+  const getRoleClass = (role) => {
+    const classes = {
+      admin: 'role-admin',
+      staff: 'role-staff',
+      user: 'role-user'
+    };
+    return classes[role] || 'role-user';
+  };
+
   const getDate = (user, field) => {
     if (field === 'registeredDate') {
       return language === 'np' ? user.registeredDate : user.enRegisteredDate;
@@ -545,6 +606,34 @@ const AdminUsers = () => {
       return language === 'np' ? user.lastLogin : user.enLastLogin;
     }
     return '-';
+  };
+
+  // Get complaint type label
+  const getComplaintType = (complaint) => {
+    if (complaint.nature_of_complaint) {
+      return language === 'np' ? getCategoryNepali(complaint.nature_of_complaint) : complaint.nature_of_complaint;
+    }
+    if (complaint.complaint_type) {
+      return language === 'np' ? getCategoryNepali(complaint.complaint_type) : complaint.complaint_type;
+    }
+    return language === 'np' ? 'सामान्य' : 'General';
+  };
+
+  // Get category Nepali translation
+  const getCategoryNepali = (category) => {
+    const categories = {
+      'service': 'सेवा समस्या',
+      'billing': 'बिलिङ समस्या',
+      'technical': 'प्राविधिक समस्या',
+      'network': 'नेटवर्क समस्या',
+      'signal': 'सिग्नल समस्या',
+      'recharge': 'रिचार्ज समस्या',
+      'activation': 'सक्रियता समस्या',
+      'internet': 'इन्टरनेट सेवा',
+      'general': 'सामान्य',
+      'other': 'अन्य'
+    };
+    return categories[category] || 'सामान्य';
   };
 
   // Filter users
@@ -565,6 +654,9 @@ const AdminUsers = () => {
   const totalUsers = filteredUsers.length;
   const activeUsers = filteredUsers.filter(u => u.status === 'active').length;
   const totalComplaintsCount = filteredUsers.reduce((sum, u) => sum + (u.complaintsCount || 0), 0);
+  const staffCount = filteredUsers.filter(u => u.role === 'staff').length;
+  const adminCount = filteredUsers.filter(u => u.role === 'admin').length;
+  const regularUsersCount = filteredUsers.filter(u => u.role === 'user').length;
 
   // Pagination
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
@@ -683,8 +775,8 @@ const AdminUsers = () => {
     }
     
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await axios.post('http://localhost:5000/api/users', {
+      const token = getAuthToken();
+      const response = await axios.post(`${API_URL}/users`, {
         name: newUser.name,
         nameEn: newUser.enName,
         email: newUser.email,
@@ -727,8 +819,8 @@ const AdminUsers = () => {
     }
     
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await axios.put(`http://localhost:5000/api/users/${editUser.id}`, {
+      const token = getAuthToken();
+      const response = await axios.put(`${API_URL}/users/${editUser.id}`, {
         name: editUser.name,
         nameEn: editUser.enName,
         email: editUser.email,
@@ -757,8 +849,8 @@ const AdminUsers = () => {
 
   const updateUserStatus = async (id, newStatus) => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await axios.patch(`http://localhost:5000/api/users/${id}/status`, {
+      const token = getAuthToken();
+      const response = await axios.patch(`${API_URL}/users/${id}/status`, {
         status: newStatus
       }, {
         headers: {
@@ -782,8 +874,8 @@ const AdminUsers = () => {
   const deleteUser = async (id, name) => {
     if (window.confirm(`${t.confirmDelete} ${language === 'np' ? name : users.find(u => u.id === id)?.enName}?`)) {
       try {
-        const token = localStorage.getItem('adminToken');
-        const response = await axios.delete(`http://localhost:5000/api/users/${id}`, {
+        const token = getAuthToken();
+        const response = await axios.delete(`${API_URL}/users/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -874,6 +966,31 @@ const AdminUsers = () => {
               </div>
             </div>
 
+            {/* Role Distribution Cards */}
+            <div className="stats-row-small">
+              <div className="stat-card-small">
+                <span className="stat-icon-small">👑</span>
+                <div className="stat-info-small">
+                  <div className="stat-value-small">{adminCount}</div>
+                  <div className="stat-label-small">{rolesObj.admin}</div>
+                </div>
+              </div>
+              <div className="stat-card-small">
+                <span className="stat-icon-small">👔</span>
+                <div className="stat-info-small">
+                  <div className="stat-value-small">{staffCount}</div>
+                  <div className="stat-label-small">{rolesObj.staff}</div>
+                </div>
+              </div>
+              <div className="stat-card-small">
+                <span className="stat-icon-small">👤</span>
+                <div className="stat-info-small">
+                  <div className="stat-value-small">{regularUsersCount}</div>
+                  <div className="stat-label-small">{rolesObj.user}</div>
+                </div>
+              </div>
+            </div>
+
             {/* Filters */}
             <div className="filters-bar">
               <div className="search-box">
@@ -926,10 +1043,18 @@ const AdminUsers = () => {
                   {paginatedUsers.length > 0 ? (
                     paginatedUsers.map((user) => (
                       <tr key={user.id}>
-                        <td className="user-name">{language === 'np' ? user.name : user.enName}</td>
+                        <td className="user-name">
+                          {language === 'np' ? user.name : user.enName}
+                          {user.role === 'admin' && <span className="admin-badge">Admin</span>}
+                          {user.role === 'staff' && <span className="staff-badge">Staff</span>}
+                        </td>
                         <td>{user.email}</td>
                         <td>{user.phone}</td>
-                        <td>{getRoleText(user.role)}</td>
+                        <td>
+                          <span className={`role-badge ${getRoleClass(user.role)}`}>
+                            {getRoleText(user.role)}
+                          </span>
+                        </td>
                         <td>
                           <span className={`status-badge ${getStatusClass(user.status)}`}>
                             {getStatusText(user.status)}
@@ -1006,7 +1131,7 @@ const AdminUsers = () => {
         </div>
       </div>
 
-      {/* User Details Modal with Complaints List */}
+      {/* User Details Modal with Complaints List from Both Endpoints */}
       {showModal && selectedUser && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content user-details-modal" onClick={(e) => e.stopPropagation()}>
@@ -1029,7 +1154,9 @@ const AdminUsers = () => {
               </div>
               <div className="detail-row">
                 <label>{t.userRole}:</label>
-                <span>{getRoleText(selectedUser.role)}</span>
+                <span className={`role-badge ${getRoleClass(selectedUser.role)}`}>
+                  {getRoleText(selectedUser.role)}
+                </span>
               </div>
               <div className="detail-row">
                 <label>{t.accountStatus}:</label>
@@ -1072,17 +1199,27 @@ const AdminUsers = () => {
                       <div key={complaint.id || index} className="complaint-item">
                         <div className="complaint-header">
                           <span className="complaint-id">
-                            {complaint.complaintNumber || `Complaint #${index + 1}`}
+                            {complaint.complaint_number || complaint.complaintNumber || `${t.ticketId} #${index + 1}`}
                           </span>
-                          <span className={`complaint-status status-${complaint.status === 'Resolved' || complaint.status === 'समाधान भयो' ? 'resolved' : 'pending'}`}>
-                            {complaint.status === 'Resolved' || complaint.status === 'समाधान भयो' 
+                          <span className="complaint-type-badge">
+                            {complaint.nature_of_complaint ? (language === 'np' ? 'साधारण' : 'Regular') : (language === 'np' ? 'सम्बन्धी' : 'Regarding')}
+                          </span>
+                          <span className={`complaint-status ${complaint.status === 'resolved' || complaint.status === 'Resolved' ? 'status-resolved' : 'status-pending'}`}>
+                            {complaint.status === 'resolved' || complaint.status === 'Resolved' 
                               ? (language === 'np' ? 'समाधान भयो' : 'Resolved')
                               : (language === 'np' ? 'विचाराधीन' : 'Pending')}
                           </span>
                         </div>
                         <div className="complaint-details">
-                          <p><strong>{language === 'np' ? 'प्रकार' : 'Category'}:</strong> {complaint.category || complaint.natureOfComplaint || 'N/A'}</p>
-                          <p><strong>{language === 'np' ? 'मिति' : 'Date'}:</strong> {formatNepaliDate(complaint.submittedDate || complaint.createdAt)}</p>
+                          <p>
+                            <strong>{t.complaintType}:</strong> {getComplaintType(complaint)}
+                          </p>
+                          {complaint.subject && (
+                            <p><strong>{t.subject}:</strong> {complaint.subject}</p>
+                          )}
+                          <p>
+                            <strong>{t.date}:</strong> {formatNepaliDate(complaint.created_at || complaint.createdAt || complaint.submittedDate)}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -1328,7 +1465,6 @@ const AdminUsers = () => {
           to { transform: rotate(360deg); }
         }
 
-        /* Dashboard Layout */
         .dashboard-layout {
           display: flex;
           height: calc(100vh - 195px);
@@ -1338,7 +1474,6 @@ const AdminUsers = () => {
           overflow: hidden;
         }
 
-        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -1351,7 +1486,6 @@ const AdminUsers = () => {
           overflow-y: auto;
         }
 
-        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
           margin-left: 260px;
@@ -1374,10 +1508,6 @@ const AdminUsers = () => {
         .main-container::-webkit-scrollbar-thumb {
           background: #3b82f6;
           border-radius: 10px;
-        }
-
-        .main-container::-webkit-scrollbar-thumb:hover {
-          background: #2563eb;
         }
 
         .content-wrapper {
@@ -1447,6 +1577,13 @@ const AdminUsers = () => {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 20px;
+          margin-bottom: 20px;
+        }
+
+        .stats-row-small {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
           margin-bottom: 28px;
         }
 
@@ -1466,6 +1603,16 @@ const AdminUsers = () => {
           box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
+        .stat-card-small {
+          background: white;
+          border-radius: 12px;
+          padding: 12px 16px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          border: 1px solid #e2e8f0;
+        }
+
         .stat-icon {
           width: 50px;
           height: 50px;
@@ -1480,7 +1627,15 @@ const AdminUsers = () => {
         .stat-icon.green { background: #d1fae5; color: #059669; }
         .stat-icon.blue { background: #dbeafe; color: #2563eb; }
 
+        .stat-icon-small {
+          font-size: 1.5rem;
+        }
+
         .stat-info {
+          flex: 1;
+        }
+
+        .stat-info-small {
           flex: 1;
         }
 
@@ -1491,10 +1646,22 @@ const AdminUsers = () => {
           line-height: 1.2;
         }
 
+        .stat-value-small {
+          font-size: 1.2rem;
+          font-weight: 700;
+          color: #0f172a;
+        }
+
         .stat-label {
           font-size: 0.75rem;
           color: #64748b;
           margin-top: 4px;
+        }
+
+        .stat-label-small {
+          font-size: 0.7rem;
+          color: #64748b;
+          margin-top: 2px;
         }
 
         .filters-bar {
@@ -1589,6 +1756,49 @@ const AdminUsers = () => {
         .user-name {
           font-weight: 600;
           color: #0f172a;
+          position: relative;
+        }
+
+        .admin-badge, .staff-badge {
+          display: inline-block;
+          margin-left: 8px;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-size: 0.6rem;
+          font-weight: 500;
+        }
+
+        .admin-badge {
+          background: #f3e8ff;
+          color: #9333ea;
+        }
+
+        .staff-badge {
+          background: #dbeafe;
+          color: #2563eb;
+        }
+
+        .role-badge {
+          display: inline-block;
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 0.7rem;
+          font-weight: 500;
+        }
+
+        .role-admin {
+          background: #f3e8ff;
+          color: #9333ea;
+        }
+
+        .role-staff {
+          background: #dbeafe;
+          color: #2563eb;
+        }
+
+        .role-user {
+          background: #d1fae5;
+          color: #059669;
         }
 
         .complaint-count-badge {
@@ -1823,6 +2033,8 @@ const AdminUsers = () => {
           display: flex;
           flex-direction: column;
           gap: 12px;
+          max-height: 300px;
+          overflow-y: auto;
         }
 
         .complaint-item {
@@ -1839,12 +2051,24 @@ const AdminUsers = () => {
           margin-bottom: 8px;
           padding-bottom: 8px;
           border-bottom: 1px solid #e2e8f0;
+          flex-wrap: wrap;
+          gap: 8px;
         }
 
         .complaint-id {
           font-weight: 600;
           color: #3b82f6;
           font-family: monospace;
+          font-size: 0.8rem;
+        }
+
+        .complaint-type-badge {
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 0.65rem;
+          font-weight: 500;
+          background: #e0e7ff;
+          color: #4f46e5;
         }
 
         .complaint-status {
@@ -1962,6 +2186,9 @@ const AdminUsers = () => {
           .stats-row {
             grid-template-columns: repeat(2, 1fr);
           }
+          .stats-row-small {
+            grid-template-columns: repeat(2, 1fr);
+          }
         }
 
         @media (max-width: 768px) {
@@ -2018,6 +2245,10 @@ const AdminUsers = () => {
             grid-template-columns: 1fr;
           }
           
+          .stats-row-small {
+            grid-template-columns: 1fr;
+          }
+          
           .action-buttons {
             flex-direction: column;
           }
@@ -2025,6 +2256,11 @@ const AdminUsers = () => {
           .header-buttons {
             width: 100%;
             flex-direction: column;
+          }
+          
+          .complaint-header {
+            flex-direction: column;
+            align-items: flex-start;
           }
         }
 
