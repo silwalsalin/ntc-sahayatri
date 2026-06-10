@@ -57,9 +57,6 @@ const LandingPage = () => {
 
   // Image states for fallback
   const [heroImageError, setHeroImageError] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
   
   // State for dynamic public complaints from backend
   const [regularComplaints, setRegularComplaints] = useState([]);
@@ -235,22 +232,6 @@ const LandingPage = () => {
     const interval = setInterval(fetchAllComplaints, 30000);
     return () => clearInterval(interval);
   }, [fetchAllComplaints]);
-
-  // Handle scroll for header effects
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      setScrollY(currentScrollY);
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setIsHeaderVisible(false);
-      } else {
-        setIsHeaderVisible(true);
-      }
-      setLastScrollY(currentScrollY);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
 
   // Close modal on escape key
   useEffect(() => {
@@ -450,7 +431,9 @@ const LandingPage = () => {
       subject: 'विषय',
       noComplaints: 'हाल कुनै गुनासोहरू छैनन्',
       refreshData: 'ताजा डाटा',
-      contactNow: 'सम्पर्क गर्नुहोस्'
+      contactNow: 'सम्पर्क गर्नुहोस्',
+      referenceNo: 'सन्दर्भ नम्बर',
+      preferredContact: 'प्राथमिकता सम्पर्क'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -515,7 +498,9 @@ const LandingPage = () => {
       subject: 'Subject',
       noComplaints: 'No complaints found',
       refreshData: 'Refresh Data',
-      contactNow: 'Contact Now'
+      contactNow: 'Contact Now',
+      referenceNo: 'Reference Number',
+      preferredContact: 'Preferred Contact'
     },
   };
 
@@ -700,7 +685,7 @@ const LandingPage = () => {
       )}
 
       {/* HEADER 1 - Top Bar */}
-      <div className={`header-1 ${!isHeaderVisible ? 'header-hidden' : ''}`}>
+      <div className="header-1">
         <div className="container-1">
           <div className="header-left">
             <div className="we-are-here">
@@ -751,7 +736,7 @@ const LandingPage = () => {
       </div>
 
       {/* HEADER 2 - Department Level with Logos */}
-      <div className={`header-2 ${!isHeaderVisible ? 'header-hidden' : ''}`}>
+      <div className="header-2">
         <div className="container-2">
           <div className="logo-left">
             <LogoImage src={ntcLogo} alt="NTC Logo" fallback="📡" className="ntc-logo" />
@@ -767,7 +752,7 @@ const LandingPage = () => {
       </div>
 
       {/* HEADER 3 - Navigation Bar */}
-      <div className={`header-3 ${!isHeaderVisible ? 'header-hidden' : ''}`}>
+      <div className="header-3">
         <div className="container-3">
           <div className="nav-menu-left">
             <button onClick={() => scrollToSection('home')} className="nav-btn">
@@ -777,6 +762,10 @@ const LandingPage = () => {
             <button onClick={() => navigate('/faqs')} className="nav-btn">
               <span className="nav-icon">❓</span>
               <span className="nav-text">{t.faqs}</span>
+            </button>
+            <button onClick={manualRefresh} className="nav-btn">
+              <span className="nav-icon">🔄</span>
+              <span className="nav-text">{t.refreshData}</span>
             </button>
           </div>
           <div className="login-btn-right">
@@ -1146,8 +1135,7 @@ const LandingPage = () => {
         </div>
       )}
 
-      <style jsx>{`
-        /* All your existing styles remain the same */
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -1163,13 +1151,33 @@ const LandingPage = () => {
           flex-direction: column;
         }
 
-        /* Header Hide/Show Animation */
+        /* Header Positioning - Fixed (Always Visible like Complaints.js) */
         .header-1, .header-2, .header-3 {
-          transition: transform 0.3s ease-in-out;
+          position: fixed;
+          left: 0;
+          width: 100%;
+          z-index: 1000;
         }
         
-        .header-hidden {
-          transform: translateY(-100%);
+        .header-1 {
+          top: 0;
+          z-index: 1003;
+        }
+        
+        .header-2 {
+          top: 55px;
+          z-index: 1002;
+        }
+        
+        .header-3 {
+          top: 119px;
+          z-index: 1001;
+        }
+
+        /* Main Content Padding */
+        .main-content {
+          flex: 1;
+          padding-top: 195px;
         }
 
         /* Toast Notification */
@@ -1177,7 +1185,7 @@ const LandingPage = () => {
           position: fixed;
           top: 200px;
           right: 20px;
-          z-index: 3000;
+          z-index: 10000;
           display: flex;
           align-items: center;
           gap: 12px;
@@ -1212,14 +1220,9 @@ const LandingPage = () => {
 
         /* HEADER 1 - Top Bar */
         .header-1 {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
           background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
           color: white;
           padding: 10px 0;
-          z-index: 1040;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
@@ -1312,14 +1315,9 @@ const LandingPage = () => {
 
         /* HEADER 2 - Department Level */
         .header-2 {
-          position: fixed;
-          top: 55px;
-          left: 0;
-          width: 100%;
           background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%);
           color: #1a2c3e;
           padding: 12px 0;
-          z-index: 1030;
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
         }
@@ -1352,15 +1350,10 @@ const LandingPage = () => {
 
         /* HEADER 3 - Navigation Bar */
         .header-3 {
-          position: fixed;
-          top: 119px;
-          left: 0;
-          width: 100%;
           background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
           color: white;
           padding: 12px 0;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          z-index: 1020;
         }
         .container-3 {
           max-width: 1400px;
@@ -1407,12 +1400,6 @@ const LandingPage = () => {
           white-space: nowrap;
         }
         .login-btn:hover { background: white; color: #1565c0; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-
-        /* Main Content */
-        .main-content {
-          flex: 1;
-          padding-top: 195px;
-        }
 
         /* Hero Section */
         .hero {
@@ -1802,7 +1789,7 @@ const LandingPage = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 2000;
+          z-index: 10000;
           animation: fadeIn 0.3s ease;
         }
 
@@ -1855,7 +1842,6 @@ const LandingPage = () => {
           border-bottom: 2px solid #e0e0e0;
         }
 
-        .detail-grid { display: flex; flex-direction: column; gap: 10px; }
         .detail-row { display: flex; margin-bottom: 8px; flex-wrap: wrap; }
         .detail-label { width: 35%; font-weight: 600; color: #0d47a1; }
         .detail-value { width: 65%; color: #333; word-break: break-word; }
