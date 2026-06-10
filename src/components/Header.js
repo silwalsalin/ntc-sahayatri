@@ -20,16 +20,6 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
   const location = useLocation();
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showAdminDropdown, setShowAdminDropdown] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-
-  // Handle scroll for header effects
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   const content = {
     np: {
@@ -68,10 +58,15 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    // Clear all admin-related storage
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    localStorage.removeItem('staffToken');
+    localStorage.removeItem('staffUser');
     localStorage.removeItem('userRole');
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
     navigate('/');
   };
 
@@ -94,7 +89,7 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
 
   // Get display name for admin
   const getDisplayName = () => {
-    if (adminName && adminName !== 'Admin') {
+    if (adminName && adminName !== 'Admin User' && adminName !== 'Admin') {
       return adminName;
     }
     return userRole === 'admin' ? t.admin : adminName;
@@ -103,7 +98,7 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
   return (
     <>
       {/* HEADER 1 - Top Bar */}
-      <div className={`header-1 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
+      <div className="header-1">
         <div className="container-1">
           <div className="header-left">
             <div className="we-are-here">
@@ -154,7 +149,7 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
       </div>
 
       {/* HEADER 2 - Department Level with Logos */}
-      <div className={`header-2 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
+      <div className="header-2">
         <div className="container-2">
           <div className="logo-left">
             <LogoImage 
@@ -180,7 +175,7 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
       </div>
 
       {/* HEADER 3 - Navigation Bar with Admin Dropdown */}
-      <div className={`header-3 ${scrollY > 50 ? 'header-scrolled' : ''}`}>
+      <div className="header-3">
         <div className="container-3">
           <div className="admin-info-display">
             <div className="welcome-text">
@@ -234,13 +229,15 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
           background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
           color: white;
           padding: 10px 0;
-          z-index: 1040;
+          z-index: 1003;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-          transition: all 0.3s ease;
         }
 
-        .header-1.header-scrolled {
-          padding: 6px 0;
+        /* Header 1 height is approximately 55px (10px padding top + content height + 10px padding bottom) */
+        .header-1::after {
+          content: '';
+          display: table;
+          clear: both;
         }
 
         .container-1 {
@@ -388,6 +385,7 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
         }
 
         /* HEADER 2 - Department Level */
+        /* Positioned directly below header-1 - header-1 height is ~55px */
         .header-2 {
           position: fixed;
           top: 55px;
@@ -396,16 +394,12 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
           background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%);
           color: #1a2c3e;
           padding: 12px 0;
-          z-index: 1030;
+          z-index: 1002;
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
-          transition: all 0.3s ease;
         }
 
-        .header-2.header-scrolled {
-          padding: 8px 0;
-          top: 45px;
-        }
+        /* Header 2 height is approximately 64px (12px padding top + content height + 12px padding bottom) */
 
         .container-2 {
           max-width: 1400px;
@@ -467,6 +461,7 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
         }
 
         /* HEADER 3 - Navigation Bar */
+        /* Positioned directly below header-2 - header-1 (55px) + header-2 (64px) = 119px */
         .header-3 {
           position: fixed;
           top: 119px;
@@ -476,13 +471,7 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
           color: white;
           padding: 12px 0;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          z-index: 1020;
-          transition: all 0.3s ease;
-        }
-
-        .header-3.header-scrolled {
-          top: 101px;
-          padding: 8px 0;
+          z-index: 1001;
         }
 
         .container-3 {
