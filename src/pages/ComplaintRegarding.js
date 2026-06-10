@@ -97,10 +97,10 @@ const ComplaintRegarding = () => {
   }, []);
 
   // Show toast notification
-  const showToast = useCallback((message, type = 'success', duration = 5000) => {
+  const showToast = useCallback((message, type = 'success', duration = 3000) => {
     setToast({ show: true, message, type });
     setTimeout(() => {
-      setToast(prev => prev.show ? { show: false, message: '', type: '' } : prev);
+      setToast({ show: false, message: '', type: '' });
     }, duration);
   }, []);
 
@@ -457,7 +457,7 @@ const ComplaintRegarding = () => {
       
       setSelectedFiles(prev => [...prev, ...validFiles]);
       if (validFiles.length > 0) {
-        showToast(`${validFiles.length} ${language === 'np' ? 'फाइल(हरू) चयन गरियो' : 'file(s) selected'}`, 'success');
+        showToast(`${validFiles.length} ${language === 'np' ? 'फाइल(हरू) चयन गरियो' : 'file(s) selected'}`, 'success', 2000);
       }
     }
   };
@@ -502,14 +502,14 @@ const ComplaintRegarding = () => {
       
       setSelectedFiles(prev => [...prev, ...validFiles]);
       if (validFiles.length > 0) {
-        showToast(`${validFiles.length} ${language === 'np' ? 'फाइल(हरू) चयन गरियो' : 'file(s) selected'}`, 'success');
+        showToast(`${validFiles.length} ${language === 'np' ? 'फाइल(हरू) चयन गरियो' : 'file(s) selected'}`, 'success', 2000);
       }
     }
   };
 
   const removeFile = (index) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    showToast(t.fileRemoved, 'info');
+    showToast(t.fileRemoved, 'info', 1500);
   };
 
   const clearForm = () => {
@@ -535,7 +535,7 @@ const ComplaintRegarding = () => {
       setTouched({});
       setDescriptionCharCount(0);
       generateReferenceNumber();
-      showToast(t.resetSuccess, 'success');
+      showToast(t.resetSuccess, 'success', 2000);
     }
   };
 
@@ -634,7 +634,6 @@ const ComplaintRegarding = () => {
         });
       }, 200);
       
-      // FIXED: Use correct endpoint - /api/complaint-regarding (singular, hyphenated)
       const response = await axios.post(`${API_URL}/complaint-regarding`, formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -673,8 +672,6 @@ const ComplaintRegarding = () => {
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
-        
-        showToast(t.successMessage, 'success');
       } else {
         throw new Error(response.data.message || 'Submission failed');
       }
@@ -720,14 +717,38 @@ const ComplaintRegarding = () => {
 
   return (
     <div className="complaint-regarding-page">
-      {/* Toast Notification */}
-      {toast.show && (
-        <div className={`toast-notification ${toast.type}`}>
-          <span className="toast-icon">
-            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
-          </span>
-          <span className="toast-message">{toast.message}</span>
-          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+      {/* Success Modal - ONLY show this, no other popup */}
+      {showSuccess && successData && (
+        <div className="success-modal-overlay" onClick={() => setShowSuccess(false)}>
+          <div className="success-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="success-icon">✅</div>
+            <h3>{t.successMessage}</h3>
+            <div className="success-details">
+              <p><strong>{t.referenceNo}:</strong> 
+                <span className="highlight">{referenceNumber}</span>
+                <button className="copy-small" onClick={copyReferenceNumber}>📋</button>
+              </p>
+              <p><strong>{t.ticketId}:</strong> 
+                <span className="highlight">{language === 'np' ? successData.complaintNumberNp : successData.complaintNumber}</span>
+              </p>
+              <p><strong>{t.password}:</strong> 
+                <span className="highlight password">{successData.trackingPassword}</span>
+              </p>
+              <p className="save-warning">⚠️ {t.saveDetails}</p>
+            </div>
+            <div className="modal-buttons">
+              <button className="btn-close" onClick={() => setShowSuccess(false)}>
+                {t.close}
+              </button>
+              <button className="btn-track" onClick={() => {
+                sessionStorage.setItem('trackingId', successData.complaintNumber);
+                sessionStorage.setItem('trackingPassword', successData.trackingPassword);
+                navigate('/track-complaint');
+              }}>
+                🔍 {t.trackNow}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1091,11 +1112,6 @@ const ComplaintRegarding = () => {
                         <div className="file-info">
                           <span className="file-name">{file.name}</span>
                           <span className="file-size">({(file.size / 1024).toFixed(2)} KB)</span>
-                          {isSubmitting && uploadProgress < 100 && (
-                            <div className="upload-progress">
-                              <div className="progress-bar" style={{ width: `${uploadProgress}%` }}></div>
-                            </div>
-                          )}
                         </div>
                         <button type="button" onClick={() => removeFile(index)} className="remove-file" title={t.fileRemoved}>
                           ✕
@@ -1132,50 +1148,7 @@ const ComplaintRegarding = () => {
         </div>
       </div>
 
-      {/* Success Modal */}
-      {showSuccess && successData && (
-        <div className="success-modal-overlay" onClick={() => setShowSuccess(false)}>
-          <div className="success-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="success-icon">✅</div>
-            <h3>{t.successMessage}</h3>
-            <div className="success-details">
-              <p><strong>{t.referenceNo}:</strong> 
-                <span className="highlight">{referenceNumber}</span>
-                <button className="copy-small" onClick={copyReferenceNumber}>📋</button>
-              </p>
-              <p><strong>{t.ticketId}:</strong> 
-                <span className="highlight">{language === 'np' ? successData.complaintNumberNp : successData.complaintNumber}</span>
-              </p>
-              <p><strong>{t.password}:</strong> 
-                <span className="highlight password">{successData.trackingPassword}</span>
-              </p>
-              <p className="save-warning">⚠️ {t.saveDetails}</p>
-            </div>
-            <div className="modal-buttons">
-              <button className="btn-close" onClick={() => setShowSuccess(false)}>
-                {t.close}
-              </button>
-              <button className="btn-track" onClick={() => {
-                sessionStorage.setItem('trackingId', successData.complaintNumber);
-                sessionStorage.setItem('trackingPassword', successData.trackingPassword);
-                navigate('/track-complaint');
-              }}>
-                🔍 {t.trackNow}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Footer */}
-      <footer className="footer">
-        <div className="footer-content">
-          <div className="footer-copyright">
-            <p>{t.footerTagline}</p>
-            <p className="copyright-text">{t.copyright}</p>
-          </div>
-        </div>
-      </footer>
+ 
 
       <style jsx>{`
         * {
@@ -1191,56 +1164,6 @@ const ComplaintRegarding = () => {
           min-height: 100vh;
           display: flex;
           flex-direction: column;
-        }
-
-        /* Toast Notification */
-        .toast-notification {
-          position: fixed;
-          top: 200px;
-          right: 20px;
-          z-index: 3000;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px 20px;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-          animation: slideInRight 0.3s ease;
-          max-width: 350px;
-        }
-        
-        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
-        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
-        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
-        
-        .toast-icon { font-size: 1.2rem; }
-        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
-        .toast-close {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #999;
-          font-size: 1rem;
-          padding: 0 4px;
-        }
-        .toast-close:hover { color: #666; }
-
-        @keyframes slideInRight {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-
-        /* Upload Progress */
-        .upload-progress {
-          margin-top: 8px;
-          width: 100%;
-        }
-        .progress-bar {
-          height: 4px;
-          background: #1565c0;
-          border-radius: 2px;
-          transition: width 0.3s ease;
         }
 
         /* HEADER 1 - Top Bar */
@@ -1788,18 +1711,7 @@ const ComplaintRegarding = () => {
         .btn-track { background: linear-gradient(135deg, #1565c0, #0d47a1); color: white; }
         .btn-track:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(21,101,192,0.3); }
 
-        /* Footer */
-        .footer {
-          background: #0d2b5e;
-          color: white;
-          padding: 20px 24px;
-          margin-top: 40px;
-          text-align: center;
-        }
-        .footer-content { max-width: 1200px; margin: 0 auto; }
-        .footer-copyright { text-align: center; }
-        .footer-copyright p { font-size: 0.75rem; opacity: 0.8; margin: 3px 0; }
-        .copyright-text { font-size: 0.65rem; opacity: 0.6; }
+    
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -1816,7 +1728,6 @@ const ComplaintRegarding = () => {
           .success-modal { padding: 25px; margin: 20px; }
           .modal-buttons { flex-direction: column; }
           .form-buttons { flex-direction: column; }
-          .toast-notification { top: auto; bottom: 20px; right: 20px; left: 20px; max-width: calc(100% - 40px); }
         }
 
         @media (max-width: 480px) {

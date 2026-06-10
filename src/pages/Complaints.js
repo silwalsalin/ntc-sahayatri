@@ -1026,15 +1026,7 @@ const Complaints = () => {
         </div>
       )}
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="footer-content">
-          <div className="footer-copyright">
-            <p>{t.footerTagline}</p>
-            <p className="copyright-text">{t.copyright}</p>
-          </div>
-        </div>
-      </footer>
+  
 
       <style jsx>{`
         * {
@@ -1788,18 +1780,6 @@ const Complaints = () => {
           transform: translateY(-1px);
         }
 
-        /* Footer */
-        .footer {
-          background: #0d2b5e;
-          color: white;
-          padding: 20px 24px;
-          margin-top: 40px;
-          text-align: center;
-        }
-        .footer-content { max-width: 1200px; margin: 0 auto; }
-        .footer-copyright { text-align: center; }
-        .footer-copyright p { font-size: 0.75rem; opacity: 0.8; margin: 3px 0; }
-        .copyright-text { font-size: 0.65rem; opacity: 0.6; }
 
         /* Responsive */
         @media (max-width: 768px) {

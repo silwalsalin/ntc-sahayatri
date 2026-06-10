@@ -1,9 +1,9 @@
 // src/pages/FAQS.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Try to import local images with fallback
-let ntcLogo, govLogo, heroImage;
+let ntcLogo, govLogo;
 try {
   ntcLogo = require('../img/ntc-logo.png');
 } catch (e) {
@@ -14,21 +14,25 @@ try {
 } catch (e) {
   govLogo = null;
 }
-try {
-  heroImage = require('../img/image.png');
-} catch (e) {
-  heroImage = null;
-}
 
 const FAQS = () => {
   const navigate = useNavigate();
   
-  // Language state
-  const [language, setLanguage] = useState('np');
+  // Language state with persistence
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   
   // FAQ accordion state
   const [openIndex, setOpenIndex] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [visibleCount, setVisibleCount] = useState(5);
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
 
   const toggleFAQ = (index) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -46,6 +50,7 @@ const FAQS = () => {
       home: 'गृह पृष्ठ',
       faqs: 'बारम्बार सोधिने प्रश्नहरू',
       login: 'लगइन',
+      complaints: 'गुनासोहरू',
       frequentlyAskedQuestions: 'बारम्बार सोधिने प्रश्नहरू',
       findAnswers: 'आफ्नो प्रश्नको जवाफ यहाँ खोज्नुहोस्',
       searchPlaceholder: 'प्रश्न खोज्नुहोस्...',
@@ -106,11 +111,15 @@ const FAQS = () => {
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
       backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
       showMore: 'थप हेर्नुहोस्',
-      showLess: 'कम हेर्नुहोस्'
+      showLess: 'कम हेर्नुहोस्',
+      copyPhone: 'फोन नम्बर प्रतिलिपि गर्नुहोस्',
+      copyEmail: 'इमेल प्रतिलिपि गर्नुहोस्',
+      copied: 'प्रतिलिपि गरियो!',
+      questionsFound: 'प्रश्नहरू फेला पर्यो'
     },
     en: {
       weAreHere: 'We are here for you',
-      contactNumber: '01-4960008',
+      contactNumber: 'Contact: 01-4960008',
       emailAddress: 'coo@ntc.net.np',
       departmentName: 'Nepal Telecommunications Authority',
       departmentAddress: 'Bhadrakali Plaza, Kathmandu',
@@ -119,6 +128,7 @@ const FAQS = () => {
       home: 'Home',
       faqs: 'FAQs',
       login: 'Login',
+      complaints: 'Complaints',
       frequentlyAskedQuestions: 'Frequently Asked Questions',
       findAnswers: 'Find answers to your questions here',
       searchPlaceholder: 'Search questions...',
@@ -179,13 +189,15 @@ const FAQS = () => {
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
       backToHome: 'Back to Home',
       showMore: 'Show More',
-      showLess: 'Show Less'
+      showLess: 'Show Less',
+      copyPhone: 'Copy phone number',
+      copyEmail: 'Copy email address',
+      copied: 'Copied!',
+      questionsFound: 'questions found'
     }
   };
 
   const t = content[language];
-  const [searchTerm, setSearchTerm] = useState('');
-  const [visibleCount, setVisibleCount] = useState(5);
 
   // Filter FAQs based on search term
   const filteredFaqs = t.faqs.filter(faq =>
@@ -201,6 +213,11 @@ const FAQS = () => {
     setShowLanguageDropdown(false);
     setOpenIndex(null);
     setVisibleCount(5);
+  };
+
+  const copyToClipboard = (text, type) => {
+    navigator.clipboard.writeText(text);
+    alert(`${type} ${t.copied}`);
   };
 
   const LogoImage = ({ src, alt, fallback, className }) => {
@@ -235,10 +252,24 @@ const FAQS = () => {
               <div className="contact-info-item">
                 <span className="contact-icon">📞</span>
                 <span className="contact-text">{t.contactNumber}</span>
+                <button 
+                  className="copy-btn-mini"
+                  onClick={() => copyToClipboard('01-4960008', t.copyPhone)}
+                  title={t.copyPhone}
+                >
+                  📋
+                </button>
               </div>
               <div className="contact-info-item">
                 <span className="contact-icon">✉️</span>
                 <span className="contact-text">{t.emailAddress}</span>
+                <button 
+                  className="copy-btn-mini"
+                  onClick={() => copyToClipboard('coo@ntc.net.np', t.copyEmail)}
+                  title={t.copyEmail}
+                >
+                  📋
+                </button>
               </div>
             </div>
             <div className="language-dropdown">
@@ -313,7 +344,7 @@ const FAQS = () => {
             </button>
           </div>
           <div className="login-btn-right">
-            <button className="login-btn" onClick={() => navigate('/admin')}>
+            <button className="login-btn" onClick={() => navigate('/login')}>
               <span className="login-icon">🔐</span>
               <span className="login-text">{t.login}</span>
             </button>
@@ -349,7 +380,7 @@ const FAQS = () => {
 
             {/* Results Count */}
             <div className="results-count">
-              {filteredFaqs.length} {filteredFaqs.length === 1 ? 'question' : 'questions'} found
+              {filteredFaqs.length} {t.questionsFound}
             </div>
 
             {/* FAQ Accordion */}
@@ -388,10 +419,16 @@ const FAQS = () => {
               <h3>{t.stillHaveQuestions}</h3>
               <p>{t.supportText}</p>
               <div className="support-buttons">
-                <button className="support-btn phone">
+                <button 
+                  className="support-btn phone"
+                  onClick={() => window.location.href = 'tel:198'}
+                >
                   📞 {t.contactNumber}
                 </button>
-                <button className="support-btn email">
+                <button 
+                  className="support-btn email"
+                  onClick={() => window.location.href = 'mailto:coo@ntc.net.np'}
+                >
                   ✉️ {t.emailAddress}
                 </button>
               </div>
@@ -406,6 +443,8 @@ const FAQS = () => {
         </div>
       </div>
 
+     
+
       <style jsx>{`
         * {
           margin: 0;
@@ -418,6 +457,8 @@ const FAQS = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
           min-height: 100vh;
+          display: flex;
+          flex-direction: column;
         }
 
         /* HEADER 1 - Top Bar */
@@ -429,7 +470,7 @@ const FAQS = () => {
           background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
           color: white;
           padding: 10px 0;
-          z-index: 1040;
+          z-index: 1003;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
@@ -477,6 +518,7 @@ const FAQS = () => {
           display: flex;
           align-items: center;
           gap: 15px;
+          flex-wrap: wrap;
         }
 
         .contact-info-item {
@@ -497,6 +539,18 @@ const FAQS = () => {
 
         .contact-icon { font-size: 0.85rem; }
         .contact-text { font-size: 0.75rem; font-weight: 500; }
+
+        .copy-btn-mini {
+          background: rgba(255,255,255,0.2);
+          border: none;
+          cursor: pointer;
+          font-size: 0.7rem;
+          padding: 2px 5px;
+          border-radius: 20px;
+          transition: all 0.3s ease;
+          color: white;
+        }
+        .copy-btn-mini:hover { background: rgba(255,255,255,0.4); transform: scale(1.05); }
 
         /* Language Dropdown */
         .language-dropdown { position: relative; }
@@ -554,10 +608,11 @@ const FAQS = () => {
           background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%);
           color: #1a2c3e;
           padding: 12px 0;
-          z-index: 1030;
+          z-index: 1002;
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
         }
+
         .container-2 {
           max-width: 1400px;
           margin: 0 auto;
@@ -595,8 +650,9 @@ const FAQS = () => {
           color: white;
           padding: 12px 0;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          z-index: 1020;
+          z-index: 1001;
         }
+
         .container-3 {
           max-width: 1400px;
           margin: 0 auto;
@@ -607,7 +663,13 @@ const FAQS = () => {
           flex-wrap: wrap;
           gap: 20px;
         }
-        .nav-menu-left { display: flex; gap: 20px; align-items: center; }
+
+        .nav-menu-left {
+          display: flex;
+          gap: 20px;
+          align-items: center;
+        }
+
         .nav-btn {
           background: transparent;
           border: none;
@@ -622,9 +684,15 @@ const FAQS = () => {
           align-items: center;
           gap: 8px;
         }
-        .nav-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-1px); }
+
+        .nav-btn:hover {
+          background: rgba(255,255,255,0.15);
+          transform: translateY(-1px);
+        }
+
         .nav-icon { font-size: 1.1rem; }
         .nav-text { font-size: 0.95rem; }
+
         .login-btn-right { display: flex; align-items: center; }
         .login-btn {
           background: transparent;
@@ -645,8 +713,9 @@ const FAQS = () => {
 
         /* Main Content */
         .main-content {
+          flex: 1;
           padding-top: 195px;
-          min-height: calc(100vh - 255px);
+          padding-bottom: 40px;
         }
 
         .faqs-container {
@@ -925,25 +994,42 @@ const FAQS = () => {
           box-shadow: 0 4px 12px rgba(21, 101, 192, 0.2);
         }
 
+      
 
-     
-
-        
+        .copyright-text {
+          margin-top: 5px;
+          font-size: 0.65rem;
+        }
 
         /* Responsive */
+        @media (max-width: 1024px) {
+          .faqs-container { padding: 40px 20px; }
+        }
+
         @media (max-width: 768px) {
-          .main-content { 
-            padding-top: 330px; 
-          }
+          .main-content { padding-top: 280px; }
           .faqs-card { padding: 28px 20px; }
           .faqs-header h1 { font-size: 1.5rem; }
           .faq-question { padding: 14px 16px; }
           .faq-question-text { font-size: 0.9rem; }
           .support-buttons { flex-direction: column; }
           .support-btn { width: 100%; }
-          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; }
+          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; padding: 0 20px; }
           .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
-          .contact-info-group { flex-direction: column; }
+          .contact-info-group { flex-direction: column; gap: 8px; }
+          .logo-left, .logo-right { display: none; }
+          .dept-text-center { flex: 1; }
+        }
+
+        @media (max-width: 480px) {
+          .main-content { padding-top: 320px; }
+          .faqs-card { padding: 20px 16px; }
+          .faq-icon { width: 20px; height: 20px; font-size: 1rem; }
+          .faq-question-text { font-size: 0.85rem; }
+          .faq-answer p { font-size: 0.85rem; }
+          .show-more-btn { padding: 8px 24px; font-size: 0.85rem; }
+          .support-section h3 { font-size: 1.1rem; }
+          .support-section p { font-size: 0.85rem; }
         }
       `}</style>
     </div>
