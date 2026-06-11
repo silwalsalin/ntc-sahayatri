@@ -9,81 +9,131 @@ const StaffDashboard = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
   const [loading, setLoading] = useState(true);
-  const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support',
-    joinDate: '2023-01-15'
+  
+  // Get staff data from localStorage (from login)
+  const [staffData, setStaffData] = useState(() => {
+    const storedUser = localStorage.getItem('staffUser');
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        return {
+          id: user.id || null,
+          name: user.name || user.nameEn || 'Staff User',
+          nameEn: user.nameEn || user.name || 'Staff User',
+          role: user.role || 'staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support',
+          joinDate: user.createdAt || user.created_at || new Date().toISOString().split('T')[0]
+        };
+      } catch (e) {
+        return {
+          id: null,
+          name: 'Staff User',
+          nameEn: 'Staff User',
+          role: 'staff',
+          email: '',
+          phone: '',
+          department: 'Customer Support',
+          joinDate: new Date().toISOString().split('T')[0]
+        };
+      }
+    }
+    return {
+      id: null,
+      name: 'Staff User',
+      nameEn: 'Staff User',
+      role: 'staff',
+      email: '',
+      phone: '',
+      department: 'Customer Support',
+      joinDate: new Date().toISOString().split('T')[0]
+    };
   });
   
   const [stats, setStats] = useState({
     totalAssigned: 0,
-    pendingTasks: 0,
-    inProgressTasks: 0,
-    completedTasks: 0,
-    resolvedComplaints: 0,
-    averageResponseTime: 0,
-    customerSatisfaction: 0,
-    totalHoursWorked: 0
+    pending: 0,
+    inProgress: 0,
+    resolved: 0,
+    review: 0,
+    highPriority: 0,
+    mediumPriority: 0,
+    lowPriority: 0
   });
   
+  const [recentComplaints, setRecentComplaints] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
-  const [upcomingTasks, setUpcomingTasks] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
-  // Fetch staff dashboard data
-  useEffect(() => {
-    const token = localStorage.getItem('staffToken');
-    const user = localStorage.getItem('staffUser');
-    
-    if (!token || !user) {
-      navigate('/staff-login');
-    } else {
-      fetchDashboardData();
-    }
-  }, [navigate]);
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+  // Helper function to get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('staffToken') || localStorage.getItem('token');
+  };
+
+  // Fetch staff dashboard data from backend
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('staffToken');
+      const token = getAuthToken();
+      if (!token) {
+        console.error('No auth token found');
+        navigate('/login');
+        return;
+      }
       
-      const statsResponse = await axios.get('http://localhost:5000/api/staff/stats', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Fetch staff statistics
+      const statsResponse = await axios.get(`${API_URL}/staff/dashboard`, { headers });
       
       if (statsResponse.data.success) {
         setStats(statsResponse.data.data);
       }
       
-      const activitiesResponse = await axios.get('http://localhost:5000/api/staff/recent-activities', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Fetch assigned complaints
+      const complaintsResponse = await axios.get(`${API_URL}/complaints/assigned-to-me?limit=10`, { headers });
       
-      if (activitiesResponse.data.success) {
-        setRecentActivities(activitiesResponse.data.data);
+      if (complaintsResponse.data.success && Array.isArray(complaintsResponse.data.data)) {
+        const transformedComplaints = complaintsResponse.data.data.map(complaint => ({
+          id: complaint.id,
+          ticketId: complaint.complaint_number || `NTC-${complaint.id}`,
+          name: complaint.name || 'N/A',
+          status: complaint.status || 'pending',
+          priority: complaint.priority || 'medium',
+          date: formatDate(complaint.created_at),
+          description: complaint.description || ''
+        }));
+        setRecentComplaints(transformedComplaints);
+        
+        // Create activities from complaints
+        const activities = transformedComplaints.slice(0, 5).map(complaint => ({
+          id: complaint.id,
+          action: `Complaint #${complaint.ticketId} is ${complaint.status}`,
+          time: complaint.date,
+          status: complaint.status
+        }));
+        setRecentActivities(activities);
       }
       
-      const tasksResponse = await axios.get('http://localhost:5000/api/staff/upcoming-tasks', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Fetch notifications
+      const notificationsResponse = await axios.get(`${API_URL}/notifications?limit=5`, { headers });
       
-      if (tasksResponse.data.success) {
-        setUpcomingTasks(tasksResponse.data.data);
-      }
-      
-      const notifResponse = await axios.get('http://localhost:5000/api/staff/notifications', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (notifResponse.data.success) {
-        setNotifications(notifResponse.data.data);
+      if (notificationsResponse.data.success && Array.isArray(notificationsResponse.data.data)) {
+        setNotifications(notificationsResponse.data.data);
+      } else {
+        // Sample notifications
+        setNotifications([
+          { id: 1, message: 'Welcome to your dashboard', time: 'Just now', read: false },
+          { id: 2, message: 'Check your assigned complaints', time: '1 hour ago', read: false }
+        ]);
       }
       
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // Set sample data if backend not available
       setSampleData();
     } finally {
       setLoading(false);
@@ -92,39 +142,94 @@ const StaffDashboard = () => {
 
   const setSampleData = () => {
     setStats({
-      totalAssigned: 24,
-      pendingTasks: 8,
-      inProgressTasks: 12,
-      completedTasks: 4,
-      resolvedComplaints: 156,
-      averageResponseTime: 2.5,
-      customerSatisfaction: 4.6,
-      totalHoursWorked: 168
+      totalAssigned: 5,
+      pending: 2,
+      inProgress: 2,
+      resolved: 1,
+      review: 0,
+      highPriority: 1,
+      mediumPriority: 3,
+      lowPriority: 1
     });
     
-    setRecentActivities([
-      { id: 1, action: 'Complaint #NTC-2024-001 resolved', time: '2 hours ago', status: 'completed' },
-      { id: 2, action: 'New complaint assigned to you', time: '3 hours ago', status: 'pending' },
-      { id: 3, action: 'Meeting with team lead', time: '5 hours ago', status: 'completed' },
-      { id: 4, action: 'Updated complaint status', time: '1 day ago', status: 'completed' },
-      { id: 5, action: 'Responded to customer query', time: '2 days ago', status: 'completed' }
+    setRecentComplaints([
+      { id: 1, ticketId: 'NTC-2024-001', name: 'राम बहादुर', status: 'in-progress', priority: 'high', date: '2024-02-20', description: 'Internet connection issue' },
+      { id: 2, ticketId: 'NTC-2024-002', name: 'सीता शर्मा', status: 'pending', priority: 'medium', date: '2024-02-19', description: 'Billing problem' },
+      { id: 3, ticketId: 'NTC-2024-003', name: 'हरि प्रसाद', status: 'resolved', priority: 'low', date: '2024-02-18', description: 'Recharge issue' }
     ]);
     
-    setUpcomingTasks([
-      { id: 1, title: 'Review pending complaints', priority: 'high', dueDate: '2024-02-20', assignedBy: 'Admin' },
-      { id: 2, title: 'Submit weekly report', priority: 'medium', dueDate: '2024-02-21', assignedBy: 'Supervisor' },
-      { id: 3, title: 'Customer follow-up calls', priority: 'high', dueDate: '2024-02-19', assignedBy: 'Team Lead' },
-      { id: 4, title: 'Update knowledge base', priority: 'low', dueDate: '2024-02-22', assignedBy: 'Admin' }
+    setRecentActivities([
+      { id: 1, action: 'Complaint #NTC-2024-001 assigned to you', time: '2 hours ago', status: 'pending' },
+      { id: 2, action: 'Updated complaint #NTC-2024-002 status', time: '5 hours ago', status: 'completed' },
+      { id: 3, action: 'Resolved complaint #NTC-2024-003', time: '1 day ago', status: 'completed' }
     ]);
     
     setNotifications([
-      { id: 1, message: 'New complaint #NTC-2024-015 assigned to you', time: '5 min ago', read: false },
-      { id: 2, message: 'Meeting scheduled at 3:00 PM', time: '1 hour ago', read: false },
-      { id: 3, message: 'Your performance review is pending', time: '2 hours ago', read: true },
-      { id: 4, message: 'System maintenance tonight at 10 PM', time: '3 hours ago', read: false },
-      { id: 5, message: 'Monthly report submitted successfully', time: '5 hours ago', read: true }
+      { id: 1, message: 'New complaint assigned to you', time: '5 min ago', read: false },
+      { id: 2, message: 'Your performance review is pending', time: '2 hours ago', read: true }
     ]);
   };
+
+  // Format date
+  const formatDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleDateString(language === 'np' ? 'ne-NP' : 'en-US');
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Format relative time
+  const formatRelativeTime = (date) => {
+    if (!date) return 'Just now';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return 'Just now';
+      const now = new Date();
+      const diffMs = now - d;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins} min ago`;
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    } catch (error) {
+      return 'Just now';
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    const token = getAuthToken();
+    const user = localStorage.getItem('staffUser');
+    
+    if (!token || !user) {
+      navigate('/login');
+    } else {
+      // Update staff data from localStorage
+      try {
+        const userData = JSON.parse(user);
+        setStaffData(prev => ({
+          ...prev,
+          id: userData.id || prev.id,
+          name: userData.name || userData.nameEn || prev.name,
+          nameEn: userData.nameEn || userData.name || prev.nameEn,
+          email: userData.email || prev.email,
+          phone: userData.phone || prev.phone,
+          role: userData.role || prev.role
+        }));
+      } catch (e) {
+        console.error('Error parsing staff user data:', e);
+      }
+      
+      fetchDashboardData();
+    }
+  }, [navigate]);
 
   const content = {
     np: {
@@ -133,19 +238,20 @@ const StaffDashboard = () => {
       overview: 'समग्र दृश्य',
       statistics: 'तथ्यांक',
       recentActivities: 'हालैका गतिविधिहरू',
-      upcomingTasks: 'आउँदा कार्यहरू',
+      assignedComplaints: 'तोकिएका गुनासोहरू',
       notifications: 'सूचनाहरू',
       totalAssigned: 'कुल तोकिएको',
-      pendingTasks: 'विचाराधीन कार्य',
+      pending: 'विचाराधीन',
       inProgress: 'प्रगतिमा',
-      completed: 'पूरा भएको',
-      resolvedComplaints: 'समाधान गरिएका गुनासो',
-      avgResponseTime: 'औसत प्रतिक्रिया समय',
-      customerSatisfaction: 'ग्राहक सन्तुष्टि',
-      hoursWorked: 'काम गरेको समय',
+      resolved: 'समाधान',
+      underReview: 'समीक्षामा',
+      highPriority: 'उच्च प्राथमिकता',
+      mediumPriority: 'मध्यम प्राथमिकता',
+      lowPriority: 'न्यून प्राथमिकता',
       viewAll: 'सबै हेर्नुहोस्',
       noActivities: 'कुनै गतिविधि छैन',
-      noTasks: 'कुनै कार्य छैन',
+      noComplaints: 'कुनै गुनासो छैन',
+      noNotifications: 'कुनै सूचना छैन',
       priority: 'प्राथमिकता',
       dueDate: 'अन्तिम मिति',
       assignedBy: 'तोक्ने व्यक्ति',
@@ -154,7 +260,12 @@ const StaffDashboard = () => {
       low: 'न्यून',
       markAsRead: 'पढेको चिन्ह लगाउनुहोस्',
       loading: 'लोड हुँदै...',
-      refresh: 'रिफ्रेस गर्नुहोस्'
+      refresh: 'रिफ्रेस गर्नुहोस्',
+      complaintId: 'गुनासो नम्बर',
+      complainant: 'उजुरीकर्ता',
+      status: 'स्थिति',
+      date: 'मिति',
+      viewDetails: 'विवरण हेर्नुहोस्'
     },
     en: {
       welcome: 'Welcome',
@@ -162,19 +273,20 @@ const StaffDashboard = () => {
       overview: 'Overview',
       statistics: 'Statistics',
       recentActivities: 'Recent Activities',
-      upcomingTasks: 'Upcoming Tasks',
+      assignedComplaints: 'Assigned Complaints',
       notifications: 'Notifications',
       totalAssigned: 'Total Assigned',
-      pendingTasks: 'Pending Tasks',
+      pending: 'Pending',
       inProgress: 'In Progress',
-      completed: 'Completed',
-      resolvedComplaints: 'Resolved Complaints',
-      avgResponseTime: 'Avg Response Time',
-      customerSatisfaction: 'Customer Satisfaction',
-      hoursWorked: 'Hours Worked',
+      resolved: 'Resolved',
+      underReview: 'Under Review',
+      highPriority: 'High Priority',
+      mediumPriority: 'Medium Priority',
+      lowPriority: 'Low Priority',
       viewAll: 'View All',
       noActivities: 'No activities found',
-      noTasks: 'No tasks found',
+      noComplaints: 'No complaints found',
+      noNotifications: 'No notifications',
       priority: 'Priority',
       dueDate: 'Due Date',
       assignedBy: 'Assigned By',
@@ -183,11 +295,45 @@ const StaffDashboard = () => {
       low: 'Low',
       markAsRead: 'Mark as read',
       loading: 'Loading...',
-      refresh: 'Refresh'
+      refresh: 'Refresh',
+      complaintId: 'Complaint ID',
+      complainant: 'Complainant',
+      status: 'Status',
+      date: 'Date',
+      viewDetails: 'View Details'
     }
   };
 
   const t = content[language];
+
+  const getStatusClass = (status) => {
+    const classes = {
+      pending: 'status-pending',
+      'in-progress': 'status-progress',
+      resolved: 'status-resolved',
+      review: 'status-review'
+    };
+    return classes[status] || 'status-pending';
+  };
+
+  const getStatusText = (status) => {
+    if (language === 'np') {
+      const texts = {
+        pending: 'विचाराधीन',
+        'in-progress': 'प्रगतिमा',
+        resolved: 'समाधान',
+        review: 'समीक्षामा'
+      };
+      return texts[status] || status;
+    }
+    const texts = {
+      pending: 'Pending',
+      'in-progress': 'In Progress',
+      resolved: 'Resolved',
+      review: 'Under Review'
+    };
+    return texts[status] || status;
+  };
 
   const getPriorityClass = (priority) => {
     const classes = {
@@ -210,9 +356,18 @@ const StaffDashboard = () => {
     return priority.charAt(0).toUpperCase() + priority.slice(1);
   };
 
-  const formatDate = (date) => {
-    const d = new Date(date);
-    return d.toLocaleDateString(language === 'np' ? 'ne-NP' : 'en-US');
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      const token = getAuthToken();
+      await axios.patch(`${API_URL}/notifications/${notificationId}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(prev => prev.map(n => 
+        n.id === notificationId ? { ...n, read: true } : n
+      ));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
   if (loading) {
@@ -231,6 +386,7 @@ const StaffDashboard = () => {
         setLanguage={setLanguage}
         staffName={staffData.name}
         staffRole={staffData.role}
+        staffEmail={staffData.email}
       />
       
       <div className="dashboard-layout">
@@ -238,6 +394,7 @@ const StaffDashboard = () => {
           language={language}
           staffName={staffData.name}
           staffRole={staffData.role}
+          staffEmail={staffData.email}
         />
         
         <div className="main-content">
@@ -246,7 +403,7 @@ const StaffDashboard = () => {
             <div className="welcome-section">
               <div>
                 <h1 className="welcome-title">
-                  {t.welcome}, {staffData.name}!
+                  {t.welcome}, {language === 'np' ? staffData.name : staffData.nameEn}!
                 </h1>
                 <p className="welcome-subtitle">{t.overview} - {t.dashboard}</p>
               </div>
@@ -268,15 +425,15 @@ const StaffDashboard = () => {
               <div className="stat-card">
                 <div className="stat-icon orange">⏳</div>
                 <div className="stat-details">
-                  <h3>{stats.pendingTasks}</h3>
-                  <p>{t.pendingTasks}</p>
+                  <h3>{stats.pending}</h3>
+                  <p>{t.pending}</p>
                 </div>
               </div>
               
               <div className="stat-card">
                 <div className="stat-icon yellow">🔄</div>
                 <div className="stat-details">
-                  <h3>{stats.inProgressTasks}</h3>
+                  <h3>{stats.inProgress}</h3>
                   <p>{t.inProgress}</p>
                 </div>
               </div>
@@ -284,46 +441,75 @@ const StaffDashboard = () => {
               <div className="stat-card">
                 <div className="stat-icon green">✅</div>
                 <div className="stat-details">
-                  <h3>{stats.completedTasks}</h3>
-                  <p>{t.completed}</p>
+                  <h3>{stats.resolved}</h3>
+                  <p>{t.resolved}</p>
                 </div>
               </div>
-              
-              <div className="stat-card">
-                <div className="stat-icon purple">📊</div>
-                <div className="stat-details">
-                  <h3>{stats.resolvedComplaints}</h3>
-                  <p>{t.resolvedComplaints}</p>
-                </div>
+            </div>
+
+            {/* Priority Statistics */}
+            <div className="priority-stats">
+              <div className="priority-stat priority-high-bg">
+                <span className="priority-label">🔴 {t.highPriority}</span>
+                <span className="priority-count">{stats.highPriority || 0}</span>
               </div>
-              
-              <div className="stat-card">
-                <div className="stat-icon teal">⏱️</div>
-                <div className="stat-details">
-                  <h3>{stats.averageResponseTime}h</h3>
-                  <p>{t.avgResponseTime}</p>
-                </div>
+              <div className="priority-stat priority-medium-bg">
+                <span className="priority-label">🟡 {t.mediumPriority}</span>
+                <span className="priority-count">{stats.mediumPriority || 0}</span>
               </div>
-              
-              <div className="stat-card">
-                <div className="stat-icon pink">⭐</div>
-                <div className="stat-details">
-                  <h3>{stats.customerSatisfaction}/5</h3>
-                  <p>{t.customerSatisfaction}</p>
-                </div>
-              </div>
-              
-              <div className="stat-card">
-                <div className="stat-icon indigo">💼</div>
-                <div className="stat-details">
-                  <h3>{stats.totalHoursWorked}h</h3>
-                  <p>{t.hoursWorked}</p>
-                </div>
+              <div className="priority-stat priority-low-bg">
+                <span className="priority-label">🟢 {t.lowPriority}</span>
+                <span className="priority-count">{stats.lowPriority || 0}</span>
               </div>
             </div>
 
             {/* Two Column Layout */}
             <div className="two-columns">
+              {/* Assigned Complaints */}
+              <div className="complaints-section">
+                <div className="section-header">
+                  <h2>📋 {t.assignedComplaints}</h2>
+                  <button className="view-all-btn" onClick={() => navigate('/staff/complaints')}>
+                    {t.viewAll} →
+                  </button>
+                </div>
+                <div className="complaints-list">
+                  {recentComplaints.length > 0 ? (
+                    recentComplaints.slice(0, 5).map(complaint => (
+                      <div key={complaint.id} className="complaint-item">
+                        <div className="complaint-header">
+                          <span className="complaint-id">{complaint.ticketId}</span>
+                          <span className={`status-badge ${getStatusClass(complaint.status)}`}>
+                            {getStatusText(complaint.status)}
+                          </span>
+                        </div>
+                        <div className="complaint-body">
+                          <p className="complaint-name">{complaint.name}</p>
+                          <p className="complaint-desc">{complaint.description?.substring(0, 60)}...</p>
+                          <div className="complaint-footer">
+                            <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
+                              {getPriorityText(complaint.priority)}
+                            </span>
+                            <span className="complaint-date">📅 {complaint.date}</span>
+                            <button 
+                              className="view-btn"
+                              onClick={() => navigate(`/staff/complaints/${complaint.id}`)}
+                            >
+                              {t.viewDetails}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="empty-state">
+                      <span className="empty-icon">📭</span>
+                      <p>{t.noComplaints}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Recent Activities */}
               <div className="activity-section">
                 <div className="section-header">
@@ -334,9 +520,9 @@ const StaffDashboard = () => {
                 </div>
                 <div className="activity-list">
                   {recentActivities.length > 0 ? (
-                    recentActivities.slice(0, 5).map(activity => (
+                    recentActivities.map(activity => (
                       <div key={activity.id} className="activity-item">
-                        <div className={`activity-dot ${activity.status}`}></div>
+                        <div className={`activity-dot ${activity.status === 'resolved' ? 'completed' : 'pending'}`}></div>
                         <div className="activity-content">
                           <p className="activity-action">{activity.action}</p>
                           <span className="activity-time">{activity.time}</span>
@@ -351,55 +537,21 @@ const StaffDashboard = () => {
                   )}
                 </div>
               </div>
-
-              {/* Upcoming Tasks */}
-              <div className="tasks-section">
-                <div className="section-header">
-                  <h2>✅ {t.upcomingTasks}</h2>
-                  <button className="view-all-btn" onClick={() => navigate('/staff/tasks')}>
-                    {t.viewAll} →
-                  </button>
-                </div>
-                <div className="tasks-list">
-                  {upcomingTasks.length > 0 ? (
-                    upcomingTasks.map(task => (
-                      <div key={task.id} className="task-item">
-                        <div className="task-header">
-                          <h4>{task.title}</h4>
-                          <span className={`priority-badge ${getPriorityClass(task.priority)}`}>
-                            {getPriorityText(task.priority)}
-                          </span>
-                        </div>
-                        <div className="task-details">
-                          <span>📅 {t.dueDate}: {formatDate(task.dueDate)}</span>
-                          <span>👤 {t.assignedBy}: {task.assignedBy}</span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="empty-state">
-                      <span className="empty-icon">✅</span>
-                      <p>{t.noTasks}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
 
             {/* Notifications Section */}
             <div className="notifications-section">
               <div className="section-header">
                 <h2>🔔 {t.notifications}</h2>
-                <button className="mark-read-btn" onClick={() => {
-                  setNotifications(notifications.map(n => ({ ...n, read: true })));
-                }}>
-                  {t.markAsRead} →
-                </button>
               </div>
               <div className="notifications-list">
                 {notifications.length > 0 ? (
                   notifications.map(notif => (
-                    <div key={notif.id} className={`notification-item ${!notif.read ? 'unread' : ''}`}>
+                    <div 
+                      key={notif.id} 
+                      className={`notification-item ${!notif.read ? 'unread' : ''}`}
+                      onClick={() => !notif.read && markNotificationAsRead(notif.id)}
+                    >
                       <div className="notification-content">
                         <p>{notif.message}</p>
                         <span className="notification-time">{notif.time}</span>
@@ -410,7 +562,7 @@ const StaffDashboard = () => {
                 ) : (
                   <div className="empty-state">
                     <span className="empty-icon">🔕</span>
-                    <p>No notifications</p>
+                    <p>{t.noNotifications}</p>
                   </div>
                 )}
               </div>
@@ -457,7 +609,6 @@ const StaffDashboard = () => {
           to { transform: rotate(360deg); }
         }
 
-        /* Dashboard Layout - Fixed positioning for sidebar */
         .dashboard-layout {
           display: flex;
           height: calc(100vh - 195px);
@@ -467,7 +618,6 @@ const StaffDashboard = () => {
           overflow: hidden;
         }
 
-        /* Main Content - Scrollable area */
         .main-content {
           flex: 1;
           width: calc(100% - 260px);
@@ -477,7 +627,6 @@ const StaffDashboard = () => {
           position: relative;
         }
 
-        /* Custom scrollbar for main content */
         .main-content::-webkit-scrollbar {
           width: 8px;
         }
@@ -492,17 +641,11 @@ const StaffDashboard = () => {
           border-radius: 10px;
         }
 
-        .main-content::-webkit-scrollbar-thumb:hover {
-          background: #0277bd;
-        }
-
-        /* Content Wrapper */
         .content-wrapper {
           padding: 24px 32px;
           min-height: 100%;
         }
 
-        /* Welcome Section */
         .welcome-section {
           display: flex;
           justify-content: space-between;
@@ -512,7 +655,6 @@ const StaffDashboard = () => {
           background: white;
           border-radius: 20px;
           border: 1px solid #e2e8f0;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.02);
           flex-wrap: wrap;
           gap: 16px;
         }
@@ -547,12 +689,11 @@ const StaffDashboard = () => {
           transform: translateY(-2px);
         }
 
-        /* Statistics Grid */
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 20px;
-          margin-bottom: 32px;
+          margin-bottom: 24px;
         }
 
         .stat-card {
@@ -564,7 +705,6 @@ const StaffDashboard = () => {
           gap: 14px;
           border: 1px solid #e2e8f0;
           transition: all 0.3s ease;
-          cursor: pointer;
         }
 
         .stat-card:hover {
@@ -581,22 +721,12 @@ const StaffDashboard = () => {
           align-items: center;
           justify-content: center;
           font-size: 1.8rem;
-          flex-shrink: 0;
         }
 
         .stat-icon.blue { background: #e3f2fd; color: #1565c0; }
         .stat-icon.orange { background: #fff3e0; color: #f57c00; }
         .stat-icon.yellow { background: #fff8e1; color: #f9a825; }
         .stat-icon.green { background: #e8f5e9; color: #2e7d32; }
-        .stat-icon.purple { background: #f3e5f5; color: #7b1fa2; }
-        .stat-icon.teal { background: #e0f2f1; color: #00695c; }
-        .stat-icon.pink { background: #fce4ec; color: #c2185b; }
-        .stat-icon.indigo { background: #e8eaf6; color: #283593; }
-
-        .stat-details {
-          flex: 1;
-          min-width: 0;
-        }
 
         .stat-details h3 {
           font-size: 1.6rem;
@@ -611,21 +741,52 @@ const StaffDashboard = () => {
           font-weight: 500;
         }
 
-        /* Two Columns Layout */
+        .priority-stats {
+          display: flex;
+          gap: 16px;
+          margin-bottom: 28px;
+          flex-wrap: wrap;
+        }
+
+        .priority-stat {
+          flex: 1;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 20px;
+          border-radius: 12px;
+          background: white;
+          border: 1px solid #e2e8f0;
+        }
+
+        .priority-high-bg { border-left: 4px solid #dc2626; }
+        .priority-medium-bg { border-left: 4px solid #f59e0b; }
+        .priority-low-bg { border-left: 4px solid #10b981; }
+
+        .priority-label {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #334155;
+        }
+
+        .priority-count {
+          font-size: 1.2rem;
+          font-weight: 700;
+          color: #0f172a;
+        }
+
         .two-columns {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 24px;
-          margin-bottom: 32px;
+          margin-bottom: 28px;
         }
 
-        /* Section Common Styles */
-        .activity-section, .tasks-section, .notifications-section {
+        .complaints-section, .activity-section, .notifications-section {
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
           overflow: hidden;
-          transition: all 0.3s ease;
         }
 
         .section-header {
@@ -643,7 +804,7 @@ const StaffDashboard = () => {
           color: #0f172a;
         }
 
-        .view-all-btn, .mark-read-btn {
+        .view-all-btn {
           background: none;
           border: none;
           color: #0288d1;
@@ -655,35 +816,101 @@ const StaffDashboard = () => {
           transition: all 0.2s;
         }
 
-        .view-all-btn:hover, .mark-read-btn:hover {
+        .view-all-btn:hover {
           background: #e0f2fe;
         }
 
-        /* Activity List */
-        .activity-list, .tasks-list, .notifications-list {
-          padding: 0;
-          max-height: 350px;
+        .complaints-list, .activity-list, .notifications-list {
+          max-height: 400px;
           overflow-y: auto;
         }
 
-        /* Custom scrollbar for lists */
-        .activity-list::-webkit-scrollbar,
-        .tasks-list::-webkit-scrollbar,
-        .notifications-list::-webkit-scrollbar {
-          width: 4px;
+        .complaint-item {
+          padding: 16px 20px;
+          border-bottom: 1px solid #f1f5f9;
         }
 
-        .activity-list::-webkit-scrollbar-track,
-        .tasks-list::-webkit-scrollbar-track,
-        .notifications-list::-webkit-scrollbar-track {
-          background: #f1f1f1;
+        .complaint-item:hover {
+          background: #f8fafc;
         }
 
-        .activity-list::-webkit-scrollbar-thumb,
-        .tasks-list::-webkit-scrollbar-thumb,
-        .notifications-list::-webkit-scrollbar-thumb {
+        .complaint-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+
+        .complaint-id {
+          font-family: monospace;
+          font-weight: 600;
+          color: #0288d1;
+          font-size: 0.85rem;
+        }
+
+        .status-badge {
+          display: inline-block;
+          padding: 2px 10px;
+          border-radius: 20px;
+          font-size: 0.7rem;
+          font-weight: 600;
+        }
+
+        .status-pending { background: #fef3c7; color: #d97706; }
+        .status-progress { background: #dbeafe; color: #2563eb; }
+        .status-resolved { background: #d1fae5; color: #059669; }
+        .status-review { background: #e0e7ff; color: #4f46e5; }
+
+        .complaint-name {
+          font-weight: 500;
+          color: #0f172a;
+          margin-bottom: 6px;
+        }
+
+        .complaint-desc {
+          font-size: 0.8rem;
+          color: #64748b;
+          margin-bottom: 10px;
+        }
+
+        .complaint-footer {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .priority-badge {
+          display: inline-block;
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 0.65rem;
+          font-weight: 600;
+        }
+
+        .priority-high { background: #fee2e2; color: #dc2626; }
+        .priority-medium { background: #fef3c7; color: #d97706; }
+        .priority-low { background: #e0e7ff; color: #4f46e5; }
+
+        .complaint-date {
+          font-size: 0.7rem;
+          color: #94a3b8;
+        }
+
+        .view-btn {
           background: #0288d1;
-          border-radius: 4px;
+          color: white;
+          border: none;
+          padding: 4px 12px;
+          border-radius: 6px;
+          font-size: 0.7rem;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .view-btn:hover {
+          background: #0277bd;
+          transform: translateY(-1px);
         }
 
         .activity-item {
@@ -692,7 +919,6 @@ const StaffDashboard = () => {
           gap: 12px;
           padding: 14px 20px;
           border-bottom: 1px solid #f1f5f9;
-          transition: background 0.2s;
         }
 
         .activity-item:hover {
@@ -704,7 +930,6 @@ const StaffDashboard = () => {
           height: 8px;
           border-radius: 50%;
           margin-top: 6px;
-          flex-shrink: 0;
         }
 
         .activity-dot.completed { background: #10b981; }
@@ -719,7 +944,6 @@ const StaffDashboard = () => {
           font-size: 0.85rem;
           color: #334155;
           margin-bottom: 4px;
-          font-weight: 500;
         }
 
         .activity-time {
@@ -727,53 +951,6 @@ const StaffDashboard = () => {
           color: #94a3b8;
         }
 
-        /* Task Items */
-        .task-item {
-          padding: 14px 20px;
-          border-bottom: 1px solid #f1f5f9;
-          transition: background 0.2s;
-        }
-
-        .task-item:hover {
-          background: #f8fafc;
-        }
-
-        .task-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .task-header h4 {
-          font-size: 0.9rem;
-          font-weight: 600;
-          color: #0f172a;
-        }
-
-        .priority-badge {
-          display: inline-block;
-          padding: 2px 10px;
-          border-radius: 20px;
-          font-size: 0.7rem;
-          font-weight: 600;
-        }
-
-        .priority-high { background: #fee2e2; color: #dc2626; }
-        .priority-medium { background: #fef3c7; color: #d97706; }
-        .priority-low { background: #e0e7ff; color: #4f46e5; }
-
-        .task-details {
-          display: flex;
-          gap: 16px;
-          font-size: 0.7rem;
-          color: #64748b;
-          flex-wrap: wrap;
-        }
-
-        /* Notifications */
         .notifications-section {
           margin-bottom: 0;
         }
@@ -784,8 +961,8 @@ const StaffDashboard = () => {
           align-items: center;
           padding: 14px 20px;
           border-bottom: 1px solid #f1f5f9;
-          transition: background 0.2s;
           cursor: pointer;
+          transition: background 0.2s;
         }
 
         .notification-item:hover {
@@ -804,7 +981,6 @@ const StaffDashboard = () => {
           font-size: 0.85rem;
           color: #334155;
           margin-bottom: 4px;
-          font-weight: 500;
         }
 
         .notification-time {
@@ -817,10 +993,8 @@ const StaffDashboard = () => {
           height: 8px;
           background: #0288d1;
           border-radius: 50%;
-          flex-shrink: 0;
         }
 
-        /* Empty State */
         .empty-state {
           text-align: center;
           padding: 40px 20px;
@@ -833,26 +1007,15 @@ const StaffDashboard = () => {
           margin-bottom: 12px;
         }
 
-        .empty-state p {
-          font-size: 0.85rem;
-        }
-
-        /* Responsive Design */
         @media (max-width: 1200px) {
           .stats-grid {
             grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-          }
-          
-          .stat-details h3 {
-            font-size: 1.4rem;
           }
         }
 
         @media (max-width: 992px) {
           .two-columns {
             grid-template-columns: 1fr;
-            gap: 20px;
           }
         }
 
@@ -881,29 +1044,20 @@ const StaffDashboard = () => {
           
           .stats-grid {
             grid-template-columns: 1fr;
-            gap: 12px;
           }
-
+          
+          .priority-stats {
+            flex-direction: column;
+          }
+          
           .welcome-section {
             flex-direction: column;
             align-items: flex-start;
-            gap: 12px;
             padding: 20px;
           }
           
           .welcome-title {
             font-size: 1.4rem;
-          }
-
-          .task-details {
-            flex-direction: column;
-            gap: 4px;
-          }
-          
-          .section-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
           }
         }
 
@@ -911,26 +1065,18 @@ const StaffDashboard = () => {
           .stat-card {
             padding: 16px;
           }
-
+          
           .stat-icon {
             width: 45px;
             height: 45px;
             font-size: 1.5rem;
           }
-
+          
           .stat-details h3 {
             font-size: 1.2rem;
           }
           
-          .activity-item, .task-item, .notification-item {
-            padding: 12px 16px;
-          }
-          
-          .activity-action, .notification-content p {
-            font-size: 0.8rem;
-          }
-          
-          .task-header {
+          .complaint-footer {
             flex-direction: column;
             align-items: flex-start;
           }

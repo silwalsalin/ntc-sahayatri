@@ -46,26 +46,50 @@ const AdminComplaints = () => {
     setLoadingStaff(true);
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get(`${API_URL}/users?role=staff`, {
+      if (!token) {
+        showToast('Authentication token not found', 'error');
+        return;
+      }
+      
+      const response = await axios.get(`${API_URL}/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       if (response.data.success && Array.isArray(response.data.data)) {
-        setStaffList(response.data.data);
+        const staffUsers = response.data.data.filter(user => user.role === 'staff');
+        setStaffList(staffUsers);
+        
+        if (staffUsers.length === 0) {
+          showToast(language === 'np' ? 'कुनै स्टाफ प्रयोगकर्ता फेला परेन। कृपया पहिले स्टाफ प्रयोगकर्ता थप्नुहोस्।' : 'No staff users found. Please add staff users first.', 'info');
+        }
+      } else {
+        setStaffList([]);
       }
     } catch (error) {
       console.error('Error fetching staff list:', error);
-      showToast('Failed to load staff list', 'error');
+      if (error.response?.status === 401) {
+        showToast('Authentication failed. Please login again.', 'error');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        setTimeout(() => navigate('/admin-login'), 1500);
+      } else {
+        showToast(language === 'np' ? 'स्टाफ सूची लोड गर्न असफल' : 'Failed to load staff list', 'error');
+      }
     } finally {
       setLoadingStaff(false);
     }
   };
 
   // Assign complaint to staff
-  const assignToStaff = async (complaintId, staffId, staffEmail, complaintType) => {
+  const assignToStaff = async (complaintId, staffId, staffEmail, staffName, complaintType) => {
     setUpdatingStatus(true);
     try {
       const token = localStorage.getItem('adminToken');
+      if (!token) {
+        showToast('Authentication token not found', 'error');
+        navigate('/admin-login');
+        return;
+      }
       
       let endpoint;
       if (complaintType === 'regular') {
@@ -86,8 +110,13 @@ const AdminComplaints = () => {
       );
       
       if (response.data.success) {
-        showToast(language === 'np' ? 'गुनासो सफलतापूर्वक तोकियो' : 'Complaint assigned successfully', 'success');
-        fetchAllComplaints();
+        showToast(
+          language === 'np' 
+            ? `गुनासो सफलतापूर्वक ${staffName} मा तोकियो` 
+            : `Complaint assigned to ${staffName} successfully`, 
+          'success'
+        );
+        await fetchAllComplaints();
         setShowAssignModal(false);
         setSelectedComplaintForAssign(null);
         setSelectedStaff('');
@@ -96,7 +125,33 @@ const AdminComplaints = () => {
       }
     } catch (error) {
       console.error('Error assigning complaint:', error);
-      showToast(language === 'np' ? 'गुनासो तोक्न असफल' : 'Failed to assign complaint', 'error');
+      let errorMessage = language === 'np' ? 'गुनासो तोक्न असफल' : 'Failed to assign complaint';
+      
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMessage = language === 'np' 
+            ? 'प्रमाणीकरण असफल। कृपया पुन: लगइन गर्नुहोस्।' 
+            : 'Authentication failed. Please login again.';
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+          setTimeout(() => navigate('/admin-login'), 1500);
+        } else if (error.response.status === 403) {
+          errorMessage = language === 'np'
+            ? 'तपाईंलाई यो कार्य गर्न अनुमति छैन।'
+            : 'You do not have permission to perform this action.';
+        } else if (error.response.status === 404) {
+          errorMessage = language === 'np'
+            ? 'गुनासो वा स्टाफ फेला परेन।'
+            : 'Complaint or staff not found.';
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.request) {
+        errorMessage = language === 'np'
+          ? 'सर्भरमा जडान हुन सकेन। कृपया नेटवर्क जाँच गर्नुहोस्।'
+          : 'Cannot connect to server. Please check your network.';
+      }
+      showToast(errorMessage, 'error');
     } finally {
       setUpdatingStatus(false);
     }
@@ -109,7 +164,6 @@ const AdminComplaints = () => {
       const token = localStorage.getItem('adminToken');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       
-      // Fetch regular complaints
       let regularData = [];
       let regardingData = [];
       
@@ -126,7 +180,6 @@ const AdminComplaints = () => {
         }
       }
       
-      // Fetch complaint regarding
       try {
         const regardingResponse = await axios.get(`${API_URL}/complaint-regarding`, { headers });
         if (regardingResponse.data.success && Array.isArray(regardingResponse.data.data)) {
@@ -139,16 +192,11 @@ const AdminComplaints = () => {
       setRegularComplaints(regularData);
       setRegardingComplaints(regardingData);
       
-      // Combine all complaints
       const combined = [...regularData, ...regardingData];
       combined.sort((a, b) => new Date(b.submittedDate) - new Date(a.submittedDate));
       setAllComplaints(combined);
       
-      if (regularData.length > 0 || regardingData.length > 0) {
-        setBackendStatus('connected');
-      } else if (regularData.length === 0 && regardingData.length === 0) {
-        setBackendStatus('connected');
-      }
+      setBackendStatus('connected');
       
     } catch (error) {
       console.error('Error fetching complaints:', error);
@@ -785,7 +833,6 @@ const AdminComplaints = () => {
 
       <Header language={language} setLanguage={setLanguage} adminName="Admin" userRole="admin" />
       
-      {/* Backend Status Banner */}
       {backendStatus === 'disconnected' && (
         <div className="backend-warning">
           ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। कृपया सर्भर सुरु गर्नुहोस्।' : 'Backend server not connected. Please start the server.'}
@@ -1196,19 +1243,48 @@ const AdminComplaints = () => {
               </div>
               <div className="form-group">
                 <label>{t.selectStaff} <span className="required">*</span></label>
-                <select 
-                  value={selectedStaff} 
-                  onChange={(e) => setSelectedStaff(JSON.parse(e.target.value))}
-                  className="staff-select"
-                  disabled={loadingStaff}
-                >
-                  <option value="">{language === 'np' ? 'स्टाफ चयन गर्नुहोस्' : 'Select Staff'}</option>
-                  {staffList.map(staff => (
-                    <option key={staff.id} value={JSON.stringify({ id: staff.id, email: staff.email, name: staff.name })}>
-                      {staff.name} ({staff.email}) - {staff.role}
-                    </option>
-                  ))}
-                </select>
+                {loadingStaff ? (
+                  <div className="loading-staff">
+                    <div className="spinner-small"></div>
+                    <span>{language === 'np' ? 'स्टाफ लोड हुँदै...' : 'Loading staff...'}</span>
+                  </div>
+                ) : (
+                  <select 
+                    value={selectedStaff} 
+                    onChange={(e) => setSelectedStaff(e.target.value)}
+                    className="staff-select"
+                  >
+                    <option value="">{language === 'np' ? '-- स्टाफ चयन गर्नुहोस् --' : '-- Select Staff --'}</option>
+                    {staffList.length > 0 ? (
+                      staffList.map(staff => (
+                        <option 
+                          key={staff.id} 
+                          value={JSON.stringify({ 
+                            id: staff.id, 
+                            email: staff.email, 
+                            name: language === 'np' ? staff.name : staff.name_en || staff.name 
+                          })}
+                        >
+                          {language === 'np' ? staff.name : staff.name_en || staff.name} - {staff.email}
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled value="">
+                        {language === 'np' ? 'कुनै स्टाफ उपलब्ध छैन' : 'No staff available'}
+                      </option>
+                    )}
+                  </select>
+                )}
+                {staffList.length === 0 && !loadingStaff && (
+                  <div className="no-staff-warning">
+                    <span className="warning-icon">⚠️</span>
+                    <span className="warning-text">
+                      {language === 'np' 
+                        ? 'कुनै स्टाफ प्रयोगकर्ता फेला परेन। कृपया पहिले प्रयोगकर्ता व्यवस्थापनबाट स्टाफ थप्नुहोस्।' 
+                        : 'No staff users found. Please add staff users from user management first.'}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
             <div className="modal-footer">
@@ -1219,16 +1295,28 @@ const AdminComplaints = () => {
                 className="btn-assign" 
                 onClick={() => {
                   if (selectedStaff) {
-                    const staffData = typeof selectedStaff === 'string' ? JSON.parse(selectedStaff) : selectedStaff;
-                    assignToStaff(
-                      selectedComplaintForAssign.id, 
-                      staffData.id, 
-                      staffData.email, 
-                      selectedComplaintForAssign.type
-                    );
+                    try {
+                      const staffData = JSON.parse(selectedStaff);
+                      if (!staffData.id || !staffData.email) {
+                        showToast(language === 'np' ? 'अमान्य स्टाफ डाटा' : 'Invalid staff data', 'error');
+                        return;
+                      }
+                      assignToStaff(
+                        selectedComplaintForAssign.id, 
+                        staffData.id, 
+                        staffData.email, 
+                        staffData.name,
+                        selectedComplaintForAssign.type
+                      );
+                    } catch (e) {
+                      console.error('Error parsing staff data:', e);
+                      showToast(language === 'np' ? 'स्टाफ डाटा प्रशोधन गर्न असफल' : 'Failed to process staff data', 'error');
+                    }
+                  } else {
+                    showToast(language === 'np' ? 'कृपया स्टाफ चयन गर्नुहोस्' : 'Please select a staff member', 'warning');
                   }
                 }}
-                disabled={!selectedStaff || updatingStatus}
+                disabled={!selectedStaff || updatingStatus || loadingStaff || staffList.length === 0}
               >
                 {updatingStatus ? t.assigning : t.assign}
               </button>
@@ -1782,6 +1870,47 @@ const AdminComplaints = () => {
           font-size: 0.85rem;
           font-family: inherit;
           margin-top: 8px;
+        }
+
+        .loading-staff {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 12px;
+          background: #f8fafc;
+          border-radius: 8px;
+          color: #1565c0;
+          margin-top: 8px;
+        }
+
+        .spinner-small {
+          width: 16px;
+          height: 16px;
+          border: 2px solid #e2e8f0;
+          border-top-color: #1565c0;
+          border-radius: 50%;
+          animation: spin 0.6s linear infinite;
+        }
+
+        .no-staff-warning {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 8px;
+          padding: 10px;
+          background: #fef3c7;
+          border-radius: 8px;
+          border-left: 3px solid #f59e0b;
+        }
+
+        .warning-icon {
+          font-size: 1rem;
+        }
+
+        .warning-text {
+          font-size: 0.75rem;
+          color: #92400e;
+          flex: 1;
         }
 
         .status-select {

@@ -13,7 +13,7 @@ const { db, generateComplaintNumber, generateComplaintNumberNp, generateTracking
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// JWT Secret - Make sure this is consistent
+// JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_this_in_production_2024';
 const JWT_EXPIRE = '7d';
 
@@ -350,17 +350,23 @@ app.post('/api/auth/login', (req, res) => {
 
             const token = generateToken(user.id, user.role);
 
+            const userData = {
+                id: user.id,
+                name: user.name,
+                nameEn: user.name_en,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                status: user.status,
+                createdAt: user.created_at,
+                lastLogin: user.last_login
+            };
+
             res.json({
                 success: true,
                 message: 'Login successful',
                 data: {
-                    id: user.id,
-                    name: user.name,
-                    nameEn: user.name_en,
-                    email: user.email,
-                    phone: user.phone,
-                    role: user.role,
-                    status: user.status,
+                    ...userData,
                     token
                 }
             });
@@ -479,16 +485,22 @@ app.get('/api/complaint-regarding', protect, staffOrAdmin, (req, res) => {
     }
 });
 
-// GET /api/complaints/assigned - Get complaints assigned to current staff
-app.get('/api/complaints/assigned', protect, staffOrAdmin, (req, res) => {
+// GET /api/complaints/assigned-to-me - Get complaints assigned to current staff
+app.get('/api/complaints/assigned-to-me', protect, staffOrAdmin, (req, res) => {
     try {
-        const { limit = 100, status } = req.query;
+        const { limit = 100, status, search } = req.query;
         let sql = `SELECT * FROM complaints WHERE assigned_to = ?`;
         const params = [req.user.email];
 
         if (status && status !== 'all') {
             sql += ` AND status = ?`;
             params.push(status);
+        }
+
+        if (search) {
+            sql += ` AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR complaint_number LIKE ?)`;
+            const searchPattern = `%${search}%`;
+            params.push(searchPattern, searchPattern, searchPattern, searchPattern);
         }
 
         sql += ` ORDER BY created_at DESC`;
@@ -509,16 +521,22 @@ app.get('/api/complaints/assigned', protect, staffOrAdmin, (req, res) => {
     }
 });
 
-// GET /api/complaint-regarding/assigned - Get complaint regarding assigned to current staff
-app.get('/api/complaint-regarding/assigned', protect, staffOrAdmin, (req, res) => {
+// GET /api/complaint-regarding/assigned-to-me - Get complaint regarding assigned to current staff
+app.get('/api/complaint-regarding/assigned-to-me', protect, staffOrAdmin, (req, res) => {
     try {
-        const { limit = 100, status } = req.query;
+        const { limit = 100, status, search } = req.query;
         let sql = `SELECT * FROM complaint_regarding WHERE assigned_to = ?`;
         const params = [req.user.email];
 
         if (status && status !== 'all') {
             sql += ` AND status = ?`;
             params.push(status);
+        }
+
+        if (search) {
+            sql += ` AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR complaint_number LIKE ?)`;
+            const searchPattern = `%${search}%`;
+            params.push(searchPattern, searchPattern, searchPattern, searchPattern);
         }
 
         sql += ` ORDER BY created_at DESC`;
@@ -667,38 +685,6 @@ app.patch('/api/admin/complaint-regarding/:id/status', protect, staffOrAdmin, (r
     }
 });
 
-// GET /api/staff/dashboard - Staff dashboard statistics
-app.get('/api/staff/dashboard', protect, staffOrAdmin, (req, res) => {
-    try {
-        const stats = {};
-
-        db.get(`SELECT COUNT(*) as total FROM complaints WHERE assigned_to = ?`, [req.user.email], (err, result) => {
-            if (err) {
-                console.error('Error getting total complaints:', err);
-                return res.status(500).json({ success: false, message: 'Database error' });
-            }
-            stats.totalAssigned = result?.total || 0;
-
-            db.get(`SELECT COUNT(*) as pending FROM complaints WHERE assigned_to = ? AND status = 'pending'`, [req.user.email], (err, result) => {
-                stats.pending = result?.pending || 0;
-
-                db.get(`SELECT COUNT(*) as inProgress FROM complaints WHERE assigned_to = ? AND status = 'in-progress'`, [req.user.email], (err, result) => {
-                    stats.inProgress = result?.inProgress || 0;
-
-                    db.get(`SELECT COUNT(*) as resolved FROM complaints WHERE assigned_to = ? AND status = 'resolved'`, [req.user.email], (err, result) => {
-                        stats.resolved = result?.resolved || 0;
-
-                        res.json({ success: true, data: stats });
-                    });
-                });
-            });
-        });
-    } catch (error) {
-        console.error('Error getting staff dashboard:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
 // ==================== STAFF ASSIGNMENT ROUTES ====================
 
 // PATCH /api/admin/complaints/:id/assign - Assign complaint to staff
@@ -785,686 +771,429 @@ app.patch('/api/admin/complaint-regarding/:id/assign', protect, adminOnly, (req,
     }
 });
 
-// GET /api/complaints/assigned-to-me - Get complaints assigned to current staff
-app.get('/api/complaints/assigned-to-me', protect, staffOrAdmin, (req, res) => {
+// GET /api/staff/dashboard - Staff dashboard statistics
+app.get('/api/staff/dashboard', protect, staffOrAdmin, (req, res) => {
     try {
-        const { limit = 100, status, search } = req.query;
-        let sql = `SELECT * FROM complaints WHERE assigned_to = ?`;
-        const params = [req.user.email];
-        
-        if (status && status !== 'all') {
-            sql += ` AND status = ?`;
-            params.push(status);
-        }
-        
-        if (search) {
-            sql += ` AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR complaint_number LIKE ?)`;
-            const searchPattern = `%${search}%`;
-            params.push(searchPattern, searchPattern, searchPattern, searchPattern);
-        }
-        
-        sql += ` ORDER BY created_at DESC`;
-        
-        if (limit && limit !== 'all') {
-            sql += ` LIMIT ?`;
-            params.push(parseInt(limit));
-        }
-        
-        db.all(sql, params, (err, rows) => {
-            if (err) {
-                return res.status(500).json({ success: false, error: err.message });
-            }
-            res.json({ success: true, data: rows || [] });
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
+        const stats = {
+            totalAssigned: 0,
+            pending: 0,
+            inProgress: 0,
+            resolved: 0,
+            review: 0
+        };
 
-// GET /api/complaint-regarding/assigned-to-me - Get complaint regarding assigned to current staff
-app.get('/api/complaint-regarding/assigned-to-me', protect, staffOrAdmin, (req, res) => {
-    try {
-        const { limit = 100, status, search } = req.query;
-        let sql = `SELECT * FROM complaint_regarding WHERE assigned_to = ?`;
-        const params = [req.user.email];
-        
-        if (status && status !== 'all') {
-            sql += ` AND status = ?`;
-            params.push(status);
-        }
-        
-        if (search) {
-            sql += ` AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR complaint_number LIKE ?)`;
-            const searchPattern = `%${search}%`;
-            params.push(searchPattern, searchPattern, searchPattern, searchPattern);
-        }
-        
-        sql += ` ORDER BY created_at DESC`;
-        
-        if (limit && limit !== 'all') {
-            sql += ` LIMIT ?`;
-            params.push(parseInt(limit));
-        }
-        
-        db.all(sql, params, (err, rows) => {
+        db.get(`SELECT COUNT(*) as total FROM complaints WHERE assigned_to = ?`, [req.user.email], (err, result) => {
             if (err) {
-                return res.status(500).json({ success: false, error: err.message });
-            }
-            res.json({ success: true, data: rows || [] });
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ==================== SETTINGS API ROUTES ====================
-// GET /api/settings/general - Get general settings
-app.get('/api/settings/general', protect, adminOnly, (req, res) => {
-    try {
-        db.get(`SELECT * FROM settings_general ORDER BY id DESC LIMIT 1`, [], (err, settings) => {
-            if (err) {
-                console.error('Error fetching general settings:', err);
+                console.error('Error getting total complaints:', err);
                 return res.status(500).json({ success: false, message: 'Database error' });
             }
-            
-            if (!settings) {
-                return res.json({
-                    success: true,
-                    data: {
-                        siteName: 'NTC Sahayatri',
-                        siteName_np: 'एनटीसी सहयात्री',
-                        siteDescription: 'Complaint Tracking System for Nepal Telecom',
-                        siteDescription_np: 'नेपाल दूरसञ्चारको लागि गुनासो ट्र्याकिङ प्रणाली',
-                        siteEmail: 'support@ntc.com.np',
-                        sitePhone: '01-4960008',
-                        siteAddress: 'Bhadrakali Plaza, Kathmandu',
-                        siteAddress_np: 'भद्रकाली प्लाजा, काठमाडौं',
-                        timezone: 'Asia/Kathmandu',
-                        dateFormat: 'YYYY-MM-DD',
-                        timeFormat: '24h',
-                        defaultLanguage: 'np',
-                        itemsPerPage: 10,
-                        enableRegistration: true,
-                        enablePublicComplaints: true,
-                        maintenanceMode: false
-                    }
-                });
-            }
-            
-            res.json({
-                success: true,
-                data: {
-                    siteName: settings.site_name,
-                    siteName_np: settings.site_name_np,
-                    siteDescription: settings.site_description,
-                    siteDescription_np: settings.site_description_np,
-                    siteEmail: settings.site_email,
-                    sitePhone: settings.site_phone,
-                    siteAddress: settings.site_address,
-                    siteAddress_np: settings.site_address_np,
-                    timezone: settings.timezone,
-                    dateFormat: settings.date_format,
-                    timeFormat: settings.time_format,
-                    defaultLanguage: settings.default_language,
-                    itemsPerPage: settings.items_per_page,
-                    enableRegistration: settings.enable_registration === 1,
-                    enablePublicComplaints: settings.enable_public_complaints === 1,
-                    maintenanceMode: settings.maintenance_mode === 1
-                }
-            });
-        });
-    } catch (error) {
-        console.error('Error in GET /settings/general:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
+            stats.totalAssigned = result?.total || 0;
 
-// PUT /api/settings/general - Update general settings
-app.put('/api/settings/general', protect, adminOnly, (req, res) => {
-    try {
-        const {
-            siteName, siteName_np, siteDescription, siteDescription_np,
-            siteEmail, sitePhone, siteAddress, siteAddress_np,
-            timezone, dateFormat, timeFormat, defaultLanguage,
-            itemsPerPage, enableRegistration, enablePublicComplaints, maintenanceMode
-        } = req.body;
-        
-        db.get(`SELECT id FROM settings_general LIMIT 1`, [], (err, existing) => {
-            if (err) {
-                console.error('Database error:', err);
-                return res.status(500).json({ success: false, message: 'Database error' });
-            }
-            
-            if (existing) {
-                const sql = `UPDATE settings_general SET
-                    site_name = ?, site_name_np = ?, site_description = ?, site_description_np = ?,
-                    site_email = ?, site_phone = ?, site_address = ?, site_address_np = ?,
-                    timezone = ?, date_format = ?, time_format = ?, default_language = ?,
-                    items_per_page = ?, enable_registration = ?, enable_public_complaints = ?,
-                    maintenance_mode = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ?`;
-                
-                db.run(sql, [
-                    siteName, siteName_np, siteDescription, siteDescription_np,
-                    siteEmail, sitePhone, siteAddress, siteAddress_np,
-                    timezone, dateFormat, timeFormat, defaultLanguage,
-                    itemsPerPage, enableRegistration ? 1 : 0, enablePublicComplaints ? 1 : 0,
-                    maintenanceMode ? 1 : 0, existing.id
-                ], function(err) {
-                    if (err) {
-                        console.error('Error updating general settings:', err);
-                        return res.status(500).json({ success: false, message: 'Database error' });
-                    }
-                    res.json({ success: true, message: 'General settings updated successfully' });
-                });
-            } else {
-                const sql = `INSERT INTO settings_general (
-                    site_name, site_name_np, site_description, site_description_np,
-                    site_email, site_phone, site_address, site_address_np,
-                    timezone, date_format, time_format, default_language,
-                    items_per_page, enable_registration, enable_public_complaints, maintenance_mode
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-                
-                db.run(sql, [
-                    siteName, siteName_np, siteDescription, siteDescription_np,
-                    siteEmail, sitePhone, siteAddress, siteAddress_np,
-                    timezone, dateFormat, timeFormat, defaultLanguage,
-                    itemsPerPage, enableRegistration ? 1 : 0, enablePublicComplaints ? 1 : 0,
-                    maintenanceMode ? 1 : 0
-                ], function(err) {
-                    if (err) {
-                        console.error('Error inserting general settings:', err);
-                        return res.status(500).json({ success: false, message: 'Database error' });
-                    }
-                    res.json({ success: true, message: 'General settings saved successfully' });
-                });
-            }
-        });
-    } catch (error) {
-        console.error('Error in PUT /settings/general:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
+            db.get(`SELECT COUNT(*) as pending FROM complaints WHERE assigned_to = ? AND status = 'pending'`, [req.user.email], (err, result) => {
+                stats.pending = result?.pending || 0;
 
-// GET /api/settings/email - Get email settings
-app.get('/api/settings/email', protect, adminOnly, (req, res) => {
-    try {
-        db.get(`SELECT * FROM settings_email ORDER BY id DESC LIMIT 1`, [], (err, settings) => {
-            if (err) {
-                console.error('Error fetching email settings:', err);
-                return res.status(500).json({ success: false, message: 'Database error' });
-            }
-            
-            if (!settings) {
-                return res.json({
-                    success: true,
-                    data: {
-                        smtpHost: 'smtp.gmail.com',
-                        smtpPort: '587',
-                        smtpUser: '',
-                        smtpPassword: '',
-                        smtpEncryption: 'tls',
-                        fromEmail: 'notifications@ntc.com.np',
-                        fromName: 'NTC Sahayatri',
-                        fromName_np: 'एनटीसी सहयात्री',
-                        sendComplaintConfirmation: true,
-                        sendComplaintUpdate: true,
-                        sendComplaintResolved: true,
-                        sendNewsletter: false
-                    }
-                });
-            }
-            
-            res.json({
-                success: true,
-                data: {
-                    smtpHost: settings.smtp_host,
-                    smtpPort: settings.smtp_port,
-                    smtpUser: settings.smtp_user,
-                    smtpPassword: '',
-                    smtpEncryption: settings.smtp_encryption,
-                    fromEmail: settings.from_email,
-                    fromName: settings.from_name,
-                    fromName_np: settings.from_name_np,
-                    sendComplaintConfirmation: settings.send_complaint_confirmation === 1,
-                    sendComplaintUpdate: settings.send_complaint_update === 1,
-                    sendComplaintResolved: settings.send_complaint_resolved === 1,
-                    sendNewsletter: settings.send_newsletter === 1
-                }
-            });
-        });
-    } catch (error) {
-        console.error('Error in GET /settings/email:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
+                db.get(`SELECT COUNT(*) as inProgress FROM complaints WHERE assigned_to = ? AND status = 'in-progress'`, [req.user.email], (err, result) => {
+                    stats.inProgress = result?.inProgress || 0;
 
-// PUT /api/settings/email - Update email settings
-app.put('/api/settings/email', protect, adminOnly, (req, res) => {
-    try {
-        const {
-            smtpHost, smtpPort, smtpUser, smtpPassword, smtpEncryption,
-            fromEmail, fromName, fromName_np,
-            sendComplaintConfirmation, sendComplaintUpdate, sendComplaintResolved, sendNewsletter
-        } = req.body;
-        
-        db.get(`SELECT id FROM settings_email LIMIT 1`, [], (err, existing) => {
-            if (err) {
-                console.error('Database error:', err);
-                return res.status(500).json({ success: false, message: 'Database error' });
-            }
-            
-            if (existing) {
-                let sql = `UPDATE settings_email SET
-                    smtp_host = ?, smtp_port = ?, smtp_user = ?, smtp_encryption = ?,
-                    from_email = ?, from_name = ?, from_name_np = ?,
-                    send_complaint_confirmation = ?, send_complaint_update = ?,
-                    send_complaint_resolved = ?, send_newsletter = ?, updated_at = CURRENT_TIMESTAMP`;
-                
-                let params = [
-                    smtpHost, smtpPort, smtpUser, smtpEncryption,
-                    fromEmail, fromName, fromName_np,
-                    sendComplaintConfirmation ? 1 : 0, sendComplaintUpdate ? 1 : 0,
-                    sendComplaintResolved ? 1 : 0, sendNewsletter ? 1 : 0
-                ];
-                
-                if (smtpPassword && smtpPassword !== '') {
-                    sql += `, smtp_password = ?`;
-                    params.push(smtpPassword);
-                }
-                
-                sql += ` WHERE id = ?`;
-                params.push(existing.id);
-                
-                db.run(sql, params, function(err) {
-                    if (err) {
-                        console.error('Error updating email settings:', err);
-                        return res.status(500).json({ success: false, message: 'Database error' });
-                    }
-                    res.json({ success: true, message: 'Email settings updated successfully' });
-                });
-            } else {
-                const sql = `INSERT INTO settings_email (
-                    smtp_host, smtp_port, smtp_user, smtp_password, smtp_encryption,
-                    from_email, from_name, from_name_np,
-                    send_complaint_confirmation, send_complaint_update, send_complaint_resolved, send_newsletter
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-                
-                const params = [
-                    smtpHost, smtpPort, smtpUser, smtpPassword || '', smtpEncryption,
-                    fromEmail, fromName, fromName_np,
-                    sendComplaintConfirmation ? 1 : 0, sendComplaintUpdate ? 1 : 0,
-                    sendComplaintResolved ? 1 : 0, sendNewsletter ? 1 : 0
-                ];
-                
-                db.run(sql, params, function(err) {
-                    if (err) {
-                        console.error('Error inserting email settings:', err);
-                        return res.status(500).json({ success: false, message: 'Database error' });
-                    }
-                    res.json({ success: true, message: 'Email settings saved successfully' });
-                });
-            }
-        });
-    } catch (error) {
-        console.error('Error in PUT /settings/email:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
+                    db.get(`SELECT COUNT(*) as resolved FROM complaints WHERE assigned_to = ? AND status = 'resolved'`, [req.user.email], (err, result) => {
+                        stats.resolved = result?.resolved || 0;
 
-// POST /api/settings/email/test - Send test email
-app.post('/api/settings/email/test', protect, adminOnly, async (req, res) => {
-    try {
-        const { to, subject, message } = req.body;
-        console.log('Test email would be sent to:', to);
-        console.log('Subject:', subject);
-        console.log('Message:', message);
-        res.json({ success: true, message: 'Test email sent successfully' });
-    } catch (error) {
-        console.error('Error sending test email:', error);
-        res.status(500).json({ success: false, message: 'Failed to send test email' });
-    }
-});
+                        db.get(`SELECT COUNT(*) as review FROM complaints WHERE assigned_to = ? AND status = 'review'`, [req.user.email], (err, result) => {
+                            stats.review = result?.review || 0;
 
-// GET /api/settings/security - Get security settings
-app.get('/api/settings/security', protect, adminOnly, (req, res) => {
-    try {
-        db.get(`SELECT * FROM settings_security ORDER BY id DESC LIMIT 1`, [], (err, settings) => {
-            if (err) {
-                console.error('Error fetching security settings:', err);
-                return res.status(500).json({ success: false, message: 'Database error' });
-            }
-            
-            if (!settings) {
-                return res.json({
-                    success: true,
-                    data: {
-                        sessionTimeout: 30,
-                        maxLoginAttempts: 5,
-                        lockoutDuration: 15,
-                        passwordExpiryDays: 90,
-                        minPasswordLength: 8,
-                        requireUppercase: true,
-                        requireLowercase: true,
-                        requireNumbers: true,
-                        requireSpecialChars: true,
-                        twoFactorAuth: false,
-                        ipWhitelist: ''
-                    }
-                });
-            }
-            
-            res.json({
-                success: true,
-                data: {
-                    sessionTimeout: settings.session_timeout,
-                    maxLoginAttempts: settings.max_login_attempts,
-                    lockoutDuration: settings.lockout_duration,
-                    passwordExpiryDays: settings.password_expiry_days,
-                    minPasswordLength: settings.min_password_length,
-                    requireUppercase: settings.require_uppercase === 1,
-                    requireLowercase: settings.require_lowercase === 1,
-                    requireNumbers: settings.require_numbers === 1,
-                    requireSpecialChars: settings.require_special_chars === 1,
-                    twoFactorAuth: settings.two_factor_auth === 1,
-                    ipWhitelist: settings.ip_whitelist || ''
-                }
-            });
-        });
-    } catch (error) {
-        console.error('Error in GET /settings/security:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// PUT /api/settings/security - Update security settings
-app.put('/api/settings/security', protect, adminOnly, (req, res) => {
-    try {
-        const {
-            sessionTimeout, maxLoginAttempts, lockoutDuration, passwordExpiryDays,
-            minPasswordLength, requireUppercase, requireLowercase, requireNumbers,
-            requireSpecialChars, twoFactorAuth, ipWhitelist
-        } = req.body;
-        
-        db.get(`SELECT id FROM settings_security LIMIT 1`, [], (err, existing) => {
-            if (err) {
-                console.error('Database error:', err);
-                return res.status(500).json({ success: false, message: 'Database error' });
-            }
-            
-            const sql = `UPDATE settings_security SET
-                session_timeout = ?, max_login_attempts = ?, lockout_duration = ?,
-                password_expiry_days = ?, min_password_length = ?,
-                require_uppercase = ?, require_lowercase = ?, require_numbers = ?,
-                require_special_chars = ?, two_factor_auth = ?, ip_whitelist = ?,
-                updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
-            
-            const params = [
-                sessionTimeout, maxLoginAttempts, lockoutDuration, passwordExpiryDays,
-                minPasswordLength, requireUppercase ? 1 : 0, requireLowercase ? 1 : 0,
-                requireNumbers ? 1 : 0, requireSpecialChars ? 1 : 0, twoFactorAuth ? 1 : 0,
-                ipWhitelist || ''
-            ];
-            
-            if (existing) {
-                params.push(existing.id);
-                db.run(sql, params, function(err) {
-                    if (err) {
-                        console.error('Error updating security settings:', err);
-                        return res.status(500).json({ success: false, message: 'Database error' });
-                    }
-                    res.json({ success: true, message: 'Security settings updated successfully' });
-                });
-            } else {
-                const insertSql = `INSERT INTO settings_security (
-                    session_timeout, max_login_attempts, lockout_duration, password_expiry_days,
-                    min_password_length, require_uppercase, require_lowercase, require_numbers,
-                    require_special_chars, two_factor_auth, ip_whitelist
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-                
-                db.run(insertSql, params, function(err) {
-                    if (err) {
-                        console.error('Error inserting security settings:', err);
-                        return res.status(500).json({ success: false, message: 'Database error' });
-                    }
-                    res.json({ success: true, message: 'Security settings saved successfully' });
-                });
-            }
-        });
-    } catch (error) {
-        console.error('Error in PUT /settings/security:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// GET /api/settings/backup - Get backup settings
-app.get('/api/settings/backup', protect, adminOnly, (req, res) => {
-    try {
-        db.get(`SELECT * FROM settings_backup ORDER BY id DESC LIMIT 1`, [], (err, settings) => {
-            if (err) {
-                console.error('Error fetching backup settings:', err);
-                return res.status(500).json({ success: false, message: 'Database error' });
-            }
-            
-            if (!settings) {
-                return res.json({
-                    success: true,
-                    data: {
-                        autoBackup: true,
-                        backupFrequency: 'daily',
-                        backupTime: '02:00',
-                        backupRetention: 30,
-                        backupLocation: '/backups/',
-                        lastBackup: '',
-                        lastBackupSize: ''
-                    }
-                });
-            }
-            
-            res.json({
-                success: true,
-                data: {
-                    autoBackup: settings.auto_backup === 1,
-                    backupFrequency: settings.backup_frequency,
-                    backupTime: settings.backup_time,
-                    backupRetention: settings.backup_retention,
-                    backupLocation: settings.backup_location,
-                    lastBackup: settings.last_backup,
-                    lastBackupSize: settings.last_backup_size
-                }
-            });
-        });
-    } catch (error) {
-        console.error('Error in GET /settings/backup:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// PUT /api/settings/backup - Update backup settings
-app.put('/api/settings/backup', protect, adminOnly, (req, res) => {
-    try {
-        const { autoBackup, backupFrequency, backupTime, backupRetention, backupLocation } = req.body;
-        
-        db.get(`SELECT id FROM settings_backup LIMIT 1`, [], (err, existing) => {
-            if (err) {
-                console.error('Database error:', err);
-                return res.status(500).json({ success: false, message: 'Database error' });
-            }
-            
-            const sql = `UPDATE settings_backup SET
-                auto_backup = ?, backup_frequency = ?, backup_time = ?,
-                backup_retention = ?, backup_location = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?`;
-            
-            const params = [autoBackup ? 1 : 0, backupFrequency, backupTime, backupRetention, backupLocation];
-            
-            if (existing) {
-                params.push(existing.id);
-                db.run(sql, params, function(err) {
-                    if (err) {
-                        console.error('Error updating backup settings:', err);
-                        return res.status(500).json({ success: false, message: 'Database error' });
-                    }
-                    res.json({ success: true, message: 'Backup settings updated successfully' });
-                });
-            } else {
-                const insertSql = `INSERT INTO settings_backup (
-                    auto_backup, backup_frequency, backup_time, backup_retention, backup_location
-                ) VALUES (?, ?, ?, ?, ?)`;
-                
-                db.run(insertSql, params, function(err) {
-                    if (err) {
-                        console.error('Error inserting backup settings:', err);
-                        return res.status(500).json({ success: false, message: 'Database error' });
-                    }
-                    res.json({ success: true, message: 'Backup settings saved successfully' });
-                });
-            }
-        });
-    } catch (error) {
-        console.error('Error in PUT /settings/backup:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// POST /api/settings/backup/now - Trigger manual backup
-app.post('/api/settings/backup/now', protect, adminOnly, (req, res) => {
-    try {
-        const now = new Date();
-        const lastBackup = now.toISOString().replace('T', ' ').substring(0, 19);
-        const lastBackupSize = '0 MB';
-        
-        db.get(`SELECT id FROM settings_backup LIMIT 1`, [], (err, existing) => {
-            if (existing) {
-                db.run(`UPDATE settings_backup SET last_backup = ?, last_backup_size = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-                    [lastBackup, lastBackupSize, existing.id], (err) => {
-                        if (err) {
-                            console.error('Error updating backup info:', err);
-                        }
+                            res.json({ success: true, data: stats });
+                        });
                     });
-            }
-        });
-        
-        res.json({
-            success: true,
-            message: 'Backup completed successfully',
-            data: { lastBackup, size: lastBackupSize }
-        });
-    } catch (error) {
-        console.error('Error creating backup:', error);
-        res.status(500).json({ success: false, message: 'Failed to create backup' });
-    }
-});
-
-// GET /api/settings/notifications - Get notification settings
-app.get('/api/settings/notifications', protect, adminOnly, (req, res) => {
-    try {
-        db.get(`SELECT * FROM settings_notifications ORDER BY id DESC LIMIT 1`, [], (err, settings) => {
-            if (err) {
-                console.error('Error fetching notification settings:', err);
-                return res.status(500).json({ success: false, message: 'Database error' });
-            }
-            
-            if (!settings) {
-                return res.json({
-                    success: true,
-                    data: {
-                        emailNotifications: true,
-                        smsNotifications: false,
-                        pushNotifications: true,
-                        notifyNewComplaint: true,
-                        notifyComplaintUpdate: true,
-                        notifyComplaintResolved: true,
-                        notifyNewUser: true,
-                        notifySystemUpdate: true,
-                        adminEmail: '',
-                        adminPhone: ''
-                    }
                 });
-            }
-            
-            res.json({
-                success: true,
-                data: {
-                    emailNotifications: settings.email_notifications === 1,
-                    smsNotifications: settings.sms_notifications === 1,
-                    pushNotifications: settings.push_notifications === 1,
-                    notifyNewComplaint: settings.notify_new_complaint === 1,
-                    notifyComplaintUpdate: settings.notify_complaint_update === 1,
-                    notifyComplaintResolved: settings.notify_complaint_resolved === 1,
-                    notifyNewUser: settings.notify_new_user === 1,
-                    notifySystemUpdate: settings.notify_system_update === 1,
-                    adminEmail: settings.admin_email || '',
-                    adminPhone: settings.admin_phone || ''
-                }
             });
         });
     } catch (error) {
-        console.error('Error in GET /settings/notifications:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// PUT /api/settings/notifications - Update notification settings
-app.put('/api/settings/notifications', protect, adminOnly, (req, res) => {
-    try {
-        const {
-            emailNotifications, smsNotifications, pushNotifications,
-            notifyNewComplaint, notifyComplaintUpdate, notifyComplaintResolved,
-            notifyNewUser, notifySystemUpdate, adminEmail, adminPhone
-        } = req.body;
-        
-        db.get(`SELECT id FROM settings_notifications LIMIT 1`, [], (err, existing) => {
-            if (err) {
-                console.error('Database error:', err);
-                return res.status(500).json({ success: false, message: 'Database error' });
-            }
-            
-            const sql = `UPDATE settings_notifications SET
-                email_notifications = ?, sms_notifications = ?, push_notifications = ?,
-                notify_new_complaint = ?, notify_complaint_update = ?, notify_complaint_resolved = ?,
-                notify_new_user = ?, notify_system_update = ?, admin_email = ?, admin_phone = ?,
-                updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
-            
-            const params = [
-                emailNotifications ? 1 : 0, smsNotifications ? 1 : 0, pushNotifications ? 1 : 0,
-                notifyNewComplaint ? 1 : 0, notifyComplaintUpdate ? 1 : 0, notifyComplaintResolved ? 1 : 0,
-                notifyNewUser ? 1 : 0, notifySystemUpdate ? 1 : 0, adminEmail || '', adminPhone || ''
-            ];
-            
-            if (existing) {
-                params.push(existing.id);
-                db.run(sql, params, function(err) {
-                    if (err) {
-                        console.error('Error updating notification settings:', err);
-                        return res.status(500).json({ success: false, message: 'Database error' });
-                    }
-                    res.json({ success: true, message: 'Notification settings updated successfully' });
-                });
-            } else {
-                const insertSql = `INSERT INTO settings_notifications (
-                    email_notifications, sms_notifications, push_notifications,
-                    notify_new_complaint, notify_complaint_update, notify_complaint_resolved,
-                    notify_new_user, notify_system_update, admin_email, admin_phone
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-                
-                db.run(insertSql, params, function(err) {
-                    if (err) {
-                        console.error('Error inserting notification settings:', err);
-                        return res.status(500).json({ success: false, message: 'Database error' });
-                    }
-                    res.json({ success: true, message: 'Notification settings saved successfully' });
-                });
-            }
-        });
-    } catch (error) {
-        console.error('Error in PUT /settings/notifications:', error);
+        console.error('Error getting staff dashboard:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
 // ==================== USER MANAGEMENT ROUTES (Admin Only) ====================
-// (Keep your existing user management routes here)
+
+// GET /api/users - Get all users
+app.get('/api/users', protect, adminOnly, (req, res) => {
+    try {
+        const { page = 1, limit = 100, role, status, search } = req.query;
+
+        let sql = `SELECT id, name, name_en, email, phone, role, status, last_login, created_at, updated_at FROM users WHERE 1=1`;
+        const params = [];
+
+        if (role && role !== 'all') {
+            sql += ` AND role = ?`;
+            params.push(role);
+        }
+
+        if (status && status !== 'all') {
+            sql += ` AND status = ?`;
+            params.push(status);
+        }
+
+        if (search) {
+            sql += ` AND (name LIKE ? OR name_en LIKE ? OR email LIKE ? OR phone LIKE ?)`;
+            const searchPattern = `%${search}%`;
+            params.push(searchPattern, searchPattern, searchPattern, searchPattern);
+        }
+
+        sql += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+        params.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
+
+        db.all(sql, params, (err, users) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: err.message });
+            }
+
+            let countSql = `SELECT COUNT(*) as total FROM users WHERE 1=1`;
+            const countParams = [];
+
+            if (role && role !== 'all') {
+                countSql += ` AND role = ?`;
+                countParams.push(role);
+            }
+            if (status && status !== 'all') {
+                countSql += ` AND status = ?`;
+                countParams.push(status);
+            }
+
+            db.get(countSql, countParams, (err, countResult) => {
+                if (err) {
+                    return res.status(500).json({ success: false, message: err.message });
+                }
+                res.json({
+                    success: true,
+                    data: users,
+                    pagination: {
+                        page: parseInt(page),
+                        limit: parseInt(limit),
+                        total: countResult?.total || 0,
+                        pages: Math.ceil((countResult?.total || 0) / parseInt(limit))
+                    }
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Get users error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// POST /api/users - Create new user (admin can create staff)
+app.post('/api/users', protect, adminOnly, async (req, res) => {
+    try {
+        const { name, nameEn, email, phone, role, password } = req.body;
+
+        if (!name || !nameEn || !email || !phone || !password) {
+            return res.status(400).json({ success: false, message: 'All fields are required' });
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
+
+        const phoneRegex = /^[9][8-9][0-9]{8}$/;
+        if (!phoneRegex.test(phone)) {
+            return res.status(400).json({ success: false, message: 'Invalid phone number. Must be 10 digits starting with 98 or 99' });
+        }
+
+        db.get(`SELECT id FROM users WHERE email = ? OR phone = ?`, [email.toLowerCase(), phone], (err, existingUser) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: err.message });
+            }
+            if (existingUser) {
+                return res.status(409).json({ success: false, message: 'User with this email or phone already exists' });
+            }
+
+            bcrypt.hash(password, 10, (err, hashedPassword) => {
+                if (err) {
+                    return res.status(500).json({ success: false, message: 'Error hashing password' });
+                }
+
+                const sql = `INSERT INTO users (name, name_en, email, phone, password, role, status, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`;
+
+                db.run(sql, [name, nameEn, email.toLowerCase(), phone, hashedPassword, role || 'user', 'active', req.user.id], function(err) {
+                    if (err) {
+                        return res.status(500).json({ success: false, message: err.message });
+                    }
+                    res.status(201).json({
+                        success: true,
+                        message: 'User created successfully',
+                        data: { id: this.lastID, name, nameEn, email, phone, role: role || 'user', status: 'active' }
+                    });
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Create user error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// PUT /api/users/:id - Update user
+app.put('/api/users/:id', protect, adminOnly, (req, res) => {
+    try {
+        const { name, nameEn, email, phone, role, status } = req.body;
+
+        if (!name || !nameEn || !email || !phone) {
+            return res.status(400).json({ success: false, message: 'Name, email, and phone are required' });
+        }
+
+        db.get(`SELECT id FROM users WHERE id = ?`, [req.params.id], (err, user) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: err.message });
+            }
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+
+            db.get(`SELECT id FROM users WHERE (email = ? OR phone = ?) AND id != ?`, [email.toLowerCase(), phone, req.params.id], (err, existingUser) => {
+                if (err) {
+                    return res.status(500).json({ success: false, message: err.message });
+                }
+                if (existingUser) {
+                    return res.status(409).json({ success: false, message: 'Email or phone already exists' });
+                }
+
+                const sql = `UPDATE users SET name = ?, name_en = ?, email = ?, phone = ?, role = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+
+                db.run(sql, [name, nameEn, email.toLowerCase(), phone, role || 'user', status || 'active', req.params.id], function(err) {
+                    if (err) {
+                        return res.status(500).json({ success: false, message: err.message });
+                    }
+                    res.json({ success: true, message: 'User updated successfully' });
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Update user error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// PATCH /api/users/:id/status - Update user status
+app.patch('/api/users/:id/status', protect, adminOnly, (req, res) => {
+    try {
+        const { status } = req.body;
+
+        if (!status || !['active', 'inactive', 'suspended'].includes(status)) {
+            return res.status(400).json({ success: false, message: 'Invalid status' });
+        }
+
+        if (parseInt(req.params.id) === req.user.id) {
+            return res.status(403).json({ success: false, message: 'You cannot change your own status' });
+        }
+
+        db.get(`SELECT id FROM users WHERE id = ?`, [req.params.id], (err, user) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: err.message });
+            }
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+
+            db.run(`UPDATE users SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [status, req.params.id], function(err) {
+                if (err) {
+                    return res.status(500).json({ success: false, message: err.message });
+                }
+                res.json({ success: true, message: `User status updated to ${status}` });
+            });
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// DELETE /api/users/:id - Delete user
+app.delete('/api/users/:id', protect, adminOnly, (req, res) => {
+    try {
+        if (parseInt(req.params.id) === req.user.id) {
+            return res.status(403).json({ success: false, message: 'You cannot delete your own account' });
+        }
+
+        db.get(`SELECT id FROM users WHERE id = ?`, [req.params.id], (err, user) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: err.message });
+            }
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+
+            db.run(`DELETE FROM users WHERE id = ?`, [req.params.id], function(err) {
+                if (err) {
+                    return res.status(500).json({ success: false, message: err.message });
+                }
+                res.json({ success: true, message: 'User deleted successfully' });
+            });
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ==================== INITIALIZE ADMIN AND STAFF USERS ====================
+
+// Function to generate unique phone number
+const generateUniquePhoneNumber = async (baseNumber) => {
+    let phoneNumber = baseNumber;
+    let isUnique = false;
+    let attempts = 0;
+    
+    while (!isUnique && attempts < 10) {
+        const exists = await new Promise((resolve) => {
+            db.get(`SELECT id FROM users WHERE phone = ?`, [phoneNumber], (err, row) => {
+                resolve(!err && row);
+            });
+        });
+        
+        if (!exists) {
+            isUnique = true;
+        } else {
+            const randomSuffix = Math.floor(Math.random() * 9000) + 1000;
+            phoneNumber = `9841${randomSuffix}`;
+        }
+        attempts++;
+    }
+    
+    return phoneNumber;
+};
+
+// Function to create sample staff users
+const createSampleStaffUsers = async () => {
+    const staffUsers = [
+        {
+            name: 'राम बहादुर',
+            name_en: 'Ram Bahadur',
+            email: 'ram@ntc.gov.np',
+            basePhone: '9841000011',
+            password: 'staff123',
+            role: 'staff'
+        },
+        {
+            name: 'सीता शर्मा',
+            name_en: 'Sita Sharma',
+            email: 'sita@ntc.gov.np',
+            basePhone: '9841000022',
+            password: 'staff123',
+            role: 'staff'
+        },
+        {
+            name: 'हरि प्रसाद',
+            name_en: 'Hari Prasad',
+            email: 'hari@ntc.gov.np',
+            basePhone: '9841000033',
+            password: 'staff123',
+            role: 'staff'
+        },
+        {
+            name: 'गीता अधिकारी',
+            name_en: 'Gita Adhikari',
+            email: 'gita@ntc.gov.np',
+            basePhone: '9841000044',
+            password: 'staff123',
+            role: 'staff'
+        },
+        {
+            name: 'विकास न्यौपाने',
+            name_en: 'Bikas Neupane',
+            email: 'bikas@ntc.gov.np',
+            basePhone: '9841000055',
+            password: 'staff123',
+            role: 'staff'
+        },
+        {
+            name: 'मिना काफ्ले',
+            name_en: 'Mina Kafle',
+            email: 'mina@ntc.gov.np',
+            basePhone: '9841000066',
+            password: 'staff123',
+            role: 'staff'
+        },
+        {
+            name: 'सुरज थापा',
+            name_en: 'Suraj Thapa',
+            email: 'suraj@ntc.gov.np',
+            basePhone: '9841000077',
+            password: 'staff123',
+            role: 'staff'
+        },
+        {
+            name: 'प्रिया श्रेष्ठ',
+            name_en: 'Priya Shrestha',
+            email: 'priya@ntc.gov.np',
+            basePhone: '9841000088',
+            password: 'staff123',
+            role: 'staff'
+        },
+        {
+            name: 'विनोद न्यौपाने',
+            name_en: 'Binod Neupane',
+            email: 'binod@ntc.gov.np',
+            basePhone: '9841000099',
+            password: 'staff123',
+            role: 'staff'
+        },
+        {
+            name: 'सुनिता कार्की',
+            name_en: 'Sunita Karki',
+            email: 'sunita@ntc.gov.np',
+            basePhone: '9841000100',
+            password: 'staff123',
+            role: 'staff'
+        }
+    ];
+
+    for (const staff of staffUsers) {
+        try {
+            // Check if user already exists by email
+            const existingUser = await new Promise((resolve) => {
+                db.get(`SELECT id FROM users WHERE email = ?`, [staff.email], (err, row) => {
+                    resolve(row);
+                });
+            });
+            
+            if (existingUser) {
+                console.log(`✅ Staff already exists: ${staff.email}`);
+                continue;
+            }
+            
+            // Get unique phone number
+            const phoneNumber = await generateUniquePhoneNumber(staff.basePhone);
+            
+            const hashedPassword = await bcrypt.hash(staff.password, 10);
+            
+            await new Promise((resolve, reject) => {
+                db.run(
+                    `INSERT INTO users (name, name_en, email, phone, password, role, status, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+                    [staff.name, staff.name_en, staff.email, phoneNumber, hashedPassword, staff.role, 'active'],
+                    function(err) {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve(this.lastID);
+                        }
+                    }
+                );
+            });
+            
+            console.log(`✅ Staff created: ${staff.email} / ${staff.password} (Phone: ${phoneNumber})`);
+            
+        } catch (error) {
+            if (error.message.includes('UNIQUE constraint failed')) {
+                console.log(`⚠️ Could not create ${staff.email} - already exists`);
+            } else {
+                console.error(`Error creating ${staff.email}:`, error.message);
+            }
+        }
+    }
+};
+
+// ==================== SETTINGS API ROUTES ====================
+// (Keep your existing settings routes here)
 
 // ==================== ERROR HANDLING ====================
 app.use((err, req, res, next) => {
@@ -1518,62 +1247,51 @@ const startServer = async () => {
                         if (err) {
                             console.error('Error creating admin user:', err);
                         } else {
-                            console.log('✅ Default admin user created successfully!');
-                            console.log('📧 Email: admin@example.com');
-                            console.log('🔑 Password: admin123');
-                        }
-                    }
-                );
-            }
-        });
-
-        // Create default staff user if not exists
-        db.get(`SELECT id FROM users WHERE email = ?`, ['staff@example.com'], async (err, user) => {
-            if (err) {
-                console.error('Error checking staff user:', err);
-                return;
-            }
-
-            if (!user) {
-                const hashedPassword = await bcrypt.hash('staff123', 10);
-                db.run(
-                    `INSERT INTO users (name, name_en, email, phone, password, role, status, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-                    ['कर्मचारी', 'Staff User', 'staff@example.com', '9841000001', hashedPassword, 'staff', 'active'],
-                    function(err) {
-                        if (err) {
-                            console.error('Error creating staff user:', err);
-                        } else {
-                            console.log('✅ Default staff user created successfully!');
-                            console.log('📧 Email: staff@example.com');
-                            console.log('🔑 Password: staff123');
+                            console.log('✅ Admin user created: admin@example.com / admin123');
                         }
                     }
                 );
             } else {
-                console.log('✅ Staff user already exists');
+                console.log('✅ Admin user already exists: admin@example.com');
             }
         });
 
+        // Wait a bit for admin creation
+        setTimeout(() => {
+            createSampleStaffUsers();
+        }, 500);
+
         app.listen(PORT, () => {
-            console.log(`=================================`);
+            console.log(`\n=================================`);
             console.log(`🚀 Server running on port ${PORT}`);
             console.log(`📡 API available at http://localhost:${PORT}/api`);
             console.log(`💚 Health check: http://localhost:${PORT}/api/health`);
-            console.log(`👥 Users API: http://localhost:${PORT}/api/users (Admin only)`);
-            console.log(`🔐 Auth API: http://localhost:${PORT}/api/auth`);
-            console.log(`📋 Public Complaints: http://localhost:${PORT}/api/complaints/public`);
-            console.log(`📋 Public Complaint Regarding: http://localhost:${PORT}/api/complaints/regarding/public`);
-            console.log(`📝 Complaint Status: PATCH /api/admin/complaints/:id/status`);
-            console.log(`📝 Complaint Regarding Status: PATCH /api/admin/complaint-regarding/:id/status`);
-            console.log(`👥 Assign Complaint: PATCH /api/admin/complaints/:id/assign`);
-            console.log(`👥 Assign Complaint Regarding: PATCH /api/admin/complaint-regarding/:id/assign`);
-            console.log(`📋 Assigned Complaints: GET /api/complaints/assigned-to-me`);
-            console.log(`📋 Assigned Complaint Regarding: GET /api/complaint-regarding/assigned-to-me`);
-            console.log(`🔄 Token Refresh: POST /api/auth/refresh`);
-            console.log(`⚙️ Settings API: /api/settings/*`);
-            console.log(`👨‍💼 Staff Dashboard: GET /api/staff/dashboard`);
             console.log(`=================================`);
+            console.log(`🔐 LOGIN CREDENTIALS:`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`👑 ADMIN LOGIN:`);
+            console.log(`   📧 Email: admin@example.com`);
+            console.log(`   🔑 Password: admin123`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`👥 STAFF LOGINS (10 staff members):`);
+            console.log(`   1. ram@ntc.gov.np / staff123`);
+            console.log(`   2. sita@ntc.gov.np / staff123`);
+            console.log(`   3. hari@ntc.gov.np / staff123`);
+            console.log(`   4. gita@ntc.gov.np / staff123`);
+            console.log(`   5. bikas@ntc.gov.np / staff123`);
+            console.log(`   6. mina@ntc.gov.np / staff123`);
+            console.log(`   7. suraj@ntc.gov.np / staff123`);
+            console.log(`   8. priya@ntc.gov.np / staff123`);
+            console.log(`   9. binod@ntc.gov.np / staff123`);
+            console.log(`  10. sunita@ntc.gov.np / staff123`);
+            console.log(`=================================`);
+            console.log(`📋 API Endpoints:`);
+            console.log(`   POST /api/auth/login - Login`);
+            console.log(`   GET /api/complaints - Get complaints`);
+            console.log(`   PATCH /api/admin/complaints/:id/status - Update status`);
+            console.log(`   PATCH /api/admin/complaints/:id/assign - Assign to staff`);
+            console.log(`   GET /api/staff/dashboard - Staff dashboard`);
+            console.log(`=================================\n`);
         });
     } catch (error) {
         console.error('Failed to start server:', error);

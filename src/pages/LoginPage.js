@@ -59,12 +59,13 @@ const LoginPage = () => {
 
   // Check if already logged in
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    const user = localStorage.getItem('adminUser');
-    const role = localStorage.getItem('userRole');
+    const adminToken = localStorage.getItem('adminToken');
+    const adminUser = localStorage.getItem('adminUser');
+    const userRole = localStorage.getItem('userRole');
     
-    if (token && user && role === 'admin') {
+    if (adminToken && adminUser && userRole === 'admin') {
       navigate('/admin-dashboard');
+      return;
     }
     
     const staffToken = localStorage.getItem('staffToken');
@@ -73,6 +74,7 @@ const LoginPage = () => {
     
     if (staffToken && staffUser && staffRole === 'staff') {
       navigate('/staff-dashboard');
+      return;
     }
   }, [navigate]);
 
@@ -87,6 +89,7 @@ const LoginPage = () => {
       serviceSub: 'गुनासो ट्र्याकिङ प्रणाली',
       home: 'गृह पृष्ठ',
       faqs: 'बारम्बार सोधिने प्रश्नहरू',
+      complaints: 'गुनासोहरू',
       login: 'लगइन',
       adminLogin: 'प्रशासक लगइन',
       staffLogin: 'स्टाफ लगइन',
@@ -104,8 +107,7 @@ const LoginPage = () => {
       demoCredentials: 'डेमो प्रमाणपत्रहरू:',
       adminUser: 'प्रशासक: admin@example.com',
       adminPass: 'पासवर्ड: admin123',
-      staffUser: 'स्टाफ: staff@example.com',
-      staffPass: 'पासवर्ड: staff123',
+      staffUsers: 'स्टाफ प्रयोगकर्ताहरू:',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
       loginSuccessAdmin: '✅ लगइन सफल! प्रशासक ड्यासबोर्डमा जाँदै...',
@@ -124,6 +126,7 @@ const LoginPage = () => {
       serviceSub: 'Complaint Tracking System',
       home: 'Home',
       faqs: 'FAQs',
+      complaints: 'Complaints',
       login: 'Login',
       adminLogin: 'Admin Login',
       staffLogin: 'Staff Login',
@@ -141,8 +144,7 @@ const LoginPage = () => {
       demoCredentials: 'Demo Credentials:',
       adminUser: 'Admin: admin@example.com',
       adminPass: 'Password: admin123',
-      staffUser: 'Staff: staff@example.com',
-      staffPass: 'Password: staff123',
+      staffUsers: 'Staff Users:',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
       loginSuccessAdmin: '✅ Login successful! Redirecting to Admin Dashboard...',
@@ -186,7 +188,7 @@ const LoginPage = () => {
     setError('');
 
     try {
-      // Make real API call to backend
+      // Make real API call to backend - backend handles both admin and staff
       const response = await axios.post(`${API_URL}/auth/login`, {
         email: formData.email,
         password: formData.password
@@ -195,8 +197,13 @@ const LoginPage = () => {
       if (response.data.success) {
         const { token, ...userData } = response.data.data;
         
-        // Store session based on user role
+        // Store session based on user role from backend response
         if (userData.role === 'admin') {
+          // Clear any existing staff session first
+          localStorage.removeItem('staffToken');
+          localStorage.removeItem('staffUser');
+          localStorage.removeItem('staffRole');
+          
           localStorage.setItem('adminToken', token);
           localStorage.setItem('adminUser', JSON.stringify(userData));
           localStorage.setItem('userRole', 'admin');
@@ -210,16 +217,19 @@ const LoginPage = () => {
             localStorage.removeItem('rememberedEmail');
           }
           
-          // Show success popup message
           setSuccessMessage(t.loginSuccessAdmin);
           setShowSuccessPopup(true);
           
-          // Redirect after a short delay
           setTimeout(() => {
             navigate('/admin-dashboard');
           }, 1500);
           
         } else if (userData.role === 'staff') {
+          // Clear any existing admin session first
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+          localStorage.removeItem('userRole');
+          
           localStorage.setItem('staffToken', token);
           localStorage.setItem('staffUser', JSON.stringify(userData));
           localStorage.setItem('staffRole', 'staff');
@@ -234,11 +244,9 @@ const LoginPage = () => {
             localStorage.removeItem('rememberedEmail');
           }
           
-          // Show success popup message
-          setSuccessMessage(t.loginSuccessStaff);
+          setSuccessMessage(`${t.loginSuccessStaff} ${userData.name}`);
           setShowSuccessPopup(true);
           
-          // Redirect after a short delay
           setTimeout(() => {
             navigate('/staff-dashboard');
           }, 1500);
@@ -256,7 +264,7 @@ const LoginPage = () => {
       if (error.response) {
         setError(error.response.data?.message || t.loginError);
       } else if (error.request) {
-        setError('Cannot connect to server. Please check if backend is running.');
+        setError('Cannot connect to server. Please check if backend is running on port 5000.');
       } else {
         setError(t.loginError);
       }
@@ -395,6 +403,10 @@ const LoginPage = () => {
               <span className="nav-icon">❓</span>
               <span className="nav-text">{t.faqs}</span>
             </button>
+            <button onClick={() => navigate('/complaints')} className="nav-btn">
+              <span className="nav-icon">📋</span>
+              <span className="nav-text">{t.complaints}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -502,7 +514,29 @@ const LoginPage = () => {
               </button>
             </form>
 
-          
+            {/* Demo Credentials */}
+            <div className="demo-credentials">
+              <div className="demo-title">{t.demoCredentials}</div>
+              <div className="demo-info">
+                <div className="demo-card">
+                  <div className="demo-role">👨‍💼 {t.adminLogin}</div>
+                  <code>admin@example.com</code>
+                  <code>admin123</code>
+                </div>
+                <div className="demo-card">
+                  <div className="demo-role">👨‍💻 {t.staffLogin}</div>
+                  <code>staff@example.com</code>
+                  <code>staff123</code>
+                </div>
+              </div>
+              <div className="demo-note">
+                <p className="demo-note-text">
+                  💡 {language === 'np' 
+                    ? 'टिप्पणी: प्रत्येक स्टाफ सदस्यको आफ्नै इमेल र पासवर्ड हुन्छ। कृपया आफ्नो व्यक्तिगत प्रमाणपत्रहरू प्रयोग गर्नुहोस्।' 
+                    : 'Note: Each staff member has their own email and password. Please use your personal credentials.'}
+                </p>
+              </div>
+            </div>
 
             <div className="back-to-home">
               <button onClick={() => navigate('/')} className="btn-back" disabled={isLoading}>
@@ -513,7 +547,15 @@ const LoginPage = () => {
         </div>
       </div>
 
-  
+      {/* Footer */}
+      <footer className="footer">
+        <div className="footer-content">
+          <div className="footer-copyright">
+            <p>{t.footerTagline}</p>
+            <p className="copyright-text">{t.copyright}</p>
+          </div>
+        </div>
+      </footer>
 
       <style jsx>{`
         * {
@@ -527,6 +569,8 @@ const LoginPage = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
           min-height: 100vh;
+          display: flex;
+          flex-direction: column;
         }
 
         /* Success Popup */
@@ -793,8 +837,9 @@ const LoginPage = () => {
 
         /* Main Content */
         .main-content {
+          flex: 1;
           padding-top: 195px;
-          min-height: calc(100vh - 200px);
+          padding-bottom: 40px;
         }
 
         .login-container {
@@ -1025,6 +1070,7 @@ const LoginPage = () => {
           justify-content: center;
           gap: 20px;
           flex-wrap: wrap;
+          margin-bottom: 16px;
         }
 
         .demo-card {
@@ -1051,6 +1097,20 @@ const LoginPage = () => {
           color: #0d47a1;
           font-family: monospace;
           margin-bottom: 4px;
+        }
+
+        .demo-note {
+          text-align: center;
+          margin-top: 12px;
+        }
+
+        .demo-note-text {
+          font-size: 0.7rem;
+          color: #6c8196;
+          background: #f0f7ff;
+          padding: 8px 12px;
+          border-radius: 8px;
+          display: inline-block;
         }
 
         .back-to-home {
@@ -1081,6 +1141,24 @@ const LoginPage = () => {
           cursor: not-allowed;
         }
 
+        .footer {
+          background: #0d2b5e;
+          color: white;
+          padding: 20px 24px;
+          margin-top: 40px;
+          text-align: center;
+        }
+
+        .footer-content {
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+
+        .footer-copyright {
+          text-align: center;
+          font-size: 0.7rem;
+          opacity: 0.7;
+        }
 
         .copyright-text {
           margin-top: 5px;
@@ -1103,6 +1181,7 @@ const LoginPage = () => {
           .dept-text-center { flex: 1; }
           .success-popup { top: auto; bottom: 20px; right: 20px; left: 20px; max-width: calc(100% - 40px); }
           .success-popup-content { max-width: 100%; }
+          .demo-note-text { font-size: 0.65rem; }
         }
 
         @media (max-width: 480px) {
