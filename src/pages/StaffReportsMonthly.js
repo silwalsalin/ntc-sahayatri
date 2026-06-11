@@ -15,12 +15,33 @@ const StaffReportsMonthly = () => {
   const [chartView, setChartView] = useState('bar');
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
 
   // Get current month string
   function getCurrentMonth() {
@@ -41,6 +62,32 @@ const StaffReportsMonthly = () => {
     const endDate = new Date(parseInt(year), parseInt(month), 0);
     return { startDate, endDate };
   }
+
+  // Format Nepali date
+  const formatNepaliDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      const year = d.getFullYear() - 57;
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  const formatEnglishDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      return d.toISOString().split('T')[0];
+    } catch (error) {
+      return '-';
+    }
+  };
 
   // Fetch monthly report
   const fetchMonthlyReport = async () => {
@@ -67,7 +114,7 @@ const StaffReportsMonthly = () => {
     }
   };
 
-  // Get sample monthly report
+  // Get sample monthly report with multi-language support
   const getSampleMonthlyReport = () => {
     const monthRange = getMonthRange(selectedMonth);
     const [year, month] = selectedMonth.split('-');
@@ -97,6 +144,7 @@ const StaffReportsMonthly = () => {
         resolutionRate: 73.5
       },
       complaintsByPriority: {
+        urgent: 15,
         high: 65,
         medium: 85,
         low: 50
@@ -106,6 +154,7 @@ const StaffReportsMonthly = () => {
         recharge: 32,
         activation: 45,
         billing: 38,
+        network: 25,
         general: 27
       },
       tasksSummary: {
@@ -123,10 +172,10 @@ const StaffReportsMonthly = () => {
         slaCompliance: 92
       },
       topPerformingStaff: [
-        { name: 'Ram Bahadur', resolved: 42, satisfaction: 4.8, avgTime: 2.8 },
-        { name: 'Sita Sharma', resolved: 38, satisfaction: 4.6, avgTime: 3.1 },
-        { name: 'Hari Prasad', resolved: 35, satisfaction: 4.5, avgTime: 3.2 },
-        { name: 'Gita Karki', resolved: 32, satisfaction: 4.4, avgTime: 3.4 }
+        { id: 1, name: 'राम बहादुर', enName: 'Ram Bahadur', resolved: 42, satisfaction: 4.8, avgTime: 2.8, role: 'प्राविधिक सहायता', enRole: 'Technical Support' },
+        { id: 2, name: 'सीता शर्मा', enName: 'Sita Sharma', resolved: 38, satisfaction: 4.6, avgTime: 3.1, role: 'ग्राहक सेवा', enRole: 'Customer Service' },
+        { id: 3, name: 'हरि प्रसाद', enName: 'Hari Prasad', resolved: 35, satisfaction: 4.5, avgTime: 3.2, role: 'नेटवर्क इन्जिनियर', enRole: 'Network Engineer' },
+        { id: 4, name: 'गीता कार्की', enName: 'Gita Karki', resolved: 32, satisfaction: 4.4, avgTime: 3.4, role: 'बिलिङ विशेषज्ञ', enRole: 'Billing Specialist' }
       ],
       monthOverMonthGrowth: {
         complaints: -5.2,
@@ -148,31 +197,6 @@ const StaffReportsMonthly = () => {
     };
   };
 
-  const formatNepaliDate = (date) => {
-    if (!date) return '-';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '-';
-      const year = d.getFullYear() - 57;
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    } catch (error) {
-      return '-';
-    }
-  };
-
-  const formatEnglishDate = (date) => {
-    if (!date) return '-';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '-';
-      return d.toISOString().split('T')[0];
-    } catch (error) {
-      return '-';
-    }
-  };
-
   // Generate month options (last 12 months)
   const getMonthOptions = () => {
     const options = [];
@@ -190,6 +214,16 @@ const StaffReportsMonthly = () => {
     return options;
   };
 
+  // Helper function to get staff display name
+  const getStaffDisplayName = (staff) => {
+    return language === 'np' ? staff.name : staff.enName;
+  };
+
+  // Helper function to get role display
+  const getRoleDisplay = (staff) => {
+    return language === 'np' ? staff.role : staff.enRole;
+  };
+
   // Check authentication
   useEffect(() => {
     const token = localStorage.getItem('staffToken');
@@ -202,12 +236,12 @@ const StaffReportsMonthly = () => {
     }
   }, [navigate]);
 
-  // Refresh when month changes
+  // Refresh when month changes or language changes
   useEffect(() => {
     if (selectedMonth) {
       fetchMonthlyReport();
     }
-  }, [selectedMonth]);
+  }, [selectedMonth, language]);
 
   const handleMonthChange = (e) => {
     setSelectedMonth(e.target.value);
@@ -266,6 +300,7 @@ const StaffReportsMonthly = () => {
       slaCompliance: 'SLA अनुपालन',
       topPerformingStaff: 'उत्कृष्ट प्रदर्शन गर्ने कर्मचारी',
       staffName: 'कर्मचारीको नाम',
+      role: 'भूमिका',
       resolved: 'समाधान गरेको',
       satisfaction: 'सन्तुष्टि',
       avgTime: 'औसत समय',
@@ -277,6 +312,7 @@ const StaffReportsMonthly = () => {
       peakHourAnalysis: 'व्यस्त समय विश्लेषण',
       hour: 'समय',
       complaintsCount: 'गुनासो संख्या',
+      urgent: 'अत्यावश्यक',
       high: 'उच्च',
       medium: 'मध्यम',
       low: 'न्यून',
@@ -284,6 +320,7 @@ const StaffReportsMonthly = () => {
       recharge: 'रिचार्ज',
       activation: 'सक्रियता',
       billing: 'बिलिङ',
+      network: 'नेटवर्क',
       general: 'सामान्य',
       export: 'रिपोर्ट निर्यात गर्नुहोस्',
       print: 'प्रिन्ट गर्नुहोस्',
@@ -325,6 +362,7 @@ const StaffReportsMonthly = () => {
       slaCompliance: 'SLA Compliance',
       topPerformingStaff: 'Top Performing Staff',
       staffName: 'Staff Name',
+      role: 'Role',
       resolved: 'Resolved',
       satisfaction: 'Satisfaction',
       avgTime: 'Avg Time',
@@ -336,6 +374,7 @@ const StaffReportsMonthly = () => {
       peakHourAnalysis: 'Peak Hour Analysis',
       hour: 'Hour',
       complaintsCount: 'Complaints',
+      urgent: 'Urgent',
       high: 'High',
       medium: 'Medium',
       low: 'Low',
@@ -343,6 +382,7 @@ const StaffReportsMonthly = () => {
       recharge: 'Recharge',
       activation: 'Activation',
       billing: 'Billing',
+      network: 'Network',
       general: 'General',
       export: 'Export Report',
       print: 'Print',
@@ -578,10 +618,10 @@ const StaffReportsMonthly = () => {
                         />
                         {/* Data points */}
                         {reportData?.weeklyBreakdown?.map((week, i) => (
-                          <circle key={i} cx={120 + i * 160} cy={260 - (week.complaints / 75) * 240} r="4" fill="#3b82f6" />
+                          <circle key={`complaint-${i}`} cx={120 + i * 160} cy={260 - (week.complaints / 75) * 240} r="4" fill="#3b82f6" />
                         ))}
                         {reportData?.weeklyBreakdown?.map((week, i) => (
-                          <circle key={i + 100} cx={120 + i * 160} cy={260 - (week.resolved / 75) * 240} r="4" fill="#10b981" />
+                          <circle key={`resolved-${i}`} cx={120 + i * 160} cy={260 - (week.resolved / 75) * 240} r="4" fill="#10b981" />
                         ))}
                       </svg>
                       <div className="chart-legend">
@@ -599,6 +639,15 @@ const StaffReportsMonthly = () => {
                 <div className="report-section">
                   <h3>{t.complaintsByPriority}</h3>
                   <div className="priority-stats">
+                    {(reportData?.complaintsByPriority.urgent > 0) && (
+                      <div className="priority-item urgent">
+                        <span className="priority-label">{t.urgent}</span>
+                        <div className="priority-bar">
+                          <div className="priority-fill urgent-fill" style={{ width: `${((reportData?.complaintsByPriority.urgent || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        </div>
+                        <span className="priority-count">{reportData?.complaintsByPriority.urgent || 0}</span>
+                      </div>
+                    )}
                     <div className="priority-item high">
                       <span className="priority-label">{t.high}</span>
                       <div className="priority-bar">
@@ -654,6 +703,13 @@ const StaffReportsMonthly = () => {
                         <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.billing || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
                       <span className="category-count">{reportData?.complaintsByCategory.billing || 0}</span>
+                    </div>
+                    <div className="category-item">
+                      <span className="category-label">{t.network}</span>
+                      <div className="category-bar">
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.network || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                      </div>
+                      <span className="category-count">{reportData?.complaintsByCategory.network || 0}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.general}</span>
@@ -740,6 +796,7 @@ const StaffReportsMonthly = () => {
                     <thead>
                       <tr>
                         <th>{t.staffName}</th>
+                        <th>{t.role}</th>
                         <th>{t.resolved}</th>
                         <th>{t.satisfaction}</th>
                         <th>{t.avgTime} ({t.days})</th>
@@ -747,12 +804,15 @@ const StaffReportsMonthly = () => {
                     </thead>
                     <tbody>
                       {reportData?.topPerformingStaff?.map((staff, index) => (
-                        <tr key={index}>
-                          <td>{staff.name}</td>
-                          <td>{staff.resolved}</td>
+                        <tr key={staff.id || index}>
+                          <td className="staff-name">{getStaffDisplayName(staff)}</td>
+                          <td className="staff-role">{getRoleDisplay(staff)}</td>
+                          <td className="staff-resolved">{staff.resolved}</td>
                           <td>
-                            <div className="satisfaction-bar">
-                              <div className="satisfaction-fill" style={{ width: `${(staff.satisfaction / 5) * 100}%` }}></div>
+                            <div className="satisfaction-container">
+                              <div className="satisfaction-bar">
+                                <div className="satisfaction-fill" style={{ width: `${(staff.satisfaction / 5) * 100}%` }}></div>
+                              </div>
                               <span className="satisfaction-value">{staff.satisfaction}/5</span>
                             </div>
                           </td>
@@ -823,7 +883,7 @@ const StaffReportsMonthly = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -872,7 +932,6 @@ const StaffReportsMonthly = () => {
 
         .main-content {
           flex: 1;
-        
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -930,6 +989,7 @@ const StaffReportsMonthly = () => {
         .header-actions {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .action-btn, .refresh-btn {
@@ -1031,6 +1091,12 @@ const StaffReportsMonthly = () => {
           display: flex;
           align-items: center;
           gap: 12px;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .summary-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .summary-icon {
@@ -1053,6 +1119,10 @@ const StaffReportsMonthly = () => {
           border-bottom: 1px solid #e2e8f0;
         }
 
+        .report-section:last-child {
+          border-bottom: none;
+        }
+
         .section-header {
           display: flex;
           justify-content: space-between;
@@ -1066,6 +1136,8 @@ const StaffReportsMonthly = () => {
           font-size: 1rem;
           font-weight: 600;
           color: #0f172a;
+          padding-left: 12px;
+          border-left: 3px solid #0288d1;
         }
 
         .chart-toggle {
@@ -1099,11 +1171,13 @@ const StaffReportsMonthly = () => {
           align-items: flex-end;
           gap: 20px;
           padding: 20px 0;
+          flex-wrap: wrap;
         }
 
         .bar-item {
           flex: 1;
           text-align: center;
+          min-width: 120px;
         }
 
         .bar-label {
@@ -1200,7 +1274,7 @@ const StaffReportsMonthly = () => {
         }
 
         .priority-label, .category-label {
-          width: 80px;
+          width: 100px;
           font-weight: 500;
         }
 
@@ -1218,13 +1292,14 @@ const StaffReportsMonthly = () => {
           transition: width 0.3s ease;
         }
 
+        .urgent-fill { background: #b91c1c; }
         .high-fill { background: #dc2626; }
         .medium-fill { background: #f59e0b; }
         .low-fill { background: #10b981; }
         .category-fill { background: #0288d1; }
 
         .priority-count, .category-count {
-          width: 30px;
+          width: 35px;
           text-align: right;
           font-weight: 500;
         }
@@ -1242,6 +1317,11 @@ const StaffReportsMonthly = () => {
           display: flex;
           align-items: center;
           gap: 12px;
+          transition: transform 0.2s;
+        }
+
+        .task-stat:hover {
+          transform: translateY(-2px);
         }
 
         .task-icon {
@@ -1270,6 +1350,11 @@ const StaffReportsMonthly = () => {
           border-radius: 12px;
           padding: 16px;
           text-align: center;
+          transition: transform 0.2s;
+        }
+
+        .metric-card:hover {
+          transform: translateY(-2px);
         }
 
         .metric-value {
@@ -1303,12 +1388,42 @@ const StaffReportsMonthly = () => {
         .staff-table th {
           background: #f8fafc;
           color: #64748b;
+          font-weight: 600;
+          font-size: 0.8rem;
+        }
+
+        .staff-table td {
+          color: #334155;
+          font-size: 0.85rem;
+        }
+
+        .staff-table tr:hover {
+          background: #fafcff;
+        }
+
+        .staff-name {
           font-weight: 500;
+          color: #0f172a;
+        }
+
+        .staff-role {
+          color: #64748b;
+          font-size: 0.75rem;
+        }
+
+        .staff-resolved {
+          font-weight: 600;
+          color: #0288d1;
+        }
+
+        .satisfaction-container {
+          display: flex;
+          align-items: center;
+          gap: 12px;
         }
 
         .satisfaction-bar {
-          position: relative;
-          width: 120px;
+          width: 100px;
           height: 8px;
           background: #e2e8f0;
           border-radius: 4px;
@@ -1319,13 +1434,12 @@ const StaffReportsMonthly = () => {
           height: 100%;
           background: #10b981;
           border-radius: 4px;
+          transition: width 0.3s ease;
         }
 
         .satisfaction-value {
-          position: absolute;
-          right: -40px;
-          top: -4px;
           font-size: 0.7rem;
+          font-weight: 500;
           color: #475569;
         }
 
@@ -1385,6 +1499,11 @@ const StaffReportsMonthly = () => {
           display: flex;
           align-items: center;
           gap: 12px;
+          transition: transform 0.2s;
+        }
+
+        .growth-card:hover {
+          transform: translateY(-2px);
         }
 
         .growth-card.positive {
@@ -1433,7 +1552,7 @@ const StaffReportsMonthly = () => {
             width: 100%;
           }
           
-          .sidebar-container, .refresh-btn, .action-btn, .month-selector, .backend-warning, .chart-toggle {
+          .staff-header, .staff-sidebar, .refresh-btn, .action-btn, .month-selector, .backend-warning, .chart-toggle {
             display: none;
           }
         }
@@ -1456,9 +1575,23 @@ const StaffReportsMonthly = () => {
           .tasks-stats, .growth-stats {
             grid-template-columns: repeat(2, 1fr);
           }
+          
+          .metrics-cards {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 992px) {
+          .metrics-cards {
+            grid-template-columns: 1fr;
+          }
         }
 
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
@@ -1472,7 +1605,7 @@ const StaffReportsMonthly = () => {
             grid-template-columns: 1fr;
           }
           
-          .tasks-stats, .metrics-cards, .growth-stats {
+          .tasks-stats, .growth-stats {
             grid-template-columns: 1fr;
           }
           

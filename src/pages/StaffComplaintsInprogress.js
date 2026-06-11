@@ -11,20 +11,23 @@ const StaffComplaintsInprogress = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [staffFilter, setStaffFilter] = useState('all');
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
 
   const [complaints, setComplaints] = useState([]);
+  const [allStaffMembers, setAllStaffMembers] = useState([]);
   const [backendStatus, setBackendStatus] = useState('checking');
   const [stats, setStats] = useState({
     total: 0,
@@ -33,6 +36,26 @@ const StaffComplaintsInprogress = () => {
     low: 0,
     assignedToMe: 0
   });
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
 
   // Fetch in-progress complaints
   const fetchInprogressComplaints = async () => {
@@ -43,6 +66,15 @@ const StaffComplaintsInprogress = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      // Fetch staff members for filter
+      const staffResponse = await axios.get('http://localhost:5000/api/staff', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (staffResponse.data.success && Array.isArray(staffResponse.data.data)) {
+        setAllStaffMembers(staffResponse.data.data);
+      }
+      
       if (response.data.success && Array.isArray(response.data.data)) {
         const transformedComplaints = response.data.data.map(complaint => transformComplaintData(complaint));
         setComplaints(transformedComplaints);
@@ -50,12 +82,14 @@ const StaffComplaintsInprogress = () => {
         setBackendStatus('connected');
       } else {
         setComplaints(getSampleInprogressComplaints());
+        setAllStaffMembers(getSampleStaffMembers());
         calculateStats(getSampleInprogressComplaints());
         setBackendStatus('disconnected');
       }
     } catch (error) {
       console.error('Error fetching in-progress complaints:', error);
       setComplaints(getSampleInprogressComplaints());
+      setAllStaffMembers(getSampleStaffMembers());
       calculateStats(getSampleInprogressComplaints());
       setBackendStatus('disconnected');
     } finally {
@@ -63,17 +97,32 @@ const StaffComplaintsInprogress = () => {
     }
   };
 
+  // Get sample staff members
+  const getSampleStaffMembers = () => {
+    return [
+      { id: 1, name: 'राम बहादुर', enName: 'Ram Bahadur', role: 'Technical Support', staffId: 'STF001' },
+      { id: 2, name: 'श्याम कुमार', enName: 'Shyam Kumar', role: 'Billing Specialist', staffId: 'STF002' },
+      { id: 3, name: 'सीता देवी', enName: 'Sita Devi', role: 'Customer Service', staffId: 'STF003' },
+      { id: 4, name: 'हरि प्रसाद', enName: 'Hari Prasad', role: 'Network Engineer', staffId: 'STF004' },
+      { id: 5, name: 'गीता अधिकारी', enName: 'Gita Adhikari', role: 'Supervisor', staffId: 'STF005' }
+    ];
+  };
+
   // Calculate statistics
   const calculateStats = (complaintsData) => {
-    const currentStaff = staffData.name;
-    const stats = {
+    const currentStaffName = staffData.name;
+    const newStats = {
       total: complaintsData.length,
-      high: complaintsData.filter(c => c.priority === 'high').length,
+      high: complaintsData.filter(c => c.priority === 'high' || c.priority === 'urgent').length,
       medium: complaintsData.filter(c => c.priority === 'medium').length,
       low: complaintsData.filter(c => c.priority === 'low').length,
-      assignedToMe: complaintsData.filter(c => c.assignedTo === currentStaff || c.assignedTo === 'Ram Bahadur').length
+      assignedToMe: complaintsData.filter(c => 
+        c.assignedTo === currentStaffName || 
+        c.assignedToName === currentStaffName ||
+        c.assignedTo === 'Ram Bahadur'
+      ).length
     };
-    setStats(stats);
+    setStats(newStats);
   };
 
   // Transform complaint data
@@ -97,6 +146,8 @@ const StaffComplaintsInprogress = () => {
     enChannel: complaint.enChannel || 'Website Portal',
     priority: mapPriority(complaint.priority),
     assignedTo: complaint.assignedTo || 'Not Assigned',
+    assignedToId: complaint.assignedToId || null,
+    assignedToName: complaint.assignedToName || complaint.assignedTo || 'Not Assigned',
     enAssignedTo: complaint.enAssignedTo || 'Not Assigned',
     resolvedDate: complaint.resolvedDate ? formatNepaliDate(complaint.resolvedDate) : null,
     enResolvedDate: complaint.resolvedDate ? formatEnglishDate(complaint.resolvedDate) : null,
@@ -106,8 +157,11 @@ const StaffComplaintsInprogress = () => {
     address: complaint.address,
     preferredContact: complaint.preferredContact,
     assignedBy: complaint.assignedBy || 'System',
+    assignedByName: complaint.assignedByName || 'System',
     lastUpdated: complaint.updatedAt ? formatNepaliDate(complaint.updatedAt) : getDate(complaint),
-    progress: complaint.progress || Math.floor(Math.random() * 40) + 30
+    progress: complaint.progress || Math.floor(Math.random() * 40) + 30,
+    staffName: complaint.staffName || complaint.assignedTo || 'Unassigned',
+    staffRole: complaint.staffRole || 'Staff'
   });
 
   const getCategoryNepali = (category) => {
@@ -116,6 +170,8 @@ const StaffComplaintsInprogress = () => {
       'recharge': 'रिचार्ज',
       'activation': 'सक्रियता',
       'billing': 'बिलिङ',
+      'network': 'नेटवर्क',
+      'signal': 'सिग्नल',
       'general': 'सामान्य'
     };
     return categories[category] || 'सामान्य';
@@ -143,7 +199,8 @@ const StaffComplaintsInprogress = () => {
     const priorityMap = {
       'High': 'high',
       'high': 'high',
-      'Urgent': 'high',
+      'Urgent': 'urgent',
+      'urgent': 'urgent',
       'Medium': 'medium',
       'medium': 'medium',
       'Low': 'low',
@@ -177,7 +234,7 @@ const StaffComplaintsInprogress = () => {
     }
   };
 
-  // Get sample in-progress complaints
+  // Get sample in-progress complaints with multiple staff
   const getSampleInprogressComplaints = () => {
     return [
       { 
@@ -199,13 +256,19 @@ const StaffComplaintsInprogress = () => {
         channel: 'वेबसाइट पोर्टल',
         enChannel: 'Website Portal',
         priority: 'high',
-        assignedTo: 'Technical Team',
-        enAssignedTo: 'Technical Team',
+        assignedTo: 'राम बहादुर',
+        assignedToId: 1,
+        assignedToName: 'Ram Bahadur',
+        enAssignedTo: 'Ram Bahadur',
         submittedDate: '2024-01-15',
         updatedAt: '2024-01-18',
         address: 'Kapan, Kathmandu',
         landmark: 'Near Ganesh Temple',
-        progress: 65
+        progress: 65,
+        assignedBy: 'Admin',
+        assignedByName: 'Admin',
+        staffName: 'राम बहादुर',
+        staffRole: 'Technical Support'
       },
       { 
         id: 2, 
@@ -226,12 +289,18 @@ const StaffComplaintsInprogress = () => {
         channel: 'इमेल',
         enChannel: 'Email',
         priority: 'medium',
-        assignedTo: 'Billing Team',
-        enAssignedTo: 'Billing Team',
+        assignedTo: 'श्याम कुमार',
+        assignedToId: 2,
+        assignedToName: 'Shyam Kumar',
+        enAssignedTo: 'Shyam Kumar',
         submittedDate: '2024-02-10',
         updatedAt: '2024-02-14',
         address: 'Baneshwor, Kathmandu',
-        progress: 45
+        progress: 45,
+        assignedBy: 'Admin',
+        assignedByName: 'Admin',
+        staffName: 'श्याम कुमार',
+        staffRole: 'Billing Specialist'
       },
       { 
         id: 3, 
@@ -251,13 +320,19 @@ const StaffComplaintsInprogress = () => {
         enDate: '2024-02-15',
         channel: 'फोन',
         enChannel: 'Phone',
-        priority: 'high',
-        assignedTo: 'Ram Bahadur',
-        enAssignedTo: 'Technical Support',
+        priority: 'urgent',
+        assignedTo: 'सीता देवी',
+        assignedToId: 3,
+        assignedToName: 'Sita Devi',
+        enAssignedTo: 'Sita Devi',
         submittedDate: '2024-02-15',
         updatedAt: '2024-02-17',
         address: 'Lalitpur',
-        progress: 80
+        progress: 80,
+        assignedBy: 'Admin',
+        assignedByName: 'Admin',
+        staffName: 'सीता देवी',
+        staffRole: 'Customer Service'
       },
       { 
         id: 4, 
@@ -278,12 +353,51 @@ const StaffComplaintsInprogress = () => {
         channel: 'वेबसाइट पोर्टल',
         enChannel: 'Website Portal',
         priority: 'medium',
-        assignedTo: 'Technical Team',
-        enAssignedTo: 'Technical Team',
+        assignedTo: 'हरि प्रसाद',
+        assignedToId: 4,
+        assignedToName: 'Hari Prasad',
+        enAssignedTo: 'Hari Prasad',
         submittedDate: '2024-02-20',
         updatedAt: '2024-02-22',
         address: 'Koteshwor, Kathmandu',
-        progress: 35
+        progress: 35,
+        assignedBy: 'Admin',
+        assignedByName: 'Admin',
+        staffName: 'हरि प्रसाद',
+        staffRole: 'Network Engineer'
+      },
+      { 
+        id: 5, 
+        ticketId: 'NTC-2024-012', 
+        name: 'माया थापा', 
+        enName: 'Maya Thapa',
+        email: 'maya@example.com',
+        phone: '9841234595',
+        category: 'network',
+        category_np: 'नेटवर्क',
+        category_en: 'Network',
+        subCategory: 'no-signal',
+        description: 'घरमा पूरै सिग्नल छैन। नेटवर्क टोलीले जाँच गरिरहेको छ।',
+        enDescription: 'No signal at home. Network team is investigating.',
+        status: 'in-progress',
+        date: '२०८०-०२-२५',
+        enDate: '2024-02-25',
+        channel: 'फोन',
+        enChannel: 'Phone',
+        priority: 'high',
+        assignedTo: 'गीता अधिकारी',
+        assignedToId: 5,
+        assignedToName: 'Gita Adhikari',
+        enAssignedTo: 'Gita Adhikari',
+        submittedDate: '2024-02-25',
+        updatedAt: '2024-02-27',
+        address: 'Bhaktapur',
+        landmark: 'Suryabinayak',
+        progress: 50,
+        assignedBy: 'Admin',
+        assignedByName: 'Admin',
+        staffName: 'गीता अधिकारी',
+        staffRole: 'Supervisor'
       }
     ];
   };
@@ -306,8 +420,12 @@ const StaffComplaintsInprogress = () => {
       inprogressComplaints: 'प्रगतिमा गुनासोहरू',
       searchPlaceholder: 'टिकेट नम्बर, नाम वा फोन नम्बरले खोज्नुहोस्...',
       filterByPriority: 'प्राथमिकता अनुसार फिल्टर',
+      filterByStaff: 'स्टाफ सदस्य अनुसार फिल्टर',
+      staffMember: 'स्टाफ सदस्य',
+      allStaff: 'सबै स्टाफ',
       ticketId: 'टिकेट नम्बर',
       complainant: 'उजुरीकर्ता',
+      assignedStaff: 'तोकिएको स्टाफ',
       category: 'प्रकार',
       submittedDate: 'दर्ता मिति',
       lastUpdated: 'अन्तिम अपडेट',
@@ -331,6 +449,7 @@ const StaffComplaintsInprogress = () => {
       high: 'उच्च',
       medium: 'मध्यम',
       low: 'न्यून',
+      urgent: 'अत्यावश्यक',
       previous: 'अघिल्लो',
       next: 'अर्को',
       page: 'पृष्ठ',
@@ -352,8 +471,12 @@ const StaffComplaintsInprogress = () => {
       inprogressComplaints: 'In Progress Complaints',
       searchPlaceholder: 'Search by ticket number, name or phone...',
       filterByPriority: 'Filter by Priority',
+      filterByStaff: 'Filter by Staff Member',
+      staffMember: 'Staff Member',
+      allStaff: 'All Staff',
       ticketId: 'Ticket ID',
       complainant: 'Complainant',
+      assignedStaff: 'Assigned Staff',
       category: 'Category',
       submittedDate: 'Submitted Date',
       lastUpdated: 'Last Updated',
@@ -377,6 +500,7 @@ const StaffComplaintsInprogress = () => {
       high: 'High',
       medium: 'Medium',
       low: 'Low',
+      urgent: 'Urgent',
       previous: 'Previous',
       next: 'Next',
       page: 'Page',
@@ -401,7 +525,8 @@ const StaffComplaintsInprogress = () => {
     const classes = { 
       high: 'priority-high', 
       medium: 'priority-medium', 
-      low: 'priority-low' 
+      low: 'priority-low',
+      urgent: 'priority-urgent'
     };
     return classes[priority] || 'priority-medium';
   };
@@ -411,14 +536,16 @@ const StaffComplaintsInprogress = () => {
       const priorityTexts = {
         high: 'उच्च',
         medium: 'मध्यम',
-        low: 'न्यून'
+        low: 'न्यून',
+        urgent: 'अत्यावश्यक'
       };
       return priorityTexts[priority] || priority;
     } else {
       const priorityTexts = {
         high: 'High',
         medium: 'Medium',
-        low: 'Low'
+        low: 'Low',
+        urgent: 'Urgent'
       };
       return priorityTexts[priority] || priority;
     }
@@ -441,7 +568,17 @@ const StaffComplaintsInprogress = () => {
   };
 
   const getAssignedTo = (complaint) => {
-    return language === 'np' ? complaint.assignedTo : complaint.enAssignedTo;
+    if (language === 'np') {
+      return complaint.assignedTo;
+    }
+    return complaint.assignedToName || complaint.assignedTo;
+  };
+
+  const getStaffName = (complaint) => {
+    if (language === 'np') {
+      return complaint.staffName;
+    }
+    return complaint.assignedToName || complaint.assignedTo;
   };
 
   // Filter complaints
@@ -454,12 +591,29 @@ const StaffComplaintsInprogress = () => {
     
     const priorityMatch = priorityFilter === 'all' || complaint.priority === priorityFilter;
     
-    return searchMatch && priorityMatch;
+    const staffMatch = staffFilter === 'all' || 
+      complaint.assignedToId === parseInt(staffFilter) ||
+      complaint.assignedTo === allStaffMembers.find(s => s.id === parseInt(staffFilter))?.name ||
+      complaint.assignedToName === allStaffMembers.find(s => s.id === parseInt(staffFilter))?.enName;
+    
+    return searchMatch && priorityMatch && staffMatch;
+  });
+
+  // Sort by priority (urgent/high first, then medium, then low)
+  const sortedComplaints = [...filteredComplaints].sort((a, b) => {
+    const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+    const aPriority = a.priority === 'urgent' ? 'urgent' : a.priority;
+    const bPriority = b.priority === 'urgent' ? 'urgent' : b.priority;
+    
+    if (priorityOrder[aPriority] !== priorityOrder[bPriority]) {
+      return priorityOrder[aPriority] - priorityOrder[bPriority];
+    }
+    return 0;
   });
 
   // Pagination
-  const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
-  const paginatedComplaints = filteredComplaints.slice(
+  const totalPages = Math.ceil(sortedComplaints.length / itemsPerPage);
+  const paginatedComplaints = sortedComplaints.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -467,11 +621,13 @@ const StaffComplaintsInprogress = () => {
   const openModal = (complaint) => {
     setSelectedComplaint(complaint);
     setShowModal(true);
+    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSelectedComplaint(null);
+    document.body.style.overflow = 'unset';
   };
 
   const handleLogout = () => {
@@ -585,9 +741,22 @@ const StaffComplaintsInprogress = () => {
                   className="filter-select"
                 >
                   <option value="all">{t.all}</option>
+                  <option value="urgent">{t.urgent}</option>
                   <option value="high">{t.high}</option>
                   <option value="medium">{t.medium}</option>
                   <option value="low">{t.low}</option>
+                </select>
+                <select
+                  value={staffFilter}
+                  onChange={(e) => setStaffFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.allStaff}</option>
+                  {allStaffMembers.map(staff => (
+                    <option key={staff.id} value={staff.id}>
+                      {language === 'np' ? staff.name : staff.enName}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -599,10 +768,10 @@ const StaffComplaintsInprogress = () => {
                   <tr>
                     <th>{t.ticketId}</th>
                     <th>{t.complainant}</th>
+                    <th>{t.assignedStaff}</th>
                     <th>{t.category}</th>
                     <th>{t.submittedDate}</th>
                     <th>{t.lastUpdated}</th>
-                    <th>{t.assignedTo}</th>
                     <th>{t.priority}</th>
                     <th>{t.progress}</th>
                     <th>{t.actions}</th>
@@ -613,11 +782,17 @@ const StaffComplaintsInprogress = () => {
                     paginatedComplaints.map((complaint) => (
                       <tr key={complaint.id}>
                         <td className="ticket-id">{complaint.ticketId}</td>
-                        <td>{language === 'np' ? complaint.name : complaint.enName}</td>
+                        <td className="complainant-cell">
+                          <div className="complainant-name">{language === 'np' ? complaint.name : complaint.enName}</div>
+                          <div className="complainant-contact">{complaint.phone}</div>
+                        </td>
+                        <td className="staff-cell">
+                          <div className="staff-name">{getStaffName(complaint)}</div>
+                          <div className="staff-role">{complaint.staffRole}</div>
+                        </td>
                         <td>{getCategoryText(complaint)}</td>
                         <td>{getDate(complaint)}</td>
                         <td>{getLastUpdated(complaint)}</td>
-                        <td>{getAssignedTo(complaint)}</td>
                         <td>
                           <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
                             {getPriorityText(complaint.priority)}
@@ -638,7 +813,7 @@ const StaffComplaintsInprogress = () => {
                       </tr>
                     ))
                   ) : (
-                    <tr>
+                    <tr className="no-data-row">
                       <td colSpan="9" className="no-data">
                         <div className="no-data-content">
                           <span className="no-data-icon">📭</span>
@@ -687,77 +862,88 @@ const StaffComplaintsInprogress = () => {
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="detail-row">
-                <label>{t.ticketId}:</label>
-                <span>{selectedComplaint.ticketId}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.complainant}:</label>
-                <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.email}:</label>
-                <span>{selectedComplaint.email}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.phone}:</label>
-                <span>{selectedComplaint.phone}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.category}:</label>
-                <span>{getCategoryText(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.priority}:</label>
-                <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
-                  {getPriorityText(selectedComplaint.priority)}
-                </span>
-              </div>
-              <div className="detail-row">
-                <label>{t.registeredDate}:</label>
-                <span>{getDate(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.lastUpdated}:</label>
-                <span>{getLastUpdated(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.progress}:</label>
-                <div className="progress-bar-container">
-                  <div className="progress-bar" style={{ width: `${selectedComplaint.progress}%` }}>
-                    <span className="progress-text">{selectedComplaint.progress}%</span>
+              <div className="detail-section">
+                <div className="detail-row">
+                  <label>{t.ticketId}:</label>
+                  <span>{selectedComplaint.ticketId}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.complainant}:</label>
+                  <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.email}:</label>
+                  <span>{selectedComplaint.email}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.phone}:</label>
+                  <span>{selectedComplaint.phone}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.category}:</label>
+                  <span>{getCategoryText(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.priority}:</label>
+                  <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
+                    {getPriorityText(selectedComplaint.priority)}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.registeredDate}:</label>
+                  <span>{getDate(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.lastUpdated}:</label>
+                  <span>{getLastUpdated(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.progress}:</label>
+                  <div className="progress-bar-container">
+                    <div className="progress-bar" style={{ width: `${selectedComplaint.progress}%` }}>
+                      <span className="progress-text">{selectedComplaint.progress}%</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="detail-row">
-                <label>{t.channel}:</label>
-                <span>{getChannel(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.assignedTo}:</label>
-                <span>{getAssignedTo(selectedComplaint)}</span>
-              </div>
-              {selectedComplaint.assignedBy && (
                 <div className="detail-row">
-                  <label>{t.assignedBy}:</label>
-                  <span>{selectedComplaint.assignedBy}</span>
+                  <label>{t.channel}:</label>
+                  <span>{getChannel(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.assignedTo}:</label>
+                  <span>
+                    {getAssignedTo(selectedComplaint)}
+                    <span className="staff-role-badge">({selectedComplaint.staffRole})</span>
+                  </span>
+                </div>
+                {selectedComplaint.assignedByName && (
+                  <div className="detail-row">
+                    <label>{t.assignedBy}:</label>
+                    <span>{selectedComplaint.assignedByName}</span>
+                  </div>
+                )}
+              </div>
+
+              {(selectedComplaint.address || selectedComplaint.landmark) && (
+                <div className="detail-section">
+                  <div className="detail-row">
+                    <label>{t.address}:</label>
+                    <span>{selectedComplaint.address || '-'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <label>{t.landmark}:</label>
+                    <span>{selectedComplaint.landmark || '-'}</span>
+                  </div>
                 </div>
               )}
-              {selectedComplaint.address && (
-                <div className="detail-row">
-                  <label>{t.address}:</label>
-                  <span>{selectedComplaint.address}</span>
+
+              <div className="detail-section">
+                <div className="detail-row full-width">
+                  <label>{t.description}:</label>
+                  <p className="complaint-description">
+                    {language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}
+                  </p>
                 </div>
-              )}
-              {selectedComplaint.landmark && (
-                <div className="detail-row">
-                  <label>{t.landmark}:</label>
-                  <span>{selectedComplaint.landmark}</span>
-                </div>
-              )}
-              <div className="detail-row full-width">
-                <label>{t.description}:</label>
-                <p>{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
               </div>
             </div>
             <div className="modal-footer">
@@ -767,7 +953,7 @@ const StaffComplaintsInprogress = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -816,7 +1002,6 @@ const StaffComplaintsInprogress = () => {
 
         .main-content {
           flex: 1;
-         
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -911,6 +1096,12 @@ const StaffComplaintsInprogress = () => {
           align-items: center;
           gap: 12px;
           border: 1px solid #e2e8f0;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-box:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .stat-box-icon {
@@ -951,10 +1142,12 @@ const StaffComplaintsInprogress = () => {
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
         }
 
         .search-box {
           flex: 1;
+          min-width: 250px;
           position: relative;
         }
 
@@ -973,6 +1166,7 @@ const StaffComplaintsInprogress = () => {
           border: 1px solid #e2e8f0;
           border-radius: 10px;
           font-size: 0.85rem;
+          transition: border-color 0.2s;
         }
 
         .search-box input:focus {
@@ -983,6 +1177,7 @@ const StaffComplaintsInprogress = () => {
         .filter-group {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .filter-select {
@@ -992,6 +1187,12 @@ const StaffComplaintsInprogress = () => {
           font-size: 0.85rem;
           background: white;
           cursor: pointer;
+          transition: border-color 0.2s;
+        }
+
+        .filter-select:focus {
+          outline: none;
+          border-color: #0288d1;
         }
 
         .table-wrapper {
@@ -1016,8 +1217,10 @@ const StaffComplaintsInprogress = () => {
         .complaints-table th {
           background: #f8fafc;
           color: #64748b;
-          font-weight: 500;
+          font-weight: 600;
           font-size: 0.8rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .complaints-table td {
@@ -1035,15 +1238,31 @@ const StaffComplaintsInprogress = () => {
           color: #0288d1;
         }
 
+        .complainant-cell, .staff-cell {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .complainant-name, .staff-name {
+          font-weight: 500;
+          color: #1e293b;
+        }
+
+        .complainant-contact, .staff-role {
+          font-size: 0.65rem;
+          color: #64748b;
+        }
+
         .priority-badge {
           display: inline-block;
           padding: 4px 12px;
           border-radius: 20px;
           font-size: 0.7rem;
-          font-weight: 500;
+          font-weight: 600;
         }
 
         .priority-high { background: #fee2e2; color: #dc2626; }
+        .priority-urgent { background: #fecaca; color: #b91c1c; font-weight: 700; }
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #e0e7ff; color: #4f46e5; }
 
@@ -1077,11 +1296,18 @@ const StaffComplaintsInprogress = () => {
           transition: all 0.2s;
           background: linear-gradient(135deg, #0288d1, #0277bd);
           color: white;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
         }
 
         .view-btn:hover {
           transform: translateY(-1px);
           box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .no-data-row {
+          text-align: center;
         }
 
         .no-data {
@@ -1117,6 +1343,7 @@ const StaffComplaintsInprogress = () => {
           cursor: pointer;
           color: #475569;
           font-weight: 500;
+          transition: all 0.2s;
         }
 
         .pagination-btn:hover:not(:disabled) {
@@ -1130,6 +1357,11 @@ const StaffComplaintsInprogress = () => {
           cursor: not-allowed;
         }
 
+        .pagination-info {
+          color: #64748b;
+          font-size: 0.85rem;
+        }
+
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -1141,6 +1373,12 @@ const StaffComplaintsInprogress = () => {
           align-items: center;
           justify-content: center;
           z-index: 1100;
+          animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         .modal-content {
@@ -1150,6 +1388,12 @@ const StaffComplaintsInprogress = () => {
           width: 90%;
           max-height: 85vh;
           overflow-y: auto;
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(50px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
 
         .modal-header {
@@ -1161,6 +1405,7 @@ const StaffComplaintsInprogress = () => {
           position: sticky;
           top: 0;
           background: white;
+          border-radius: 20px 20px 0 0;
         }
 
         .modal-header h2 {
@@ -1174,16 +1419,25 @@ const StaffComplaintsInprogress = () => {
           font-size: 1.3rem;
           cursor: pointer;
           color: #94a3b8;
+          transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+          color: #ef4444;
         }
 
         .modal-body {
           padding: 24px;
         }
 
+        .detail-section {
+          margin-bottom: 20px;
+        }
+
         .detail-row {
           display: flex;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
           border-bottom: 1px solid #f1f5f9;
         }
 
@@ -1207,6 +1461,26 @@ const StaffComplaintsInprogress = () => {
           margin-bottom: 8px;
         }
 
+        .staff-role-badge {
+          display: inline-block;
+          margin-left: 8px;
+          padding: 2px 8px;
+          background: #e2e8f0;
+          border-radius: 12px;
+          font-size: 0.65rem;
+          color: #475569;
+        }
+
+        .complaint-description {
+          line-height: 1.6;
+          background: #f8fafc;
+          padding: 12px;
+          border-radius: 8px;
+          margin-top: 4px;
+          white-space: pre-wrap;
+          word-wrap: break-word;
+        }
+
         .modal-footer {
           padding: 16px 24px;
           border-top: 1px solid #e2e8f0;
@@ -1216,6 +1490,7 @@ const StaffComplaintsInprogress = () => {
           position: sticky;
           bottom: 0;
           background: white;
+          border-radius: 0 0 20px 20px;
         }
 
         .btn-close {
@@ -1226,6 +1501,11 @@ const StaffComplaintsInprogress = () => {
           border: none;
           background: #e2e8f0;
           color: #475569;
+          transition: all 0.2s;
+        }
+
+        .btn-close:hover {
+          background: #cbd5e1;
         }
 
         @media (max-width: 1200px) {
@@ -1241,6 +1521,10 @@ const StaffComplaintsInprogress = () => {
         }
 
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
@@ -1274,6 +1558,11 @@ const StaffComplaintsInprogress = () => {
           .detail-row label {
             width: 100%;
             margin-bottom: 4px;
+          }
+          
+          .modal-content {
+            width: 95%;
+            margin: 10px;
           }
         }
       `}</style>

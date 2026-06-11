@@ -18,11 +18,12 @@ const StaffComplaintsAll = () => {
   const itemsPerPage = 10;
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
 
   const [complaints, setComplaints] = useState([]);
@@ -37,6 +38,26 @@ const StaffComplaintsAll = () => {
     medium: 0,
     low: 0
   });
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
 
   // Fetch all complaints
   const fetchAllComplaints = async () => {
@@ -69,7 +90,7 @@ const StaffComplaintsAll = () => {
 
   // Calculate statistics
   const calculateStats = (complaintsData) => {
-    const stats = {
+    const newStats = {
       total: complaintsData.length,
       pending: complaintsData.filter(c => c.status === 'pending').length,
       inProgress: complaintsData.filter(c => c.status === 'in-progress').length,
@@ -79,7 +100,7 @@ const StaffComplaintsAll = () => {
       medium: complaintsData.filter(c => c.priority === 'medium').length,
       low: complaintsData.filter(c => c.priority === 'low').length
     };
-    setStats(stats);
+    setStats(newStats);
   };
 
   // Transform complaint data
@@ -122,6 +143,8 @@ const StaffComplaintsAll = () => {
       'recharge': 'रिचार्ज',
       'activation': 'सक्रियता',
       'billing': 'बिलिङ',
+      'network': 'नेटवर्क',
+      'signal': 'सिग्नल',
       'general': 'सामान्य'
     };
     return categories[category] || 'सामान्य';
@@ -183,7 +206,7 @@ const StaffComplaintsAll = () => {
     }
   };
 
-  // Get sample all complaints
+  // Get sample all complaints with more variety
   const getSampleAllComplaints = () => {
     return [
       { 
@@ -197,8 +220,8 @@ const StaffComplaintsAll = () => {
         category_np: 'इन्टरनेट',
         category_en: 'Internet',
         subCategory: 'connection',
-        description: 'फाइबर जडान २ दिनदेखि बन्द छ। इन्टरनेट सेवा नभएकोले धेरै समस्या भएको छ।',
-        enDescription: 'Fiber connection has been down for 2 days.',
+        description: 'फाइबर जडान २ दिनदेखि बन्द छ। इन्टरनेट सेवा नभएकोले धेरै समस्या भएको छ। कृपया तुरुन्त समाधान गरिदिनुहोस्।',
+        enDescription: 'Fiber connection has been down for 2 days. Please resolve urgently.',
         status: 'in-progress',
         date: '२०८०-०१-१५',
         enDate: '2024-01-15',
@@ -208,7 +231,9 @@ const StaffComplaintsAll = () => {
         assignedTo: 'Technical Team',
         enAssignedTo: 'Technical Team',
         resolvedDate: null,
-        assignedBy: 'Admin'
+        assignedBy: 'Admin',
+        address: 'बानेश्वर, काठमाडौं',
+        landmark: 'बानेश्वर चोक नजिक'
       },
       { 
         id: 2, 
@@ -221,8 +246,8 @@ const StaffComplaintsAll = () => {
         category_np: 'रिचार्ज',
         category_en: 'Recharge',
         subCategory: 'not-credited',
-        description: 'रु. ५०० रिचार्ज गरे पनि ब्यालेन्स अपडेट भएन।',
-        enDescription: 'Recharged Rs. 500 but balance not updated.',
+        description: 'रु. ५०० रिचार्ज गरे पनि ब्यालेन्स अपडेट भएन। कृपया जाँच गरिदिनुहोस्।',
+        enDescription: 'Recharged Rs. 500 but balance not updated. Please check.',
         status: 'resolved',
         date: '२०८०-०१-२०',
         enDate: '2024-01-20',
@@ -233,7 +258,9 @@ const StaffComplaintsAll = () => {
         enAssignedTo: 'Billing Team',
         resolvedDate: '२०८०-०१-२२',
         enResolvedDate: '2024-01-22',
-        assignedBy: 'Admin'
+        assignedBy: 'Admin',
+        resolution: 'ब्यालेन्स अपडेट गरियो। रु. ५०० क्रेडिट भयो।',
+        actionTaken: 'रिचार्ज म्यानुअली प्रोसेस गरियो'
       },
       { 
         id: 3, 
@@ -257,7 +284,8 @@ const StaffComplaintsAll = () => {
         assignedTo: 'Customer Service',
         enAssignedTo: 'Customer Service',
         resolvedDate: null,
-        assignedBy: 'Admin'
+        assignedBy: 'Admin',
+        address: 'कपन, काठमाडौं'
       },
       { 
         id: 4, 
@@ -270,8 +298,8 @@ const StaffComplaintsAll = () => {
         category_np: 'बिलिङ',
         category_en: 'Billing',
         subCategory: 'wrong-charge',
-        description: 'गत महिनाको बिलमा गलत चार्ज देखाइएको छ।',
-        enDescription: 'Wrong charge shown in last month\'s bill.',
+        description: 'गत महिनाको बिलमा गलत चार्ज देखाइएको छ। रु. १५०० अतिरिक्त चार्ज भएको छ।',
+        enDescription: 'Wrong charge shown in last month\'s bill. Extra Rs. 1500 charged.',
         status: 'review',
         date: '२०८०-०२-१०',
         enDate: '2024-02-10',
@@ -294,8 +322,8 @@ const StaffComplaintsAll = () => {
         category_np: 'इन्टरनेट',
         category_en: 'Internet',
         subCategory: 'slow-speed',
-        description: 'इन्टरनेट गति धेरै ढिलो छ।',
-        enDescription: 'Internet speed is very slow.',
+        description: 'इन्टरनेट गति धेरै ढिलो छ। 100 Mbps को प्याकेज लिएको तर 10-15 Mbps मात्र आइरहेको छ।',
+        enDescription: 'Internet speed is very slow. Getting only 10-15 Mbps on 100 Mbps package.',
         status: 'in-progress',
         date: '२०८०-०२-१५',
         enDate: '2024-02-15',
@@ -304,6 +332,133 @@ const StaffComplaintsAll = () => {
         priority: 'high',
         assignedTo: 'Technical Team',
         enAssignedTo: 'Technical Team',
+        resolvedDate: null,
+        assignedBy: 'Admin'
+      },
+      { 
+        id: 6, 
+        ticketId: 'NTC-2024-006', 
+        name: 'माया थापा', 
+        enName: 'Maya Thapa',
+        email: 'maya@example.com',
+        phone: '9812345691',
+        category: 'network',
+        category_np: 'नेटवर्क',
+        category_en: 'Network',
+        subCategory: 'no-signal',
+        description: 'घरमा पूरै सिग्नल छैन। पछिल्लो ५ दिन देखि समस्या छ।',
+        enDescription: 'No signal at home. Problem for last 5 days.',
+        status: 'pending',
+        date: '२०८०-०२-२०',
+        enDate: '2024-02-20',
+        channel: 'फोन',
+        enChannel: 'Phone',
+        priority: 'urgent',
+        assignedTo: 'Network Team',
+        enAssignedTo: 'Network Team',
+        resolvedDate: null,
+        assignedBy: 'Admin',
+        address: 'ललितपुर, खुमलटार',
+        landmark: 'जावलाखेल नजिक'
+      },
+      { 
+        id: 7, 
+        ticketId: 'NTC-2024-007', 
+        name: 'सुशील गिरी', 
+        enName: 'Sushil Giri',
+        email: 'sushil@example.com',
+        phone: '9812345692',
+        category: 'billing',
+        category_np: 'बिलिङ',
+        category_en: 'Billing',
+        subCategory: 'payment-issue',
+        description: 'अनलाइन भुक्तानी गरे पनि बिल स्टेटस अपडेट भएको छैन।',
+        enDescription: 'Bill status not updated after online payment.',
+        status: 'resolved',
+        date: '२०८०-०२-२५',
+        enDate: '2024-02-25',
+        channel: 'इमेल',
+        enChannel: 'Email',
+        priority: 'medium',
+        assignedTo: 'Billing Team',
+        enAssignedTo: 'Billing Team',
+        resolvedDate: '२०८०-०२-२७',
+        enResolvedDate: '2024-02-27',
+        assignedBy: 'Admin',
+        resolution: 'भुक्तानी स्टेटस अपडेट गरियो',
+        actionTaken: 'भुक्तानी मिलान गरियो'
+      },
+      { 
+        id: 8, 
+        ticketId: 'NTC-2024-008', 
+        name: 'विद्या पाण्डे', 
+        enName: 'Vidya Pandey',
+        email: 'vidya@example.com',
+        phone: '9812345693',
+        category: 'activation',
+        category_np: 'सक्रियता',
+        category_en: 'Activation',
+        subCategory: 'service-activation',
+        description: 'नयाँ सिम किनेको तर ३ दिनसम्म पनि सक्रिय भएन।',
+        enDescription: 'New SIM not activated even after 3 days.',
+        status: 'in-progress',
+        date: '२०८०-०३-०१',
+        enDate: '2024-03-01',
+        channel: 'वेबसाइट पोर्टल',
+        enChannel: 'Website Portal',
+        priority: 'high',
+        assignedTo: 'Customer Service',
+        enAssignedTo: 'Customer Service',
+        resolvedDate: null,
+        assignedBy: 'Admin'
+      },
+      { 
+        id: 9, 
+        ticketId: 'NTC-2024-009', 
+        name: 'कृष्ण बस्नेत', 
+        enName: 'Krishna Basnet',
+        email: 'krishna@example.com',
+        phone: '9812345694',
+        category: 'internet',
+        category_np: 'इन्टरनेट',
+        category_en: 'Internet',
+        subCategory: 'fiber-cut',
+        description: 'फाइबर तार काटिएको छ। पछिल्लो हप्ता देखि इन्टरनेट छैन।',
+        enDescription: 'Fiber wire cut. No internet for last week.',
+        status: 'pending',
+        date: '२०८०-०३-०५',
+        enDate: '2024-03-05',
+        channel: 'फोन',
+        enChannel: 'Phone',
+        priority: 'urgent',
+        assignedTo: 'Technical Team',
+        enAssignedTo: 'Technical Team',
+        resolvedDate: null,
+        assignedBy: 'Admin',
+        address: 'भक्तपुर',
+        landmark: 'सूर्यविनायक'
+      },
+      { 
+        id: 10, 
+        ticketId: 'NTC-2024-010', 
+        name: 'अनिता श्रेष्ठ', 
+        enName: 'Anita Shrestha',
+        email: 'anita@example.com',
+        phone: '9812345695',
+        category: 'recharge',
+        category_np: 'रिचार्ज',
+        category_en: 'Recharge',
+        subCategory: 'wrong-amount',
+        description: 'रु. २०० को रिचार्ज गर्दा रु. ५०० कटौती भयो।',
+        enDescription: 'Rs. 500 deducted for Rs. 200 recharge.',
+        status: 'review',
+        date: '२०८०-०३-०८',
+        enDate: '2024-03-08',
+        channel: 'व्हाट्सएप',
+        enChannel: 'WhatsApp',
+        priority: 'medium',
+        assignedTo: 'Billing Team',
+        enAssignedTo: 'Billing Team',
         resolvedDate: null,
         assignedBy: 'Admin'
       }
@@ -473,7 +628,8 @@ const StaffComplaintsAll = () => {
     const classes = { 
       high: 'priority-high', 
       medium: 'priority-medium', 
-      low: 'priority-low' 
+      low: 'priority-low',
+      urgent: 'priority-high'
     };
     return classes[priority] || 'priority-medium';
   };
@@ -483,14 +639,16 @@ const StaffComplaintsAll = () => {
       const priorityTexts = {
         high: 'उच्च',
         medium: 'मध्यम',
-        low: 'न्यून'
+        low: 'न्यून',
+        urgent: 'अत्यावश्यक'
       };
       return priorityTexts[priority] || priority;
     } else {
       const priorityTexts = {
         high: 'High',
         medium: 'Medium',
-        low: 'Low'
+        low: 'Low',
+        urgent: 'Urgent'
       };
       return priorityTexts[priority] || priority;
     }
@@ -716,7 +874,10 @@ const StaffComplaintsAll = () => {
                     paginatedComplaints.map((complaint) => (
                       <tr key={complaint.id}>
                         <td className="ticket-id">{complaint.ticketId}</td>
-                        <td>{language === 'np' ? complaint.name : complaint.enName}</td>
+                        <td className="complainant-cell">
+                          <div className="complainant-name">{language === 'np' ? complaint.name : complaint.enName}</div>
+                          <div className="complainant-contact">{complaint.phone}</div>
+                        </td>
                         <td>{getCategoryText(complaint)}</td>
                         <td>{getDate(complaint)}</td>
                         <td>
@@ -786,88 +947,101 @@ const StaffComplaintsAll = () => {
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="detail-row">
-                <label>{t.ticketId}:</label>
-                <span>{selectedComplaint.ticketId}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.complainant}:</label>
-                <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.email}:</label>
-                <span>{selectedComplaint.email}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.phone}:</label>
-                <span>{selectedComplaint.phone}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.category}:</label>
-                <span>{getCategoryText(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.status}:</label>
-                <span className={`status-badge ${getStatusClass(selectedComplaint.status)}`}>
-                  {getStatusText(selectedComplaint.status)}
-                </span>
-              </div>
-              <div className="detail-row">
-                <label>{t.priority}:</label>
-                <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
-                  {getPriorityText(selectedComplaint.priority)}
-                </span>
-              </div>
-              <div className="detail-row">
-                <label>{t.registeredDate}:</label>
-                <span>{getDate(selectedComplaint)}</span>
-              </div>
-              {selectedComplaint.resolvedDate && (
+              <div className="detail-section">
                 <div className="detail-row">
-                  <label>{t.resolvedDate}:</label>
-                  <span>{language === 'np' ? selectedComplaint.resolvedDate : selectedComplaint.enResolvedDate}</span>
+                  <label>{t.ticketId}:</label>
+                  <span>{selectedComplaint.ticketId}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.complainant}:</label>
+                  <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.email}:</label>
+                  <span>{selectedComplaint.email}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.phone}:</label>
+                  <span>{selectedComplaint.phone}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.category}:</label>
+                  <span>{getCategoryText(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.status}:</label>
+                  <span className={`status-badge ${getStatusClass(selectedComplaint.status)}`}>
+                    {getStatusText(selectedComplaint.status)}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.priority}:</label>
+                  <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
+                    {getPriorityText(selectedComplaint.priority)}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.registeredDate}:</label>
+                  <span>{getDate(selectedComplaint)}</span>
+                </div>
+                {selectedComplaint.resolvedDate && (
+                  <div className="detail-row">
+                    <label>{t.resolvedDate}:</label>
+                    <span>{language === 'np' ? selectedComplaint.resolvedDate : selectedComplaint.enResolvedDate}</span>
+                  </div>
+                )}
+                <div className="detail-row">
+                  <label>{t.channel}:</label>
+                  <span>{getChannel(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.assignedTo}:</label>
+                  <span>{getAssignedTo(selectedComplaint)}</span>
+                </div>
+                {selectedComplaint.assignedBy && (
+                  <div className="detail-row">
+                    <label>{t.assignedBy}:</label>
+                    <span>{selectedComplaint.assignedBy}</span>
+                  </div>
+                )}
+              </div>
+
+              {(selectedComplaint.address || selectedComplaint.landmark) && (
+                <div className="detail-section">
+                  <div className="detail-row">
+                    <label>{t.address}:</label>
+                    <span>{selectedComplaint.address || '-'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <label>{t.landmark}:</label>
+                    <span>{selectedComplaint.landmark || '-'}</span>
+                  </div>
                 </div>
               )}
-              <div className="detail-row">
-                <label>{t.channel}:</label>
-                <span>{getChannel(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.assignedTo}:</label>
-                <span>{getAssignedTo(selectedComplaint)}</span>
-              </div>
-              {selectedComplaint.assignedBy && (
-                <div className="detail-row">
-                  <label>{t.assignedBy}:</label>
-                  <span>{selectedComplaint.assignedBy}</span>
-                </div>
-              )}
-              {selectedComplaint.address && (
-                <div className="detail-row">
-                  <label>{t.address}:</label>
-                  <span>{selectedComplaint.address}</span>
-                </div>
-              )}
-              {selectedComplaint.landmark && (
-                <div className="detail-row">
-                  <label>{t.landmark}:</label>
-                  <span>{selectedComplaint.landmark}</span>
-                </div>
-              )}
-              <div className="detail-row full-width">
-                <label>{t.description}:</label>
-                <p>{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
-              </div>
-              {selectedComplaint.resolution && (
+
+              <div className="detail-section">
                 <div className="detail-row full-width">
-                  <label>{t.resolution}:</label>
-                  <p>{selectedComplaint.resolution}</p>
+                  <label>{t.description}:</label>
+                  <p className="complaint-description">
+                    {language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}
+                  </p>
                 </div>
-              )}
-              {selectedComplaint.actionTaken && (
-                <div className="detail-row full-width">
-                  <label>{t.actionTaken}:</label>
-                  <p>{selectedComplaint.actionTaken}</p>
+              </div>
+
+              {(selectedComplaint.resolution || selectedComplaint.actionTaken) && (
+                <div className="detail-section resolution-section">
+                  {selectedComplaint.resolution && (
+                    <div className="detail-row full-width">
+                      <label>{t.resolution}:</label>
+                      <p className="resolution-text">{selectedComplaint.resolution}</p>
+                    </div>
+                  )}
+                  {selectedComplaint.actionTaken && (
+                    <div className="detail-row full-width">
+                      <label>{t.actionTaken}:</label>
+                      <p className="action-text">{selectedComplaint.actionTaken}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -878,7 +1052,7 @@ const StaffComplaintsAll = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -927,7 +1101,6 @@ const StaffComplaintsAll = () => {
 
         .main-content {
           flex: 1;
-         
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -1188,6 +1361,21 @@ const StaffComplaintsAll = () => {
           color: #0288d1;
         }
 
+        .complainant-cell {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .complainant-name {
+          font-weight: 500;
+          color: #1e293b;
+        }
+
+        .complainant-contact {
+          font-size: 0.65rem;
+          color: #64748b;
+        }
+
         .status-badge, .priority-badge {
           display: inline-block;
           padding: 4px 12px;
@@ -1298,6 +1486,7 @@ const StaffComplaintsAll = () => {
           position: sticky;
           top: 0;
           background: white;
+          border-radius: 20px 20px 0 0;
         }
 
         .modal-header h2 {
@@ -1317,10 +1506,14 @@ const StaffComplaintsAll = () => {
           padding: 24px;
         }
 
+        .detail-section {
+          margin-bottom: 20px;
+        }
+
         .detail-row {
           display: flex;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
           border-bottom: 1px solid #f1f5f9;
         }
 
@@ -1344,6 +1537,21 @@ const StaffComplaintsAll = () => {
           margin-bottom: 8px;
         }
 
+        .complaint-description, .resolution-text, .action-text {
+          line-height: 1.6;
+          background: #f8fafc;
+          padding: 12px;
+          border-radius: 8px;
+          margin-top: 4px;
+        }
+
+        .resolution-section {
+          background: #f0fdf4;
+          border-radius: 12px;
+          padding: 12px;
+          margin-top: 16px;
+        }
+
         .modal-footer {
           padding: 16px 24px;
           border-top: 1px solid #e2e8f0;
@@ -1353,6 +1561,7 @@ const StaffComplaintsAll = () => {
           position: sticky;
           bottom: 0;
           background: white;
+          border-radius: 0 0 20px 20px;
         }
 
         .btn-close {
@@ -1363,6 +1572,10 @@ const StaffComplaintsAll = () => {
           border: none;
           background: #e2e8f0;
           color: #475569;
+        }
+
+        .btn-close:hover {
+          background: #cbd5e1;
         }
 
         @media (max-width: 1200px) {

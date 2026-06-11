@@ -12,50 +12,116 @@ const StaffComplaintsMy = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [staffMemberFilter, setStaffMemberFilter] = useState('all');
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: '',
+    staffId: ''
   });
 
   const [complaints, setComplaints] = useState([]);
+  const [allStaffMembers, setAllStaffMembers] = useState([]);
   const [backendStatus, setBackendStatus] = useState('checking');
 
-  // Fetch my complaints (complaints submitted by this staff)
+  // Fetch current staff data
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support',
+          staffId: user.staffId || user.id
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
+
+  // Fetch my complaints (complaints assigned to this staff OR submitted by their department)
   const fetchMyComplaints = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('staffToken');
-      const response = await axios.get('http://localhost:5000/api/complaints/my-complaints', {
+      const staffUser = JSON.parse(localStorage.getItem('staffUser') || '{}');
+      
+      // Fetch complaints assigned to this staff member
+      const assignedResponse = await axios.get('http://localhost:5000/api/complaints/assigned-to-me', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      if (response.data.success && Array.isArray(response.data.data)) {
-        const transformedComplaints = response.data.data.map(complaint => transformComplaintData(complaint));
-        setComplaints(transformedComplaints);
-        setBackendStatus('connected');
-      } else {
-        setComplaints(getSampleMyComplaints());
-        setBackendStatus('disconnected');
+      // Fetch complaints submitted by staff members (for admin/supervisor view)
+      let staffComplaintsResponse = { data: { data: [] } };
+      if (staffUser.role === 'admin' || staffUser.role === 'supervisor') {
+        staffComplaintsResponse = await axios.get('http://localhost:5000/api/complaints/staff-complaints', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
       }
+      
+      // Fetch all staff members for filter
+      const staffResponse = await axios.get('http://localhost:5000/api/staff', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (staffResponse.data.success && Array.isArray(staffResponse.data.data)) {
+        setAllStaffMembers(staffResponse.data.data);
+      }
+      
+      let allComplaintsData = [];
+      
+      // Add assigned complaints
+      if (assignedResponse.data.success && Array.isArray(assignedResponse.data.data)) {
+        const assignedComplaints = assignedResponse.data.data.map(complaint => 
+          transformComplaintData(complaint, 'assigned')
+        );
+        allComplaintsData = [...allComplaintsData, ...assignedComplaints];
+      }
+      
+      // Add staff complaints (if admin/supervisor)
+      if (staffComplaintsResponse.data.success && Array.isArray(staffComplaintsResponse.data.data)) {
+        const staffComplaints = staffComplaintsResponse.data.data.map(complaint => 
+          transformComplaintData(complaint, 'submitted')
+        );
+        allComplaintsData = [...allComplaintsData, ...staffComplaints];
+      }
+      
+      // If no data from backend, use sample data with multiple staff
+      if (allComplaintsData.length === 0) {
+        setBackendStatus('disconnected');
+        setComplaints(getSampleMultiStaffComplaints());
+        setAllStaffMembers(getSampleStaffMembers());
+      } else {
+        setComplaints(allComplaintsData);
+        setBackendStatus('connected');
+      }
+      
     } catch (error) {
-      console.error('Error fetching my complaints:', error);
-      setComplaints(getSampleMyComplaints());
+      console.error('Error fetching complaints:', error);
       setBackendStatus('disconnected');
+      setComplaints(getSampleMultiStaffComplaints());
+      setAllStaffMembers(getSampleStaffMembers());
     } finally {
       setLoading(false);
     }
   };
 
   // Transform complaint data
-  const transformComplaintData = (complaint) => ({
+  const transformComplaintData = (complaint, type = 'assigned') => ({
     id: complaint.id,
     ticketId: complaint.complaintNumber || `NTC-${complaint.id}`,
     name: complaint.name || 'N/A',
@@ -63,7 +129,7 @@ const StaffComplaintsMy = () => {
     email: complaint.email || 'N/A',
     phone: complaint.phone || 'N/A',
     category: complaint.category || 'general',
-    category_np: complaint.categoryNp || getCategoryNepali(complaint.category),
+    category_np: getCategoryNepali(complaint.category),
     category_en: complaint.category || 'General',
     subCategory: complaint.subject || 'general',
     description: complaint.complaint || complaint.description || 'N/A',
@@ -75,7 +141,12 @@ const StaffComplaintsMy = () => {
     enChannel: complaint.enChannel || 'Website Portal',
     priority: mapPriority(complaint.priority),
     assignedTo: complaint.assignedTo || 'Not Assigned',
-    enAssignedTo: complaint.enAssignedTo || 'Not Assigned',
+    assignedToName: complaint.assignedToName || complaint.assignedTo || 'Not Assigned',
+    assignedById: complaint.assignedById,
+    assignedByName: complaint.assignedByName || 'System',
+    submittedBy: complaint.submittedBy || complaint.name || 'N/A',
+    submittedById: complaint.submittedById,
+    submittedByRole: complaint.submittedByRole || 'customer',
     resolvedDate: complaint.resolvedDate ? formatNepaliDate(complaint.resolvedDate) : null,
     enResolvedDate: complaint.resolvedDate ? formatEnglishDate(complaint.resolvedDate) : null,
     submittedDate: complaint.submittedDate,
@@ -83,9 +154,11 @@ const StaffComplaintsMy = () => {
     landmark: complaint.landmark,
     address: complaint.address,
     preferredContact: complaint.preferredContact,
-    assignedBy: complaint.assignedBy || 'System',
     resolution: complaint.resolution || null,
-    actionTaken: complaint.actionTaken || null
+    actionTaken: complaint.actionTaken || null,
+    type: type,
+    staffName: complaint.staffName || complaint.assignedTo || 'System',
+    staffRole: complaint.staffRole || 'Staff'
   });
 
   const getCategoryNepali = (category) => {
@@ -94,7 +167,9 @@ const StaffComplaintsMy = () => {
       'recharge': 'रिचार्ज',
       'activation': 'सक्रियता',
       'billing': 'बिलिङ',
-      'general': 'सामान्य'
+      'general': 'सामान्य',
+      'network': 'नेटवर्क',
+      'signal': 'सिग्नल'
     };
     return categories[category] || 'सामान्य';
   };
@@ -155,8 +230,19 @@ const StaffComplaintsMy = () => {
     }
   };
 
-  // Get sample my complaints
-  const getSampleMyComplaints = () => {
+  // Get sample staff members
+  const getSampleStaffMembers = () => {
+    return [
+      { id: 1, name: 'राम बहादुर', enName: 'Ram Bahadur', role: 'Technical Support', department: 'Technical', staffId: 'STF001' },
+      { id: 2, name: 'श्याम कुमार', enName: 'Shyam Kumar', role: 'Billing Specialist', department: 'Billing', staffId: 'STF002' },
+      { id: 3, name: 'सीता देवी', enName: 'Sita Devi', role: 'Customer Service', department: 'Customer Support', staffId: 'STF003' },
+      { id: 4, name: 'हरि प्रसाद', enName: 'Hari Prasad', role: 'Network Engineer', department: 'Network', staffId: 'STF004' },
+      { id: 5, name: 'गीता अधिकारी', enName: 'Gita Adhikari', role: 'Supervisor', department: 'Customer Support', staffId: 'STF005' }
+    ];
+  };
+
+  // Get sample complaints from multiple staff
+  const getSampleMultiStaffComplaints = () => {
     return [
       { 
         id: 1, 
@@ -177,18 +263,24 @@ const StaffComplaintsMy = () => {
         channel: 'वेबसाइट पोर्टल',
         enChannel: 'Website Portal',
         priority: 'high',
-        assignedTo: 'Technical Team',
-        enAssignedTo: 'Technical Team',
+        assignedTo: 'राम बहादुर',
+        assignedToName: 'Ram Bahadur',
+        assignedByName: 'Admin',
+        submittedBy: 'राम बहादुर',
+        submittedById: 1,
+        submittedByRole: 'staff',
         resolvedDate: null,
-        assignedBy: 'Admin'
+        staffName: 'राम बहादुर',
+        staffRole: 'Technical Support',
+        type: 'assigned'
       },
       { 
         id: 2, 
         ticketId: 'NTC-2024-015', 
-        name: 'राम बहादुर', 
-        enName: 'Ram Bahadur',
-        email: 'ram@ntc.gov.np',
-        phone: '9841234567',
+        name: 'श्याम कुमार', 
+        enName: 'Shyam Kumar',
+        email: 'shyam@ntc.gov.np',
+        phone: '9841234568',
         category: 'billing',
         category_np: 'बिलिङ',
         category_en: 'Billing',
@@ -201,21 +293,26 @@ const StaffComplaintsMy = () => {
         channel: 'इमेल',
         enChannel: 'Email',
         priority: 'medium',
-        assignedTo: 'Billing Team',
-        enAssignedTo: 'Billing Team',
+        assignedTo: 'श्याम कुमार',
+        assignedToName: 'Shyam Kumar',
+        assignedByName: 'Admin',
+        submittedBy: 'श्याम कुमार',
+        submittedById: 2,
+        submittedByRole: 'staff',
         resolvedDate: '२०८०-०२-२८',
         enResolvedDate: '2024-02-28',
-        assignedBy: 'Admin',
+        staffName: 'श्याम कुमार',
+        staffRole: 'Billing Specialist',
         resolution: 'बिल सच्याइएको छ। अतिरिक्त चार्ज हटाइएको छ।',
-        actionTaken: 'बिल समायोजन गरियो'
+        type: 'submitted'
       },
       { 
         id: 3, 
         ticketId: 'NTC-2024-020', 
-        name: 'राम बहादुर', 
-        enName: 'Ram Bahadur',
-        email: 'ram@ntc.gov.np',
-        phone: '9841234567',
+        name: 'सीता देवी', 
+        enName: 'Sita Devi',
+        email: 'sita@ntc.gov.np',
+        phone: '9841234569',
         category: 'activation',
         category_np: 'सक्रियता',
         category_en: 'Activation',
@@ -228,10 +325,108 @@ const StaffComplaintsMy = () => {
         channel: 'फोन',
         enChannel: 'Phone',
         priority: 'high',
-        assignedTo: 'Customer Service',
-        enAssignedTo: 'Customer Service',
+        assignedTo: 'सीता देवी',
+        assignedToName: 'Sita Devi',
+        assignedByName: 'Supervisor',
+        submittedBy: 'सीता देवी',
+        submittedById: 3,
+        submittedByRole: 'staff',
         resolvedDate: null,
-        assignedBy: 'Admin'
+        staffName: 'सीता देवी',
+        staffRole: 'Customer Service',
+        type: 'assigned'
+      },
+      { 
+        id: 4, 
+        ticketId: 'NTC-2024-025', 
+        name: 'हरि प्रसाद', 
+        enName: 'Hari Prasad',
+        email: 'hari@ntc.gov.np',
+        phone: '9841234570',
+        category: 'network',
+        category_np: 'नेटवर्क',
+        category_en: 'Network',
+        subCategory: 'no-signal',
+        description: 'घरमा पूरै सिग्नल छैन। पछिल्लो ३ दिन देखि समस्या छ।',
+        enDescription: 'No signal at home. Problem for last 3 days.',
+        status: 'in-progress',
+        date: '२०८०-०३-१०',
+        enDate: '2024-03-10',
+        channel: 'व्हाट्सएप',
+        enChannel: 'WhatsApp',
+        priority: 'high',
+        assignedTo: 'हरि प्रसाद',
+        assignedToName: 'Hari Prasad',
+        assignedByName: 'Admin',
+        submittedBy: 'हरि प्रसाद',
+        submittedById: 4,
+        submittedByRole: 'staff',
+        resolvedDate: null,
+        staffName: 'हरि प्रसाद',
+        staffRole: 'Network Engineer',
+        type: 'assigned'
+      },
+      { 
+        id: 5, 
+        ticketId: 'NTC-2024-030', 
+        name: 'गीता अधिकारी', 
+        enName: 'Gita Adhikari',
+        email: 'gita@ntc.gov.np',
+        phone: '9841234571',
+        category: 'general',
+        category_np: 'सामान्य',
+        category_en: 'General',
+        subCategory: 'feedback',
+        description: 'ग्राहक सेवामा सुधारको लागि सुझाव। फोनमा धेरै बेर पर्खनु पर्ने समस्या छ।',
+        enDescription: 'Suggestion for customer service improvement. Long waiting time on phone.',
+        status: 'review',
+        date: '२०८०-०३-१५',
+        enDate: '2024-03-15',
+        channel: 'इमेल',
+        enChannel: 'Email',
+        priority: 'low',
+        assignedTo: 'गीता अधिकारी',
+        assignedToName: 'Gita Adhikari',
+        assignedByName: 'Admin',
+        submittedBy: 'गीता अधिकारी',
+        submittedById: 5,
+        submittedByRole: 'staff',
+        resolvedDate: null,
+        staffName: 'गीता अधिकारी',
+        staffRole: 'Supervisor',
+        type: 'submitted'
+      },
+      { 
+        id: 6, 
+        ticketId: 'NTC-2024-035', 
+        name: 'राम बहादुर', 
+        enName: 'Ram Bahadur',
+        email: 'ram@ntc.gov.np',
+        phone: '9841234567',
+        category: 'internet',
+        category_np: 'इन्टरनेट',
+        category_en: 'Internet',
+        subCategory: 'connection-drop',
+        description: 'इन्टरनेट जडान बारम्बार ड्रप हुन्छ। दिनमा १०-१५ पटक जडान जान्छ।',
+        enDescription: 'Internet connection drops frequently. 10-15 times per day.',
+        status: 'resolved',
+        date: '२०८०-०३-१८',
+        enDate: '2024-03-18',
+        channel: 'वेबसाइट पोर्टल',
+        enChannel: 'Website Portal',
+        priority: 'high',
+        assignedTo: 'हरि प्रसाद',
+        assignedToName: 'Hari Prasad',
+        assignedByName: 'Supervisor',
+        submittedBy: 'राम बहादुर',
+        submittedById: 1,
+        submittedByRole: 'staff',
+        resolvedDate: '२०८०-०३-२०',
+        enResolvedDate: '2024-03-20',
+        staffName: 'हरि प्रसाद',
+        staffRole: 'Network Engineer',
+        resolution: 'राउटर सेटिङ मिलाइयो',
+        type: 'submitted'
       }
     ];
   };
@@ -250,13 +445,16 @@ const StaffComplaintsMy = () => {
 
   const content = {
     np: {
-      pageTitle: 'मेरो गुनासोहरू',
-      myComplaints: 'मेरो गुनासोहरू',
+      pageTitle: 'स्टाफ गुनासोहरू',
+      myComplaints: 'सबै स्टाफका गुनासोहरू',
       searchPlaceholder: 'टिकेट नम्बर, विवरण वा प्रकारले खोज्नुहोस्...',
       filterByStatus: 'स्थिति अनुसार फिल्टर',
       filterByPriority: 'प्राथमिकता अनुसार फिल्टर',
+      filterByStaff: 'स्टाफ सदस्य अनुसार फिल्टर',
+      staffMember: 'स्टाफ सदस्य',
       ticketId: 'टिकेट नम्बर',
       category: 'प्रकार',
+      staffName: 'स्टाफको नाम',
       submittedDate: 'दर्ता मिति',
       status: 'स्थिति',
       priority: 'प्राथमिकता',
@@ -271,6 +469,7 @@ const StaffComplaintsMy = () => {
       resolvedDate: 'समाधान मिति',
       assignedTo: 'तोकिएको व्यक्ति',
       assignedBy: 'तोक्ने व्यक्ति',
+      submittedBy: 'पेश गर्ने व्यक्ति',
       address: 'ठेगाना',
       landmark: 'सन्दर्भ स्थल',
       resolution: 'समाधान विवरण',
@@ -298,16 +497,19 @@ const StaffComplaintsMy = () => {
       refresh: 'रिफ्रेस',
       welcome: 'स्वागत छ',
       dashboard: 'ड्यासबोर्ड',
-      myComplaintsTitle: 'मेरो गुनासो'
+      myComplaintsTitle: 'स्टाफ गुनासोहरू'
     },
     en: {
-      pageTitle: 'My Complaints',
-      myComplaints: 'My Complaints',
+      pageTitle: 'Staff Complaints',
+      myComplaints: 'All Staff Complaints',
       searchPlaceholder: 'Search by ticket number, description or category...',
       filterByStatus: 'Filter by Status',
       filterByPriority: 'Filter by Priority',
+      filterByStaff: 'Filter by Staff Member',
+      staffMember: 'Staff Member',
       ticketId: 'Ticket ID',
       category: 'Category',
+      staffName: 'Staff Name',
       submittedDate: 'Submitted Date',
       status: 'Status',
       priority: 'Priority',
@@ -322,6 +524,7 @@ const StaffComplaintsMy = () => {
       resolvedDate: 'Resolved Date',
       assignedTo: 'Assigned To',
       assignedBy: 'Assigned By',
+      submittedBy: 'Submitted By',
       address: 'Address',
       landmark: 'Landmark',
       resolution: 'Resolution Details',
@@ -349,7 +552,7 @@ const StaffComplaintsMy = () => {
       refresh: 'Refresh',
       welcome: 'Welcome',
       dashboard: 'Dashboard',
-      myComplaintsTitle: 'My Complaints'
+      myComplaintsTitle: 'Staff Complaints'
     }
   };
 
@@ -425,7 +628,11 @@ const StaffComplaintsMy = () => {
   };
 
   const getAssignedTo = (complaint) => {
-    return language === 'np' ? complaint.assignedTo : complaint.enAssignedTo;
+    return language === 'np' ? complaint.assignedTo : complaint.assignedToName;
+  };
+
+  const getStaffName = (complaint) => {
+    return language === 'np' ? complaint.staffName : complaint.staffName;
   };
 
   // Filter complaints
@@ -434,12 +641,22 @@ const StaffComplaintsMy = () => {
       complaint.ticketId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       complaint.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       complaint.enDescription.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      complaint.category.toLowerCase().includes(searchTerm.toLowerCase());
+      complaint.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      complaint.staffName.toLowerCase().includes(searchTerm.toLowerCase());
     
     const statusMatch = statusFilter === 'all' || complaint.status === statusFilter;
     const priorityMatch = priorityFilter === 'all' || complaint.priority === priorityFilter;
     
-    return searchMatch && statusMatch && priorityMatch;
+    let staffMatch = true;
+    if (staffMemberFilter !== 'all') {
+      const staffId = parseInt(staffMemberFilter);
+      staffMatch = complaint.submittedById === staffId || 
+                   (complaint.assignedToName && complaint.assignedToName.toLowerCase().includes(
+                     allStaffMembers.find(s => s.id === staffId)?.name?.toLowerCase() || ''
+                   ));
+    }
+    
+    return searchMatch && statusMatch && priorityMatch && staffMatch;
   });
 
   // Pagination
@@ -578,6 +795,18 @@ const StaffComplaintsMy = () => {
                   <option value="medium">{t.medium}</option>
                   <option value="low">{t.low}</option>
                 </select>
+                <select
+                  value={staffMemberFilter}
+                  onChange={(e) => setStaffMemberFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.all} {t.staffMember}</option>
+                  {allStaffMembers.map(staff => (
+                    <option key={staff.id} value={staff.id}>
+                      {language === 'np' ? staff.name : staff.enName}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -587,6 +816,7 @@ const StaffComplaintsMy = () => {
                 <thead>
                   <tr>
                     <th>{t.ticketId}</th>
+                    <th>{t.staffName}</th>
                     <th>{t.category}</th>
                     <th>{t.submittedDate}</th>
                     <th>{t.status}</th>
@@ -599,6 +829,12 @@ const StaffComplaintsMy = () => {
                     paginatedComplaints.map((complaint) => (
                       <tr key={complaint.id}>
                         <td className="ticket-id">{complaint.ticketId}</td>
+                        <td>
+                          <div className="staff-info">
+                            <span className="staff-name">{getStaffName(complaint)}</span>
+                            <span className="staff-role">{complaint.staffRole}</span>
+                          </div>
+                        </td>
                         <td>{getCategoryText(complaint)}</td>
                         <td>{getDate(complaint)}</td>
                         <td>
@@ -620,7 +856,7 @@ const StaffComplaintsMy = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="no-data">
+                      <td colSpan="7" className="no-data">
                         <div className="no-data-content">
                           <span className="no-data-icon">📭</span>
                           <p>{t.noComplaintsFound}</p>
@@ -673,6 +909,15 @@ const StaffComplaintsMy = () => {
                 <span>{selectedComplaint.ticketId}</span>
               </div>
               <div className="detail-row">
+                <label>{t.staffName}:</label>
+                <span>
+                  {getStaffName(selectedComplaint)}
+                  <small style={{ display: 'block', fontSize: '0.7rem', color: '#64748b' }}>
+                    {selectedComplaint.staffRole}
+                  </small>
+                </span>
+              </div>
+              <div className="detail-row">
                 <label>{t.category}:</label>
                 <span>{getCategoryText(selectedComplaint)}</span>
               </div>
@@ -706,10 +951,16 @@ const StaffComplaintsMy = () => {
                 <label>{t.assignedTo}:</label>
                 <span>{getAssignedTo(selectedComplaint)}</span>
               </div>
-              {selectedComplaint.assignedBy && (
+              {selectedComplaint.assignedByName && (
                 <div className="detail-row">
                   <label>{t.assignedBy}:</label>
-                  <span>{selectedComplaint.assignedBy}</span>
+                  <span>{selectedComplaint.assignedByName}</span>
+                </div>
+              )}
+              {selectedComplaint.submittedBy && (
+                <div className="detail-row">
+                  <label>{t.submittedBy}:</label>
+                  <span>{selectedComplaint.submittedBy}</span>
                 </div>
               )}
               {selectedComplaint.address && (
@@ -797,7 +1048,6 @@ const StaffComplaintsMy = () => {
 
         .main-content {
           flex: 1;
-       
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -931,10 +1181,12 @@ const StaffComplaintsMy = () => {
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
         }
 
         .search-box {
           flex: 1;
+          min-width: 200px;
           position: relative;
         }
 
@@ -963,6 +1215,7 @@ const StaffComplaintsMy = () => {
         .filter-group {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .filter-select {
@@ -1013,6 +1266,21 @@ const StaffComplaintsMy = () => {
           font-family: monospace;
           font-weight: 600;
           color: #0288d1;
+        }
+
+        .staff-info {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .staff-name {
+          font-weight: 500;
+          color: #1e293b;
+        }
+
+        .staff-role {
+          font-size: 0.65rem;
+          color: #64748b;
         }
 
         .status-badge, .priority-badge {

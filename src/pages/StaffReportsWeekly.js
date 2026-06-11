@@ -15,12 +15,33 @@ const StaffReportsWeekly = () => {
   const [chartView, setChartView] = useState('bar');
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
 
   // Get current week number
   function getCurrentWeek() {
@@ -34,11 +55,37 @@ const StaffReportsWeekly = () => {
   // Get week range from week string
   function getWeekRange(weekStr) {
     const [year, week] = weekStr.split('-W');
-    const startDate = new Date(year, 0, 1 + (week - 1) * 7);
+    const startDate = new Date(parseInt(year), 0, 1 + (parseInt(week) - 1) * 7);
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 6);
     return { startDate, endDate };
   }
+
+  // Format Nepali date
+  const formatNepaliDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      const year = d.getFullYear() - 57;
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  const formatEnglishDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      return d.toISOString().split('T')[0];
+    } catch (error) {
+      return '-';
+    }
+  };
 
   // Fetch weekly report
   const fetchWeeklyReport = async () => {
@@ -93,6 +140,7 @@ const StaffReportsWeekly = () => {
         customerSatisfaction: 4.5
       },
       complaintsByPriority: {
+        urgent: 5,
         high: 18,
         medium: 20,
         low: 10
@@ -102,6 +150,7 @@ const StaffReportsWeekly = () => {
         recharge: 8,
         activation: 12,
         billing: 9,
+        network: 5,
         general: 4
       },
       tasksSummary: {
@@ -121,6 +170,7 @@ const StaffReportsWeekly = () => {
         { category: 'activation', count: 12, percentage: 25 },
         { category: 'billing', count: 9, percentage: 18.75 },
         { category: 'recharge', count: 8, percentage: 16.67 },
+        { category: 'network', count: 5, percentage: 10.42 },
         { category: 'general', count: 4, percentage: 8.33 }
       ],
       weekOverWeekGrowth: {
@@ -129,31 +179,6 @@ const StaffReportsWeekly = () => {
         satisfaction: 2.1
       }
     };
-  };
-
-  const formatNepaliDate = (date) => {
-    if (!date) return '-';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '-';
-      const year = d.getFullYear() - 57;
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    } catch (error) {
-      return '-';
-    }
-  };
-
-  const formatEnglishDate = (date) => {
-    if (!date) return '-';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '-';
-      return d.toISOString().split('T')[0];
-    } catch (error) {
-      return '-';
-    }
   };
 
   // Generate week options
@@ -193,7 +218,7 @@ const StaffReportsWeekly = () => {
     if (selectedWeek) {
       fetchWeeklyReport();
     }
-  }, [selectedWeek]);
+  }, [selectedWeek, language]);
 
   const handleWeekChange = (e) => {
     setSelectedWeek(e.target.value);
@@ -218,6 +243,20 @@ const StaffReportsWeekly = () => {
     localStorage.removeItem('staffUser');
     localStorage.removeItem('staffRole');
     navigate('/');
+  };
+
+  const getDayTranslation = (day) => {
+    const days = {
+      monday: { np: 'सोमबार', en: 'Mon' },
+      tuesday: { np: 'मंगलबार', en: 'Tue' },
+      wednesday: { np: 'बुधबार', en: 'Wed' },
+      thursday: { np: 'बिहीबार', en: 'Thu' },
+      friday: { np: 'शुक्रबार', en: 'Fri' },
+      saturday: { np: 'शनिबार', en: 'Sat' },
+      sunday: { np: 'आइतबार', en: 'Sun' }
+    };
+    const key = day.toLowerCase();
+    return days[key]?.[language] || day.substring(0, 3);
   };
 
   const content = {
@@ -255,6 +294,7 @@ const StaffReportsWeekly = () => {
       complaintsCount: 'गुनासो संख्या',
       resolved: 'समाधान',
       tasks: 'कार्य',
+      urgent: 'अत्यावश्यक',
       high: 'उच्च',
       medium: 'मध्यम',
       low: 'न्यून',
@@ -262,6 +302,7 @@ const StaffReportsWeekly = () => {
       recharge: 'रिचार्ज',
       activation: 'सक्रियता',
       billing: 'बिलिङ',
+      network: 'नेटवर्क',
       general: 'सामान्य',
       category: 'प्रकार',
       count: 'संख्या',
@@ -309,6 +350,7 @@ const StaffReportsWeekly = () => {
       complaintsCount: 'Complaints',
       resolved: 'Resolved',
       tasks: 'Tasks',
+      urgent: 'Urgent',
       high: 'High',
       medium: 'Medium',
       low: 'Low',
@@ -316,6 +358,7 @@ const StaffReportsWeekly = () => {
       recharge: 'Recharge',
       activation: 'Activation',
       billing: 'Billing',
+      network: 'Network',
       general: 'General',
       category: 'Category',
       count: 'Count',
@@ -470,7 +513,7 @@ const StaffReportsWeekly = () => {
                     <div className="bar-chart">
                       {reportData?.dailyBreakdown?.map((day, index) => (
                         <div key={index} className="bar-item">
-                          <div className="bar-label">{t[day.day.toLowerCase()] || day.day}</div>
+                          <div className="bar-label">{getDayTranslation(day.day)}</div>
                           <div className="bars-container">
                             <div 
                               className="bar complaints-bar" 
@@ -526,7 +569,7 @@ const StaffReportsWeekly = () => {
                         {/* X-axis labels */}
                         {reportData?.dailyBreakdown?.map((day, i) => (
                           <text key={i} x={80 + i * 100} y="275" textAnchor="middle" fontSize="10" fill="#64748b">
-                            {t[day.day.toLowerCase()]?.substring(0, 3) || day.day.substring(0, 3)}
+                            {getDayTranslation(day.day).substring(0, 3)}
                           </text>
                         ))}
                         {/* Complaints Line */}
@@ -545,10 +588,10 @@ const StaffReportsWeekly = () => {
                         />
                         {/* Data points */}
                         {reportData?.dailyBreakdown?.map((day, i) => (
-                          <circle key={i} cx={80 + i * 100} cy={260 - (day.complaints / 20) * 240} r="4" fill="#3b82f6" />
+                          <circle key={`complaint-${i}`} cx={80 + i * 100} cy={260 - (day.complaints / 20) * 240} r="4" fill="#3b82f6" />
                         ))}
                         {reportData?.dailyBreakdown?.map((day, i) => (
-                          <circle key={i + 100} cx={80 + i * 100} cy={260 - (day.resolved / 20) * 240} r="4" fill="#10b981" />
+                          <circle key={`resolved-${i}`} cx={80 + i * 100} cy={260 - (day.resolved / 20) * 240} r="4" fill="#10b981" />
                         ))}
                       </svg>
                       <div className="chart-legend">
@@ -566,6 +609,15 @@ const StaffReportsWeekly = () => {
                 <div className="report-section">
                   <h3>{t.complaintsByPriority}</h3>
                   <div className="priority-stats">
+                    {(reportData?.complaintsByPriority.urgent > 0) && (
+                      <div className="priority-item urgent">
+                        <span className="priority-label">{t.urgent}</span>
+                        <div className="priority-bar">
+                          <div className="priority-fill urgent-fill" style={{ width: `${((reportData?.complaintsByPriority.urgent || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        </div>
+                        <span className="priority-count">{reportData?.complaintsByPriority.urgent || 0}</span>
+                      </div>
+                    )}
                     <div className="priority-item high">
                       <span className="priority-label">{t.high}</span>
                       <div className="priority-bar">
@@ -621,6 +673,13 @@ const StaffReportsWeekly = () => {
                         <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.billing || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
                       <span className="category-count">{reportData?.complaintsByCategory.billing || 0}</span>
+                    </div>
+                    <div className="category-item">
+                      <span className="category-label">{t.network}</span>
+                      <div className="category-bar">
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.network || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                      </div>
+                      <span className="category-count">{reportData?.complaintsByCategory.network || 0}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.general}</span>
@@ -741,7 +800,7 @@ const StaffReportsWeekly = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -790,7 +849,6 @@ const StaffReportsWeekly = () => {
 
         .main-content {
           flex: 1;
-         
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -848,6 +906,7 @@ const StaffReportsWeekly = () => {
         .header-actions {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .action-btn, .refresh-btn {
@@ -949,6 +1008,12 @@ const StaffReportsWeekly = () => {
           display: flex;
           align-items: center;
           gap: 12px;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .summary-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .summary-icon {
@@ -971,6 +1036,10 @@ const StaffReportsWeekly = () => {
           border-bottom: 1px solid #e2e8f0;
         }
 
+        .report-section:last-child {
+          border-bottom: none;
+        }
+
         .section-header {
           display: flex;
           justify-content: space-between;
@@ -984,6 +1053,8 @@ const StaffReportsWeekly = () => {
           font-size: 1rem;
           font-weight: 600;
           color: #0f172a;
+          padding-left: 12px;
+          border-left: 3px solid #0288d1;
         }
 
         .chart-toggle {
@@ -1017,11 +1088,13 @@ const StaffReportsWeekly = () => {
           align-items: flex-end;
           gap: 20px;
           padding: 20px 0;
+          flex-wrap: wrap;
         }
 
         .bar-item {
           flex: 1;
           text-align: center;
+          min-width: 80px;
         }
 
         .bar-label {
@@ -1040,7 +1113,6 @@ const StaffReportsWeekly = () => {
 
         .bar {
           width: 40px;
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
           border-radius: 8px 8px 0 0;
           position: relative;
           transition: height 0.3s ease;
@@ -1113,7 +1185,7 @@ const StaffReportsWeekly = () => {
         }
 
         .priority-label, .category-label {
-          width: 80px;
+          width: 100px;
           font-weight: 500;
         }
 
@@ -1131,13 +1203,14 @@ const StaffReportsWeekly = () => {
           transition: width 0.3s ease;
         }
 
+        .urgent-fill { background: #b91c1c; }
         .high-fill { background: #dc2626; }
         .medium-fill { background: #f59e0b; }
         .low-fill { background: #10b981; }
         .category-fill { background: #0288d1; }
 
         .priority-count, .category-count {
-          width: 30px;
+          width: 35px;
           text-align: right;
           font-weight: 500;
         }
@@ -1155,6 +1228,11 @@ const StaffReportsWeekly = () => {
           display: flex;
           align-items: center;
           gap: 12px;
+          transition: transform 0.2s;
+        }
+
+        .task-stat:hover {
+          transform: translateY(-2px);
         }
 
         .task-icon {
@@ -1183,6 +1261,11 @@ const StaffReportsWeekly = () => {
           border-radius: 12px;
           padding: 20px;
           text-align: center;
+          transition: transform 0.2s;
+        }
+
+        .metric-card:hover {
+          transform: translateY(-2px);
         }
 
         .metric-value {
@@ -1250,6 +1333,11 @@ const StaffReportsWeekly = () => {
           display: flex;
           align-items: center;
           gap: 12px;
+          transition: transform 0.2s;
+        }
+
+        .growth-card:hover {
+          transform: translateY(-2px);
         }
 
         .growth-card.positive {
@@ -1287,7 +1375,7 @@ const StaffReportsWeekly = () => {
             width: 100%;
           }
           
-          .sidebar-container, .refresh-btn, .action-btn, .week-selector, .backend-warning, .chart-toggle {
+          .staff-header, .staff-sidebar, .refresh-btn, .action-btn, .week-selector, .backend-warning, .chart-toggle {
             display: none;
           }
         }
@@ -1306,7 +1394,17 @@ const StaffReportsWeekly = () => {
           }
         }
 
+        @media (max-width: 992px) {
+          .tasks-stats, .metrics-cards, .growth-stats {
+            grid-template-columns: 1fr;
+          }
+        }
+
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
@@ -1317,10 +1415,6 @@ const StaffReportsWeekly = () => {
           }
           
           .summary-cards {
-            grid-template-columns: 1fr;
-          }
-          
-          .tasks-stats, .metrics-cards, .growth-stats {
             grid-template-columns: 1fr;
           }
           

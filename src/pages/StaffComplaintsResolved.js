@@ -11,6 +11,7 @@ const StaffComplaintsResolved = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [staffFilter, setStaffFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -18,14 +19,16 @@ const StaffComplaintsResolved = () => {
   const itemsPerPage = 10;
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
 
   const [complaints, setComplaints] = useState([]);
+  const [allStaffMembers, setAllStaffMembers] = useState([]);
   const [backendStatus, setBackendStatus] = useState('checking');
   const [stats, setStats] = useState({
     total: 0,
@@ -36,6 +39,26 @@ const StaffComplaintsResolved = () => {
     avgResolutionTime: 0
   });
 
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
+
   // Fetch resolved complaints
   const fetchResolvedComplaints = async () => {
     setLoading(true);
@@ -45,6 +68,15 @@ const StaffComplaintsResolved = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      // Fetch staff members for filter
+      const staffResponse = await axios.get('http://localhost:5000/api/staff', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (staffResponse.data.success && Array.isArray(staffResponse.data.data)) {
+        setAllStaffMembers(staffResponse.data.data);
+      }
+      
       if (response.data.success && Array.isArray(response.data.data)) {
         const transformedComplaints = response.data.data.map(complaint => transformComplaintData(complaint));
         setComplaints(transformedComplaints);
@@ -52,17 +84,30 @@ const StaffComplaintsResolved = () => {
         setBackendStatus('connected');
       } else {
         setComplaints(getSampleResolvedComplaints());
+        setAllStaffMembers(getSampleStaffMembers());
         calculateStats(getSampleResolvedComplaints());
         setBackendStatus('disconnected');
       }
     } catch (error) {
       console.error('Error fetching resolved complaints:', error);
       setComplaints(getSampleResolvedComplaints());
+      setAllStaffMembers(getSampleStaffMembers());
       calculateStats(getSampleResolvedComplaints());
       setBackendStatus('disconnected');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Get sample staff members
+  const getSampleStaffMembers = () => {
+    return [
+      { id: 1, name: 'राम बहादुर', enName: 'Ram Bahadur', role: 'Technical Support', staffId: 'STF001' },
+      { id: 2, name: 'श्याम कुमार', enName: 'Shyam Kumar', role: 'Billing Specialist', staffId: 'STF002' },
+      { id: 3, name: 'सीता देवी', enName: 'Sita Devi', role: 'Customer Service', staffId: 'STF003' },
+      { id: 4, name: 'हरि प्रसाद', enName: 'Hari Prasad', role: 'Network Engineer', staffId: 'STF004' },
+      { id: 5, name: 'गीता अधिकारी', enName: 'Gita Adhikari', role: 'Supervisor', staffId: 'STF005' }
+    ];
   };
 
   // Calculate statistics
@@ -71,9 +116,9 @@ const StaffComplaintsResolved = () => {
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
     
-    const stats = {
+    const newStats = {
       total: complaintsData.length,
-      high: complaintsData.filter(c => c.priority === 'high').length,
+      high: complaintsData.filter(c => c.priority === 'high' || c.priority === 'urgent').length,
       medium: complaintsData.filter(c => c.priority === 'medium').length,
       low: complaintsData.filter(c => c.priority === 'low').length,
       resolvedThisMonth: complaintsData.filter(c => {
@@ -85,7 +130,7 @@ const StaffComplaintsResolved = () => {
         ? Math.round(complaintsData.reduce((acc, c) => acc + c.resolutionTime, 0) / complaintsData.length) 
         : 0
     };
-    setStats(stats);
+    setStats(newStats);
   };
 
   // Transform complaint data
@@ -118,8 +163,11 @@ const StaffComplaintsResolved = () => {
       enChannel: complaint.enChannel || 'Website Portal',
       priority: mapPriority(complaint.priority),
       assignedTo: complaint.assignedTo || 'Not Assigned',
+      assignedToId: complaint.assignedToId || null,
+      assignedToName: complaint.assignedToName || complaint.assignedTo || 'Not Assigned',
       enAssignedTo: complaint.enAssignedTo || 'Not Assigned',
       assignedBy: complaint.assignedBy || 'System',
+      assignedByName: complaint.assignedByName || 'System',
       resolution: complaint.resolution || 'गुनासो समाधान गरियो।',
       enResolution: complaint.enResolution || 'Complaint has been resolved.',
       actionTaken: complaint.actionTaken || 'आवश्यक कार्य गरियो।',
@@ -128,7 +176,9 @@ const StaffComplaintsResolved = () => {
       resolvedDateObj: resolvedDate,
       resolutionTime: resolutionTime,
       satisfaction: complaint.satisfaction || null,
-      feedback: complaint.feedback || null
+      feedback: complaint.feedback || null,
+      staffName: complaint.staffName || complaint.assignedTo || 'Unassigned',
+      staffRole: complaint.staffRole || 'Staff'
     };
   };
 
@@ -138,6 +188,8 @@ const StaffComplaintsResolved = () => {
       'recharge': 'रिचार्ज',
       'activation': 'सक्रियता',
       'billing': 'बिलिङ',
+      'network': 'नेटवर्क',
+      'signal': 'सिग्नल',
       'general': 'सामान्य'
     };
     return categories[category] || 'सामान्य';
@@ -159,7 +211,8 @@ const StaffComplaintsResolved = () => {
     const priorityMap = {
       'High': 'high',
       'high': 'high',
-      'Urgent': 'high',
+      'Urgent': 'urgent',
+      'urgent': 'urgent',
       'Medium': 'medium',
       'medium': 'medium',
       'Low': 'low',
@@ -193,7 +246,7 @@ const StaffComplaintsResolved = () => {
     }
   };
 
-  // Get sample resolved complaints
+  // Get sample resolved complaints with multiple staff
   const getSampleResolvedComplaints = () => {
     return [
       { 
@@ -217,15 +270,20 @@ const StaffComplaintsResolved = () => {
         channel: 'व्हाट्सएप',
         enChannel: 'WhatsApp',
         priority: 'medium',
-        assignedTo: 'Billing Team',
-        enAssignedTo: 'Billing Team',
+        assignedTo: 'श्याम कुमार',
+        assignedToId: 2,
+        assignedToName: 'Shyam Kumar',
+        enAssignedTo: 'Shyam Kumar',
         assignedBy: 'Admin',
+        assignedByName: 'Admin',
         resolution: 'रिचार्ज सफलतापूर्वक क्रेडिट गरियो। ग्राहकको ब्यालेन्स अपडेट गरियो।',
         enResolution: 'Recharge successfully credited. Customer balance updated.',
         actionTaken: 'रिचार्ज जाँच गरी ब्यालेन्स समायोजन गरियो।',
         submittedDate: '2024-01-20',
         resolvedDateObj: new Date('2024-01-22'),
-        resolutionTime: 2
+        resolutionTime: 2,
+        staffName: 'श्याम कुमार',
+        staffRole: 'Billing Specialist'
       },
       { 
         id: 2, 
@@ -248,15 +306,20 @@ const StaffComplaintsResolved = () => {
         channel: 'इमेल',
         enChannel: 'Email',
         priority: 'medium',
-        assignedTo: 'Billing Team',
-        enAssignedTo: 'Billing Team',
+        assignedTo: 'श्याम कुमार',
+        assignedToId: 2,
+        assignedToName: 'Shyam Kumar',
+        enAssignedTo: 'Shyam Kumar',
         assignedBy: 'Admin',
+        assignedByName: 'Admin',
         resolution: 'बिल जाँच गरी गलत चार्ज हटाइयो। सही बिल जारी गरियो।',
         enResolution: 'Bill reviewed and wrong charge removed. Correct bill issued.',
         actionTaken: 'बिल समायोजन गरियो र ग्राहकलाई सूचित गरियो।',
         submittedDate: '2024-02-10',
         resolvedDateObj: new Date('2024-02-15'),
-        resolutionTime: 5
+        resolutionTime: 5,
+        staffName: 'श्याम कुमार',
+        staffRole: 'Billing Specialist'
       },
       { 
         id: 3, 
@@ -279,15 +342,20 @@ const StaffComplaintsResolved = () => {
         channel: 'फोन',
         enChannel: 'Phone',
         priority: 'high',
-        assignedTo: 'Technical Team',
-        enAssignedTo: 'Technical Team',
+        assignedTo: 'हरि प्रसाद',
+        assignedToId: 4,
+        assignedToName: 'Hari Prasad',
+        enAssignedTo: 'Hari Prasad',
         assignedBy: 'Admin',
+        assignedByName: 'Admin',
         resolution: 'लाइन जाँच गरी फाइबर केबल मर्मत गरियो। इन्टरनेट सेवा पुनर्स्थापित गरियो।',
         enResolution: 'Line checked and fiber cable repaired. Internet service restored.',
         actionTaken: 'प्राविधिक टोलीले केबल मर्मत गर्यो।',
         submittedDate: '2024-02-25',
         resolvedDateObj: new Date('2024-02-26'),
-        resolutionTime: 1
+        resolutionTime: 1,
+        staffName: 'हरि प्रसाद',
+        staffRole: 'Network Engineer'
       },
       { 
         id: 4, 
@@ -309,16 +377,57 @@ const StaffComplaintsResolved = () => {
         enResolvedDate: '2024-03-02',
         channel: 'वेबसाइट पोर्टल',
         enChannel: 'Website Portal',
-        priority: 'high',
-        assignedTo: 'Ram Bahadur',
-        enAssignedTo: 'Technical Support',
+        priority: 'urgent',
+        assignedTo: 'सीता देवी',
+        assignedToId: 3,
+        assignedToName: 'Sita Devi',
+        enAssignedTo: 'Sita Devi',
         assignedBy: 'Admin',
+        assignedByName: 'Admin',
         resolution: 'सिम कार्यान्वयन गरियो र सफलतापूर्वक सक्रिय गरियो।',
         enResolution: 'SIM processed and activated successfully.',
         actionTaken: 'सिम सक्रियता प्रक्रिया पूरा गरियो।',
         submittedDate: '2024-03-01',
         resolvedDateObj: new Date('2024-03-02'),
-        resolutionTime: 1
+        resolutionTime: 1,
+        staffName: 'सीता देवी',
+        staffRole: 'Customer Service'
+      },
+      { 
+        id: 5, 
+        ticketId: 'NTC-2024-011', 
+        name: 'राम बहादुर', 
+        enName: 'Ram Bahadur',
+        email: 'ram@example.com',
+        phone: '9841234570',
+        category: 'network',
+        category_np: 'नेटवर्क',
+        category_en: 'Network',
+        subCategory: 'no-signal',
+        description: 'घरमा सिग्नल छैन। पछिल्लो हप्ता देखि समस्या छ।',
+        enDescription: 'No signal at home. Problem for last week.',
+        status: 'resolved',
+        date: '२०८०-०३-०५',
+        enDate: '2024-03-05',
+        resolvedDate: '२०८०-०३-०८',
+        enResolvedDate: '2024-03-08',
+        channel: 'फोन',
+        enChannel: 'Phone',
+        priority: 'high',
+        assignedTo: 'गीता अधिकारी',
+        assignedToId: 5,
+        assignedToName: 'Gita Adhikari',
+        enAssignedTo: 'Gita Adhikari',
+        assignedBy: 'Admin',
+        assignedByName: 'Admin',
+        resolution: 'टावर मर्मत गरी सिग्नल पुनर्स्थापित गरियो।',
+        enResolution: 'Tower repaired and signal restored.',
+        actionTaken: 'नेटवर्क टोलीले टावर मर्मत गर्यो।',
+        submittedDate: '2024-03-05',
+        resolvedDateObj: new Date('2024-03-08'),
+        resolutionTime: 3,
+        staffName: 'गीता अधिकारी',
+        staffRole: 'Supervisor'
       }
     ];
   };
@@ -329,19 +438,22 @@ const StaffComplaintsResolved = () => {
     if (!complaint.resolvedDateObj) return false;
     
     const now = new Date();
-    const resolved = complaint.resolvedDateObj;
+    const resolved = new Date(complaint.resolvedDateObj);
     
     switch(filter) {
       case 'today':
         return resolved.toDateString() === now.toDateString();
       case 'week':
-        const weekAgo = new Date(now.setDate(now.getDate() - 7));
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
         return resolved >= weekAgo;
       case 'month':
-        const monthAgo = new Date(now.setMonth(now.getMonth() - 1));
+        const monthAgo = new Date();
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
         return resolved >= monthAgo;
       case 'year':
-        const yearAgo = new Date(now.setFullYear(now.getFullYear() - 1));
+        const yearAgo = new Date();
+        yearAgo.setFullYear(yearAgo.getFullYear() - 1);
         return resolved >= yearAgo;
       default:
         return true;
@@ -366,9 +478,13 @@ const StaffComplaintsResolved = () => {
       resolvedComplaints: 'समाधान गरिएका गुनासोहरू',
       searchPlaceholder: 'टिकेट नम्बर, नाम वा फोन नम्बरले खोज्नुहोस्...',
       filterByPriority: 'प्राथमिकता अनुसार फिल्टर',
+      filterByStaff: 'स्टाफ सदस्य अनुसार फिल्टर',
       filterByDate: 'मिति अनुसार फिल्टर',
+      staffMember: 'स्टाफ सदस्य',
+      allStaff: 'सबै स्टाफ',
       ticketId: 'टिकेट नम्बर',
       complainant: 'उजुरीकर्ता',
+      assignedStaff: 'तोकिएको स्टाफ',
       category: 'प्रकार',
       resolvedDate: 'समाधान मिति',
       resolutionTime: 'समाधान समय',
@@ -392,6 +508,7 @@ const StaffComplaintsResolved = () => {
       high: 'उच्च',
       medium: 'मध्यम',
       low: 'न्यून',
+      urgent: 'अत्यावश्यक',
       today: 'आज',
       week: 'यो हप्ता',
       month: 'यो महिना',
@@ -419,9 +536,13 @@ const StaffComplaintsResolved = () => {
       resolvedComplaints: 'Resolved Complaints',
       searchPlaceholder: 'Search by ticket number, name or phone...',
       filterByPriority: 'Filter by Priority',
+      filterByStaff: 'Filter by Staff Member',
       filterByDate: 'Filter by Date',
+      staffMember: 'Staff Member',
+      allStaff: 'All Staff',
       ticketId: 'Ticket ID',
       complainant: 'Complainant',
+      assignedStaff: 'Assigned Staff',
       category: 'Category',
       resolvedDate: 'Resolved Date',
       resolutionTime: 'Resolution Time',
@@ -445,6 +566,7 @@ const StaffComplaintsResolved = () => {
       high: 'High',
       medium: 'Medium',
       low: 'Low',
+      urgent: 'Urgent',
       today: 'Today',
       week: 'This Week',
       month: 'This Month',
@@ -475,7 +597,8 @@ const StaffComplaintsResolved = () => {
     const classes = { 
       high: 'priority-high', 
       medium: 'priority-medium', 
-      low: 'priority-low' 
+      low: 'priority-low',
+      urgent: 'priority-urgent'
     };
     return classes[priority] || 'priority-medium';
   };
@@ -485,14 +608,16 @@ const StaffComplaintsResolved = () => {
       const priorityTexts = {
         high: 'उच्च',
         medium: 'मध्यम',
-        low: 'न्यून'
+        low: 'न्यून',
+        urgent: 'अत्यावश्यक'
       };
       return priorityTexts[priority] || priority;
     } else {
       const priorityTexts = {
         high: 'High',
         medium: 'Medium',
-        low: 'Low'
+        low: 'Low',
+        urgent: 'Urgent'
       };
       return priorityTexts[priority] || priority;
     }
@@ -511,7 +636,17 @@ const StaffComplaintsResolved = () => {
   };
 
   const getAssignedTo = (complaint) => {
-    return language === 'np' ? complaint.assignedTo : complaint.enAssignedTo;
+    if (language === 'np') {
+      return complaint.assignedTo;
+    }
+    return complaint.assignedToName || complaint.assignedTo;
+  };
+
+  const getStaffName = (complaint) => {
+    if (language === 'np') {
+      return complaint.staffName;
+    }
+    return complaint.assignedToName || complaint.assignedTo;
   };
 
   // Filter complaints
@@ -525,7 +660,12 @@ const StaffComplaintsResolved = () => {
     const priorityMatch = priorityFilter === 'all' || complaint.priority === priorityFilter;
     const dateMatch = filterByDate(complaint, dateFilter);
     
-    return searchMatch && priorityMatch && dateMatch;
+    const staffMatch = staffFilter === 'all' || 
+      complaint.assignedToId === parseInt(staffFilter) ||
+      complaint.assignedTo === allStaffMembers.find(s => s.id === parseInt(staffFilter))?.name ||
+      complaint.assignedToName === allStaffMembers.find(s => s.id === parseInt(staffFilter))?.enName;
+    
+    return searchMatch && priorityMatch && dateMatch && staffMatch;
   });
 
   // Pagination
@@ -538,11 +678,13 @@ const StaffComplaintsResolved = () => {
   const openModal = (complaint) => {
     setSelectedComplaint(complaint);
     setShowModal(true);
+    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSelectedComplaint(null);
+    document.body.style.overflow = 'unset';
   };
 
   const handleLogout = () => {
@@ -663,9 +805,22 @@ const StaffComplaintsResolved = () => {
                   className="filter-select"
                 >
                   <option value="all">{t.all}</option>
+                  <option value="urgent">{t.urgent}</option>
                   <option value="high">{t.high}</option>
                   <option value="medium">{t.medium}</option>
                   <option value="low">{t.low}</option>
+                </select>
+                <select
+                  value={staffFilter}
+                  onChange={(e) => setStaffFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.allStaff}</option>
+                  {allStaffMembers.map(staff => (
+                    <option key={staff.id} value={staff.id}>
+                      {language === 'np' ? staff.name : staff.enName}
+                    </option>
+                  ))}
                 </select>
                 <select
                   value={dateFilter}
@@ -688,6 +843,7 @@ const StaffComplaintsResolved = () => {
                   <tr>
                     <th>{t.ticketId}</th>
                     <th>{t.complainant}</th>
+                    <th>{t.assignedStaff}</th>
                     <th>{t.category}</th>
                     <th>{t.resolvedDate}</th>
                     <th>{t.resolutionTime}</th>
@@ -700,7 +856,14 @@ const StaffComplaintsResolved = () => {
                     paginatedComplaints.map((complaint) => (
                       <tr key={complaint.id}>
                         <td className="ticket-id">{complaint.ticketId}</td>
-                        <td>{language === 'np' ? complaint.name : complaint.enName}</td>
+                        <td className="complainant-cell">
+                          <div className="complainant-name">{language === 'np' ? complaint.name : complaint.enName}</div>
+                          <div className="complainant-contact">{complaint.phone}</div>
+                        </td>
+                        <td className="staff-cell">
+                          <div className="staff-name">{getStaffName(complaint)}</div>
+                          <div className="staff-role">{complaint.staffRole}</div>
+                        </td>
                         <td>{getCategoryText(complaint)}</td>
                         <td>{getResolvedDate(complaint)}</td>
                         <td>
@@ -721,8 +884,8 @@ const StaffComplaintsResolved = () => {
                       </tr>
                     ))
                   ) : (
-                    <tr>
-                      <td colSpan="7" className="no-data">
+                    <tr className="no-data-row">
+                      <td colSpan="8" className="no-data">
                         <div className="no-data-content">
                           <span className="no-data-icon">📭</span>
                           <p>{t.noComplaintsFound}</p>
@@ -770,81 +933,99 @@ const StaffComplaintsResolved = () => {
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="detail-row">
-                <label>{t.ticketId}:</label>
-                <span>{selectedComplaint.ticketId}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.complainant}:</label>
-                <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.email}:</label>
-                <span>{selectedComplaint.email}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.phone}:</label>
-                <span>{selectedComplaint.phone}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.category}:</label>
-                <span>{getCategoryText(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.priority}:</label>
-                <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
-                  {getPriorityText(selectedComplaint.priority)}
-                </span>
-              </div>
-              <div className="detail-row">
-                <label>{t.registeredDate}:</label>
-                <span>{language === 'np' ? selectedComplaint.date : selectedComplaint.enDate}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.resolvedDate}:</label>
-                <span>{getResolvedDate(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.resolutionTime}:</label>
-                <span className="resolution-time-badge">{selectedComplaint.resolutionTime} {t.days}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.channel}:</label>
-                <span>{getChannel(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.assignedTo}:</label>
-                <span>{getAssignedTo(selectedComplaint)}</span>
-              </div>
-              {selectedComplaint.assignedBy && (
+              <div className="detail-section">
                 <div className="detail-row">
-                  <label>{t.assignedBy}:</label>
-                  <span>{selectedComplaint.assignedBy}</span>
+                  <label>{t.ticketId}:</label>
+                  <span>{selectedComplaint.ticketId}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.complainant}:</label>
+                  <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.email}:</label>
+                  <span>{selectedComplaint.email}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.phone}:</label>
+                  <span>{selectedComplaint.phone}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.category}:</label>
+                  <span>{getCategoryText(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.priority}:</label>
+                  <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
+                    {getPriorityText(selectedComplaint.priority)}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.registeredDate}:</label>
+                  <span>{language === 'np' ? selectedComplaint.date : selectedComplaint.enDate}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.resolvedDate}:</label>
+                  <span>{getResolvedDate(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.resolutionTime}:</label>
+                  <span className="resolution-time-badge">{selectedComplaint.resolutionTime} {t.days}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.channel}:</label>
+                  <span>{getChannel(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.assignedTo}:</label>
+                  <span>
+                    {getAssignedTo(selectedComplaint)}
+                    <span className="staff-role-badge">({selectedComplaint.staffRole})</span>
+                  </span>
+                </div>
+                {selectedComplaint.assignedByName && (
+                  <div className="detail-row">
+                    <label>{t.assignedBy}:</label>
+                    <span>{selectedComplaint.assignedByName}</span>
+                  </div>
+                )}
+              </div>
+
+              {(selectedComplaint.address || selectedComplaint.landmark) && (
+                <div className="detail-section">
+                  <div className="detail-row">
+                    <label>{t.address}:</label>
+                    <span>{selectedComplaint.address || '-'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <label>{t.landmark}:</label>
+                    <span>{selectedComplaint.landmark || '-'}</span>
+                  </div>
                 </div>
               )}
-              {selectedComplaint.address && (
-                <div className="detail-row">
-                  <label>{t.address}:</label>
-                  <span>{selectedComplaint.address}</span>
+
+              <div className="detail-section">
+                <div className="detail-row full-width">
+                  <label>{t.description}:</label>
+                  <p className="complaint-description">
+                    {language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}
+                  </p>
                 </div>
-              )}
-              {selectedComplaint.landmark && (
-                <div className="detail-row">
-                  <label>{t.landmark}:</label>
-                  <span>{selectedComplaint.landmark}</span>
+              </div>
+
+              <div className="detail-section resolution-section">
+                <div className="detail-row full-width">
+                  <label>{t.resolution}:</label>
+                  <p className="resolution-text">
+                    {language === 'np' ? selectedComplaint.resolution : selectedComplaint.enResolution}
+                  </p>
                 </div>
-              )}
-              <div className="detail-row full-width">
-                <label>{t.description}:</label>
-                <p>{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
-              </div>
-              <div className="detail-row full-width">
-                <label>{t.resolution}:</label>
-                <p className="resolution-text">{language === 'np' ? selectedComplaint.resolution : selectedComplaint.enResolution}</p>
-              </div>
-              <div className="detail-row full-width">
-                <label>{t.actionTaken}:</label>
-                <p className="action-text">{language === 'np' ? selectedComplaint.actionTaken : selectedComplaint.enActionTaken}</p>
+                <div className="detail-row full-width">
+                  <label>{t.actionTaken}:</label>
+                  <p className="action-text">
+                    {language === 'np' ? selectedComplaint.actionTaken : selectedComplaint.enActionTaken}
+                  </p>
+                </div>
               </div>
             </div>
             <div className="modal-footer">
@@ -854,7 +1035,7 @@ const StaffComplaintsResolved = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -903,7 +1084,6 @@ const StaffComplaintsResolved = () => {
 
         .main-content {
           flex: 1;
-       
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -998,6 +1178,12 @@ const StaffComplaintsResolved = () => {
           align-items: center;
           gap: 12px;
           border: 1px solid #e2e8f0;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-box:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .stat-box-icon {
@@ -1039,10 +1225,12 @@ const StaffComplaintsResolved = () => {
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
         }
 
         .search-box {
           flex: 1;
+          min-width: 250px;
           position: relative;
         }
 
@@ -1061,6 +1249,7 @@ const StaffComplaintsResolved = () => {
           border: 1px solid #e2e8f0;
           border-radius: 10px;
           font-size: 0.85rem;
+          transition: border-color 0.2s;
         }
 
         .search-box input:focus {
@@ -1071,6 +1260,7 @@ const StaffComplaintsResolved = () => {
         .filter-group {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .filter-select {
@@ -1080,6 +1270,12 @@ const StaffComplaintsResolved = () => {
           font-size: 0.85rem;
           background: white;
           cursor: pointer;
+          transition: border-color 0.2s;
+        }
+
+        .filter-select:focus {
+          outline: none;
+          border-color: #0288d1;
         }
 
         .table-wrapper {
@@ -1104,8 +1300,10 @@ const StaffComplaintsResolved = () => {
         .complaints-table th {
           background: #f8fafc;
           color: #64748b;
-          font-weight: 500;
+          font-weight: 600;
           font-size: 0.8rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .complaints-table td {
@@ -1123,15 +1321,31 @@ const StaffComplaintsResolved = () => {
           color: #0288d1;
         }
 
+        .complainant-cell, .staff-cell {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .complainant-name, .staff-name {
+          font-weight: 500;
+          color: #1e293b;
+        }
+
+        .complainant-contact, .staff-role {
+          font-size: 0.65rem;
+          color: #64748b;
+        }
+
         .priority-badge {
           display: inline-block;
           padding: 4px 12px;
           border-radius: 20px;
           font-size: 0.7rem;
-          font-weight: 500;
+          font-weight: 600;
         }
 
         .priority-high { background: #fee2e2; color: #dc2626; }
+        .priority-urgent { background: #fecaca; color: #b91c1c; font-weight: 700; }
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #e0e7ff; color: #4f46e5; }
 
@@ -1154,11 +1368,18 @@ const StaffComplaintsResolved = () => {
           transition: all 0.2s;
           background: linear-gradient(135deg, #0288d1, #0277bd);
           color: white;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
         }
 
         .view-btn:hover {
           transform: translateY(-1px);
           box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .no-data-row {
+          text-align: center;
         }
 
         .no-data {
@@ -1194,6 +1415,7 @@ const StaffComplaintsResolved = () => {
           cursor: pointer;
           color: #475569;
           font-weight: 500;
+          transition: all 0.2s;
         }
 
         .pagination-btn:hover:not(:disabled) {
@@ -1207,6 +1429,11 @@ const StaffComplaintsResolved = () => {
           cursor: not-allowed;
         }
 
+        .pagination-info {
+          color: #64748b;
+          font-size: 0.85rem;
+        }
+
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -1218,6 +1445,12 @@ const StaffComplaintsResolved = () => {
           align-items: center;
           justify-content: center;
           z-index: 1100;
+          animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         .modal-content {
@@ -1227,6 +1460,12 @@ const StaffComplaintsResolved = () => {
           width: 90%;
           max-height: 85vh;
           overflow-y: auto;
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(50px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
 
         .modal-header {
@@ -1238,6 +1477,7 @@ const StaffComplaintsResolved = () => {
           position: sticky;
           top: 0;
           background: white;
+          border-radius: 20px 20px 0 0;
         }
 
         .modal-header h2 {
@@ -1251,16 +1491,25 @@ const StaffComplaintsResolved = () => {
           font-size: 1.3rem;
           cursor: pointer;
           color: #94a3b8;
+          transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+          color: #ef4444;
         }
 
         .modal-body {
           padding: 24px;
         }
 
+        .detail-section {
+          margin-bottom: 20px;
+        }
+
         .detail-row {
           display: flex;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
           border-bottom: 1px solid #f1f5f9;
         }
 
@@ -1284,11 +1533,31 @@ const StaffComplaintsResolved = () => {
           margin-bottom: 8px;
         }
 
-        .resolution-text, .action-text {
+        .staff-role-badge {
+          display: inline-block;
+          margin-left: 8px;
+          padding: 2px 8px;
+          background: #e2e8f0;
+          border-radius: 12px;
+          font-size: 0.65rem;
+          color: #475569;
+        }
+
+        .complaint-description, .resolution-text, .action-text {
           line-height: 1.6;
           background: #f8fafc;
           padding: 12px;
           border-radius: 8px;
+          margin-top: 4px;
+          white-space: pre-wrap;
+          word-wrap: break-word;
+        }
+
+        .resolution-section {
+          background: #f0fdf4;
+          border-radius: 12px;
+          padding: 12px;
+          margin-top: 16px;
         }
 
         .modal-footer {
@@ -1300,6 +1569,7 @@ const StaffComplaintsResolved = () => {
           position: sticky;
           bottom: 0;
           background: white;
+          border-radius: 0 0 20px 20px;
         }
 
         .btn-close {
@@ -1310,6 +1580,11 @@ const StaffComplaintsResolved = () => {
           border: none;
           background: #e2e8f0;
           color: #475569;
+          transition: all 0.2s;
+        }
+
+        .btn-close:hover {
+          background: #cbd5e1;
         }
 
         @media (max-width: 1400px) {
@@ -1325,6 +1600,10 @@ const StaffComplaintsResolved = () => {
         }
 
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
@@ -1358,6 +1637,11 @@ const StaffComplaintsResolved = () => {
           .detail-row label {
             width: 100%;
             margin-bottom: 4px;
+          }
+          
+          .modal-content {
+            width: 95%;
+            margin: 10px;
           }
         }
       `}</style>

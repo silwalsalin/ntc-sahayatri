@@ -14,9 +14,12 @@ const StaffAccountSettings = () => {
   const [backendStatus, setBackendStatus] = useState('checking');
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
+    id: null,
+    name: '',
+    email: '',
+    phone: '',
+    role: '',
+    department: '',
     profilePicture: null,
     timezone: 'Asia/Kathmandu',
     dateFormat: 'YYYY-MM-DD',
@@ -56,16 +59,35 @@ const StaffAccountSettings = () => {
   });
 
   const [sessionData, setSessionData] = useState({
-    sessions: [
-      { id: 1, device: 'Chrome on Windows', location: 'Kathmandu, Nepal', ip: '192.168.1.1', lastActive: '2024-01-15 10:30 AM', current: true },
-      { id: 2, device: 'Safari on iPhone', location: 'Kathmandu, Nepal', ip: '192.168.1.2', lastActive: '2024-01-14 08:15 PM', current: false },
-      { id: 3, device: 'Firefox on Mac', location: 'Pokhara, Nepal', ip: '192.168.1.3', lastActive: '2024-01-13 02:00 PM', current: false }
-    ],
-    activeSessions: 1
+    sessions: [],
+    activeSessions: 0
   });
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          email: user.email || '',
+          phone: user.phone || '',
+          role: user.role || 'Staff',
+          department: user.department || 'Customer Support',
+          timezone: 'Asia/Kathmandu',
+          dateFormat: 'YYYY-MM-DD',
+          language: language === 'np' ? 'ne' : 'en'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, [language]);
 
   // Fetch account settings
   const fetchAccountSettings = async () => {
@@ -103,7 +125,7 @@ const StaffAccountSettings = () => {
 
   const getSampleGeneralSettings = () => ({
     theme: 'light',
-    language: 'ne',
+    language: language === 'np' ? 'ne' : 'en',
     timezone: 'Asia/Kathmandu',
     dateFormat: 'YYYY-MM-DD',
     timeFormat: '24h',
@@ -237,7 +259,11 @@ const StaffAccountSettings = () => {
 
   // Terminate session
   const terminateSession = async (sessionId) => {
-    if (window.confirm(language === 'np' ? 'यो सेसन बन्द गर्नुहुन्छ?' : 'Terminate this session?')) {
+    const confirmMessage = language === 'np' 
+      ? 'के तपाईं पक्कै यो सेसन बन्द गर्न चाहनुहुन्छ?' 
+      : 'Are you sure you want to terminate this session?';
+    
+    if (window.confirm(confirmMessage)) {
       try {
         const token = localStorage.getItem('staffToken');
         const response = await axios.delete(
@@ -264,7 +290,11 @@ const StaffAccountSettings = () => {
 
   // Terminate all other sessions
   const terminateAllOtherSessions = async () => {
-    if (window.confirm(language === 'np' ? 'अरू सबै सेसनहरू बन्द गर्नुहुन्छ?' : 'Terminate all other sessions?')) {
+    const confirmMessage = language === 'np' 
+      ? 'के तपाईं पक्कै अरू सबै सेसनहरू बन्द गर्न चाहनुहुन्छ?' 
+      : 'Are you sure you want to terminate all other sessions?';
+    
+    if (window.confirm(confirmMessage)) {
       try {
         const token = localStorage.getItem('staffToken');
         const response = await axios.delete(
@@ -487,16 +517,16 @@ const StaffAccountSettings = () => {
       <StaffHeader 
         language={language}
         setLanguage={setLanguage}
-        staffName="Ram Bahadur"
-        staffRole="Technical Support"
+        staffName={staffData.name}
+        staffRole={staffData.role}
         onLogout={handleLogout}
       />
       
       <div className="dashboard-layout">
         <StaffSidebar 
           language={language}
-          staffName="Ram Bahadur"
-          staffRole="Technical Support"
+          staffName={staffData.name}
+          staffRole={staffData.role}
           onLogout={handleLogout}
         />
         
@@ -922,7 +952,7 @@ const StaffAccountSettings = () => {
                   {sessionData.sessions.length === 0 && (
                     <div className="empty-state">
                       <span className="empty-icon">💻</span>
-                      <p>No active sessions</p>
+                      <p>{t.noActiveSessions || 'No active sessions'}</p>
                     </div>
                   )}
                 </div>
@@ -932,7 +962,7 @@ const StaffAccountSettings = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -981,7 +1011,6 @@ const StaffAccountSettings = () => {
 
         .main-content {
           flex: 1;
-         
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -1026,6 +1055,8 @@ const StaffAccountSettings = () => {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 24px;
+          flex-wrap: wrap;
+          gap: 16px;
         }
 
         .page-title {
@@ -1102,6 +1133,10 @@ const StaffAccountSettings = () => {
           border-left: 4px solid #4caf50;
         }
 
+        .error-icon, .success-icon {
+          font-size: 1.1rem;
+        }
+
         .settings-container {
           margin-bottom: 24px;
         }
@@ -1133,6 +1168,8 @@ const StaffAccountSettings = () => {
           font-weight: 600;
           color: #0f172a;
           margin-bottom: 16px;
+          padding-left: 8px;
+          border-left: 3px solid #0288d1;
         }
 
         .form-group {
@@ -1154,6 +1191,7 @@ const StaffAccountSettings = () => {
           border-radius: 10px;
           font-size: 0.85rem;
           background: white;
+          transition: border-color 0.2s;
         }
 
         .form-group select:focus {
@@ -1164,6 +1202,7 @@ const StaffAccountSettings = () => {
         .form-row {
           display: flex;
           gap: 20px;
+          flex-wrap: wrap;
         }
 
         .form-section.half {
@@ -1180,6 +1219,11 @@ const StaffAccountSettings = () => {
           align-items: center;
           padding: 14px 24px;
           border-bottom: 1px solid #e2e8f0;
+          transition: background 0.2s;
+        }
+
+        .preference-item:hover, .session-item:hover {
+          background: #f8fafc;
         }
 
         .preference-info {
@@ -1262,6 +1306,12 @@ const StaffAccountSettings = () => {
           cursor: pointer;
           font-size: 0.75rem;
           font-weight: 500;
+          transition: all 0.2s;
+        }
+
+        .btn-enable:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
         .enabled-badge {
@@ -1275,6 +1325,8 @@ const StaffAccountSettings = () => {
           align-items: center;
           padding: 16px 24px;
           border-bottom: 1px solid #e2e8f0;
+          flex-wrap: wrap;
+          gap: 12px;
         }
 
         .btn-terminate-all {
@@ -1286,12 +1338,19 @@ const StaffAccountSettings = () => {
           cursor: pointer;
           font-size: 0.75rem;
           font-weight: 500;
+          transition: all 0.2s;
+        }
+
+        .btn-terminate-all:hover {
+          background: #fecaca;
         }
 
         .session-item {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          flex-wrap: wrap;
+          gap: 12px;
         }
 
         .session-item.current {
@@ -1340,6 +1399,11 @@ const StaffAccountSettings = () => {
           cursor: pointer;
           font-size: 0.75rem;
           font-weight: 500;
+          transition: all 0.2s;
+        }
+
+        .btn-terminate:hover {
+          background: #fecaca;
         }
 
         .form-actions {
@@ -1384,6 +1448,10 @@ const StaffAccountSettings = () => {
         }
 
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
@@ -1405,12 +1473,10 @@ const StaffAccountSettings = () => {
           .session-item {
             flex-direction: column;
             align-items: flex-start;
-            gap: 12px;
           }
           
           .sessions-header {
             flex-direction: column;
-            gap: 12px;
             align-items: flex-start;
           }
           

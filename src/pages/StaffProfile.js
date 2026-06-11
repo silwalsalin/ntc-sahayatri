@@ -14,23 +14,24 @@ const StaffProfile = () => {
   const [backendStatus, setBackendStatus] = useState('checking');
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support',
-    joinDate: '2023-01-15',
-    employeeId: 'NTC-EMP-001',
-    address: 'Kapan, Kathmandu, Nepal',
-    dateOfBirth: '1990-05-15',
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: '',
+    joinDate: '',
+    employeeId: '',
+    address: '',
+    dateOfBirth: '',
     gender: 'Male',
-    emergencyContact: '9812345678',
-    emergencyContactName: 'Sita Bahadur',
+    emergencyContact: '',
+    emergencyContactName: '',
     bloodGroup: 'O+',
-    qualification: 'Bachelor in Computer Science',
-    experience: '5 years',
-    languages: 'Nepali, English, Hindi',
-    about: 'Experienced technical support professional with expertise in customer complaint resolution and system troubleshooting.'
+    qualification: '',
+    experience: '',
+    languages: '',
+    about: ''
   });
 
   const [formData, setFormData] = useState({ ...staffData });
@@ -50,7 +51,29 @@ const StaffProfile = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Fetch staff profile
+  // Load staff data from localStorage (this is the logged-in staff)
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData(prev => ({
+          ...prev,
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support',
+          employeeId: user.employeeId || `EMP-${user.id || '001'}`
+        }));
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
+
+  // Fetch staff profile - this fetches the profile of the logged-in staff only
   const fetchProfile = async () => {
     setLoading(true);
     try {
@@ -60,8 +83,18 @@ const StaffProfile = () => {
       });
       
       if (response.data.success) {
-        setStaffData(response.data.data);
-        setFormData(response.data.data);
+        const profileData = response.data.data;
+        setStaffData(profileData);
+        setFormData(profileData);
+        
+        // Update localStorage with latest profile data for this staff
+        const userStr = localStorage.getItem('staffUser');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const updatedUser = { ...user, ...profileData };
+          localStorage.setItem('staffUser', JSON.stringify(updatedUser));
+        }
+        
         setBackendStatus('connected');
       } else {
         setStaffData(getSampleProfile());
@@ -78,30 +111,31 @@ const StaffProfile = () => {
     }
   };
 
-  // Get sample profile
+  // Get sample profile based on current staff data (for demo/offline mode)
   const getSampleProfile = () => {
     return {
-      name: 'Ram Bahadur',
-      role: 'Technical Support',
-      email: 'ram@ntc.gov.np',
-      phone: '9841234567',
-      department: 'Customer Support',
+      id: staffData.id || 1,
+      name: staffData.name || 'Staff Member',
+      role: staffData.role || 'Staff',
+      email: staffData.email || 'staff@ntc.gov.np',
+      phone: staffData.phone || '9841XXXXXX',
+      department: staffData.department || 'Customer Support',
       joinDate: '2023-01-15',
-      employeeId: 'NTC-EMP-001',
-      address: 'Kapan, Kathmandu, Nepal',
-      dateOfBirth: '1990-05-15',
+      employeeId: staffData.employeeId || 'NTC-EMP-001',
+      address: 'Kathmandu, Nepal',
+      dateOfBirth: '1990-01-01',
       gender: 'Male',
-      emergencyContact: '9812345678',
-      emergencyContactName: 'Sita Bahadur',
+      emergencyContact: '98XXXXXXXX',
+      emergencyContactName: 'Emergency Contact',
       bloodGroup: 'O+',
-      qualification: 'Bachelor in Computer Science',
+      qualification: 'Bachelor Degree',
       experience: '5 years',
-      languages: 'Nepali, English, Hindi',
-      about: 'Experienced technical support professional with expertise in customer complaint resolution and system troubleshooting.'
+      languages: 'Nepali, English',
+      about: 'Staff member at NTC Complaint Management System.'
     };
   };
 
-  // Update profile
+  // Update profile for the logged-in staff
   const updateProfile = async () => {
     setUpdating(true);
     setError('');
@@ -117,6 +151,15 @@ const StaffProfile = () => {
       
       if (response.data.success) {
         setStaffData(formData);
+        
+        // Update localStorage with updated profile data for this staff
+        const userStr = localStorage.getItem('staffUser');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const updatedUser = { ...user, ...formData };
+          localStorage.setItem('staffUser', JSON.stringify(updatedUser));
+        }
+        
         setSuccess(language === 'np' ? 'प्रोफाइल सफलतापूर्वक अपडेट गरियो' : 'Profile updated successfully');
         setTimeout(() => setSuccess(''), 3000);
       } else {
@@ -133,15 +176,23 @@ const StaffProfile = () => {
     }
   };
 
-  // Change password
+  // Change password for the logged-in staff
   const changePassword = async () => {
+    if (!passwordData.currentPassword) {
+      setError(language === 'np' ? 'कृपया हालको पासवर्ड प्रविष्ट गर्नुहोस्' : 'Please enter current password');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setError(language === 'np' ? 'नयाँ पासवर्ड मिल्दैन' : 'New passwords do not match');
+      setTimeout(() => setError(''), 3000);
       return;
     }
     
     if (passwordData.newPassword.length < 6) {
       setError(language === 'np' ? 'पासवर्ड कम्तीमा ६ क्यारेक्टरको हुनुपर्छ' : 'Password must be at least 6 characters');
+      setTimeout(() => setError(''), 3000);
       return;
     }
     
@@ -178,7 +229,7 @@ const StaffProfile = () => {
     }
   };
 
-  // Update notification settings
+  // Update notification settings for the logged-in staff
   const updateNotificationSettings = async () => {
     setUpdating(true);
     setError('');
@@ -209,7 +260,7 @@ const StaffProfile = () => {
     }
   };
 
-  // Check authentication
+  // Check authentication - this ensures only logged-in staff can access
   useEffect(() => {
     const token = localStorage.getItem('staffToken');
     const user = localStorage.getItem('staffUser');
@@ -454,7 +505,7 @@ const StaffProfile = () => {
                         <input
                           type="text"
                           name="name"
-                          value={formData.name}
+                          value={formData.name || ''}
                           onChange={handleInputChange}
                           disabled={updating}
                         />
@@ -464,7 +515,7 @@ const StaffProfile = () => {
                         <input
                           type="text"
                           name="role"
-                          value={formData.role}
+                          value={formData.role || ''}
                           disabled
                           className="disabled-input"
                         />
@@ -474,7 +525,7 @@ const StaffProfile = () => {
                         <input
                           type="email"
                           name="email"
-                          value={formData.email}
+                          value={formData.email || ''}
                           onChange={handleInputChange}
                           disabled={updating}
                         />
@@ -484,7 +535,7 @@ const StaffProfile = () => {
                         <input
                           type="tel"
                           name="phone"
-                          value={formData.phone}
+                          value={formData.phone || ''}
                           onChange={handleInputChange}
                           disabled={updating}
                         />
@@ -494,7 +545,7 @@ const StaffProfile = () => {
                         <input
                           type="text"
                           name="department"
-                          value={formData.department}
+                          value={formData.department || ''}
                           disabled
                           className="disabled-input"
                         />
@@ -504,7 +555,7 @@ const StaffProfile = () => {
                         <input
                           type="text"
                           name="joinDate"
-                          value={formData.joinDate}
+                          value={formData.joinDate || ''}
                           disabled
                           className="disabled-input"
                         />
@@ -520,7 +571,7 @@ const StaffProfile = () => {
                         <input
                           type="text"
                           name="address"
-                          value={formData.address}
+                          value={formData.address || ''}
                           onChange={handleInputChange}
                           disabled={updating}
                         />
@@ -530,7 +581,7 @@ const StaffProfile = () => {
                         <input
                           type="date"
                           name="dateOfBirth"
-                          value={formData.dateOfBirth}
+                          value={formData.dateOfBirth || ''}
                           onChange={handleInputChange}
                           disabled={updating}
                         />
@@ -539,7 +590,7 @@ const StaffProfile = () => {
                         <label>{t.gender}</label>
                         <select
                           name="gender"
-                          value={formData.gender}
+                          value={formData.gender || 'Male'}
                           onChange={handleInputChange}
                           disabled={updating}
                         >
@@ -553,7 +604,7 @@ const StaffProfile = () => {
                         <input
                           type="tel"
                           name="emergencyContact"
-                          value={formData.emergencyContact}
+                          value={formData.emergencyContact || ''}
                           onChange={handleInputChange}
                           disabled={updating}
                         />
@@ -563,7 +614,7 @@ const StaffProfile = () => {
                         <input
                           type="text"
                           name="emergencyContactName"
-                          value={formData.emergencyContactName}
+                          value={formData.emergencyContactName || ''}
                           onChange={handleInputChange}
                           disabled={updating}
                         />
@@ -572,7 +623,7 @@ const StaffProfile = () => {
                         <label>{t.bloodGroup}</label>
                         <select
                           name="bloodGroup"
-                          value={formData.bloodGroup}
+                          value={formData.bloodGroup || 'O+'}
                           onChange={handleInputChange}
                           disabled={updating}
                         >
@@ -591,7 +642,7 @@ const StaffProfile = () => {
                         <input
                           type="text"
                           name="qualification"
-                          value={formData.qualification}
+                          value={formData.qualification || ''}
                           onChange={handleInputChange}
                           disabled={updating}
                         />
@@ -601,7 +652,7 @@ const StaffProfile = () => {
                         <input
                           type="text"
                           name="experience"
-                          value={formData.experience}
+                          value={formData.experience || ''}
                           onChange={handleInputChange}
                           disabled={updating}
                         />
@@ -611,7 +662,7 @@ const StaffProfile = () => {
                         <input
                           type="text"
                           name="languages"
-                          value={formData.languages}
+                          value={formData.languages || ''}
                           onChange={handleInputChange}
                           disabled={updating}
                         />
@@ -620,7 +671,7 @@ const StaffProfile = () => {
                         <label>{t.about}</label>
                         <textarea
                           name="about"
-                          value={formData.about}
+                          value={formData.about || ''}
                           onChange={handleInputChange}
                           rows="4"
                           disabled={updating}
@@ -812,7 +863,7 @@ const StaffProfile = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -861,7 +912,6 @@ const StaffProfile = () => {
 
         .main-content {
           flex: 1;
-        
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -906,6 +956,8 @@ const StaffProfile = () => {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 24px;
+          flex-wrap: wrap;
+          gap: 16px;
         }
 
         .page-title {
@@ -937,6 +989,7 @@ const StaffProfile = () => {
           margin-bottom: 24px;
           border-bottom: 2px solid #e2e8f0;
           padding-bottom: 0;
+          flex-wrap: wrap;
         }
 
         .tab-btn {
@@ -994,6 +1047,7 @@ const StaffProfile = () => {
           gap: 24px;
           margin-bottom: 24px;
           border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
         }
 
         .profile-avatar {
@@ -1043,6 +1097,8 @@ const StaffProfile = () => {
           font-weight: 600;
           color: #0f172a;
           margin-bottom: 20px;
+          padding-left: 12px;
+          border-left: 3px solid #0288d1;
         }
 
         .form-grid {
@@ -1135,6 +1191,8 @@ const StaffProfile = () => {
           font-weight: 600;
           color: #0f172a;
           margin-bottom: 20px;
+          padding-left: 12px;
+          border-left: 3px solid #0288d1;
         }
 
         .settings-list {
@@ -1150,6 +1208,11 @@ const StaffProfile = () => {
           padding: 12px;
           background: #f8fafc;
           border-radius: 12px;
+          transition: transform 0.2s;
+        }
+
+        .setting-item:hover {
+          transform: translateX(4px);
         }
 
         .setting-info {
@@ -1227,6 +1290,8 @@ const StaffProfile = () => {
           font-weight: 600;
           color: #0f172a;
           margin-bottom: 20px;
+          padding-left: 12px;
+          border-left: 3px solid #0288d1;
         }
 
         .security-card .form-group {
@@ -1234,6 +1299,10 @@ const StaffProfile = () => {
         }
 
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
@@ -1271,6 +1340,16 @@ const StaffProfile = () => {
             background: #0288d1;
             color: white;
             border-bottom: none;
+          }
+          
+          .setting-item {
+            flex-direction: column;
+            gap: 12px;
+            text-align: center;
+          }
+          
+          .form-actions {
+            justify-content: center;
           }
         }
       `}</style>

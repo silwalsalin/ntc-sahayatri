@@ -17,11 +17,12 @@ const StaffTasksCompleted = () => {
   const itemsPerPage = 10;
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
 
   const [tasks, setTasks] = useState([]);
@@ -31,9 +32,30 @@ const StaffTasksCompleted = () => {
     high: 0,
     medium: 0,
     low: 0,
+    urgent: 0,
     completedThisMonth: 0,
     avgCompletionTime: 0
   });
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
 
   // Fetch completed tasks
   const fetchCompletedTasks = async () => {
@@ -70,11 +92,12 @@ const StaffTasksCompleted = () => {
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
     
-    const stats = {
+    const newStats = {
       total: tasksData.length,
       high: tasksData.filter(t => t.priority === 'high').length,
       medium: tasksData.filter(t => t.priority === 'medium').length,
       low: tasksData.filter(t => t.priority === 'low').length,
+      urgent: tasksData.filter(t => t.priority === 'urgent').length,
       completedThisMonth: tasksData.filter(t => {
         if (!t.completedDateObj) return false;
         return t.completedDateObj.getMonth() === currentMonth && 
@@ -84,7 +107,7 @@ const StaffTasksCompleted = () => {
         ? Math.round(tasksData.reduce((acc, t) => acc + t.completionTime, 0) / tasksData.length) 
         : 0
     };
-    setStats(stats);
+    setStats(newStats);
   };
 
   // Transform task data
@@ -95,6 +118,12 @@ const StaffTasksCompleted = () => {
       ? Math.ceil((completedDate - assignedDate) / (1000 * 60 * 60 * 24))
       : task.completionTime || Math.floor(Math.random() * 5) + 1;
     
+    const dueDateObj = task.dueDate ? new Date(task.dueDate) : null;
+    let completedOnTime = true;
+    if (dueDateObj && completedDate) {
+      completedOnTime = completedDate <= dueDateObj;
+    }
+    
     return {
       id: task.id,
       title: task.title || 'N/A',
@@ -104,6 +133,8 @@ const StaffTasksCompleted = () => {
       status: mapStatus(task.status),
       priority: mapPriority(task.priority),
       assignedBy: task.assignedBy || 'Admin',
+      assignedById: task.assignedById || null,
+      assignedByName: task.assignedByName || 'Admin',
       assignedDate: task.assignedDate ? formatNepaliDate(task.assignedDate) : formatNepaliDate(new Date()),
       enAssignedDate: task.assignedDate ? formatEnglishDate(task.assignedDate) : formatEnglishDate(new Date()),
       completedDate: task.completedDate ? formatNepaliDate(task.completedDate) : formatNepaliDate(new Date()),
@@ -112,11 +143,15 @@ const StaffTasksCompleted = () => {
       completionTime: completionTime,
       dueDate: task.dueDate ? formatNepaliDate(task.dueDate) : null,
       enDueDate: task.dueDate ? formatEnglishDate(task.dueDate) : null,
-      completedOnTime: task.dueDate ? new Date(task.completedDate) <= new Date(task.dueDate) : true,
+      dueDateObj: dueDateObj,
+      completedOnTime: completedOnTime,
       relatedComplaintId: task.relatedComplaintId || null,
       relatedTicketId: task.relatedTicketId || null,
+      relatedTicketNo: task.relatedTicketNo || task.relatedTicketId || null,
       notes: task.notes || null,
-      feedback: task.feedback || null
+      feedback: task.feedback || null,
+      staffName: task.staffName || task.assignedTo || 'Unassigned',
+      staffRole: task.staffRole || 'Staff'
     };
   };
 
@@ -124,7 +159,9 @@ const StaffTasksCompleted = () => {
     if (!status) return 'completed';
     const statusMap = {
       'Completed': 'completed',
-      'completed': 'completed'
+      'completed': 'completed',
+      'Resolved': 'completed',
+      'resolved': 'completed'
     };
     return statusMap[status] || 'completed';
   };
@@ -134,7 +171,8 @@ const StaffTasksCompleted = () => {
     const priorityMap = {
       'High': 'high',
       'high': 'high',
-      'Urgent': 'high',
+      'Urgent': 'urgent',
+      'urgent': 'urgent',
       'Medium': 'medium',
       'medium': 'medium',
       'Low': 'low',
@@ -168,22 +206,25 @@ const StaffTasksCompleted = () => {
     }
   };
 
-  // Get sample completed tasks
+  // Get sample completed tasks with multiple staff
   const getSampleCompletedTasks = () => {
     return [
       { 
         id: 1, 
         title: 'ज्ञानकोष अपडेट गर्नुहोस्', 
         enTitle: 'Update knowledge base',
-        description: 'नयाँ समाधानहरूको आधारमा ज्ञानकोष अपडेट गर्नुहोस्।',
-        enDescription: 'Update the knowledge base with new solutions.',
+        description: 'नयाँ समाधानहरूको आधारमा ज्ञानकोष अपडेट गर्नुहोस्। यसमा ५ वटा नयाँ समाधानहरू थप्नुपर्नेछ।',
+        enDescription: 'Update the knowledge base with new solutions. Need to add 5 new solutions.',
         status: 'completed',
         priority: 'medium',
         assignedBy: 'Admin',
+        assignedByName: 'Admin',
         assignedDate: '2024-02-18',
         completedDate: '2024-02-21',
         dueDate: '2024-02-22',
-        completionTime: 3
+        completionTime: 3,
+        completedOnTime: true,
+        relatedTicketNo: 'NTC-2024-010'
       },
       { 
         id: 2, 
@@ -194,10 +235,12 @@ const StaffTasksCompleted = () => {
         status: 'completed',
         priority: 'high',
         assignedBy: 'Supervisor',
+        assignedByName: 'Supervisor',
         assignedDate: '2024-02-19',
         completedDate: '2024-02-23',
         dueDate: '2024-02-23',
-        completionTime: 4
+        completionTime: 4,
+        completedOnTime: true
       },
       { 
         id: 3, 
@@ -208,10 +251,12 @@ const StaffTasksCompleted = () => {
         status: 'completed',
         priority: 'low',
         assignedBy: 'Team Lead',
+        assignedByName: 'Team Lead',
         assignedDate: '2024-02-20',
         completedDate: '2024-02-24',
         dueDate: '2024-02-25',
-        completionTime: 4
+        completionTime: 4,
+        completedOnTime: true
       },
       { 
         id: 4, 
@@ -220,12 +265,32 @@ const StaffTasksCompleted = () => {
         description: 'नयाँ प्रणाली अपडेटको परीक्षण गरी रिपोर्ट तयार गर्नुहोस्।',
         enDescription: 'Test the new system update and prepare a report.',
         status: 'completed',
-        priority: 'high',
+        priority: 'urgent',
         assignedBy: 'IT Department',
+        assignedByName: 'IT Department',
         assignedDate: '2024-02-15',
         completedDate: '2024-02-18',
         dueDate: '2024-02-20',
-        completionTime: 3
+        completionTime: 3,
+        completedOnTime: true,
+        relatedTicketNo: 'NTC-2024-008'
+      },
+      { 
+        id: 5, 
+        title: 'प्राविधिक दस्तावेज तयार गर्नुहोस्', 
+        enTitle: 'Prepare technical documentation',
+        description: 'नयाँ प्रणालीको लागि प्राविधिक दस्तावेज तयार गर्नुहोस्।',
+        enDescription: 'Prepare technical documentation for the new system.',
+        status: 'completed',
+        priority: 'medium',
+        assignedBy: 'Technical Lead',
+        assignedByName: 'Technical Lead',
+        assignedDate: '2024-02-10',
+        completedDate: '2024-02-19',
+        dueDate: '2024-02-18',
+        completionTime: 9,
+        completedOnTime: false,
+        feedback: 'दस्तावेज राम्रो बनेको छ तर समयमा पेश गर्न सकिएन। अर्को पटक समयमै पेश गर्नुहोस्।'
       }
     ];
   };
@@ -269,6 +334,7 @@ const StaffTasksCompleted = () => {
       high: 'उच्च',
       medium: 'मध्यम',
       low: 'न्यून',
+      urgent: 'अत्यावश्यक',
       previous: 'अघिल्लो',
       next: 'अर्को',
       page: 'पृष्ठ',
@@ -279,6 +345,7 @@ const StaffTasksCompleted = () => {
       highPriority: 'उच्च प्राथमिकता',
       mediumPriority: 'मध्यम प्राथमिकता',
       lowPriority: 'न्यून प्राथमिकता',
+      urgentPriority: 'अत्यावश्यक',
       completedThisMonth: 'यो महिना पूरा',
       avgCompletionTime: 'औसत पूरा हुने समय',
       days: 'दिन',
@@ -315,6 +382,7 @@ const StaffTasksCompleted = () => {
       high: 'High',
       medium: 'Medium',
       low: 'Low',
+      urgent: 'Urgent',
       previous: 'Previous',
       next: 'Next',
       page: 'Page',
@@ -325,6 +393,7 @@ const StaffTasksCompleted = () => {
       highPriority: 'High Priority',
       mediumPriority: 'Medium Priority',
       lowPriority: 'Low Priority',
+      urgentPriority: 'Urgent',
       completedThisMonth: 'Completed This Month',
       avgCompletionTime: 'Avg Completion Time',
       days: 'days',
@@ -343,7 +412,8 @@ const StaffTasksCompleted = () => {
     const classes = { 
       high: 'priority-high', 
       medium: 'priority-medium', 
-      low: 'priority-low' 
+      low: 'priority-low',
+      urgent: 'priority-urgent'
     };
     return classes[priority] || 'priority-medium';
   };
@@ -353,14 +423,16 @@ const StaffTasksCompleted = () => {
       const priorityTexts = {
         high: 'उच्च',
         medium: 'मध्यम',
-        low: 'न्यून'
+        low: 'न्यून',
+        urgent: 'अत्यावश्यक'
       };
       return priorityTexts[priority] || priority;
     } else {
       const priorityTexts = {
         high: 'High',
         medium: 'Medium',
-        low: 'Low'
+        low: 'Low',
+        urgent: 'Urgent'
       };
       return priorityTexts[priority] || priority;
     }
@@ -391,9 +463,17 @@ const StaffTasksCompleted = () => {
     return searchMatch && priorityMatch;
   });
 
+  // Sort tasks by completed date (newest first)
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    if (a.completedDateObj && b.completedDateObj) {
+      return b.completedDateObj - a.completedDateObj;
+    }
+    return 0;
+  });
+
   // Pagination
-  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
-  const paginatedTasks = filteredTasks.slice(
+  const totalPages = Math.ceil(sortedTasks.length / itemsPerPage);
+  const paginatedTasks = sortedTasks.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -401,11 +481,13 @@ const StaffTasksCompleted = () => {
   const openModal = (task) => {
     setSelectedTask(task);
     setShowModal(true);
+    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSelectedTask(null);
+    document.body.style.overflow = 'unset';
   };
 
   const handleLogout = () => {
@@ -472,6 +554,13 @@ const StaffTasksCompleted = () => {
                 </div>
               </div>
               <div className="stat-box">
+                <div className="stat-box-icon purple">🔴</div>
+                <div className="stat-box-info">
+                  <div className="stat-box-value">{stats.urgent}</div>
+                  <div className="stat-box-label">{t.urgentPriority}</div>
+                </div>
+              </div>
+              <div className="stat-box">
                 <div className="stat-box-icon red">🔴</div>
                 <div className="stat-box-info">
                   <div className="stat-box-value">{stats.high}</div>
@@ -526,6 +615,7 @@ const StaffTasksCompleted = () => {
                   className="filter-select"
                 >
                   <option value="all">{t.all}</option>
+                  <option value="urgent">{t.urgent}</option>
                   <option value="high">{t.high}</option>
                   <option value="medium">{t.medium}</option>
                   <option value="low">{t.low}</option>
@@ -553,13 +643,18 @@ const StaffTasksCompleted = () => {
                       <tr key={task.id}>
                         <td className="task-title">
                           {language === 'np' ? task.title : task.enTitle}
-                          {task.completedOnTime ? (
-                            <span className="ontime-badge">✓ {t.yes}</span>
-                          ) : (
-                            <span className="late-badge">⚠ {t.no}</span>
-                          )}
+                          <div className="task-badges">
+                            {task.completedOnTime ? (
+                              <span className="ontime-badge">✓ {t.yes}</span>
+                            ) : (
+                              <span className="late-badge">⚠ {t.no}</span>
+                            )}
+                            {task.relatedTicketNo && (
+                              <span className="ticket-ref-badge">#{task.relatedTicketNo}</span>
+                            )}
+                          </div>
                          </td>
-                        <td>{task.assignedBy}</td>
+                        <td>{task.assignedByName || task.assignedBy}</td>
                         <td>{getAssignedDate(task)}</td>
                         <td>{getCompletedDate(task)}</td>
                         <td>
@@ -580,7 +675,7 @@ const StaffTasksCompleted = () => {
                       </tr>
                     ))
                   ) : (
-                    <tr>
+                    <tr className="no-data-row">
                       <td colSpan="7" className="no-data">
                         <div className="no-data-content">
                           <span className="no-data-icon">📭</span>
@@ -629,68 +724,76 @@ const StaffTasksCompleted = () => {
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="detail-row">
-                <label>{t.taskTitle}:</label>
-                <span>{language === 'np' ? selectedTask.title : selectedTask.enTitle}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.description}:</label>
-                <span>{language === 'np' ? selectedTask.description : selectedTask.enDescription}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.assignedBy}:</label>
-                <span>{selectedTask.assignedBy}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.assignedDate}:</label>
-                <span>{getAssignedDate(selectedTask)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.completedDate}:</label>
-                <span>{getCompletedDate(selectedTask)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.completionTime}:</label>
-                <span className="completion-time-badge">{selectedTask.completionTime} {t.days}</span>
-              </div>
-              {selectedTask.dueDate && (
+              <div className="detail-section">
                 <div className="detail-row">
-                  <label>{t.dueDate}:</label>
-                  <span>{getDueDate(selectedTask)}</span>
+                  <label>{t.taskTitle}:</label>
+                  <span>{language === 'np' ? selectedTask.title : selectedTask.enTitle}</span>
                 </div>
-              )}
-              <div className="detail-row">
-                <label>{t.completedOnTime}:</label>
-                <span>
-                  {selectedTask.completedOnTime ? (
-                    <span className="ontime-badge-modal">✓ {t.yes}</span>
-                  ) : (
-                    <span className="late-badge-modal">⚠ {t.no}</span>
-                  )}
-                </span>
-              </div>
-              <div className="detail-row">
-                <label>{t.priority}:</label>
-                <span className={`priority-badge ${getPriorityClass(selectedTask.priority)}`}>
-                  {getPriorityText(selectedTask.priority)}
-                </span>
-              </div>
-              {selectedTask.relatedTicketId && (
                 <div className="detail-row">
-                  <label>{t.relatedComplaint}:</label>
-                  <span className="ticket-id">{selectedTask.relatedTicketId}</span>
+                  <label>{t.description}:</label>
+                  <span>{language === 'np' ? selectedTask.description : selectedTask.enDescription}</span>
                 </div>
-              )}
+                <div className="detail-row">
+                  <label>{t.assignedBy}:</label>
+                  <span>{selectedTask.assignedByName || selectedTask.assignedBy}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.assignedDate}:</label>
+                  <span>{getAssignedDate(selectedTask)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.completedDate}:</label>
+                  <span>{getCompletedDate(selectedTask)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.completionTime}:</label>
+                  <span className="completion-time-badge">{selectedTask.completionTime} {t.days}</span>
+                </div>
+                {selectedTask.dueDate && (
+                  <div className="detail-row">
+                    <label>{t.dueDate}:</label>
+                    <span>{getDueDate(selectedTask)}</span>
+                  </div>
+                )}
+                <div className="detail-row">
+                  <label>{t.completedOnTime}:</label>
+                  <span>
+                    {selectedTask.completedOnTime ? (
+                      <span className="ontime-badge-modal">✓ {t.yes}</span>
+                    ) : (
+                      <span className="late-badge-modal">⚠ {t.no}</span>
+                    )}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.priority}:</label>
+                  <span className={`priority-badge ${getPriorityClass(selectedTask.priority)}`}>
+                    {getPriorityText(selectedTask.priority)}
+                  </span>
+                </div>
+                {selectedTask.relatedTicketNo && (
+                  <div className="detail-row">
+                    <label>{t.relatedComplaint}:</label>
+                    <span className="ticket-id">{selectedTask.relatedTicketNo}</span>
+                  </div>
+                )}
+              </div>
+
               {selectedTask.notes && (
-                <div className="detail-row full-width">
-                  <label>{t.notes}:</label>
-                  <p>{selectedTask.notes}</p>
+                <div className="detail-section">
+                  <div className="detail-row full-width">
+                    <label>{t.notes}:</label>
+                    <p className="notes-text">{selectedTask.notes}</p>
+                  </div>
                 </div>
               )}
+
               {selectedTask.feedback && (
-                <div className="detail-row full-width">
-                  <label>{t.feedback}:</label>
-                  <p className="feedback-text">{selectedTask.feedback}</p>
+                <div className="detail-section feedback-section">
+                  <div className="detail-row full-width">
+                    <label>{t.feedback}:</label>
+                    <p className="feedback-text">{selectedTask.feedback}</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -701,7 +804,7 @@ const StaffTasksCompleted = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -831,7 +934,7 @@ const StaffTasksCompleted = () => {
 
         .stats-row {
           display: grid;
-          grid-template-columns: repeat(6, 1fr);
+          grid-template-columns: repeat(7, 1fr);
           gap: 16px;
           margin-bottom: 24px;
         }
@@ -844,6 +947,12 @@ const StaffTasksCompleted = () => {
           align-items: center;
           gap: 12px;
           border: 1px solid #e2e8f0;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-box:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .stat-box-icon {
@@ -885,10 +994,12 @@ const StaffTasksCompleted = () => {
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
         }
 
         .search-box {
           flex: 1;
+          min-width: 250px;
           position: relative;
         }
 
@@ -907,6 +1018,7 @@ const StaffTasksCompleted = () => {
           border: 1px solid #e2e8f0;
           border-radius: 10px;
           font-size: 0.85rem;
+          transition: border-color 0.2s;
         }
 
         .search-box input:focus {
@@ -926,6 +1038,12 @@ const StaffTasksCompleted = () => {
           font-size: 0.85rem;
           background: white;
           cursor: pointer;
+          transition: border-color 0.2s;
+        }
+
+        .filter-select:focus {
+          outline: none;
+          border-color: #0288d1;
         }
 
         .table-wrapper {
@@ -950,8 +1068,10 @@ const StaffTasksCompleted = () => {
         .tasks-table th {
           background: #f8fafc;
           color: #64748b;
-          font-weight: 500;
+          font-weight: 600;
           font-size: 0.8rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .tasks-table td {
@@ -966,9 +1086,13 @@ const StaffTasksCompleted = () => {
         .task-title {
           font-weight: 500;
           color: #0f172a;
+        }
+
+        .task-badges {
           display: flex;
           align-items: center;
           gap: 8px;
+          margin-top: 4px;
           flex-wrap: wrap;
         }
 
@@ -990,6 +1114,17 @@ const StaffTasksCompleted = () => {
           border-radius: 12px;
           font-size: 0.6rem;
           font-weight: 500;
+        }
+
+        .ticket-ref-badge {
+          display: inline-block;
+          padding: 2px 8px;
+          background: #e3f2fd;
+          color: #1565c0;
+          border-radius: 12px;
+          font-size: 0.6rem;
+          font-weight: 500;
+          font-family: monospace;
         }
 
         .ontime-badge-modal {
@@ -1027,10 +1162,11 @@ const StaffTasksCompleted = () => {
           padding: 4px 12px;
           border-radius: 20px;
           font-size: 0.7rem;
-          font-weight: 500;
+          font-weight: 600;
         }
 
         .priority-high { background: #fee2e2; color: #dc2626; }
+        .priority-urgent { background: #fecaca; color: #b91c1c; font-weight: 700; }
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #e0e7ff; color: #4f46e5; }
 
@@ -1048,6 +1184,10 @@ const StaffTasksCompleted = () => {
         .view-btn:hover {
           transform: translateY(-1px);
           box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .no-data-row {
+          text-align: center;
         }
 
         .no-data {
@@ -1083,6 +1223,7 @@ const StaffTasksCompleted = () => {
           cursor: pointer;
           color: #475569;
           font-weight: 500;
+          transition: all 0.2s;
         }
 
         .pagination-btn:hover:not(:disabled) {
@@ -1096,6 +1237,11 @@ const StaffTasksCompleted = () => {
           cursor: not-allowed;
         }
 
+        .pagination-info {
+          color: #64748b;
+          font-size: 0.85rem;
+        }
+
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -1107,6 +1253,12 @@ const StaffTasksCompleted = () => {
           align-items: center;
           justify-content: center;
           z-index: 1100;
+          animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         .modal-content {
@@ -1116,6 +1268,12 @@ const StaffTasksCompleted = () => {
           width: 90%;
           max-height: 85vh;
           overflow-y: auto;
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(50px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
 
         .modal-header {
@@ -1127,6 +1285,7 @@ const StaffTasksCompleted = () => {
           position: sticky;
           top: 0;
           background: white;
+          border-radius: 20px 20px 0 0;
         }
 
         .modal-header h2 {
@@ -1140,16 +1299,25 @@ const StaffTasksCompleted = () => {
           font-size: 1.3rem;
           cursor: pointer;
           color: #94a3b8;
+          transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+          color: #ef4444;
         }
 
         .modal-body {
           padding: 24px;
         }
 
+        .detail-section {
+          margin-bottom: 20px;
+        }
+
         .detail-row {
           display: flex;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
           border-bottom: 1px solid #f1f5f9;
         }
 
@@ -1179,12 +1347,28 @@ const StaffTasksCompleted = () => {
           color: #0288d1;
         }
 
-        .feedback-text {
+        .notes-text {
           line-height: 1.6;
           background: #f8fafc;
           padding: 12px;
           border-radius: 8px;
+          margin-top: 4px;
+        }
+
+        .feedback-text {
+          line-height: 1.6;
+          background: #fef3c7;
+          padding: 12px;
+          border-radius: 8px;
           font-style: italic;
+          margin-top: 4px;
+        }
+
+        .feedback-section {
+          background: #fffbeb;
+          border-radius: 12px;
+          padding: 12px;
+          margin-top: 16px;
         }
 
         .modal-footer {
@@ -1196,6 +1380,7 @@ const StaffTasksCompleted = () => {
           position: sticky;
           bottom: 0;
           background: white;
+          border-radius: 0 0 20px 20px;
         }
 
         .btn-close {
@@ -1206,11 +1391,16 @@ const StaffTasksCompleted = () => {
           border: none;
           background: #e2e8f0;
           color: #475569;
+          transition: all 0.2s;
+        }
+
+        .btn-close:hover {
+          background: #cbd5e1;
         }
 
         @media (max-width: 1400px) {
           .stats-row {
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
           }
         }
 
@@ -1221,6 +1411,10 @@ const StaffTasksCompleted = () => {
         }
 
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
@@ -1254,6 +1448,16 @@ const StaffTasksCompleted = () => {
           .detail-row label {
             width: 100%;
             margin-bottom: 4px;
+          }
+          
+          .modal-content {
+            width: 95%;
+            margin: 10px;
+          }
+          
+          .task-badges {
+            flex-direction: column;
+            align-items: flex-start;
           }
         }
       `}</style>

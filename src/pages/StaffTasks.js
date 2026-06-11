@@ -20,11 +20,12 @@ const StaffTasks = () => {
   const itemsPerPage = 10;
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
 
   const [tasks, setTasks] = useState([]);
@@ -38,6 +39,26 @@ const StaffTasks = () => {
     medium: 0,
     low: 0
   });
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
 
   // Fetch tasks
   const fetchTasks = async () => {
@@ -70,16 +91,16 @@ const StaffTasks = () => {
 
   // Calculate statistics
   const calculateStats = (tasksData) => {
-    const stats = {
+    const newStats = {
       total: tasksData.length,
       pending: tasksData.filter(t => t.status === 'pending').length,
       inProgress: tasksData.filter(t => t.status === 'in-progress').length,
       completed: tasksData.filter(t => t.status === 'completed').length,
-      high: tasksData.filter(t => t.priority === 'high').length,
+      high: tasksData.filter(t => t.priority === 'high' || t.priority === 'urgent').length,
       medium: tasksData.filter(t => t.priority === 'medium').length,
       low: tasksData.filter(t => t.priority === 'low').length
     };
-    setStats(stats);
+    setStats(newStats);
   };
 
   // Transform task data
@@ -92,6 +113,8 @@ const StaffTasks = () => {
     status: mapStatus(task.status),
     priority: mapPriority(task.priority),
     assignedBy: task.assignedBy || 'Admin',
+    assignedById: task.assignedById || null,
+    assignedByName: task.assignedByName || 'Admin',
     assignedDate: task.assignedDate ? formatNepaliDate(task.assignedDate) : formatNepaliDate(new Date()),
     enAssignedDate: task.assignedDate ? formatEnglishDate(task.assignedDate) : formatEnglishDate(new Date()),
     dueDate: task.dueDate ? formatNepaliDate(task.dueDate) : null,
@@ -100,7 +123,10 @@ const StaffTasks = () => {
     enCompletedDate: task.completedDate ? formatEnglishDate(task.completedDate) : null,
     relatedComplaintId: task.relatedComplaintId || null,
     relatedTicketId: task.relatedTicketId || null,
-    notes: task.notes || null
+    relatedTicketNo: task.relatedTicketNo || task.relatedTicketId || null,
+    notes: task.notes || null,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt
   });
 
   const mapStatus = (status) => {
@@ -121,7 +147,8 @@ const StaffTasks = () => {
     const priorityMap = {
       'High': 'high',
       'high': 'high',
-      'Urgent': 'high',
+      'Urgent': 'urgent',
+      'urgent': 'urgent',
       'Medium': 'medium',
       'medium': 'medium',
       'Low': 'low',
@@ -179,7 +206,17 @@ const StaffTasks = () => {
               : task
           )
         );
-        alert(language === 'np' ? 'कार्य स्थिति सफलतापूर्वक अपडेट गरियो' : 'Task status updated successfully');
+        calculateStats(
+          tasks.map(task =>
+            task.id === taskId
+              ? { ...task, status: newStatusValue }
+              : task
+          )
+        );
+        showNotification(
+          language === 'np' ? 'कार्य स्थिति सफलतापूर्वक अपडेट गरियो' : 'Task status updated successfully',
+          'success'
+        );
         setShowStatusModal(false);
         setSelectedTask(null);
       } else {
@@ -187,13 +224,22 @@ const StaffTasks = () => {
       }
     } catch (error) {
       console.error('Error updating task status:', error);
-      alert(language === 'np' 
-        ? 'स्थिति अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
-        : 'Failed to update status. Please try again.');
+      showNotification(
+        language === 'np' 
+          ? 'स्थिति अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
+          : 'Failed to update status. Please try again.',
+        'error'
+      );
     }
   };
 
-  // Get sample tasks
+  // Show notification
+  const showNotification = (message, type = 'info') => {
+    // You can implement a toast notification here
+    alert(message);
+  };
+
+  // Get sample tasks for multiple staff
   const getSampleTasks = () => {
     return [
       { 
@@ -205,9 +251,11 @@ const StaffTasks = () => {
         status: 'pending',
         priority: 'high',
         assignedBy: 'Admin',
+        assignedByName: 'Admin',
         assignedDate: '2024-02-20',
         dueDate: '2024-02-25',
-        relatedTicketId: 'NTC-2024-001'
+        relatedTicketId: 'NTC-2024-001',
+        relatedTicketNo: 'NTC-2024-001'
       },
       { 
         id: 2, 
@@ -218,6 +266,7 @@ const StaffTasks = () => {
         status: 'in-progress',
         priority: 'medium',
         assignedBy: 'Supervisor',
+        assignedByName: 'Supervisor',
         assignedDate: '2024-02-21',
         dueDate: '2024-02-24'
       },
@@ -228,11 +277,13 @@ const StaffTasks = () => {
         description: 'समाधान गरिएका गुनासोहरूको ग्राहक पालना गरी सन्तुष्टि सुनिश्चित गर्नुहोस्।',
         enDescription: 'Follow up with customers whose complaints have been resolved to ensure satisfaction.',
         status: 'pending',
-        priority: 'high',
+        priority: 'urgent',
         assignedBy: 'Team Lead',
+        assignedByName: 'Team Lead',
         assignedDate: '2024-02-22',
         dueDate: '2024-02-26',
-        relatedTicketId: 'NTC-2024-015'
+        relatedTicketId: 'NTC-2024-015',
+        relatedTicketNo: 'NTC-2024-015'
       },
       { 
         id: 4, 
@@ -243,9 +294,25 @@ const StaffTasks = () => {
         status: 'completed',
         priority: 'low',
         assignedBy: 'Admin',
+        assignedByName: 'Admin',
         assignedDate: '2024-02-18',
         dueDate: '2024-02-22',
         completedDate: '2024-02-21'
+      },
+      { 
+        id: 5, 
+        title: 'प्राविधिक समस्या समाधान', 
+        enTitle: 'Technical issue resolution',
+        description: 'ग्राहकको इन्टरनेट जडान समस्या समाधान गर्नुहोस्।',
+        enDescription: 'Resolve customer internet connection issue.',
+        status: 'in-progress',
+        priority: 'high',
+        assignedBy: 'Network Manager',
+        assignedByName: 'Network Manager',
+        assignedDate: '2024-02-23',
+        dueDate: '2024-02-27',
+        relatedTicketId: 'NTC-2024-018',
+        relatedTicketNo: 'NTC-2024-018'
       }
     ];
   };
@@ -291,6 +358,7 @@ const StaffTasks = () => {
       high: 'उच्च',
       medium: 'मध्यम',
       low: 'न्यून',
+      urgent: 'अत्यावश्यक',
       previous: 'अघिल्लो',
       next: 'अर्को',
       page: 'पृष्ठ',
@@ -341,6 +409,7 @@ const StaffTasks = () => {
       high: 'High',
       medium: 'Medium',
       low: 'Low',
+      urgent: 'Urgent',
       previous: 'Previous',
       next: 'Next',
       page: 'Page',
@@ -398,7 +467,8 @@ const StaffTasks = () => {
     const classes = { 
       high: 'priority-high', 
       medium: 'priority-medium', 
-      low: 'priority-low' 
+      low: 'priority-low',
+      urgent: 'priority-urgent'
     };
     return classes[priority] || 'priority-medium';
   };
@@ -408,14 +478,16 @@ const StaffTasks = () => {
       const priorityTexts = {
         high: 'उच्च',
         medium: 'मध्यम',
-        low: 'न्यून'
+        low: 'न्यून',
+        urgent: 'अत्यावश्यक'
       };
       return priorityTexts[priority] || priority;
     } else {
       const priorityTexts = {
         high: 'High',
         medium: 'Medium',
-        low: 'Low'
+        low: 'Low',
+        urgent: 'Urgent'
       };
       return priorityTexts[priority] || priority;
     }
@@ -427,6 +499,10 @@ const StaffTasks = () => {
 
   const getDueDate = (task) => {
     return language === 'np' ? task.dueDate : task.enDueDate;
+  };
+
+  const getCompletedDate = (task) => {
+    return language === 'np' ? task.completedDate : task.enCompletedDate;
   };
 
   // Filter tasks
@@ -443,9 +519,26 @@ const StaffTasks = () => {
     return searchMatch && statusMatch && priorityMatch;
   });
 
+  // Sort tasks: urgent first, then by due date
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+    const aPriority = a.priority === 'urgent' ? 'urgent' : a.priority;
+    const bPriority = b.priority === 'urgent' ? 'urgent' : b.priority;
+    
+    if (priorityOrder[aPriority] !== priorityOrder[bPriority]) {
+      return priorityOrder[aPriority] - priorityOrder[bPriority];
+    }
+    
+    // If same priority, sort by due date (earlier first)
+    if (a.dueDate && b.dueDate) {
+      return new Date(a.dueDate) - new Date(b.dueDate);
+    }
+    return 0;
+  });
+
   // Pagination
-  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
-  const paginatedTasks = filteredTasks.slice(
+  const totalPages = Math.ceil(sortedTasks.length / itemsPerPage);
+  const paginatedTasks = sortedTasks.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -453,11 +546,13 @@ const StaffTasks = () => {
   const openModal = (task) => {
     setSelectedTask(task);
     setShowModal(true);
+    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSelectedTask(null);
+    document.body.style.overflow = 'unset';
   };
 
   const openStatusModal = (task) => {
@@ -471,6 +566,7 @@ const StaffTasks = () => {
     setShowStatusModal(false);
     setSelectedTask(null);
     setNewStatus('');
+    document.body.style.overflow = 'unset';
   };
 
   const handleStatusUpdate = () => {
@@ -614,6 +710,7 @@ const StaffTasks = () => {
                   className="filter-select"
                 >
                   <option value="all">{t.all}</option>
+                  <option value="urgent">{t.urgent}</option>
                   <option value="high">{t.high}</option>
                   <option value="medium">{t.medium}</option>
                   <option value="low">{t.low}</option>
@@ -639,10 +736,19 @@ const StaffTasks = () => {
                   {paginatedTasks.length > 0 ? (
                     paginatedTasks.map((task) => (
                       <tr key={task.id}>
-                        <td className="task-title">{language === 'np' ? task.title : task.enTitle}</td>
-                        <td>{task.assignedBy}</td>
+                        <td className="task-title">
+                          {language === 'np' ? task.title : task.enTitle}
+                          {task.relatedTicketNo && (
+                            <div className="task-ticket-ref">
+                              #{task.relatedTicketNo}
+                            </div>
+                          )}
+                        </td>
+                        <td>{task.assignedByName || task.assignedBy}</td>
                         <td>{getAssignedDate(task)}</td>
-                        <td>{getDueDate(task) || '-'}</td>
+                        <td className={task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed' ? 'overdue' : ''}>
+                          {getDueDate(task) || '-'}
+                        </td>
                         <td>
                           <span className={`status-badge ${getStatusClass(task.status)}`}>
                             {getStatusText(task.status)}
@@ -658,15 +764,17 @@ const StaffTasks = () => {
                             <button className="view-btn" onClick={() => openModal(task)}>
                               👁️ {t.viewDetails}
                             </button>
-                            <button className="update-status-btn" onClick={() => openStatusModal(task)}>
-                              🔄 {t.updateStatus}
-                            </button>
+                            {task.status !== 'completed' && (
+                              <button className="update-status-btn" onClick={() => openStatusModal(task)}>
+                                🔄 {t.updateStatus}
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
                     ))
                   ) : (
-                    <tr>
+                    <tr className="no-data-row">
                       <td colSpan="7" className="no-data">
                         <div className="no-data-content">
                           <span className="no-data-icon">📭</span>
@@ -715,61 +823,67 @@ const StaffTasks = () => {
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="detail-row">
-                <label>{t.taskTitle}:</label>
-                <span>{language === 'np' ? selectedTask.title : selectedTask.enTitle}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.description}:</label>
-                <span>{language === 'np' ? selectedTask.description : selectedTask.enDescription}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.assignedBy}:</label>
-                <span>{selectedTask.assignedBy}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.assignedDate}:</label>
-                <span>{getAssignedDate(selectedTask)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.dueDate}:</label>
-                <span>{getDueDate(selectedTask) || '-'}</span>
-              </div>
-              {selectedTask.completedDate && (
+              <div className="detail-section">
                 <div className="detail-row">
-                  <label>{t.completedDate}:</label>
-                  <span>{language === 'np' ? selectedTask.completedDate : selectedTask.enCompletedDate}</span>
+                  <label>{t.taskTitle}:</label>
+                  <span>{language === 'np' ? selectedTask.title : selectedTask.enTitle}</span>
                 </div>
-              )}
-              <div className="detail-row">
-                <label>{t.status}:</label>
-                <span className={`status-badge ${getStatusClass(selectedTask.status)}`}>
-                  {getStatusText(selectedTask.status)}
-                </span>
-              </div>
-              <div className="detail-row">
-                <label>{t.priority}:</label>
-                <span className={`priority-badge ${getPriorityClass(selectedTask.priority)}`}>
-                  {getPriorityText(selectedTask.priority)}
-                </span>
-              </div>
-              {selectedTask.relatedTicketId && (
                 <div className="detail-row">
-                  <label>{t.relatedComplaint}:</label>
-                  <span className="ticket-id">{selectedTask.relatedTicketId}</span>
+                  <label>{t.description}:</label>
+                  <span>{language === 'np' ? selectedTask.description : selectedTask.enDescription}</span>
                 </div>
-              )}
-              {selectedTask.notes && (
-                <div className="detail-row full-width">
-                  <label>{t.notes}:</label>
-                  <p>{selectedTask.notes}</p>
+                <div className="detail-row">
+                  <label>{t.assignedBy}:</label>
+                  <span>{selectedTask.assignedByName || selectedTask.assignedBy}</span>
                 </div>
-              )}
+                <div className="detail-row">
+                  <label>{t.assignedDate}:</label>
+                  <span>{getAssignedDate(selectedTask)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.dueDate}:</label>
+                  <span className={selectedTask.dueDate && new Date(selectedTask.dueDate) < new Date() && selectedTask.status !== 'completed' ? 'overdue-text' : ''}>
+                    {getDueDate(selectedTask) || '-'}
+                  </span>
+                </div>
+                {selectedTask.completedDate && (
+                  <div className="detail-row">
+                    <label>{t.completedDate}:</label>
+                    <span>{getCompletedDate(selectedTask)}</span>
+                  </div>
+                )}
+                <div className="detail-row">
+                  <label>{t.status}:</label>
+                  <span className={`status-badge ${getStatusClass(selectedTask.status)}`}>
+                    {getStatusText(selectedTask.status)}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.priority}:</label>
+                  <span className={`priority-badge ${getPriorityClass(selectedTask.priority)}`}>
+                    {getPriorityText(selectedTask.priority)}
+                  </span>
+                </div>
+                {selectedTask.relatedTicketNo && (
+                  <div className="detail-row">
+                    <label>{t.relatedComplaint}:</label>
+                    <span className="ticket-id">{selectedTask.relatedTicketNo}</span>
+                  </div>
+                )}
+                {selectedTask.notes && (
+                  <div className="detail-row full-width">
+                    <label>{t.notes}:</label>
+                    <p className="notes-text">{selectedTask.notes}</p>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-update-status" onClick={() => openStatusModal(selectedTask)}>
-                🔄 {t.updateStatus}
-              </button>
+              {selectedTask.status !== 'completed' && (
+                <button className="btn-update-status" onClick={() => openStatusModal(selectedTask)}>
+                  🔄 {t.updateStatus}
+                </button>
+              )}
               <button className="btn-close" onClick={closeModal}>{t.close}</button>
             </div>
           </div>
@@ -818,7 +932,7 @@ const StaffTasks = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -867,7 +981,6 @@ const StaffTasks = () => {
 
         .main-content {
           flex: 1;
-         
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -962,6 +1075,12 @@ const StaffTasks = () => {
           align-items: center;
           gap: 16px;
           border: 1px solid #e2e8f0;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-box:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .stat-box-icon {
@@ -1041,10 +1160,12 @@ const StaffTasks = () => {
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
         }
 
         .search-box {
           flex: 1;
+          min-width: 250px;
           position: relative;
         }
 
@@ -1063,6 +1184,7 @@ const StaffTasks = () => {
           border: 1px solid #e2e8f0;
           border-radius: 10px;
           font-size: 0.85rem;
+          transition: border-color 0.2s;
         }
 
         .search-box input:focus {
@@ -1073,6 +1195,7 @@ const StaffTasks = () => {
         .filter-group {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .filter-select {
@@ -1082,6 +1205,12 @@ const StaffTasks = () => {
           font-size: 0.85rem;
           background: white;
           cursor: pointer;
+          transition: border-color 0.2s;
+        }
+
+        .filter-select:focus {
+          outline: none;
+          border-color: #0288d1;
         }
 
         .table-wrapper {
@@ -1106,8 +1235,10 @@ const StaffTasks = () => {
         .tasks-table th {
           background: #f8fafc;
           color: #64748b;
-          font-weight: 500;
+          font-weight: 600;
           font-size: 0.8rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .tasks-table td {
@@ -1124,12 +1255,29 @@ const StaffTasks = () => {
           color: #0f172a;
         }
 
+        .task-ticket-ref {
+          font-size: 0.65rem;
+          color: #0288d1;
+          margin-top: 4px;
+          font-family: monospace;
+        }
+
+        .overdue {
+          color: #dc2626;
+          font-weight: 600;
+        }
+
+        .overdue-text {
+          color: #dc2626;
+          font-weight: 600;
+        }
+
         .status-badge, .priority-badge {
           display: inline-block;
           padding: 4px 12px;
           border-radius: 20px;
           font-size: 0.7rem;
-          font-weight: 500;
+          font-weight: 600;
         }
 
         .status-pending { background: #fef3c7; color: #d97706; }
@@ -1137,12 +1285,14 @@ const StaffTasks = () => {
         .status-completed { background: #d1fae5; color: #059669; }
 
         .priority-high { background: #fee2e2; color: #dc2626; }
+        .priority-urgent { background: #fecaca; color: #b91c1c; font-weight: 700; }
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #e0e7ff; color: #4f46e5; }
 
         .action-buttons {
           display: flex;
           gap: 8px;
+          flex-wrap: wrap;
         }
 
         .view-btn, .update-status-btn {
@@ -1167,6 +1317,10 @@ const StaffTasks = () => {
         .view-btn:hover, .update-status-btn:hover {
           transform: translateY(-1px);
           box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .no-data-row {
+          text-align: center;
         }
 
         .no-data {
@@ -1202,6 +1356,7 @@ const StaffTasks = () => {
           cursor: pointer;
           color: #475569;
           font-weight: 500;
+          transition: all 0.2s;
         }
 
         .pagination-btn:hover:not(:disabled) {
@@ -1215,6 +1370,11 @@ const StaffTasks = () => {
           cursor: not-allowed;
         }
 
+        .pagination-info {
+          color: #64748b;
+          font-size: 0.85rem;
+        }
+
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -1226,6 +1386,12 @@ const StaffTasks = () => {
           align-items: center;
           justify-content: center;
           z-index: 1100;
+          animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         .modal-content {
@@ -1235,6 +1401,12 @@ const StaffTasks = () => {
           width: 90%;
           max-height: 85vh;
           overflow-y: auto;
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(50px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
 
         .status-modal {
@@ -1250,6 +1422,7 @@ const StaffTasks = () => {
           position: sticky;
           top: 0;
           background: white;
+          border-radius: 20px 20px 0 0;
         }
 
         .modal-header h2 {
@@ -1263,16 +1436,25 @@ const StaffTasks = () => {
           font-size: 1.3rem;
           cursor: pointer;
           color: #94a3b8;
+          transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+          color: #ef4444;
         }
 
         .modal-body {
           padding: 24px;
         }
 
+        .detail-section {
+          margin-bottom: 20px;
+        }
+
         .detail-row {
           display: flex;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
           border-bottom: 1px solid #f1f5f9;
         }
 
@@ -1302,6 +1484,14 @@ const StaffTasks = () => {
           color: #0288d1;
         }
 
+        .notes-text {
+          line-height: 1.6;
+          background: #f8fafc;
+          padding: 12px;
+          border-radius: 8px;
+          margin-top: 4px;
+        }
+
         .status-select {
           flex: 1;
           padding: 8px 12px;
@@ -1319,6 +1509,7 @@ const StaffTasks = () => {
           position: sticky;
           bottom: 0;
           background: white;
+          border-radius: 0 0 20px 20px;
         }
 
         .btn-close, .btn-update-status, .btn-cancel, .btn-update {
@@ -1327,6 +1518,7 @@ const StaffTasks = () => {
           cursor: pointer;
           font-weight: 500;
           border: none;
+          transition: all 0.2s;
         }
 
         .btn-close {
@@ -1334,9 +1526,18 @@ const StaffTasks = () => {
           color: #475569;
         }
 
+        .btn-close:hover {
+          background: #cbd5e1;
+        }
+
         .btn-update-status {
           background: linear-gradient(135deg, #10b981, #059669);
           color: white;
+        }
+
+        .btn-update-status:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         .btn-cancel {
@@ -1344,9 +1545,23 @@ const StaffTasks = () => {
           color: #475569;
         }
 
+        .btn-cancel:hover {
+          background: #cbd5e1;
+        }
+
         .btn-update {
           background: linear-gradient(135deg, #0288d1, #0277bd);
           color: white;
+        }
+
+        .btn-update:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .btn-update:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         @media (max-width: 1200px) {
@@ -1356,6 +1571,10 @@ const StaffTasks = () => {
         }
 
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
@@ -1397,6 +1616,11 @@ const StaffTasks = () => {
           .detail-row label {
             width: 100%;
             margin-bottom: 4px;
+          }
+          
+          .modal-content {
+            width: 95%;
+            margin: 10px;
           }
         }
       `}</style>

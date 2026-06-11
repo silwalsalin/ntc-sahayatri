@@ -11,20 +11,23 @@ const StaffComplaintsPending = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [staffFilter, setStaffFilter] = useState('all');
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
 
   const [complaints, setComplaints] = useState([]);
+  const [allStaffMembers, setAllStaffMembers] = useState([]);
   const [backendStatus, setBackendStatus] = useState('checking');
   const [stats, setStats] = useState({
     total: 0,
@@ -32,6 +35,26 @@ const StaffComplaintsPending = () => {
     medium: 0,
     low: 0
   });
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
 
   // Fetch pending complaints
   const fetchPendingComplaints = async () => {
@@ -42,6 +65,15 @@ const StaffComplaintsPending = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      // Fetch staff members for filter
+      const staffResponse = await axios.get('http://localhost:5000/api/staff', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (staffResponse.data.success && Array.isArray(staffResponse.data.data)) {
+        setAllStaffMembers(staffResponse.data.data);
+      }
+      
       if (response.data.success && Array.isArray(response.data.data)) {
         const transformedComplaints = response.data.data.map(complaint => transformComplaintData(complaint));
         setComplaints(transformedComplaints);
@@ -49,12 +81,14 @@ const StaffComplaintsPending = () => {
         setBackendStatus('connected');
       } else {
         setComplaints(getSamplePendingComplaints());
+        setAllStaffMembers(getSampleStaffMembers());
         calculateStats(getSamplePendingComplaints());
         setBackendStatus('disconnected');
       }
     } catch (error) {
       console.error('Error fetching pending complaints:', error);
       setComplaints(getSamplePendingComplaints());
+      setAllStaffMembers(getSampleStaffMembers());
       calculateStats(getSamplePendingComplaints());
       setBackendStatus('disconnected');
     } finally {
@@ -62,15 +96,26 @@ const StaffComplaintsPending = () => {
     }
   };
 
+  // Get sample staff members
+  const getSampleStaffMembers = () => {
+    return [
+      { id: 1, name: 'राम बहादुर', enName: 'Ram Bahadur', role: 'Technical Support', staffId: 'STF001' },
+      { id: 2, name: 'श्याम कुमार', enName: 'Shyam Kumar', role: 'Billing Specialist', staffId: 'STF002' },
+      { id: 3, name: 'सीता देवी', enName: 'Sita Devi', role: 'Customer Service', staffId: 'STF003' },
+      { id: 4, name: 'हरि प्रसाद', enName: 'Hari Prasad', role: 'Network Engineer', staffId: 'STF004' },
+      { id: 5, name: 'गीता अधिकारी', enName: 'Gita Adhikari', role: 'Supervisor', staffId: 'STF005' }
+    ];
+  };
+
   // Calculate statistics
   const calculateStats = (complaintsData) => {
-    const stats = {
+    const newStats = {
       total: complaintsData.length,
-      high: complaintsData.filter(c => c.priority === 'high').length,
+      high: complaintsData.filter(c => c.priority === 'high' || c.priority === 'urgent').length,
       medium: complaintsData.filter(c => c.priority === 'medium').length,
       low: complaintsData.filter(c => c.priority === 'low').length
     };
-    setStats(stats);
+    setStats(newStats);
   };
 
   // Transform complaint data
@@ -94,6 +139,8 @@ const StaffComplaintsPending = () => {
     enChannel: complaint.enChannel || 'Website Portal',
     priority: mapPriority(complaint.priority),
     assignedTo: complaint.assignedTo || 'Not Assigned',
+    assignedToId: complaint.assignedToId || null,
+    assignedToName: complaint.assignedToName || complaint.assignedTo || 'Not Assigned',
     enAssignedTo: complaint.enAssignedTo || 'Not Assigned',
     resolvedDate: complaint.resolvedDate ? formatNepaliDate(complaint.resolvedDate) : null,
     enResolvedDate: complaint.resolvedDate ? formatEnglishDate(complaint.resolvedDate) : null,
@@ -103,16 +150,25 @@ const StaffComplaintsPending = () => {
     address: complaint.address,
     preferredContact: complaint.preferredContact,
     assignedBy: complaint.assignedBy || 'System',
-    daysPending: calculateDaysPending(complaint.submittedDate)
+    assignedByName: complaint.assignedByName || 'System',
+    daysPending: calculateDaysPending(complaint.submittedDate),
+    staffName: complaint.staffName || complaint.assignedTo || 'Unassigned',
+    staffRole: complaint.staffRole || 'Staff'
   });
 
   const calculateDaysPending = (submittedDate) => {
     if (!submittedDate) return 0;
-    const submitted = new Date(submittedDate);
-    const today = new Date();
-    const diffTime = Math.abs(today - submitted);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    try {
+      const submitted = new Date(submittedDate);
+      const today = new Date();
+      submitted.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      const diffTime = today - submitted;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(0, diffDays);
+    } catch (error) {
+      return 0;
+    }
   };
 
   const getCategoryNepali = (category) => {
@@ -121,6 +177,8 @@ const StaffComplaintsPending = () => {
       'recharge': 'रिचार्ज',
       'activation': 'सक्रियता',
       'billing': 'बिलिङ',
+      'network': 'नेटवर्क',
+      'signal': 'सिग्नल',
       'general': 'सामान्य'
     };
     return categories[category] || 'सामान्य';
@@ -148,7 +206,8 @@ const StaffComplaintsPending = () => {
     const priorityMap = {
       'High': 'high',
       'high': 'high',
-      'Urgent': 'high',
+      'Urgent': 'urgent',
+      'urgent': 'urgent',
       'Medium': 'medium',
       'medium': 'medium',
       'Low': 'low',
@@ -182,7 +241,7 @@ const StaffComplaintsPending = () => {
     }
   };
 
-  // Get sample pending complaints
+  // Get sample pending complaints with multiple staff assignments
   const getSamplePendingComplaints = () => {
     return [
       { 
@@ -204,11 +263,17 @@ const StaffComplaintsPending = () => {
         channel: 'फोन',
         enChannel: 'Phone',
         priority: 'high',
-        assignedTo: 'Customer Service',
-        enAssignedTo: 'Customer Service',
+        assignedTo: 'राम बहादुर',
+        assignedToId: 1,
+        assignedToName: 'Ram Bahadur',
+        enAssignedTo: 'Ram Bahadur',
         submittedDate: '2024-02-01',
         address: 'Maitidevi, Kathmandu',
-        landmark: 'Near Maitidevi Temple'
+        landmark: 'Near Maitidevi Temple',
+        assignedBy: 'Admin',
+        assignedByName: 'Admin',
+        staffName: 'राम बहादुर',
+        staffRole: 'Technical Support'
       },
       { 
         id: 2, 
@@ -229,10 +294,16 @@ const StaffComplaintsPending = () => {
         channel: 'इमेल',
         enChannel: 'Email',
         priority: 'medium',
-        assignedTo: 'Billing Team',
-        enAssignedTo: 'Billing Team',
+        assignedTo: 'श्याम कुमार',
+        assignedToId: 2,
+        assignedToName: 'Shyam Kumar',
+        enAssignedTo: 'Shyam Kumar',
         submittedDate: '2024-02-18',
-        address: 'Baluwatar, Kathmandu'
+        address: 'Baluwatar, Kathmandu',
+        assignedBy: 'Admin',
+        assignedByName: 'Admin',
+        staffName: 'श्याम कुमार',
+        staffRole: 'Billing Specialist'
       },
       { 
         id: 3, 
@@ -245,19 +316,86 @@ const StaffComplaintsPending = () => {
         category_np: 'इन्टरनेट',
         category_en: 'Internet',
         subCategory: 'connection',
-        description: 'इन्टरनेट जडान नियमित रूपमा डिस्कनेक्ट भइरहेको छ।',
-        enDescription: 'Internet connection is disconnecting regularly.',
+        description: 'इन्टरनेट जडान नियमित रूपमा डिस्कनेक्ट भइरहेको छ। दिनमा १०-१५ पटक जडान जान्छ।',
+        enDescription: 'Internet connection is disconnecting regularly. 10-15 times per day.',
         status: 'pending',
         date: '२०८०-०२-२२',
         enDate: '2024-02-22',
         channel: 'वेबसाइट पोर्टल',
         enChannel: 'Website Portal',
         priority: 'high',
-        assignedTo: 'Technical Team',
-        enAssignedTo: 'Technical Team',
+        assignedTo: 'हरि प्रसाद',
+        assignedToId: 4,
+        assignedToName: 'Hari Prasad',
+        enAssignedTo: 'Hari Prasad',
         submittedDate: '2024-02-22',
         address: 'Lalitpur',
-        landmark: 'Near Patan Hospital'
+        landmark: 'Near Patan Hospital',
+        assignedBy: 'Admin',
+        assignedByName: 'Admin',
+        staffName: 'हरि प्रसाद',
+        staffRole: 'Network Engineer'
+      },
+      { 
+        id: 4, 
+        ticketId: 'NTC-2024-015', 
+        name: 'राम बहादुर', 
+        enName: 'Ram Bahadur',
+        email: 'ram@example.com',
+        phone: '9841234570',
+        category: 'network',
+        category_np: 'नेटवर्क',
+        category_en: 'Network',
+        subCategory: 'no-signal',
+        description: 'घरमा पूरै सिग्नल छैन। पछिल्लो ३ दिन देखि समस्या छ।',
+        enDescription: 'No signal at home. Problem for last 3 days.',
+        status: 'pending',
+        date: '२०८०-०३-०१',
+        enDate: '2024-03-01',
+        channel: 'फोन',
+        enChannel: 'Phone',
+        priority: 'urgent',
+        assignedTo: 'सीता देवी',
+        assignedToId: 3,
+        assignedToName: 'Sita Devi',
+        enAssignedTo: 'Sita Devi',
+        submittedDate: '2024-03-01',
+        address: 'Bhaktapur',
+        landmark: 'Suryabinayak',
+        assignedBy: 'Admin',
+        assignedByName: 'Admin',
+        staffName: 'सीता देवी',
+        staffRole: 'Customer Service'
+      },
+      { 
+        id: 5, 
+        ticketId: 'NTC-2024-018', 
+        name: 'सीता शर्मा', 
+        enName: 'Sita Sharma',
+        email: 'sita@example.com',
+        phone: '9812345680',
+        category: 'recharge',
+        category_np: 'रिचार्ज',
+        category_en: 'Recharge',
+        subCategory: 'not-credited',
+        description: 'रु. २०० को रिचार्ज गर्दा रु. ५०० कटौती भयो। कृपया रकम फिर्ता गरिदिनुहोस्।',
+        enDescription: 'Rs. 500 deducted for Rs. 200 recharge. Please refund.',
+        status: 'pending',
+        date: '२०८०-०३-०५',
+        enDate: '2024-03-05',
+        channel: 'व्हाट्सएप',
+        enChannel: 'WhatsApp',
+        priority: 'medium',
+        assignedTo: 'गीता अधिकारी',
+        assignedToId: 5,
+        assignedToName: 'Gita Adhikari',
+        enAssignedTo: 'Gita Adhikari',
+        submittedDate: '2024-03-05',
+        address: 'Koteshwor, Kathmandu',
+        assignedBy: 'Admin',
+        assignedByName: 'Admin',
+        staffName: 'गीता अधिकारी',
+        staffRole: 'Supervisor'
       }
     ];
   };
@@ -280,8 +418,12 @@ const StaffComplaintsPending = () => {
       pendingComplaints: 'विचाराधीन गुनासोहरू',
       searchPlaceholder: 'टिकेट नम्बर, नाम वा फोन नम्बरले खोज्नुहोस्...',
       filterByPriority: 'प्राथमिकता अनुसार फिल्टर',
+      filterByStaff: 'स्टाफ सदस्य अनुसार फिल्टर',
+      staffMember: 'स्टाफ सदस्य',
+      allStaff: 'सबै स्टाफ',
       ticketId: 'टिकेट नम्बर',
       complainant: 'उजुरीकर्ता',
+      assignedStaff: 'तोकिएको स्टाफ',
       category: 'प्रकार',
       submittedDate: 'दर्ता मिति',
       daysPending: 'दिन बाँकी',
@@ -303,6 +445,7 @@ const StaffComplaintsPending = () => {
       high: 'उच्च',
       medium: 'मध्यम',
       low: 'न्यून',
+      urgent: 'अत्यावश्यक',
       previous: 'अघिल्लो',
       next: 'अर्को',
       page: 'पृष्ठ',
@@ -324,8 +467,12 @@ const StaffComplaintsPending = () => {
       pendingComplaints: 'Pending Complaints',
       searchPlaceholder: 'Search by ticket number, name or phone...',
       filterByPriority: 'Filter by Priority',
+      filterByStaff: 'Filter by Staff Member',
+      staffMember: 'Staff Member',
+      allStaff: 'All Staff',
       ticketId: 'Ticket ID',
       complainant: 'Complainant',
+      assignedStaff: 'Assigned Staff',
       category: 'Category',
       submittedDate: 'Submitted Date',
       daysPending: 'Days Pending',
@@ -347,6 +494,7 @@ const StaffComplaintsPending = () => {
       high: 'High',
       medium: 'Medium',
       low: 'Low',
+      urgent: 'Urgent',
       previous: 'Previous',
       next: 'Next',
       page: 'Page',
@@ -371,7 +519,8 @@ const StaffComplaintsPending = () => {
     const classes = { 
       high: 'priority-high', 
       medium: 'priority-medium', 
-      low: 'priority-low' 
+      low: 'priority-low',
+      urgent: 'priority-urgent'
     };
     return classes[priority] || 'priority-medium';
   };
@@ -381,14 +530,16 @@ const StaffComplaintsPending = () => {
       const priorityTexts = {
         high: 'उच्च',
         medium: 'मध्यम',
-        low: 'न्यून'
+        low: 'न्यून',
+        urgent: 'अत्यावश्यक'
       };
       return priorityTexts[priority] || priority;
     } else {
       const priorityTexts = {
         high: 'High',
         medium: 'Medium',
-        low: 'Low'
+        low: 'Low',
+        urgent: 'Urgent'
       };
       return priorityTexts[priority] || priority;
     }
@@ -407,7 +558,17 @@ const StaffComplaintsPending = () => {
   };
 
   const getAssignedTo = (complaint) => {
-    return language === 'np' ? complaint.assignedTo : complaint.enAssignedTo;
+    if (language === 'np') {
+      return complaint.assignedTo;
+    }
+    return complaint.assignedToName || complaint.assignedTo;
+  };
+
+  const getStaffName = (complaint) => {
+    if (language === 'np') {
+      return complaint.staffName;
+    }
+    return complaint.assignedToName || complaint.assignedTo;
   };
 
   // Filter complaints
@@ -420,12 +581,29 @@ const StaffComplaintsPending = () => {
     
     const priorityMatch = priorityFilter === 'all' || complaint.priority === priorityFilter;
     
-    return searchMatch && priorityMatch;
+    const staffMatch = staffFilter === 'all' || 
+      complaint.assignedToId === parseInt(staffFilter) ||
+      complaint.assignedTo === allStaffMembers.find(s => s.id === parseInt(staffFilter))?.name ||
+      complaint.assignedToName === allStaffMembers.find(s => s.id === parseInt(staffFilter))?.enName;
+    
+    return searchMatch && priorityMatch && staffMatch;
+  });
+
+  // Sort by priority (urgent/high first, then medium, then low) and then by days pending (oldest first)
+  const sortedComplaints = [...filteredComplaints].sort((a, b) => {
+    const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+    const aPriority = a.priority === 'urgent' ? 'urgent' : a.priority;
+    const bPriority = b.priority === 'urgent' ? 'urgent' : b.priority;
+    
+    if (priorityOrder[aPriority] !== priorityOrder[bPriority]) {
+      return priorityOrder[aPriority] - priorityOrder[bPriority];
+    }
+    return b.daysPending - a.daysPending;
   });
 
   // Pagination
-  const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
-  const paginatedComplaints = filteredComplaints.slice(
+  const totalPages = Math.ceil(sortedComplaints.length / itemsPerPage);
+  const paginatedComplaints = sortedComplaints.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -433,11 +611,13 @@ const StaffComplaintsPending = () => {
   const openModal = (complaint) => {
     setSelectedComplaint(complaint);
     setShowModal(true);
+    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSelectedComplaint(null);
+    document.body.style.overflow = 'unset';
   };
 
   const handleLogout = () => {
@@ -544,9 +724,22 @@ const StaffComplaintsPending = () => {
                   className="filter-select"
                 >
                   <option value="all">{t.all}</option>
+                  <option value="urgent">{t.urgent}</option>
                   <option value="high">{t.high}</option>
                   <option value="medium">{t.medium}</option>
                   <option value="low">{t.low}</option>
+                </select>
+                <select
+                  value={staffFilter}
+                  onChange={(e) => setStaffFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">{t.allStaff}</option>
+                  {allStaffMembers.map(staff => (
+                    <option key={staff.id} value={staff.id}>
+                      {language === 'np' ? staff.name : staff.enName}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -558,6 +751,7 @@ const StaffComplaintsPending = () => {
                   <tr>
                     <th>{t.ticketId}</th>
                     <th>{t.complainant}</th>
+                    <th>{t.assignedStaff}</th>
                     <th>{t.category}</th>
                     <th>{t.submittedDate}</th>
                     <th>{t.daysPending}</th>
@@ -570,11 +764,18 @@ const StaffComplaintsPending = () => {
                     paginatedComplaints.map((complaint) => (
                       <tr key={complaint.id}>
                         <td className="ticket-id">{complaint.ticketId}</td>
-                        <td>{language === 'np' ? complaint.name : complaint.enName}</td>
+                        <td className="complainant-cell">
+                          <div className="complainant-name">{language === 'np' ? complaint.name : complaint.enName}</div>
+                          <div className="complainant-contact">{complaint.phone}</div>
+                        </td>
+                        <td className="staff-cell">
+                          <div className="staff-name">{getStaffName(complaint)}</div>
+                          <div className="staff-role">{complaint.staffRole}</div>
+                        </td>
                         <td>{getCategoryText(complaint)}</td>
                         <td>{getDate(complaint)}</td>
                         <td>
-                          <span className="days-badge">
+                          <span className={`days-badge ${complaint.daysPending > 7 ? 'days-warning' : complaint.daysPending > 3 ? 'days-caution' : ''}`}>
                             {complaint.daysPending} {t.days}
                           </span>
                         </td>
@@ -591,8 +792,8 @@ const StaffComplaintsPending = () => {
                       </tr>
                     ))
                   ) : (
-                    <tr>
-                      <td colSpan="7" className="no-data">
+                    <tr className="no-data-row">
+                      <td colSpan="8" className="no-data">
                         <div className="no-data-content">
                           <span className="no-data-icon">📭</span>
                           <p>{t.noComplaintsFound}</p>
@@ -640,69 +841,82 @@ const StaffComplaintsPending = () => {
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="detail-row">
-                <label>{t.ticketId}:</label>
-                <span>{selectedComplaint.ticketId}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.complainant}:</label>
-                <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.email}:</label>
-                <span>{selectedComplaint.email}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.phone}:</label>
-                <span>{selectedComplaint.phone}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.category}:</label>
-                <span>{getCategoryText(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.priority}:</label>
-                <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
-                  {getPriorityText(selectedComplaint.priority)}
-                </span>
-              </div>
-              <div className="detail-row">
-                <label>{t.registeredDate}:</label>
-                <span>{getDate(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.daysPending}:</label>
-                <span className="days-badge">{selectedComplaint.daysPending} {t.days}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.channel}:</label>
-                <span>{getChannel(selectedComplaint)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.assignedTo}:</label>
-                <span>{getAssignedTo(selectedComplaint)}</span>
-              </div>
-              {selectedComplaint.assignedBy && (
+              <div className="detail-section">
                 <div className="detail-row">
-                  <label>{t.assignedBy}:</label>
-                  <span>{selectedComplaint.assignedBy}</span>
+                  <label>{t.ticketId}:</label>
+                  <span>{selectedComplaint.ticketId}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.complainant}:</label>
+                  <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.email}:</label>
+                  <span>{selectedComplaint.email}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.phone}:</label>
+                  <span>{selectedComplaint.phone}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.category}:</label>
+                  <span>{getCategoryText(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.priority}:</label>
+                  <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
+                    {getPriorityText(selectedComplaint.priority)}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.registeredDate}:</label>
+                  <span>{getDate(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.daysPending}:</label>
+                  <span className={`days-badge ${selectedComplaint.daysPending > 7 ? 'days-warning' : selectedComplaint.daysPending > 3 ? 'days-caution' : ''}`}>
+                    {selectedComplaint.daysPending} {t.days}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.channel}:</label>
+                  <span>{getChannel(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.assignedTo}:</label>
+                  <span>
+                    {getAssignedTo(selectedComplaint)}
+                    <span className="staff-role-badge">({selectedComplaint.staffRole})</span>
+                  </span>
+                </div>
+                {selectedComplaint.assignedByName && (
+                  <div className="detail-row">
+                    <label>{t.assignedBy}:</label>
+                    <span>{selectedComplaint.assignedByName}</span>
+                  </div>
+                )}
+              </div>
+
+              {(selectedComplaint.address || selectedComplaint.landmark) && (
+                <div className="detail-section">
+                  <div className="detail-row">
+                    <label>{t.address}:</label>
+                    <span>{selectedComplaint.address || '-'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <label>{t.landmark}:</label>
+                    <span>{selectedComplaint.landmark || '-'}</span>
+                  </div>
                 </div>
               )}
-              {selectedComplaint.address && (
-                <div className="detail-row">
-                  <label>{t.address}:</label>
-                  <span>{selectedComplaint.address}</span>
+
+              <div className="detail-section">
+                <div className="detail-row full-width">
+                  <label>{t.description}:</label>
+                  <p className="complaint-description">
+                    {language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}
+                  </p>
                 </div>
-              )}
-              {selectedComplaint.landmark && (
-                <div className="detail-row">
-                  <label>{t.landmark}:</label>
-                  <span>{selectedComplaint.landmark}</span>
-                </div>
-              )}
-              <div className="detail-row full-width">
-                <label>{t.description}:</label>
-                <p>{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
               </div>
             </div>
             <div className="modal-footer">
@@ -712,7 +926,7 @@ const StaffComplaintsPending = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -761,7 +975,6 @@ const StaffComplaintsPending = () => {
 
         .main-content {
           flex: 1;
-         
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -856,6 +1069,12 @@ const StaffComplaintsPending = () => {
           align-items: center;
           gap: 16px;
           border: 1px solid #e2e8f0;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-box:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .stat-box-icon {
@@ -895,10 +1114,12 @@ const StaffComplaintsPending = () => {
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
         }
 
         .search-box {
           flex: 1;
+          min-width: 250px;
           position: relative;
         }
 
@@ -917,6 +1138,7 @@ const StaffComplaintsPending = () => {
           border: 1px solid #e2e8f0;
           border-radius: 10px;
           font-size: 0.85rem;
+          transition: border-color 0.2s;
         }
 
         .search-box input:focus {
@@ -927,6 +1149,7 @@ const StaffComplaintsPending = () => {
         .filter-group {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .filter-select {
@@ -936,6 +1159,12 @@ const StaffComplaintsPending = () => {
           font-size: 0.85rem;
           background: white;
           cursor: pointer;
+          transition: border-color 0.2s;
+        }
+
+        .filter-select:focus {
+          outline: none;
+          border-color: #0288d1;
         }
 
         .table-wrapper {
@@ -960,8 +1189,10 @@ const StaffComplaintsPending = () => {
         .complaints-table th {
           background: #f8fafc;
           color: #64748b;
-          font-weight: 500;
+          font-weight: 600;
           font-size: 0.8rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .complaints-table td {
@@ -979,26 +1210,52 @@ const StaffComplaintsPending = () => {
           color: #0288d1;
         }
 
+        .complainant-cell, .staff-cell {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .complainant-name, .staff-name {
+          font-weight: 500;
+          color: #1e293b;
+        }
+
+        .complainant-contact, .staff-role {
+          font-size: 0.65rem;
+          color: #64748b;
+        }
+
         .priority-badge {
           display: inline-block;
           padding: 4px 12px;
           border-radius: 20px;
           font-size: 0.7rem;
-          font-weight: 500;
+          font-weight: 600;
         }
 
         .priority-high { background: #fee2e2; color: #dc2626; }
+        .priority-urgent { background: #fecaca; color: #b91c1c; font-weight: 700; }
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #e0e7ff; color: #4f46e5; }
 
         .days-badge {
           display: inline-block;
           padding: 4px 12px;
-          background: #fff3e0;
-          color: #f57c00;
+          background: #f0fdf4;
+          color: #059669;
           border-radius: 20px;
           font-size: 0.7rem;
           font-weight: 500;
+        }
+
+        .days-badge.days-caution {
+          background: #fef3c7;
+          color: #d97706;
+        }
+
+        .days-badge.days-warning {
+          background: #fee2e2;
+          color: #dc2626;
         }
 
         .view-btn {
@@ -1010,11 +1267,18 @@ const StaffComplaintsPending = () => {
           transition: all 0.2s;
           background: linear-gradient(135deg, #0288d1, #0277bd);
           color: white;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
         }
 
         .view-btn:hover {
           transform: translateY(-1px);
           box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .no-data-row {
+          text-align: center;
         }
 
         .no-data {
@@ -1050,6 +1314,7 @@ const StaffComplaintsPending = () => {
           cursor: pointer;
           color: #475569;
           font-weight: 500;
+          transition: all 0.2s;
         }
 
         .pagination-btn:hover:not(:disabled) {
@@ -1063,6 +1328,11 @@ const StaffComplaintsPending = () => {
           cursor: not-allowed;
         }
 
+        .pagination-info {
+          color: #64748b;
+          font-size: 0.85rem;
+        }
+
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -1074,6 +1344,12 @@ const StaffComplaintsPending = () => {
           align-items: center;
           justify-content: center;
           z-index: 1100;
+          animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         .modal-content {
@@ -1083,6 +1359,12 @@ const StaffComplaintsPending = () => {
           width: 90%;
           max-height: 85vh;
           overflow-y: auto;
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(50px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
 
         .modal-header {
@@ -1094,6 +1376,7 @@ const StaffComplaintsPending = () => {
           position: sticky;
           top: 0;
           background: white;
+          border-radius: 20px 20px 0 0;
         }
 
         .modal-header h2 {
@@ -1107,16 +1390,25 @@ const StaffComplaintsPending = () => {
           font-size: 1.3rem;
           cursor: pointer;
           color: #94a3b8;
+          transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+          color: #ef4444;
         }
 
         .modal-body {
           padding: 24px;
         }
 
+        .detail-section {
+          margin-bottom: 20px;
+        }
+
         .detail-row {
           display: flex;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
           border-bottom: 1px solid #f1f5f9;
         }
 
@@ -1140,6 +1432,26 @@ const StaffComplaintsPending = () => {
           margin-bottom: 8px;
         }
 
+        .staff-role-badge {
+          display: inline-block;
+          margin-left: 8px;
+          padding: 2px 8px;
+          background: #e2e8f0;
+          border-radius: 12px;
+          font-size: 0.65rem;
+          color: #475569;
+        }
+
+        .complaint-description {
+          line-height: 1.6;
+          background: #f8fafc;
+          padding: 12px;
+          border-radius: 8px;
+          margin-top: 4px;
+          white-space: pre-wrap;
+          word-wrap: break-word;
+        }
+
         .modal-footer {
           padding: 16px 24px;
           border-top: 1px solid #e2e8f0;
@@ -1149,6 +1461,7 @@ const StaffComplaintsPending = () => {
           position: sticky;
           bottom: 0;
           background: white;
+          border-radius: 0 0 20px 20px;
         }
 
         .btn-close {
@@ -1159,6 +1472,11 @@ const StaffComplaintsPending = () => {
           border: none;
           background: #e2e8f0;
           color: #475569;
+          transition: all 0.2s;
+        }
+
+        .btn-close:hover {
+          background: #cbd5e1;
         }
 
         @media (max-width: 1200px) {
@@ -1168,6 +1486,10 @@ const StaffComplaintsPending = () => {
         }
 
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
@@ -1201,6 +1523,11 @@ const StaffComplaintsPending = () => {
           .detail-row label {
             width: 100%;
             margin-bottom: 4px;
+          }
+          
+          .modal-content {
+            width: 95%;
+            margin: 10px;
           }
         }
       `}</style>

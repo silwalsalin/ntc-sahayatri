@@ -18,12 +18,33 @@ const StaffNotifications = () => {
   const [backendStatus, setBackendStatus] = useState('checking');
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
 
   // Fetch notifications
   const fetchNotifications = async () => {
@@ -233,7 +254,6 @@ const StaffNotifications = () => {
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
-      // Update locally even if API fails (for sample data)
       setNotifications(prevNotifications =>
         prevNotifications.map(notification =>
           notification.id === notificationId
@@ -261,7 +281,6 @@ const StaffNotifications = () => {
       }
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
-      // Update locally even if API fails
       setNotifications(prevNotifications =>
         prevNotifications.map(notification => ({ ...notification, read: true }))
       );
@@ -286,7 +305,6 @@ const StaffNotifications = () => {
       }
     } catch (error) {
       console.error('Error deleting notification:', error);
-      // Update locally even if API fails
       setNotifications(prevNotifications =>
         prevNotifications.filter(notification => notification.id !== notificationId)
       );
@@ -297,7 +315,11 @@ const StaffNotifications = () => {
 
   // Delete all notifications
   const deleteAllNotifications = async () => {
-    if (window.confirm(language === 'np' ? 'सबै सूचनाहरू मेटाउनुहुन्छ?' : 'Delete all notifications?')) {
+    const confirmMessage = language === 'np' 
+      ? 'के तपाईं पक्कै सबै सूचनाहरू मेटाउन चाहनुहुन्छ?' 
+      : 'Are you sure you want to delete all notifications?';
+    
+    if (window.confirm(confirmMessage)) {
       try {
         const token = localStorage.getItem('staffToken');
         const response = await axios.delete(
@@ -339,11 +361,13 @@ const StaffNotifications = () => {
       markAsRead(notification.id);
     }
     setShowModal(true);
+    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSelectedNotification(null);
+    document.body.style.overflow = 'unset';
   };
 
   const handleLogout = () => {
@@ -398,6 +422,10 @@ const StaffNotifications = () => {
       refresh: 'रिफ्रेस',
       welcome: 'स्वागत छ',
       dashboard: 'ड्यासबोर्ड',
+      previous: 'अघिल्लो',
+      next: 'अर्को',
+      page: 'पृष्ठ',
+      of: 'को',
       assignment: 'तोकिएको',
       resolution: 'समाधान',
       reminder: 'सम्झना',
@@ -433,6 +461,10 @@ const StaffNotifications = () => {
       refresh: 'Refresh',
       welcome: 'Welcome',
       dashboard: 'Dashboard',
+      previous: 'Previous',
+      next: 'Next',
+      page: 'Page',
+      of: 'of',
       assignment: 'Assignment',
       resolution: 'Resolution',
       reminder: 'Reminder',
@@ -484,6 +516,12 @@ const StaffNotifications = () => {
       low: 'priority-low'
     };
     return classes[priority] || 'priority-medium';
+  };
+
+  const getPriorityText = (priority) => {
+    if (priority === 'high') return t.high;
+    if (priority === 'medium') return t.medium;
+    return t.low;
   };
 
   const getTypeText = (type) => {
@@ -598,8 +636,7 @@ const StaffNotifications = () => {
                           {language === 'np' ? notification.title : notification.enTitle}
                         </h3>
                         <span className={`priority-badge ${getPriorityClass(notification.priority)}`}>
-                          {notification.priority === 'high' ? t.high : 
-                           notification.priority === 'medium' ? t.medium : t.low}
+                          {getPriorityText(notification.priority)}
                         </span>
                       </div>
                       <p className="notification-message">
@@ -669,8 +706,7 @@ const StaffNotifications = () => {
               <div className="detail-row">
                 <label>{t.priority}:</label>
                 <span className={`priority-badge ${getPriorityClass(selectedNotification.priority)}`}>
-                  {selectedNotification.priority === 'high' ? t.high : 
-                   selectedNotification.priority === 'medium' ? t.medium : t.low}
+                  {getPriorityText(selectedNotification.priority)}
                 </span>
               </div>
               <div className="detail-row">
@@ -683,7 +719,7 @@ const StaffNotifications = () => {
               </div>
               <div className="detail-row full-width">
                 <label>{t.message}:</label>
-                <p>{language === 'np' ? selectedNotification.message : selectedNotification.enMessage}</p>
+                <p className="notification-message-full">{language === 'np' ? selectedNotification.message : selectedNotification.enMessage}</p>
               </div>
             </div>
             <div className="modal-footer">
@@ -710,7 +746,7 @@ const StaffNotifications = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -759,7 +795,6 @@ const StaffNotifications = () => {
 
         .main-content {
           flex: 1;
-       
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -823,6 +858,7 @@ const StaffNotifications = () => {
         .header-actions {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .action-btn, .refresh-btn {
@@ -863,6 +899,7 @@ const StaffNotifications = () => {
           padding: 8px;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
         }
 
         .filter-tab {
@@ -911,6 +948,7 @@ const StaffNotifications = () => {
 
         .notification-icon {
           position: relative;
+          flex-shrink: 0;
         }
 
         .type-icon {
@@ -964,6 +1002,16 @@ const StaffNotifications = () => {
           font-size: 0.85rem;
           margin-bottom: 12px;
           line-height: 1.4;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .notification-message-full {
+          color: #334155;
+          font-size: 0.9rem;
+          line-height: 1.6;
         }
 
         .notification-footer {
@@ -971,6 +1019,7 @@ const StaffNotifications = () => {
           gap: 16px;
           font-size: 0.7rem;
           color: #94a3b8;
+          flex-wrap: wrap;
         }
 
         .notification-type {
@@ -978,15 +1027,6 @@ const StaffNotifications = () => {
           align-items: center;
           gap: 4px;
         }
-
-        .type-assignment { border-left-color: #3b82f6; }
-        .type-resolution { border-left-color: #10b981; }
-        .type-reminder { border-left-color: #f59e0b; }
-        .type-training { border-left-color: #8b5cf6; }
-        .type-review { border-left-color: #ec4899; }
-        .type-maintenance { border-left-color: #ef4444; }
-        .type-task { border-left-color: #14b8a6; }
-        .type-info { border-left-color: #64748b; }
 
         .type-badge {
           display: inline-flex;
@@ -1038,6 +1078,7 @@ const StaffNotifications = () => {
           cursor: pointer;
           color: #475569;
           font-weight: 500;
+          transition: all 0.2s;
         }
 
         .pagination-btn:hover:not(:disabled) {
@@ -1051,6 +1092,11 @@ const StaffNotifications = () => {
           cursor: not-allowed;
         }
 
+        .pagination-info {
+          color: #64748b;
+          font-size: 0.85rem;
+        }
+
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -1062,6 +1108,12 @@ const StaffNotifications = () => {
           align-items: center;
           justify-content: center;
           z-index: 1100;
+          animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         .modal-content {
@@ -1071,6 +1123,12 @@ const StaffNotifications = () => {
           width: 90%;
           max-height: 85vh;
           overflow-y: auto;
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(50px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
 
         .modal-header {
@@ -1082,6 +1140,7 @@ const StaffNotifications = () => {
           position: sticky;
           top: 0;
           background: white;
+          border-radius: 20px 20px 0 0;
         }
 
         .modal-header h2 {
@@ -1095,6 +1154,11 @@ const StaffNotifications = () => {
           font-size: 1.3rem;
           cursor: pointer;
           color: #94a3b8;
+          transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+          color: #ef4444;
         }
 
         .modal-body {
@@ -1137,6 +1201,8 @@ const StaffNotifications = () => {
           position: sticky;
           bottom: 0;
           background: white;
+          border-radius: 0 0 20px 20px;
+          flex-wrap: wrap;
         }
 
         .btn-close, .btn-action, .btn-delete {
@@ -1153,9 +1219,18 @@ const StaffNotifications = () => {
           color: #475569;
         }
 
+        .btn-close:hover {
+          background: #cbd5e1;
+        }
+
         .btn-action {
           background: linear-gradient(135deg, #0288d1, #0277bd);
           color: white;
+        }
+
+        .btn-action:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
         .btn-delete {
@@ -1163,11 +1238,37 @@ const StaffNotifications = () => {
           color: white;
         }
 
-        .btn-close:hover, .btn-action:hover, .btn-delete:hover {
+        .btn-delete:hover {
           transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        @media print {
+          .staff-notifications {
+            height: auto;
+            overflow: visible;
+          }
+          
+          .dashboard-layout {
+            margin-top: 0;
+            height: auto;
+          }
+          
+          .main-content {
+            margin-left: 0;
+            width: 100%;
+          }
+          
+          .staff-header, .staff-sidebar, .refresh-btn, .action-btn, .filter-tabs, .backend-warning {
+            display: none;
+          }
         }
 
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
@@ -1198,6 +1299,10 @@ const StaffNotifications = () => {
           
           .filter-tab {
             text-align: center;
+          }
+          
+          .notification-card {
+            flex-direction: column;
           }
           
           .notification-header {

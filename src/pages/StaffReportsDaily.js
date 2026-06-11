@@ -14,12 +14,59 @@ const StaffReportsDaily = () => {
   const [backendStatus, setBackendStatus] = useState('checking');
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
+
+  // Format Nepali date
+  const formatNepaliDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      const year = d.getFullYear() - 57;
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  const formatEnglishDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      return d.toISOString().split('T')[0];
+    } catch (error) {
+      return '-';
+    }
+  };
 
   // Fetch daily report
   const fetchDailyReport = async () => {
@@ -46,7 +93,7 @@ const StaffReportsDaily = () => {
     }
   };
 
-  // Get sample daily report
+  // Get sample daily report with multi-language staff names
   const getSampleDailyReport = () => {
     return {
       date: selectedDate,
@@ -60,6 +107,7 @@ const StaffReportsDaily = () => {
         underReviewComplaints: 2
       },
       complaintsByPriority: {
+        urgent: 2,
         high: 4,
         medium: 5,
         low: 3
@@ -69,51 +117,32 @@ const StaffReportsDaily = () => {
         recharge: 2,
         activation: 3,
         billing: 2,
+        network: 2,
         general: 1
       },
-      tasksCompleted: 6,
-      tasksPending: 4,
-      tasksInProgress: 3,
-      averageResponseTime: 2.5,
-      customerSatisfaction: 4.6,
+      tasksOverview: {
+        completed: 6,
+        pending: 4,
+        inProgress: 3
+      },
+      performanceMetrics: {
+        averageResponseTime: 2.5,
+        customerSatisfaction: 4.6,
+        resolutionRate: 75
+      },
       topPerformingStaff: [
-        { name: 'Ram Bahadur', resolved: 8, satisfaction: 4.8 },
-        { name: 'Sita Sharma', resolved: 6, satisfaction: 4.5 },
-        { name: 'Hari Prasad', resolved: 5, satisfaction: 4.3 }
+        { id: 1, name: 'राम बहादुर', enName: 'Ram Bahadur', resolved: 8, satisfaction: 4.8, role: 'प्राविधिक सहायता', enRole: 'Technical Support' },
+        { id: 2, name: 'सीता शर्मा', enName: 'Sita Sharma', resolved: 6, satisfaction: 4.5, role: 'ग्राहक सेवा', enRole: 'Customer Service' },
+        { id: 3, name: 'हरि प्रसाद', enName: 'Hari Prasad', resolved: 5, satisfaction: 4.3, role: 'नेटवर्क इन्जिनियर', enRole: 'Network Engineer' }
       ],
       recentActivities: [
-        { time: '09:30 AM', action: 'Complaint #NTC-2024-001 resolved', type: 'resolution' },
-        { time: '10:15 AM', action: 'New complaint assigned - #NTC-2024-015', type: 'assignment' },
-        { time: '11:45 AM', action: 'Follow-up call with customer', type: 'followup' },
-        { time: '02:00 PM', action: 'Updated complaint status', type: 'update' },
-        { time: '03:30 PM', action: 'Submitted daily report', type: 'report' }
+        { time: '09:30 AM', action: language === 'np' ? 'गुनासो #NTC-2024-001 समाधान गरियो' : 'Complaint #NTC-2024-001 resolved', type: 'resolution' },
+        { time: '10:15 AM', action: language === 'np' ? 'नयाँ गुनासो तोकियो - #NTC-2024-015' : 'New complaint assigned - #NTC-2024-015', type: 'assignment' },
+        { time: '11:45 AM', action: language === 'np' ? 'ग्राहकसँग पालना कल' : 'Follow-up call with customer', type: 'followup' },
+        { time: '02:00 PM', action: language === 'np' ? 'गुनासो स्थिति अपडेट गरियो' : 'Updated complaint status', type: 'update' },
+        { time: '03:30 PM', action: language === 'np' ? 'दैनिक रिपोर्ट पेश गरियो' : 'Submitted daily report', type: 'report' }
       ]
     };
-  };
-
-  const formatNepaliDate = (date) => {
-    if (!date) return '-';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '-';
-      const year = d.getFullYear() - 57;
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    } catch (error) {
-      return '-';
-    }
-  };
-
-  const formatEnglishDate = (date) => {
-    if (!date) return '-';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '-';
-      return d.toISOString().split('T')[0];
-    } catch (error) {
-      return '-';
-    }
   };
 
   // Check authentication
@@ -133,14 +162,13 @@ const StaffReportsDaily = () => {
     if (selectedDate) {
       fetchDailyReport();
     }
-  }, [selectedDate]);
+  }, [selectedDate, language]);
 
   const handleDateChange = (e) => {
     setSelectedDate(e.target.value);
   };
 
   const handleExportReport = () => {
-    // Export report as JSON or PDF
     const dataStr = JSON.stringify(reportData, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     const exportFileDefaultName = `daily_report_${selectedDate}.json`;
@@ -176,6 +204,7 @@ const StaffReportsDaily = () => {
       underReviewComplaints: 'समीक्षामा गुनासो',
       complaintsByPriority: 'प्राथमिकता अनुसार गुनासो',
       complaintsByCategory: 'प्रकार अनुसार गुनासो',
+      urgent: 'अत्यावश्यक',
       high: 'उच्च',
       medium: 'मध्यम',
       low: 'न्यून',
@@ -183,6 +212,7 @@ const StaffReportsDaily = () => {
       recharge: 'रिचार्ज',
       activation: 'सक्रियता',
       billing: 'बिलिङ',
+      network: 'नेटवर्क',
       general: 'सामान्य',
       tasksOverview: 'कार्य सारांश',
       tasksCompleted: 'पूरा भएका कार्य',
@@ -191,10 +221,12 @@ const StaffReportsDaily = () => {
       performanceMetrics: 'प्रदर्शन मेट्रिक्स',
       averageResponseTime: 'औसत प्रतिक्रिया समय',
       customerSatisfaction: 'ग्राहक सन्तुष्टि',
+      resolutionRate: 'समाधान दर',
       hours: 'घण्टा',
       outOf: 'मध्ये',
       topPerformingStaff: 'उत्कृष्ट प्रदर्शन गर्ने कर्मचारी',
       staffName: 'कर्मचारीको नाम',
+      role: 'भूमिका',
       resolved: 'समाधान गरेको',
       satisfaction: 'सन्तुष्टि',
       recentActivities: 'हालैका गतिविधिहरू',
@@ -212,7 +244,8 @@ const StaffReportsDaily = () => {
       loading: 'लोड हुँदै...',
       back: 'पछाडि फर्कनुहोस्',
       welcome: 'स्वागत छ',
-      dashboard: 'ड्यासबोर्ड'
+      dashboard: 'ड्यासबोर्ड',
+      percent: '%'
     },
     en: {
       pageTitle: 'Daily Report',
@@ -228,6 +261,7 @@ const StaffReportsDaily = () => {
       underReviewComplaints: 'Under Review Complaints',
       complaintsByPriority: 'Complaints by Priority',
       complaintsByCategory: 'Complaints by Category',
+      urgent: 'Urgent',
       high: 'High',
       medium: 'Medium',
       low: 'Low',
@@ -235,6 +269,7 @@ const StaffReportsDaily = () => {
       recharge: 'Recharge',
       activation: 'Activation',
       billing: 'Billing',
+      network: 'Network',
       general: 'General',
       tasksOverview: 'Tasks Overview',
       tasksCompleted: 'Tasks Completed',
@@ -243,10 +278,12 @@ const StaffReportsDaily = () => {
       performanceMetrics: 'Performance Metrics',
       averageResponseTime: 'Avg Response Time',
       customerSatisfaction: 'Customer Satisfaction',
+      resolutionRate: 'Resolution Rate',
       hours: 'hours',
       outOf: 'out of',
       topPerformingStaff: 'Top Performing Staff',
       staffName: 'Staff Name',
+      role: 'Role',
       resolved: 'Resolved',
       satisfaction: 'Satisfaction',
       recentActivities: 'Recent Activities',
@@ -264,11 +301,22 @@ const StaffReportsDaily = () => {
       loading: 'Loading...',
       back: 'Back',
       welcome: 'Welcome',
-      dashboard: 'Dashboard'
+      dashboard: 'Dashboard',
+      percent: '%'
     }
   };
 
   const t = content[language];
+
+  // Helper function to get display name
+  const getStaffDisplayName = (staff) => {
+    return language === 'np' ? staff.name : staff.enName;
+  };
+
+  // Helper function to get role display
+  const getRoleDisplay = (staff) => {
+    return language === 'np' ? staff.role : staff.enRole;
+  };
 
   if (loading) {
     return (
@@ -393,6 +441,15 @@ const StaffReportsDaily = () => {
                 <div className="report-section">
                   <h3>{t.complaintsByPriority}</h3>
                   <div className="priority-stats">
+                    {(reportData?.complaintsByPriority?.urgent > 0) && (
+                      <div className="priority-item urgent">
+                        <span className="priority-label">{t.urgent}</span>
+                        <div className="priority-bar">
+                          <div className="priority-fill urgent-fill" style={{ width: `${((reportData?.complaintsByPriority.urgent || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        </div>
+                        <span className="priority-count">{reportData?.complaintsByPriority.urgent || 0}</span>
+                      </div>
+                    )}
                     <div className="priority-item high">
                       <span className="priority-label">{t.high}</span>
                       <div className="priority-bar">
@@ -450,6 +507,13 @@ const StaffReportsDaily = () => {
                       <span className="category-count">{reportData?.complaintsByCategory.billing || 0}</span>
                     </div>
                     <div className="category-item">
+                      <span className="category-label">{t.network}</span>
+                      <div className="category-bar">
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.network || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                      </div>
+                      <span className="category-count">{reportData?.complaintsByCategory.network || 0}</span>
+                    </div>
+                    <div className="category-item">
                       <span className="category-label">{t.general}</span>
                       <div className="category-bar">
                         <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.general || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
@@ -467,21 +531,21 @@ const StaffReportsDaily = () => {
                   <div className="task-stat">
                     <div className="task-icon">✅</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksCompleted || 0}</div>
+                      <div className="task-value">{reportData?.tasksOverview?.completed || reportData?.tasksCompleted || 0}</div>
                       <div className="task-label">{t.tasksCompleted}</div>
                     </div>
                   </div>
                   <div className="task-stat">
                     <div className="task-icon">⏳</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksPending || 0}</div>
+                      <div className="task-value">{reportData?.tasksOverview?.pending || reportData?.tasksPending || 0}</div>
                       <div className="task-label">{t.tasksPending}</div>
                     </div>
                   </div>
                   <div className="task-stat">
                     <div className="task-icon">🔄</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksInProgress || 0}</div>
+                      <div className="task-value">{reportData?.tasksOverview?.inProgress || reportData?.tasksInProgress || 0}</div>
                       <div className="task-label">{t.tasksInProgress}</div>
                     </div>
                   </div>
@@ -493,12 +557,16 @@ const StaffReportsDaily = () => {
                 <h3>{t.performanceMetrics}</h3>
                 <div className="metrics-cards">
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.averageResponseTime || 0} {t.hours}</div>
+                    <div className="metric-value">{reportData?.performanceMetrics?.averageResponseTime || reportData?.averageResponseTime || 0} {t.hours}</div>
                     <div className="metric-label">{t.averageResponseTime}</div>
                   </div>
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.customerSatisfaction || 0}/5</div>
+                    <div className="metric-value">{reportData?.performanceMetrics?.customerSatisfaction || reportData?.customerSatisfaction || 0}/5</div>
                     <div className="metric-label">{t.customerSatisfaction}</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-value">{reportData?.performanceMetrics?.resolutionRate || 0}{t.percent}</div>
+                    <div className="metric-label">{t.resolutionRate}</div>
                   </div>
                 </div>
               </div>
@@ -511,18 +579,22 @@ const StaffReportsDaily = () => {
                     <thead>
                       <tr>
                         <th>{t.staffName}</th>
+                        <th>{t.role}</th>
                         <th>{t.resolved}</th>
                         <th>{t.satisfaction}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {reportData?.topPerformingStaff?.map((staff, index) => (
-                        <tr key={index}>
-                          <td>{staff.name}</td>
-                          <td>{staff.resolved}</td>
+                        <tr key={staff.id || index}>
+                          <td className="staff-name">{getStaffDisplayName(staff)}</td>
+                          <td className="staff-role">{getRoleDisplay(staff)}</td>
+                          <td className="staff-resolved">{staff.resolved}</td>
                           <td>
-                            <div className="satisfaction-bar">
-                              <div className="satisfaction-fill" style={{ width: `${(staff.satisfaction / 5) * 100}%` }}></div>
+                            <div className="satisfaction-container">
+                              <div className="satisfaction-bar">
+                                <div className="satisfaction-fill" style={{ width: `${(staff.satisfaction / 5) * 100}%` }}></div>
+                              </div>
                               <span className="satisfaction-value">{staff.satisfaction}/5</span>
                             </div>
                           </td>
@@ -551,7 +623,7 @@ const StaffReportsDaily = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -600,7 +672,6 @@ const StaffReportsDaily = () => {
 
         .main-content {
           flex: 1;
-        
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -658,6 +729,7 @@ const StaffReportsDaily = () => {
         .header-actions {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .action-btn, .refresh-btn {
@@ -699,6 +771,7 @@ const StaffReportsDaily = () => {
           display: flex;
           align-items: center;
           gap: 16px;
+          flex-wrap: wrap;
         }
 
         .date-selector label {
@@ -752,6 +825,12 @@ const StaffReportsDaily = () => {
           display: flex;
           align-items: center;
           gap: 12px;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .summary-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .summary-icon {
@@ -782,11 +861,17 @@ const StaffReportsDaily = () => {
           border-bottom: 1px solid #e2e8f0;
         }
 
+        .report-section:last-child {
+          border-bottom: none;
+        }
+
         .report-section h3 {
           font-size: 1rem;
           font-weight: 600;
           color: #0f172a;
           margin-bottom: 16px;
+          padding-left: 12px;
+          border-left: 3px solid #0288d1;
         }
 
         .priority-stats, .category-list {
@@ -802,7 +887,7 @@ const StaffReportsDaily = () => {
         }
 
         .priority-label, .category-label {
-          width: 80px;
+          width: 100px;
           font-weight: 500;
         }
 
@@ -820,13 +905,14 @@ const StaffReportsDaily = () => {
           transition: width 0.3s ease;
         }
 
+        .urgent-fill { background: #b91c1c; }
         .high-fill { background: #dc2626; }
         .medium-fill { background: #f59e0b; }
         .low-fill { background: #10b981; }
         .category-fill { background: #0288d1; }
 
         .priority-count, .category-count {
-          width: 30px;
+          width: 35px;
           text-align: right;
           font-weight: 500;
         }
@@ -844,6 +930,11 @@ const StaffReportsDaily = () => {
           display: flex;
           align-items: center;
           gap: 12px;
+          transition: transform 0.2s;
+        }
+
+        .task-stat:hover {
+          transform: translateY(-2px);
         }
 
         .task-icon {
@@ -863,7 +954,7 @@ const StaffReportsDaily = () => {
 
         .metrics-cards {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: repeat(3, 1fr);
           gap: 16px;
         }
 
@@ -872,10 +963,15 @@ const StaffReportsDaily = () => {
           border-radius: 12px;
           padding: 20px;
           text-align: center;
+          transition: transform 0.2s;
+        }
+
+        .metric-card:hover {
+          transform: translateY(-2px);
         }
 
         .metric-value {
-          font-size: 1.8rem;
+          font-size: 1.5rem;
           font-weight: 700;
           color: #0288d1;
         }
@@ -905,12 +1001,42 @@ const StaffReportsDaily = () => {
         .staff-table th {
           background: #f8fafc;
           color: #64748b;
+          font-weight: 600;
+          font-size: 0.8rem;
+        }
+
+        .staff-table td {
+          color: #334155;
+          font-size: 0.85rem;
+        }
+
+        .staff-table tr:hover {
+          background: #fafcff;
+        }
+
+        .staff-name {
           font-weight: 500;
+          color: #0f172a;
+        }
+
+        .staff-role {
+          color: #64748b;
+          font-size: 0.75rem;
+        }
+
+        .staff-resolved {
+          font-weight: 600;
+          color: #0288d1;
+        }
+
+        .satisfaction-container {
+          display: flex;
+          align-items: center;
+          gap: 12px;
         }
 
         .satisfaction-bar {
-          position: relative;
-          width: 120px;
+          width: 100px;
           height: 8px;
           background: #e2e8f0;
           border-radius: 4px;
@@ -921,13 +1047,12 @@ const StaffReportsDaily = () => {
           height: 100%;
           background: #10b981;
           border-radius: 4px;
+          transition: width 0.3s ease;
         }
 
         .satisfaction-value {
-          position: absolute;
-          right: -40px;
-          top: -4px;
           font-size: 0.7rem;
+          font-weight: 500;
           color: #475569;
         }
 
@@ -944,6 +1069,11 @@ const StaffReportsDaily = () => {
           padding: 12px;
           background: #f8fafc;
           border-radius: 8px;
+          transition: transform 0.2s;
+        }
+
+        .activity-item:hover {
+          transform: translateX(4px);
         }
 
         .activity-time {
@@ -988,7 +1118,7 @@ const StaffReportsDaily = () => {
             width: 100%;
           }
           
-          .sidebar-container, .refresh-btn, .action-btn, .date-selector, .backend-warning {
+          .staff-header, .staff-sidebar, .refresh-btn, .action-btn, .date-selector, .backend-warning {
             display: none;
           }
         }
@@ -1001,9 +1131,23 @@ const StaffReportsDaily = () => {
           .two-columns {
             grid-template-columns: 1fr;
           }
+          
+          .metrics-cards {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 992px) {
+          .metrics-cards {
+            grid-template-columns: 1fr;
+          }
         }
 
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
@@ -1021,10 +1165,6 @@ const StaffReportsDaily = () => {
             grid-template-columns: 1fr;
           }
           
-          .metrics-cards {
-            grid-template-columns: 1fr;
-          }
-          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
@@ -1036,6 +1176,15 @@ const StaffReportsDaily = () => {
           }
           
           .activity-item {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          
+          .activity-time {
+            width: 100%;
+          }
+          
+          .satisfaction-container {
             flex-direction: column;
             align-items: flex-start;
           }

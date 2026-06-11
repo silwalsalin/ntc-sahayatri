@@ -9,19 +9,42 @@ const StaffPerformance = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [selectedPeriod, setSelectedPeriod] = useState('monthly');
   const [performanceData, setPerformanceData] = useState(null);
   const [backendStatus, setBackendStatus] = useState('checking');
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support',
-    joinDate: '2023-01-15',
-    employeeId: 'NTC-EMP-001'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: '',
+    joinDate: '',
+    employeeId: ''
   });
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support',
+          joinDate: user.joinDate || '2023-01-15',
+          employeeId: user.employeeId || `EMP-${user.id || '001'}`
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
 
   // Fetch performance data
   const fetchPerformanceData = async () => {
@@ -85,21 +108,26 @@ const StaffPerformance = () => {
         recharge: { resolved: 28, satisfaction: 4.7, avgTime: 1.8 },
         activation: { resolved: 32, satisfaction: 4.6, avgTime: 2.5 },
         billing: { resolved: 35, satisfaction: 4.4, avgTime: 3.2 },
+        network: { resolved: 20, satisfaction: 4.3, avgTime: 2.8 },
         general: { resolved: 16, satisfaction: 4.8, avgTime: 1.5 }
       },
       achievements: [
-        { title: 'Best Performer of the Month', date: 'March 2024', icon: '🏆' },
-        { title: '100 Complaints Resolved', date: 'February 2024', icon: '🎯' },
-        { title: 'Customer Satisfaction Award', date: 'January 2024', icon: '⭐' },
-        { title: 'Perfect Attendance', date: 'December 2023', icon: '📅' }
+        { title: language === 'np' ? 'महिनाको उत्कृष्ट कर्मचारी' : 'Best Performer of the Month', date: 'March 2024', icon: '🏆' },
+        { title: language === 'np' ? '१०० गुनासो समाधान' : '100 Complaints Resolved', date: 'February 2024', icon: '🎯' },
+        { title: language === 'np' ? 'ग्राहक सन्तुष्टि पुरस्कार' : 'Customer Satisfaction Award', date: 'January 2024', icon: '⭐' },
+        { title: language === 'np' ? 'पूर्ण उपस्थिति' : 'Perfect Attendance', date: 'December 2023', icon: '📅' }
       ],
       feedback: [
-        { from: 'Admin', message: 'Excellent performance this month! Keep it up.', rating: 5, date: '2024-03-30' },
-        { from: 'Supervisor', message: 'Great work on resolving complex complaints.', rating: 4.5, date: '2024-03-25' },
-        { from: 'Customer', message: 'Very helpful and professional service.', rating: 5, date: '2024-03-20' }
+        { from: 'Admin', message: language === 'np' ? 'यो महिना उत्कृष्ट प्रदर्शन! यसरी नै जारी राख्नुहोस्।' : 'Excellent performance this month! Keep it up.', rating: 5, date: '2024-03-30' },
+        { from: 'Supervisor', message: language === 'np' ? 'जटिल गुनासोहरू समाधान गर्ने उत्कृष्ट कार्य।' : 'Great work on resolving complex complaints.', rating: 4.5, date: '2024-03-25' },
+        { from: 'Customer', message: language === 'np' ? 'धेरै सहयोगी र व्यावसायिक सेवा।' : 'Very helpful and professional service.', rating: 5, date: '2024-03-20' }
       ],
-      strengths: ['Quick Resolution', 'High Customer Satisfaction', 'Technical Expertise', 'Team Player'],
-      improvements: ['Documentation', 'Follow-up Communication', 'Time Management']
+      strengths: language === 'np' 
+        ? ['द्रुत समाधान', 'उच्च ग्राहक सन्तुष्टि', 'प्राविधिक विशेषज्ञता', 'टोली खेलाडी']
+        : ['Quick Resolution', 'High Customer Satisfaction', 'Technical Expertise', 'Team Player'],
+      improvements: language === 'np'
+        ? ['कागजातीकरण', 'पालना संचार', 'समय व्यवस्थापन']
+        : ['Documentation', 'Follow-up Communication', 'Time Management']
     };
   };
 
@@ -120,7 +148,7 @@ const StaffPerformance = () => {
     if (selectedPeriod) {
       fetchPerformanceData();
     }
-  }, [selectedPeriod]);
+  }, [selectedPeriod, language]);
 
   const handlePeriodChange = (period) => {
     setSelectedPeriod(period);
@@ -145,6 +173,24 @@ const StaffPerformance = () => {
     localStorage.removeItem('staffUser');
     localStorage.removeItem('staffRole');
     navigate('/');
+  };
+
+  const getMonthTranslation = (month) => {
+    const months = {
+      Jan: { np: 'जनवरी', en: 'Jan' },
+      Feb: { np: 'फेब्रुअरी', en: 'Feb' },
+      Mar: { np: 'मार्च', en: 'Mar' },
+      Apr: { np: 'अप्रिल', en: 'Apr' },
+      May: { np: 'मे', en: 'May' },
+      Jun: { np: 'जुन', en: 'Jun' },
+      Jul: { np: 'जुलाई', en: 'Jul' },
+      Aug: { np: 'अगस्ट', en: 'Aug' },
+      Sep: { np: 'सेप्टेम्बर', en: 'Sep' },
+      Oct: { np: 'अक्टोबर', en: 'Oct' },
+      Nov: { np: 'नोभेम्बर', en: 'Nov' },
+      Dec: { np: 'डिसेम्बर', en: 'Dec' }
+    };
+    return months[month]?.[language] || month;
   };
 
   const content = {
@@ -201,6 +247,7 @@ const StaffPerformance = () => {
       recharge: 'रिचार्ज',
       activation: 'सक्रियता',
       billing: 'बिलिङ',
+      network: 'नेटवर्क',
       general: 'सामान्य'
     },
     en: {
@@ -256,6 +303,7 @@ const StaffPerformance = () => {
       recharge: 'Recharge',
       activation: 'Activation',
       billing: 'Billing',
+      network: 'Network',
       general: 'General'
     }
   };
@@ -271,8 +319,8 @@ const StaffPerformance = () => {
     );
   }
 
-  const maxMonthlyResolved = Math.max(...(performanceData?.monthlyBreakdown?.map(m => m.resolved) || [0]));
-  const maxWeeklyResolved = Math.max(...(performanceData?.weeklyBreakdown?.map(w => w.resolved) || [0]));
+  const currentData = selectedPeriod === 'weekly' ? performanceData?.weeklyBreakdown : performanceData?.monthlyBreakdown;
+  const maxResolved = Math.max(...(currentData?.map(item => item.resolved) || [0]));
 
   return (
     <div className="staff-performance">
@@ -409,25 +457,29 @@ const StaffPerformance = () => {
                 </div>
               </div>
 
-              {/* Performance Chart - Monthly/Weekly Breakdown */}
+              {/* Performance Chart */}
               <div className="report-section">
                 <h3>{selectedPeriod === 'weekly' ? t.weeklyBreakdown : t.monthlyBreakdown}</h3>
                 <div className="performance-chart">
                   <div className="bar-chart">
-                    {(selectedPeriod === 'weekly' ? performanceData?.weeklyBreakdown : performanceData?.monthlyBreakdown)?.map((item, index) => (
+                    {currentData?.map((item, index) => (
                       <div key={index} className="bar-item">
-                        <div className="bar-label">{selectedPeriod === 'weekly' ? item.week : item.month}</div>
+                        <div className="bar-label">
+                          {selectedPeriod === 'weekly' 
+                            ? `${t.week} ${item.week.split(' ')[1]}` 
+                            : getMonthTranslation(item.month)}
+                        </div>
                         <div className="bars-container">
                           <div 
                             className="bar resolved-bar" 
-                            style={{ height: `${(item.resolved / (selectedPeriod === 'weekly' ? maxWeeklyResolved : maxMonthlyResolved)) * 120}px` }}
+                            style={{ height: `${(item.resolved / maxResolved) * 120}px` }}
                             title={`Resolved: ${item.resolved}`}
                           >
                             <span className="bar-value">{item.resolved}</span>
                           </div>
                           <div 
                             className="bar tasks-bar" 
-                            style={{ height: `${(item.tasks / (selectedPeriod === 'weekly' ? maxWeeklyResolved : maxMonthlyResolved)) * 120}px` }}
+                            style={{ height: `${(item.tasks / maxResolved) * 120}px` }}
                             title={`Tasks: ${item.tasks}`}
                           >
                             <span className="bar-value">{item.tasks}</span>
@@ -462,15 +514,17 @@ const StaffPerformance = () => {
                       <tbody>
                         {Object.entries(performanceData?.categoryPerformance || {}).map(([category, data]) => (
                           <tr key={category}>
-                            <td>{t[category] || category}</td>
-                            <td>{data.resolved}</td>
+                            <td className="category-name">{t[category] || category}</td>
+                            <td className="category-resolved">{data.resolved}</td>
                             <td>
-                              <div className="satisfaction-bar">
-                                <div className="satisfaction-fill" style={{ width: `${(data.satisfaction / 5) * 100}%` }}></div>
+                              <div className="satisfaction-container">
+                                <div className="satisfaction-bar">
+                                  <div className="satisfaction-fill" style={{ width: `${(data.satisfaction / 5) * 100}%` }}></div>
+                                </div>
                                 <span className="satisfaction-value">{data.satisfaction}/5</span>
                               </div>
                             </td>
-                            <td>{data.avgTime} {t.days}</td>
+                            <td className="category-time">{data.avgTime} {t.days}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -545,7 +599,7 @@ const StaffPerformance = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -594,7 +648,6 @@ const StaffPerformance = () => {
 
         .main-content {
           flex: 1;
-         
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -652,6 +705,7 @@ const StaffPerformance = () => {
         .header-actions {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .action-btn, .refresh-btn {
@@ -763,6 +817,7 @@ const StaffPerformance = () => {
           gap: 20px;
           font-size: 0.8rem;
           color: #64748b;
+          flex-wrap: wrap;
         }
 
         .overall-score {
@@ -805,6 +860,12 @@ const StaffPerformance = () => {
           display: flex;
           align-items: center;
           gap: 12px;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .summary-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .summary-icon {
@@ -841,11 +902,17 @@ const StaffPerformance = () => {
           border-bottom: 1px solid #e2e8f0;
         }
 
+        .report-section:last-child {
+          border-bottom: none;
+        }
+
         .report-section h3 {
           font-size: 1rem;
           font-weight: 600;
           color: #0f172a;
           margin-bottom: 20px;
+          padding-left: 12px;
+          border-left: 3px solid #0288d1;
         }
 
         .performance-chart {
@@ -858,11 +925,13 @@ const StaffPerformance = () => {
           align-items: flex-end;
           gap: 20px;
           padding: 20px 0;
+          flex-wrap: wrap;
         }
 
         .bar-item {
           flex: 1;
           text-align: center;
+          min-width: 100px;
         }
 
         .bar-label {
@@ -952,11 +1021,40 @@ const StaffPerformance = () => {
         .category-table th {
           background: #f8fafc;
           color: #64748b;
+          font-weight: 600;
+          font-size: 0.8rem;
+        }
+
+        .category-table td {
+          color: #334155;
+          font-size: 0.85rem;
+        }
+
+        .category-table tr:hover {
+          background: #fafcff;
+        }
+
+        .category-name {
           font-weight: 500;
+          color: #0f172a;
+        }
+
+        .category-resolved {
+          font-weight: 600;
+          color: #0288d1;
+        }
+
+        .category-time {
+          color: #64748b;
+        }
+
+        .satisfaction-container {
+          display: flex;
+          align-items: center;
+          gap: 12px;
         }
 
         .satisfaction-bar {
-          position: relative;
           width: 100px;
           height: 8px;
           background: #e2e8f0;
@@ -968,13 +1066,12 @@ const StaffPerformance = () => {
           height: 100%;
           background: #10b981;
           border-radius: 4px;
+          transition: width 0.3s ease;
         }
 
         .satisfaction-value {
-          position: absolute;
-          right: -40px;
-          top: -4px;
           font-size: 0.7rem;
+          font-weight: 500;
           color: #475569;
         }
 
@@ -983,10 +1080,17 @@ const StaffPerformance = () => {
           border-radius: 12px;
           padding: 16px;
           margin-bottom: 16px;
+          transition: transform 0.2s;
+        }
+
+        .strengths-box:hover, .improvements-box:hover {
+          transform: translateY(-2px);
         }
 
         .strengths-box h3, .improvements-box h3 {
           margin-bottom: 12px;
+          border-left: none;
+          padding-left: 0;
         }
 
         .strengths-list, .improvements-list {
@@ -1023,6 +1127,12 @@ const StaffPerformance = () => {
           display: flex;
           align-items: center;
           gap: 12px;
+          transition: transform 0.2s;
+        }
+
+        .achievement-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .achievement-icon {
@@ -1050,6 +1160,11 @@ const StaffPerformance = () => {
           background: #f8fafc;
           border-radius: 12px;
           padding: 16px;
+          transition: transform 0.2s;
+        }
+
+        .feedback-card:hover {
+          transform: translateX(4px);
         }
 
         .feedback-header {
@@ -1079,6 +1194,7 @@ const StaffPerformance = () => {
           color: #334155;
           font-style: italic;
           margin-bottom: 8px;
+          line-height: 1.5;
         }
 
         .feedback-date {
@@ -1102,7 +1218,7 @@ const StaffPerformance = () => {
             width: 100%;
           }
           
-          .sidebar-container, .refresh-btn, .action-btn, .period-selector, .backend-warning {
+          .staff-header, .staff-sidebar, .refresh-btn, .action-btn, .period-selector, .backend-warning {
             display: none;
           }
         }
@@ -1123,7 +1239,17 @@ const StaffPerformance = () => {
           }
         }
 
+        @media (max-width: 992px) {
+          .summary-cards {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;

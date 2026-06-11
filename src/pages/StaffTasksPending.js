@@ -19,11 +19,12 @@ const StaffTasksPending = () => {
   const itemsPerPage = 10;
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
 
   const [tasks, setTasks] = useState([]);
@@ -33,8 +34,29 @@ const StaffTasksPending = () => {
     high: 0,
     medium: 0,
     low: 0,
-    overdue: 0
+    overdue: 0,
+    urgent: 0
   });
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
 
   // Fetch pending tasks
   const fetchPendingTasks = async () => {
@@ -68,24 +90,36 @@ const StaffTasksPending = () => {
   // Calculate statistics
   const calculateStats = (tasksData) => {
     const today = new Date();
-    const stats = {
+    today.setHours(0, 0, 0, 0);
+    
+    const newStats = {
       total: tasksData.length,
       high: tasksData.filter(t => t.priority === 'high').length,
       medium: tasksData.filter(t => t.priority === 'medium').length,
       low: tasksData.filter(t => t.priority === 'low').length,
+      urgent: tasksData.filter(t => t.priority === 'urgent').length,
       overdue: tasksData.filter(t => {
         if (!t.dueDateObj) return false;
-        return t.dueDateObj < today;
+        const dueDate = new Date(t.dueDateObj);
+        dueDate.setHours(0, 0, 0, 0);
+        return dueDate < today;
       }).length
     };
-    setStats(stats);
+    setStats(newStats);
   };
 
   // Transform task data
   const transformTaskData = (task) => {
     const dueDateObj = task.dueDate ? new Date(task.dueDate) : null;
     const today = new Date();
-    const isOverdue = dueDateObj && dueDateObj < today;
+    today.setHours(0, 0, 0, 0);
+    let isOverdue = false;
+    
+    if (dueDateObj) {
+      const dueDate = new Date(dueDateObj);
+      dueDate.setHours(0, 0, 0, 0);
+      isOverdue = dueDate < today;
+    }
     
     return {
       id: task.id,
@@ -96,6 +130,8 @@ const StaffTasksPending = () => {
       status: mapStatus(task.status),
       priority: mapPriority(task.priority),
       assignedBy: task.assignedBy || 'Admin',
+      assignedById: task.assignedById || null,
+      assignedByName: task.assignedByName || 'Admin',
       assignedDate: task.assignedDate ? formatNepaliDate(task.assignedDate) : formatNepaliDate(new Date()),
       enAssignedDate: task.assignedDate ? formatEnglishDate(task.assignedDate) : formatEnglishDate(new Date()),
       dueDate: task.dueDate ? formatNepaliDate(task.dueDate) : null,
@@ -104,7 +140,10 @@ const StaffTasksPending = () => {
       isOverdue: isOverdue,
       relatedComplaintId: task.relatedComplaintId || null,
       relatedTicketId: task.relatedTicketId || null,
-      notes: task.notes || null
+      relatedTicketNo: task.relatedTicketNo || task.relatedTicketId || null,
+      notes: task.notes || null,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt
     };
   };
 
@@ -126,7 +165,8 @@ const StaffTasksPending = () => {
     const priorityMap = {
       'High': 'high',
       'high': 'high',
-      'Urgent': 'high',
+      'Urgent': 'urgent',
+      'urgent': 'urgent',
       'Medium': 'medium',
       'medium': 'medium',
       'Low': 'low',
@@ -184,74 +224,112 @@ const StaffTasksPending = () => {
               : task
           )
         );
-        alert(language === 'np' ? 'कार्य स्थिति सफलतापूर्वक अपडेट गरियो' : 'Task status updated successfully');
+        calculateStats(
+          tasks.map(task =>
+            task.id === taskId
+              ? { ...task, status: newStatusValue }
+              : task
+          )
+        );
+        showNotification(
+          language === 'np' ? 'कार्य स्थिति सफलतापूर्वक अपडेट गरियो' : 'Task status updated successfully',
+          'success'
+        );
         setShowStatusModal(false);
         setSelectedTask(null);
-        // Refresh stats
-        fetchPendingTasks();
+        fetchPendingTasks(); // Refresh the list
       } else {
         throw new Error(response.data.message || 'Failed to update status');
       }
     } catch (error) {
       console.error('Error updating task status:', error);
-      alert(language === 'np' 
-        ? 'स्थिति अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
-        : 'Failed to update status. Please try again.');
+      showNotification(
+        language === 'np' 
+          ? 'स्थिति अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
+          : 'Failed to update status. Please try again.',
+        'error'
+      );
     }
   };
 
-  // Get sample pending tasks
+  // Show notification
+  const showNotification = (message, type = 'info') => {
+    alert(message);
+  };
+
+  // Get sample pending tasks with multiple staff assignments
   const getSamplePendingTasks = () => {
     return [
       { 
         id: 1, 
         title: 'समीक्षा गर्न बाँकी गुनासोहरू', 
         enTitle: 'Review pending complaints',
-        description: 'सबै विचाराधीन गुनासोहरूको समीक्षा गरी उचित वर्गीकरण गर्नुहोस्।',
-        enDescription: 'Review all pending complaints and classify them appropriately.',
+        description: 'सबै विचाराधीन गुनासोहरूको समीक्षा गरी उचित वर्गीकरण गर्नुहोस्। यसमा गत हप्ताका १५ वटा गुनासोहरू समावेश छन्।',
+        enDescription: 'Review all pending complaints and classify them appropriately. This includes 15 complaints from last week.',
         status: 'pending',
         priority: 'high',
         assignedBy: 'Admin',
+        assignedByName: 'Admin',
         assignedDate: '2024-02-20',
         dueDate: '2024-02-25',
-        relatedTicketId: 'NTC-2024-001'
+        relatedTicketId: 'NTC-2024-001',
+        relatedTicketNo: 'NTC-2024-001'
       },
       { 
         id: 2, 
         title: 'ग्राहक पालना गर्नुहोस्', 
         enTitle: 'Customer follow-up',
-        description: 'समाधान गरिएका गुनासोहरूको ग्राहक पालना गरी सन्तुष्टि सुनिश्चित गर्नुहोस्।',
-        enDescription: 'Follow up with customers whose complaints have been resolved to ensure satisfaction.',
+        description: 'समाधान गरिएका गुनासोहरूको ग्राहक पालना गरी सन्तुष्टि सुनिश्चित गर्नुहोस्। १० जना ग्राहकलाई सम्पर्क गर्नुपर्नेछ।',
+        enDescription: 'Follow up with customers whose complaints have been resolved to ensure satisfaction. Need to contact 10 customers.',
         status: 'pending',
-        priority: 'high',
+        priority: 'urgent',
         assignedBy: 'Team Lead',
+        assignedByName: 'Team Lead',
         assignedDate: '2024-02-22',
-        dueDate: '2024-02-26',
-        relatedTicketId: 'NTC-2024-015'
+        dueDate: '2024-02-24',
+        relatedTicketId: 'NTC-2024-015',
+        relatedTicketNo: 'NTC-2024-015'
       },
       { 
         id: 3, 
         title: 'प्रशिक्षण सामग्री तयार गर्नुहोस्', 
         enTitle: 'Prepare training materials',
-        description: 'नयाँ स्टाफको लागि प्रशिक्षण सामग्री तयार गर्नुहोस्।',
-        enDescription: 'Prepare training materials for new staff.',
+        description: 'नयाँ स्टाफको लागि प्रशिक्षण सामग्री तयार गर्नुहोस्। यसमा पावरपोइन्ट स्लाइड्स र दस्तावेज समावेश हुनेछन्।',
+        enDescription: 'Prepare training materials for new staff. This will include PowerPoint slides and documentation.',
         status: 'pending',
         priority: 'medium',
         assignedBy: 'HR Department',
+        assignedByName: 'HR Department',
         assignedDate: '2024-02-23',
-        dueDate: '2024-03-01'
+        dueDate: '2024-02-28'
       },
       { 
         id: 4, 
         title: 'प्रणाली अपडेट परीक्षण गर्नुहोस्', 
         enTitle: 'Test system update',
-        description: 'नयाँ प्रणाली अपडेटको परीक्षण गरी रिपोर्ट तयार गर्नुहोस्।',
-        enDescription: 'Test the new system update and prepare a report.',
+        description: 'नयाँ प्रणाली अपडेटको परीक्षण गरी रिपोर्ट तयार गर्नुहोस्। सबै मोड्युलहरूको परीक्षण गर्नुपर्नेछ।',
+        enDescription: 'Test the new system update and prepare a report. All modules need to be tested.',
         status: 'pending',
-        priority: 'low',
+        priority: 'high',
         assignedBy: 'IT Department',
+        assignedByName: 'IT Department',
         assignedDate: '2024-02-21',
-        dueDate: '2024-02-20'
+        dueDate: '2024-02-23',
+        relatedTicketId: 'NTC-2024-020',
+        relatedTicketNo: 'NTC-2024-020'
+      },
+      { 
+        id: 5, 
+        title: 'साप्ताहिक रिपोर्ट तयार गर्नुहोस्', 
+        enTitle: 'Prepare weekly report',
+        description: 'यो हप्ताको कार्य प्रगति र गुनासो समाधानको विवरण सहितको रिपोर्ट तयार गर्नुहोस्।',
+        enDescription: 'Prepare a report with details of weekly progress and complaint resolutions.',
+        status: 'pending',
+        priority: 'medium',
+        assignedBy: 'Supervisor',
+        assignedByName: 'Supervisor',
+        assignedDate: '2024-02-24',
+        dueDate: '2024-02-26'
       }
     ];
   };
@@ -295,6 +373,7 @@ const StaffTasksPending = () => {
       high: 'उच्च',
       medium: 'मध्यम',
       low: 'न्यून',
+      urgent: 'अत्यावश्यक',
       previous: 'अघिल्लो',
       next: 'अर्को',
       page: 'पृष्ठ',
@@ -305,8 +384,8 @@ const StaffTasksPending = () => {
       highPriority: 'उच्च प्राथमिकता',
       mediumPriority: 'मध्यम प्राथमिकता',
       lowPriority: 'न्यून प्राथमिकता',
+      urgentPriority: 'अत्यावश्यक',
       overdue: 'म्याद गुज्रेको',
-      days: 'दिन',
       loading: 'लोड हुँदै...',
       refresh: 'रिफ्रेस',
       welcome: 'स्वागत छ',
@@ -342,6 +421,7 @@ const StaffTasksPending = () => {
       high: 'High',
       medium: 'Medium',
       low: 'Low',
+      urgent: 'Urgent',
       previous: 'Previous',
       next: 'Next',
       page: 'Page',
@@ -352,8 +432,8 @@ const StaffTasksPending = () => {
       highPriority: 'High Priority',
       mediumPriority: 'Medium Priority',
       lowPriority: 'Low Priority',
+      urgentPriority: 'Urgent',
       overdue: 'Overdue',
-      days: 'days',
       loading: 'Loading...',
       refresh: 'Refresh',
       welcome: 'Welcome',
@@ -398,7 +478,8 @@ const StaffTasksPending = () => {
     const classes = { 
       high: 'priority-high', 
       medium: 'priority-medium', 
-      low: 'priority-low' 
+      low: 'priority-low',
+      urgent: 'priority-urgent'
     };
     return classes[priority] || 'priority-medium';
   };
@@ -408,14 +489,16 @@ const StaffTasksPending = () => {
       const priorityTexts = {
         high: 'उच्च',
         medium: 'मध्यम',
-        low: 'न्यून'
+        low: 'न्यून',
+        urgent: 'अत्यावश्यक'
       };
       return priorityTexts[priority] || priority;
     } else {
       const priorityTexts = {
         high: 'High',
         medium: 'Medium',
-        low: 'Low'
+        low: 'Low',
+        urgent: 'Urgent'
       };
       return priorityTexts[priority] || priority;
     }
@@ -442,9 +525,26 @@ const StaffTasksPending = () => {
     return searchMatch && priorityMatch;
   });
 
+  // Sort tasks: urgent first, then high, then by due date
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+    const aPriority = a.priority === 'urgent' ? 'urgent' : a.priority;
+    const bPriority = b.priority === 'urgent' ? 'urgent' : b.priority;
+    
+    if (priorityOrder[aPriority] !== priorityOrder[bPriority]) {
+      return priorityOrder[aPriority] - priorityOrder[bPriority];
+    }
+    
+    // If same priority, sort by due date (earlier first)
+    if (a.dueDateObj && b.dueDateObj) {
+      return a.dueDateObj - b.dueDateObj;
+    }
+    return 0;
+  });
+
   // Pagination
-  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
-  const paginatedTasks = filteredTasks.slice(
+  const totalPages = Math.ceil(sortedTasks.length / itemsPerPage);
+  const paginatedTasks = sortedTasks.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -452,11 +552,13 @@ const StaffTasksPending = () => {
   const openModal = (task) => {
     setSelectedTask(task);
     setShowModal(true);
+    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSelectedTask(null);
+    document.body.style.overflow = 'unset';
   };
 
   const openStatusModal = (task) => {
@@ -470,6 +572,7 @@ const StaffTasksPending = () => {
     setShowStatusModal(false);
     setSelectedTask(null);
     setNewStatus('');
+    document.body.style.overflow = 'unset';
   };
 
   const handleStatusUpdate = () => {
@@ -544,6 +647,13 @@ const StaffTasksPending = () => {
                 </div>
               </div>
               <div className="stat-box">
+                <div className="stat-box-icon purple">🔴</div>
+                <div className="stat-box-info">
+                  <div className="stat-box-value">{stats.urgent}</div>
+                  <div className="stat-box-label">{t.urgentPriority}</div>
+                </div>
+              </div>
+              <div className="stat-box">
                 <div className="stat-box-icon red">🔴</div>
                 <div className="stat-box-info">
                   <div className="stat-box-value">{stats.high}</div>
@@ -591,6 +701,7 @@ const StaffTasksPending = () => {
                   className="filter-select"
                 >
                   <option value="all">{t.all}</option>
+                  <option value="urgent">{t.urgent}</option>
                   <option value="high">{t.high}</option>
                   <option value="medium">{t.medium}</option>
                   <option value="low">{t.low}</option>
@@ -618,8 +729,13 @@ const StaffTasksPending = () => {
                         <td className={`task-title ${task.isOverdue ? 'overdue' : ''}`}>
                           {language === 'np' ? task.title : task.enTitle}
                           {task.isOverdue && <span className="overdue-badge">{t.overdue}</span>}
+                          {task.relatedTicketNo && (
+                            <div className="task-ticket-ref">
+                              #{task.relatedTicketNo}
+                            </div>
+                          )}
                         </td>
-                        <td>{task.assignedBy}</td>
+                        <td>{task.assignedByName || task.assignedBy}</td>
                         <td>{getAssignedDate(task)}</td>
                         <td className={task.isOverdue ? 'overdue-date' : ''}>
                           {getDueDate(task) || '-'}
@@ -642,7 +758,7 @@ const StaffTasksPending = () => {
                       </tr>
                     ))
                   ) : (
-                    <tr className="no-data">
+                    <tr className="no-data-row">
                       <td colSpan="6" className="no-data">
                         <div className="no-data-content">
                           <span className="no-data-icon">📭</span>
@@ -691,47 +807,49 @@ const StaffTasksPending = () => {
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="detail-row">
-                <label>{t.taskTitle}:</label>
-                <span>{language === 'np' ? selectedTask.title : selectedTask.enTitle}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.description}:</label>
-                <span>{language === 'np' ? selectedTask.description : selectedTask.enDescription}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.assignedBy}:</label>
-                <span>{selectedTask.assignedBy}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.assignedDate}:</label>
-                <span>{getAssignedDate(selectedTask)}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.dueDate}:</label>
-                <span className={selectedTask.isOverdue ? 'overdue-date' : ''}>
-                  {getDueDate(selectedTask) || '-'}
-                  {selectedTask.isOverdue && <span className="overdue-badge-modal">{t.overdue}</span>}
-                </span>
-              </div>
-              <div className="detail-row">
-                <label>{t.priority}:</label>
-                <span className={`priority-badge ${getPriorityClass(selectedTask.priority)}`}>
-                  {getPriorityText(selectedTask.priority)}
-                </span>
-              </div>
-              {selectedTask.relatedTicketId && (
+              <div className="detail-section">
                 <div className="detail-row">
-                  <label>{t.relatedComplaint}:</label>
-                  <span className="ticket-id">{selectedTask.relatedTicketId}</span>
+                  <label>{t.taskTitle}:</label>
+                  <span>{language === 'np' ? selectedTask.title : selectedTask.enTitle}</span>
                 </div>
-              )}
-              {selectedTask.notes && (
-                <div className="detail-row full-width">
-                  <label>{t.notes}:</label>
-                  <p>{selectedTask.notes}</p>
+                <div className="detail-row">
+                  <label>{t.description}:</label>
+                  <span>{language === 'np' ? selectedTask.description : selectedTask.enDescription}</span>
                 </div>
-              )}
+                <div className="detail-row">
+                  <label>{t.assignedBy}:</label>
+                  <span>{selectedTask.assignedByName || selectedTask.assignedBy}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.assignedDate}:</label>
+                  <span>{getAssignedDate(selectedTask)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.dueDate}:</label>
+                  <span className={selectedTask.isOverdue ? 'overdue-date' : ''}>
+                    {getDueDate(selectedTask) || '-'}
+                    {selectedTask.isOverdue && <span className="overdue-badge-modal">{t.overdue}</span>}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.priority}:</label>
+                  <span className={`priority-badge ${getPriorityClass(selectedTask.priority)}`}>
+                    {getPriorityText(selectedTask.priority)}
+                  </span>
+                </div>
+                {selectedTask.relatedTicketNo && (
+                  <div className="detail-row">
+                    <label>{t.relatedComplaint}:</label>
+                    <span className="ticket-id">{selectedTask.relatedTicketNo}</span>
+                  </div>
+                )}
+                {selectedTask.notes && (
+                  <div className="detail-row full-width">
+                    <label>{t.notes}:</label>
+                    <p className="notes-text">{selectedTask.notes}</p>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="modal-footer">
               <button className="btn-update-status" onClick={() => openStatusModal(selectedTask)}>
@@ -785,7 +903,7 @@ const StaffTasksPending = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -915,7 +1033,7 @@ const StaffTasksPending = () => {
 
         .stats-row {
           display: grid;
-          grid-template-columns: repeat(5, 1fr);
+          grid-template-columns: repeat(6, 1fr);
           gap: 16px;
           margin-bottom: 24px;
         }
@@ -928,6 +1046,12 @@ const StaffTasksPending = () => {
           align-items: center;
           gap: 12px;
           border: 1px solid #e2e8f0;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-box:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .stat-box-icon {
@@ -941,6 +1065,7 @@ const StaffTasksPending = () => {
         }
 
         .stat-box-icon.blue { background: #e3f2fd; color: #1565c0; }
+        .stat-box-icon.purple { background: #f3e5f5; color: #7b1fa2; }
         .stat-box-icon.red { background: #fee2e2; color: #dc2626; }
         .stat-box-icon.yellow { background: #fef3c7; color: #d97706; }
         .stat-box-icon.green { background: #e8f5e9; color: #2e7d32; }
@@ -968,10 +1093,12 @@ const StaffTasksPending = () => {
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
         }
 
         .search-box {
           flex: 1;
+          min-width: 250px;
           position: relative;
         }
 
@@ -990,6 +1117,7 @@ const StaffTasksPending = () => {
           border: 1px solid #e2e8f0;
           border-radius: 10px;
           font-size: 0.85rem;
+          transition: border-color 0.2s;
         }
 
         .search-box input:focus {
@@ -1009,6 +1137,12 @@ const StaffTasksPending = () => {
           font-size: 0.85rem;
           background: white;
           cursor: pointer;
+          transition: border-color 0.2s;
+        }
+
+        .filter-select:focus {
+          outline: none;
+          border-color: #0288d1;
         }
 
         .table-wrapper {
@@ -1033,8 +1167,10 @@ const StaffTasksPending = () => {
         .tasks-table th {
           background: #f8fafc;
           color: #64748b;
-          font-weight: 500;
+          font-weight: 600;
           font-size: 0.8rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .tasks-table td {
@@ -1059,6 +1195,14 @@ const StaffTasksPending = () => {
           color: #dc2626;
         }
 
+        .task-ticket-ref {
+          font-size: 0.65rem;
+          color: #0288d1;
+          margin-top: 4px;
+          font-family: monospace;
+          width: 100%;
+        }
+
         .overdue-badge {
           display: inline-block;
           padding: 2px 8px;
@@ -1071,7 +1215,7 @@ const StaffTasksPending = () => {
 
         .overdue-date {
           color: #dc2626;
-          font-weight: 500;
+          font-weight: 600;
         }
 
         .overdue-badge-modal {
@@ -1090,16 +1234,18 @@ const StaffTasksPending = () => {
           padding: 4px 12px;
           border-radius: 20px;
           font-size: 0.7rem;
-          font-weight: 500;
+          font-weight: 600;
         }
 
         .priority-high { background: #fee2e2; color: #dc2626; }
+        .priority-urgent { background: #fecaca; color: #b91c1c; font-weight: 700; }
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #e0e7ff; color: #4f46e5; }
 
         .action-buttons {
           display: flex;
           gap: 8px;
+          flex-wrap: wrap;
         }
 
         .view-btn, .update-status-btn {
@@ -1124,6 +1270,10 @@ const StaffTasksPending = () => {
         .view-btn:hover, .update-status-btn:hover {
           transform: translateY(-1px);
           box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .no-data-row {
+          text-align: center;
         }
 
         .no-data {
@@ -1159,6 +1309,7 @@ const StaffTasksPending = () => {
           cursor: pointer;
           color: #475569;
           font-weight: 500;
+          transition: all 0.2s;
         }
 
         .pagination-btn:hover:not(:disabled) {
@@ -1172,6 +1323,11 @@ const StaffTasksPending = () => {
           cursor: not-allowed;
         }
 
+        .pagination-info {
+          color: #64748b;
+          font-size: 0.85rem;
+        }
+
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -1183,6 +1339,12 @@ const StaffTasksPending = () => {
           align-items: center;
           justify-content: center;
           z-index: 1100;
+          animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         .modal-content {
@@ -1192,6 +1354,12 @@ const StaffTasksPending = () => {
           width: 90%;
           max-height: 85vh;
           overflow-y: auto;
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(50px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
 
         .status-modal {
@@ -1207,6 +1375,7 @@ const StaffTasksPending = () => {
           position: sticky;
           top: 0;
           background: white;
+          border-radius: 20px 20px 0 0;
         }
 
         .modal-header h2 {
@@ -1220,16 +1389,25 @@ const StaffTasksPending = () => {
           font-size: 1.3rem;
           cursor: pointer;
           color: #94a3b8;
+          transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+          color: #ef4444;
         }
 
         .modal-body {
           padding: 24px;
         }
 
+        .detail-section {
+          margin-bottom: 20px;
+        }
+
         .detail-row {
           display: flex;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
           border-bottom: 1px solid #f1f5f9;
         }
 
@@ -1259,6 +1437,14 @@ const StaffTasksPending = () => {
           color: #0288d1;
         }
 
+        .notes-text {
+          line-height: 1.6;
+          background: #f8fafc;
+          padding: 12px;
+          border-radius: 8px;
+          margin-top: 4px;
+        }
+
         .status-select {
           flex: 1;
           padding: 8px 12px;
@@ -1276,6 +1462,7 @@ const StaffTasksPending = () => {
           position: sticky;
           bottom: 0;
           background: white;
+          border-radius: 0 0 20px 20px;
         }
 
         .btn-close, .btn-update-status, .btn-cancel, .btn-update {
@@ -1284,6 +1471,7 @@ const StaffTasksPending = () => {
           cursor: pointer;
           font-weight: 500;
           border: none;
+          transition: all 0.2s;
         }
 
         .btn-close {
@@ -1291,9 +1479,18 @@ const StaffTasksPending = () => {
           color: #475569;
         }
 
+        .btn-close:hover {
+          background: #cbd5e1;
+        }
+
         .btn-update-status {
           background: linear-gradient(135deg, #10b981, #059669);
           color: white;
+        }
+
+        .btn-update-status:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         .btn-cancel {
@@ -1301,9 +1498,23 @@ const StaffTasksPending = () => {
           color: #475569;
         }
 
+        .btn-cancel:hover {
+          background: #cbd5e1;
+        }
+
         .btn-update {
           background: linear-gradient(135deg, #0288d1, #0277bd);
           color: white;
+        }
+
+        .btn-update:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .btn-update:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         @media (max-width: 1200px) {
@@ -1319,6 +1530,10 @@ const StaffTasksPending = () => {
         }
 
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
@@ -1356,6 +1571,11 @@ const StaffTasksPending = () => {
           .detail-row label {
             width: 100%;
             margin-bottom: 4px;
+          }
+          
+          .modal-content {
+            width: 95%;
+            margin: 10px;
           }
         }
       `}</style>
