@@ -230,7 +230,15 @@ CREATE TABLE IF NOT EXISTS `staff` (
     INDEX `idx_staff_username` (`username`),
     INDEX `idx_staff_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Add assignment columns to complaints table
+ALTER TABLE complaints ADD COLUMN assigned_to VARCHAR(100);
+ALTER TABLE complaints ADD COLUMN assigned_by INTEGER;
+ALTER TABLE complaints ADD COLUMN assigned_at DATETIME;
 
+-- Add assignment columns to complaint_regarding table
+ALTER TABLE complaint_regarding ADD COLUMN assigned_to VARCHAR(100);
+ALTER TABLE complaint_regarding ADD COLUMN assigned_by INTEGER;
+ALTER TABLE complaint_regarding ADD COLUMN assigned_at DATETIME;
 -- Create index for faster lookups
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_phone ON users(phone);

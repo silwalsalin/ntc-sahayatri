@@ -9,15 +9,12 @@ const AdminComplaintsPending = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
   const [loading, setLoading] = useState(true);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [newStatus, setNewStatus] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -96,20 +93,6 @@ const AdminComplaintsPending = () => {
     return priorityMap[priority] || 'medium';
   };
 
-  // Helper function to convert status to Nepali
-  const getStatusInNepali = (status) => {
-    const statusMap = {
-      'pending': 'विचाराधीन',
-      'in-progress': 'प्रगतिमा',
-      'inprogress': 'प्रगतिमा',
-      'review': 'समीक्षामा',
-      'resolved': 'समाधान भयो',
-      'closed': 'बन्द',
-      'rejected': 'अस्वीकृत'
-    };
-    return statusMap[status?.toLowerCase()] || status || 'विचाराधीन';
-  };
-
   // Check if complaint is pending
   const isPending = (status) => {
     const pendingStatuses = ['pending', 'Pending', 'विचाराधीन', 'PENDING'];
@@ -128,7 +111,7 @@ const AdminComplaintsPending = () => {
       
       // Fetch regular complaints
       try {
-        const regularResponse = await axios.get(`${API_URL}/complaints/public`, { headers });
+        const regularResponse = await axios.get(`${API_URL}/complaints`, { headers });
         if (regularResponse.data.success && Array.isArray(regularResponse.data.data)) {
           regularData = regularResponse.data.data
             .filter(complaint => isPending(complaint.status))
@@ -140,7 +123,7 @@ const AdminComplaintsPending = () => {
       
       // Fetch complaint regarding
       try {
-        const regardingResponse = await axios.get(`${API_URL}/complaints/regarding/public`, { headers });
+        const regardingResponse = await axios.get(`${API_URL}/complaint-regarding`, { headers });
         if (regardingResponse.data.success && Array.isArray(regardingResponse.data.data)) {
           regardingData = regardingResponse.data.data
             .filter(complaint => isPending(complaint.status))
@@ -259,60 +242,6 @@ const AdminComplaintsPending = () => {
     return categories[category] || 'सामान्य';
   };
 
-  // Update complaint status
-  const updateComplaintStatus = async (complaintId, newStatusValue, complaintType) => {
-    setUpdatingStatus(true);
-    try {
-      const token = localStorage.getItem('adminToken');
-      const statusMap = {
-        'pending': 'pending',
-        'in-progress': 'in-progress',
-        'resolved': 'resolved',
-        'review': 'review'
-      };
-      
-      let endpoint;
-      if (complaintType === 'regular') {
-        endpoint = `${API_URL}/admin/complaints/${complaintId}/status`;
-      } else {
-        endpoint = `${API_URL}/admin/complaints/regarding/${complaintId}/status`;
-      }
-      
-      const response = await axios.patch(
-        endpoint,
-        { status: statusMap[newStatusValue] },
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
-      
-      if (response.data.success) {
-        // Remove from pending list
-        setAllPendingComplaints(prev => prev.filter(c => c.complaintId !== complaintId));
-        setRegularComplaints(prev => prev.filter(c => c.complaintId !== complaintId));
-        setRegardingComplaints(prev => prev.filter(c => c.complaintId !== complaintId));
-        
-        showToast(language === 'np' ? 'स्थिति सफलतापूर्वक अपडेट गरियो' : 'Status updated successfully', 'success');
-        setShowStatusModal(false);
-        setSelectedComplaint(null);
-      } else {
-        throw new Error(response.data.message || 'Failed to update status');
-      }
-    } catch (error) {
-      console.error('Error updating status:', error);
-      showToast(language === 'np' 
-        ? 'स्थिति अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
-        : 'Failed to update status. Please try again.', 'error');
-    } finally {
-      setUpdatingStatus(false);
-    }
-  };
-
-  // Process complaint (move to in-progress)
-  const processComplaint = (complaint) => {
-    setSelectedComplaint(complaint);
-    setNewStatus('in-progress');
-    setShowStatusModal(true);
-  };
-
   // Check authentication and fetch data
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
@@ -349,8 +278,6 @@ const AdminComplaintsPending = () => {
       priority: 'प्राथमिकता',
       actions: 'कार्यहरू',
       viewDetails: 'विवरण हेर्नुहोस्',
-      processNow: 'प्रक्रिया सुरु गर्नुहोस्',
-      updateStatus: 'स्थिति अपडेट गर्नुहोस्',
       complaintDetails: 'गुनासोको विवरण',
       description: 'विवरण',
       channel: 'च्यानल',
@@ -373,11 +300,6 @@ const AdminComplaintsPending = () => {
       urgentAttention: 'तत्काल ध्यान दिनुहोस्',
       loading: 'लोड हुँदै...',
       refresh: 'रिफ्रेस',
-      updateStatusTitle: 'स्थिति अपडेट गर्नुहोस्',
-      selectNewStatus: 'नयाँ स्थिति चयन गर्नुहोस्',
-      cancel: 'रद्द गर्नुहोस्',
-      update: 'अपडेट गर्नुहोस्',
-      updating: 'अपडेट हुँदै...',
       referenceNo: 'सन्दर्भ नम्बर',
       landmark: 'नजिकैको चिन्ह',
       address: 'ठेगाना',
@@ -407,8 +329,6 @@ const AdminComplaintsPending = () => {
       priority: 'Priority',
       actions: 'Actions',
       viewDetails: 'View Details',
-      processNow: 'Start Process',
-      updateStatus: 'Update Status',
       complaintDetails: 'Complaint Details',
       description: 'Description',
       channel: 'Channel',
@@ -431,11 +351,6 @@ const AdminComplaintsPending = () => {
       urgentAttention: 'Requires Urgent Attention',
       loading: 'Loading...',
       refresh: 'Refresh',
-      updateStatusTitle: 'Update Status',
-      selectNewStatus: 'Select New Status',
-      cancel: 'Cancel',
-      update: 'Update',
-      updating: 'Updating...',
       referenceNo: 'Reference Number',
       landmark: 'Landmark',
       address: 'Address',
@@ -571,27 +486,6 @@ const AdminComplaintsPending = () => {
   const closeModal = () => {
     setShowModal(false);
     setSelectedComplaint(null);
-  };
-
-  const openStatusModal = (complaint) => {
-    setSelectedComplaint(complaint);
-    setNewStatus(complaint.status);
-    setShowStatusModal(true);
-    setShowModal(false);
-  };
-
-  const closeStatusModal = () => {
-    setShowStatusModal(false);
-    setSelectedComplaint(null);
-    setNewStatus('');
-  };
-
-  const handleStatusUpdate = () => {
-    if (selectedComplaint && newStatus !== selectedComplaint.status) {
-      updateComplaintStatus(selectedComplaint.complaintId, newStatus, selectedComplaint.type);
-    } else {
-      closeStatusModal();
-    }
   };
 
   // Refresh data
@@ -799,11 +693,8 @@ const AdminComplaintsPending = () => {
                         </td>
                         <td>
                           <div className="action-buttons">
-                            <button className="view-btn" onClick={() => openModal(complaint)} title={t.viewDetails}>
-                              👁️
-                            </button>
-                            <button className="process-btn" onClick={() => processComplaint(complaint)}>
-                              ⚡ {t.processNow}
+                            <button className="view-details-btn" onClick={() => openModal(complaint)}>
+                              👁️ {t.viewDetails}
                             </button>
                           </div>
                         </td>
@@ -817,7 +708,7 @@ const AdminComplaintsPending = () => {
                           <p>{t.noComplaintsFound}</p>
                           <small>{t.tryAdjustingFilters}</small>
                         </div>
-                       </td>
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -850,7 +741,7 @@ const AdminComplaintsPending = () => {
         </div>
       </div>
 
-      {/* Complaint Details Modal */}
+      {/* Complaint Details Modal - View Only */}
       {showModal && selectedComplaint && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -887,6 +778,18 @@ const AdminComplaintsPending = () => {
                     <span>{selectedComplaint.referenceNumber}</span>
                   </div>
                 )}
+                <div className="detail-row">
+                  <label>{t.priority}:</label>
+                  <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
+                    {getPriorityText(selectedComplaint.priority)}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.daysPending}:</label>
+                  <span className={`urgency-badge ${getUrgencyClass(selectedComplaint.daysPending)}`}>
+                    {selectedComplaint.daysPending} {language === 'np' ? 'दिन' : 'days'} - {getUrgencyText(selectedComplaint.daysPending)}
+                  </span>
+                </div>
               </div>
 
               <div className="detail-section">
@@ -920,27 +823,15 @@ const AdminComplaintsPending = () => {
               <div className="detail-section">
                 <h4>📝 {t.description}</h4>
                 <div className="detail-row full-width">
-                  <p>{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
+                  <p className="description-text">{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
                 </div>
               </div>
 
               <div className="detail-section">
                 <h4>📊 {t.statusInfo}</h4>
                 <div className="detail-row">
-                  <label>{t.priority}:</label>
-                  <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
-                    {getPriorityText(selectedComplaint.priority)}
-                  </span>
-                </div>
-                <div className="detail-row">
                   <label>{t.registeredDate}:</label>
                   <span>{getDate(selectedComplaint)}</span>
-                </div>
-                <div className="detail-row">
-                  <label>{t.daysPending}:</label>
-                  <span className={`urgency-badge ${getUrgencyClass(selectedComplaint.daysPending)}`}>
-                    {selectedComplaint.daysPending} {language === 'np' ? 'दिन' : 'days'}
-                  </span>
                 </div>
                 <div className="detail-row">
                   <label>{t.channel}:</label>
@@ -959,59 +850,7 @@ const AdminComplaintsPending = () => {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-process" onClick={() => {
-                setShowModal(false);
-                processComplaint(selectedComplaint);
-              }}>
-                ⚡ {t.processNow}
-              </button>
               <button className="btn-close" onClick={closeModal}>{t.close}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Update Status Modal */}
-      {showStatusModal && selectedComplaint && (
-        <div className="modal-overlay" onClick={closeStatusModal}>
-          <div className="modal-content status-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>🔄 {t.updateStatusTitle}</h2>
-              <button className="modal-close" onClick={closeStatusModal}>✕</button>
-            </div>
-            <div className="modal-body">
-              <div className="detail-row">
-                <label>{t.ticketId}:</label>
-                <span>{selectedComplaint.ticketId}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.complainant}:</label>
-                <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
-              </div>
-              <div className="detail-row">
-                <label>{t.selectNewStatus}:</label>
-                <select 
-                  value={newStatus} 
-                  onChange={(e) => setNewStatus(e.target.value)}
-                  className="status-select"
-                >
-                  <option value="in-progress">{t.inProgress || 'In Progress'}</option>
-                  <option value="review">{t.underReview || 'Under Review'}</option>
-                  <option value="resolved">{t.resolved || 'Resolved'}</option>
-                </select>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn-cancel" onClick={closeStatusModal}>
-                {t.cancel}
-              </button>
-              <button 
-                className="btn-update" 
-                onClick={handleStatusUpdate}
-                disabled={updatingStatus}
-              >
-                {updatingStatus ? t.updating : t.update}
-              </button>
             </div>
           </div>
         </div>
@@ -1437,22 +1276,8 @@ const AdminComplaintsPending = () => {
           flex-wrap: wrap;
         }
 
-        .view-btn {
-          background: #f1f5f9;
-          border: none;
-          padding: 6px 12px;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 0.8rem;
-          transition: all 0.2s;
-        }
-
-        .view-btn:hover {
-          background: #e2e8f0;
-        }
-
-        .process-btn {
-          background: linear-gradient(135deg, #10b981, #059669);
+        .view-details-btn {
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
           color: white;
           border: none;
           padding: 6px 14px;
@@ -1465,9 +1290,9 @@ const AdminComplaintsPending = () => {
           gap: 4px;
         }
 
-        .process-btn:hover {
+        .view-details-btn:hover {
           transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+          box-shadow: 0 2px 8px rgba(59,130,246,0.3);
         }
 
         .no-data {
@@ -1546,10 +1371,6 @@ const AdminComplaintsPending = () => {
           overflow-y: auto;
         }
 
-        .status-modal {
-          max-width: 500px;
-        }
-
         .modal-header {
           display: flex;
           justify-content: space-between;
@@ -1623,12 +1444,9 @@ const AdminComplaintsPending = () => {
           margin-bottom: 8px;
         }
 
-        .status-select {
-          flex: 1;
-          padding: 8px 12px;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          font-size: 0.9rem;
+        .description-text {
+          line-height: 1.6;
+          white-space: pre-wrap;
         }
 
         .modal-footer {
@@ -1642,40 +1460,17 @@ const AdminComplaintsPending = () => {
           background: white;
         }
 
-        .btn-process, .btn-close, .btn-cancel, .btn-update {
+        .btn-close {
+          background: #f1f5f9;
+          color: #475569;
+          border: none;
           padding: 10px 24px;
           border-radius: 10px;
           cursor: pointer;
           font-weight: 500;
-          border: none;
         }
 
-        .btn-process {
-          background: linear-gradient(135deg, #10b981, #059669);
-          color: white;
-        }
-
-        .btn-close, .btn-cancel {
-          background: #f1f5f9;
-          color: #475569;
-        }
-
-        .btn-update {
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
-          color: white;
-        }
-
-        .btn-update:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .btn-process:hover, .btn-update:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .btn-close:hover, .btn-cancel:hover {
+        .btn-close:hover {
           background: #e2e8f0;
         }
 

@@ -17,6 +17,11 @@ const AdminComplaints = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedComplaintForAssign, setSelectedComplaintForAssign] = useState(null);
+  const [selectedStaff, setSelectedStaff] = useState('');
+  const [staffList, setStaffList] = useState([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -36,6 +41,67 @@ const AdminComplaints = () => {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   }, []);
 
+  // Fetch staff list
+  const fetchStaffList = async () => {
+    setLoadingStaff(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await axios.get(`${API_URL}/users?role=staff`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success && Array.isArray(response.data.data)) {
+        setStaffList(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching staff list:', error);
+      showToast('Failed to load staff list', 'error');
+    } finally {
+      setLoadingStaff(false);
+    }
+  };
+
+  // Assign complaint to staff
+  const assignToStaff = async (complaintId, staffId, staffEmail, complaintType) => {
+    setUpdatingStatus(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      
+      let endpoint;
+      if (complaintType === 'regular') {
+        endpoint = `${API_URL}/admin/complaints/${complaintId}/assign`;
+      } else {
+        endpoint = `${API_URL}/admin/complaint-regarding/${complaintId}/assign`;
+      }
+      
+      const response = await axios.patch(
+        endpoint,
+        { assignedTo: staffEmail, assignedById: staffId },
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
+      );
+      
+      if (response.data.success) {
+        showToast(language === 'np' ? 'गुनासो सफलतापूर्वक तोकियो' : 'Complaint assigned successfully', 'success');
+        fetchAllComplaints();
+        setShowAssignModal(false);
+        setSelectedComplaintForAssign(null);
+        setSelectedStaff('');
+      } else {
+        throw new Error(response.data.message || 'Failed to assign complaint');
+      }
+    } catch (error) {
+      console.error('Error assigning complaint:', error);
+      showToast(language === 'np' ? 'गुनासो तोक्न असफल' : 'Failed to assign complaint', 'error');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   // Fetch all complaints from both endpoints
   const fetchAllComplaints = useCallback(async () => {
     setLoading(true);
@@ -48,7 +114,7 @@ const AdminComplaints = () => {
       let regardingData = [];
       
       try {
-        const regularResponse = await axios.get(`${API_URL}/complaints/public`, { headers });
+        const regularResponse = await axios.get(`${API_URL}/complaints`, { headers });
         if (regularResponse.data.success && Array.isArray(regularResponse.data.data)) {
           regularData = regularResponse.data.data.map(complaint => transformRegularComplaint(complaint));
         }
@@ -62,7 +128,7 @@ const AdminComplaints = () => {
       
       // Fetch complaint regarding
       try {
-        const regardingResponse = await axios.get(`${API_URL}/complaints/regarding/public`, { headers });
+        const regardingResponse = await axios.get(`${API_URL}/complaint-regarding`, { headers });
         if (regardingResponse.data.success && Array.isArray(regardingResponse.data.data)) {
           regardingData = regardingResponse.data.data.map(complaint => transformRegardingComplaint(complaint));
         }
@@ -119,6 +185,7 @@ const AdminComplaints = () => {
     priority: mapPriority(complaint.priority),
     assignedTo: complaint.assigned_to || (language === 'np' ? 'प्रशासक' : 'Administrator'),
     enAssignedTo: complaint.assigned_to || 'Administrator',
+    assignedBy: complaint.assigned_by || null,
     resolvedDate: complaint.resolved_at ? formatNepaliDate(complaint.resolved_at) : null,
     enResolvedDate: complaint.resolved_at ? formatEnglishDate(complaint.resolved_at) : null,
     submittedDate: complaint.created_at,
@@ -154,6 +221,7 @@ const AdminComplaints = () => {
     priority: mapPriority(complaint.priority),
     assignedTo: complaint.assigned_to || (language === 'np' ? 'प्रशासक' : 'Administrator'),
     enAssignedTo: complaint.assigned_to || 'Administrator',
+    assignedBy: complaint.assigned_by || null,
     resolvedDate: complaint.resolved_at ? formatNepaliDate(complaint.resolved_at) : null,
     enResolvedDate: complaint.resolved_at ? formatEnglishDate(complaint.resolved_at) : null,
     submittedDate: complaint.created_at,
@@ -199,8 +267,8 @@ const AdminComplaints = () => {
       'review': 'review',
       'Under Review': 'review',
       'under review': 'review',
-      'Rejected': 'review',
-      'rejected': 'review'
+      'Rejected': 'rejected',
+      'rejected': 'rejected'
     };
     return statusMap[status] || 'pending';
   };
@@ -248,7 +316,7 @@ const AdminComplaints = () => {
     }
   };
 
-  // FIXED: Update complaint status - CORRECT ENDPOINT WITH PROPER ID HANDLING
+  // Update complaint status
   const updateComplaintStatus = async (complaintId, newStatusValue, complaintType) => {
     if (!complaintId || !newStatusValue) {
       showToast('Invalid complaint ID or status', 'error');
@@ -263,7 +331,6 @@ const AdminComplaints = () => {
         return;
       }
       
-      // Map status values for backend
       let backendStatus;
       switch (newStatusValue) {
         case 'pending':
@@ -278,19 +345,19 @@ const AdminComplaints = () => {
         case 'resolved':
           backendStatus = 'resolved';
           break;
+        case 'rejected':
+          backendStatus = 'rejected';
+          break;
         default:
           backendStatus = 'pending';
       }
       
-      // CORRECT ENDPOINTS
       let endpoint;
       if (complaintType === 'regular') {
         endpoint = `${API_URL}/admin/complaints/${complaintId}/status`;
       } else {
         endpoint = `${API_URL}/admin/complaint-regarding/${complaintId}/status`;
       }
-      
-      console.log('Updating status:', { endpoint, complaintId, newStatusValue, backendStatus, complaintType });
       
       const response = await axios.patch(
         endpoint,
@@ -304,9 +371,7 @@ const AdminComplaints = () => {
       );
       
       if (response.data.success) {
-        // Update local state - FIXED: Properly identify complaints by ID
         const updateComplaint = (complaint) => {
-          // Check both id and complaintId fields
           const complaintIdToCheck = complaint.id || complaint.complaintId;
           if (complaintIdToCheck === complaintId) {
             return { 
@@ -340,14 +405,17 @@ const AdminComplaints = () => {
           errorMessage = language === 'np' 
             ? 'प्रमाणीकरण असफल। कृपया पुन: लगइन गर्नुहोस्।' 
             : 'Authentication failed. Please login again.';
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+          setTimeout(() => navigate('/admin-login'), 1500);
+        } else if (error.response.status === 403) {
+          errorMessage = language === 'np'
+            ? 'तपाईंलाई यो कार्य गर्न अनुमति छैन।'
+            : 'You do not have permission to perform this action.';
         } else if (error.response.status === 404) {
           errorMessage = language === 'np'
-            ? 'एपीआई एन्डपोइन्ट फेला परेन। कृपया प्रणाली प्रशासकलाई सम्पर्क गर्नुहोस्।'
-            : 'API endpoint not found. Please contact system administrator.';
-        } else if (error.response.status === 500) {
-          errorMessage = language === 'np'
-            ? 'सर्भर त्रुटि। कृपया पछि पुन: प्रयास गर्नुहोस्।'
-            : 'Server error. Please try again later.';
+            ? 'गुनासो फेला परेन।'
+            : 'Complaint not found.';
         } else if (error.response.data?.message) {
           errorMessage = error.response.data.message;
         }
@@ -357,6 +425,14 @@ const AdminComplaints = () => {
     } finally {
       setUpdatingStatus(false);
     }
+  };
+
+  // Open assign modal
+  const openAssignModal = (complaint) => {
+    setSelectedComplaintForAssign(complaint);
+    setSelectedStaff('');
+    setShowAssignModal(true);
+    fetchStaffList();
   };
 
   // Check authentication and fetch data
@@ -396,6 +472,7 @@ const AdminComplaints = () => {
       actions: 'कार्यहरू',
       viewDetails: 'विवरण हेर्नुहोस्',
       updateStatus: 'स्थिति अपडेट गर्नुहोस्',
+      assignToStaff: 'स्टाफ तोक्नुहोस्',
       complaintDetails: 'गुनासोको विवरण',
       description: 'विवरण',
       channel: 'च्यानल',
@@ -410,6 +487,7 @@ const AdminComplaints = () => {
       inProgress: 'प्रगतिमा',
       resolved: 'समाधान',
       underReview: 'समीक्षामा',
+      rejected: 'अस्वीकृत',
       high: 'उच्च',
       medium: 'मध्यम',
       low: 'न्यून',
@@ -441,7 +519,10 @@ const AdminComplaints = () => {
       complainantInfo: 'उजुरीकर्ताको जानकारी',
       statusInfo: 'स्थिति जानकारी',
       updateSuccess: 'स्थिति सफलतापूर्वक अपडेट गरियो',
-      updateError: 'स्थिति अपडेट गर्न असफल'
+      updateError: 'स्थिति अपडेट गर्न असफल',
+      selectStaff: 'स्टाफ चयन गर्नुहोस्',
+      assign: 'तोक्नुहोस्',
+      assigning: 'तोक्दै...'
     },
     en: {
       complaintsManagement: 'Complaints Management',
@@ -463,6 +544,7 @@ const AdminComplaints = () => {
       actions: 'Actions',
       viewDetails: 'View Details',
       updateStatus: 'Update Status',
+      assignToStaff: 'Assign to Staff',
       complaintDetails: 'Complaint Details',
       description: 'Description',
       channel: 'Channel',
@@ -477,6 +559,7 @@ const AdminComplaints = () => {
       inProgress: 'In Progress',
       resolved: 'Resolved',
       underReview: 'Under Review',
+      rejected: 'Rejected',
       high: 'High',
       medium: 'Medium',
       low: 'Low',
@@ -508,7 +591,10 @@ const AdminComplaints = () => {
       complainantInfo: 'Complainant Information',
       statusInfo: 'Status Information',
       updateSuccess: 'Status updated successfully',
-      updateError: 'Failed to update status'
+      updateError: 'Failed to update status',
+      selectStaff: 'Select Staff',
+      assign: 'Assign',
+      assigning: 'Assigning...'
     }
   };
 
@@ -519,7 +605,8 @@ const AdminComplaints = () => {
       pending: 'status-pending', 
       'in-progress': 'status-progress', 
       resolved: 'status-resolved',
-      review: 'status-review'
+      review: 'status-review',
+      rejected: 'status-rejected'
     };
     return classes[status] || 'status-pending';
   };
@@ -530,7 +617,8 @@ const AdminComplaints = () => {
         pending: 'विचाराधीन',
         'in-progress': 'प्रगतिमा',
         resolved: 'समाधान',
-        review: 'समीक्षामा'
+        review: 'समीक्षामा',
+        rejected: 'अस्वीकृत'
       };
       return statusTexts[status] || status;
     } else {
@@ -538,7 +626,8 @@ const AdminComplaints = () => {
         pending: 'Pending',
         'in-progress': 'In Progress',
         resolved: 'Resolved',
-        review: 'Under Review'
+        review: 'Under Review',
+        rejected: 'Rejected'
       };
       return statusTexts[status] || status;
     }
@@ -601,10 +690,10 @@ const AdminComplaints = () => {
   // Filter complaints
   const filteredComplaints = allComplaints.filter(complaint => {
     const searchMatch = searchTerm === '' || 
-      complaint.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      complaint.enName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      complaint.ticketId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      complaint.phone.includes(searchTerm);
+      complaint.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      complaint.enName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      complaint.ticketId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      complaint.phone?.includes(searchTerm);
     
     const statusMatch = statusFilter === 'all' || complaint.status === statusFilter;
     const priorityMatch = priorityFilter === 'all' || complaint.priority === priorityFilter;
@@ -630,7 +719,6 @@ const AdminComplaints = () => {
     setSelectedComplaint(null);
   };
 
-  // FIXED: Open status modal with proper complaint data
   const openStatusModal = (complaint) => {
     setSelectedComplaint(complaint);
     setNewStatus(complaint.status);
@@ -644,10 +732,8 @@ const AdminComplaints = () => {
     setNewStatus('');
   };
 
-  // FIXED: Handle status update with proper ID extraction
   const handleStatusUpdate = () => {
     if (selectedComplaint && newStatus && newStatus !== selectedComplaint.status) {
-      // Get the correct ID (either id or complaintId)
       const complaintId = selectedComplaint.id || selectedComplaint.complaintId;
       if (!complaintId) {
         showToast('Invalid complaint ID', 'error');
@@ -788,6 +874,7 @@ const AdminComplaints = () => {
                   <option value="pending">{t.pending}</option>
                   <option value="in-progress">{t.inProgress}</option>
                   <option value="review">{t.underReview}</option>
+                  <option value="rejected">{t.rejected}</option>
                   <option value="resolved">{t.resolved}</option>
                 </select>
                 <select
@@ -816,6 +903,7 @@ const AdminComplaints = () => {
                     <th>{t.status}</th>
                     <th>{t.priority}</th>
                     <th>{t.complaintType}</th>
+                    <th>{t.assignedTo}</th>
                     <th>{t.actions}</th>
                   </tr>
                 </thead>
@@ -848,13 +936,29 @@ const AdminComplaints = () => {
                             {getComplaintTypeText(complaint)}
                           </span>
                         </td>
+                        <td>{getAssignedTo(complaint)}</td>
                         <td>
                           <div className="action-buttons">
-                            <button className="view-btn" onClick={() => openModal(complaint)}>
+                            <button 
+                              className="btn-view" 
+                              onClick={() => openModal(complaint)}
+                              title={t.viewDetails}
+                            >
                               👁️ {t.viewDetails}
                             </button>
-                            <button className="update-status-btn" onClick={() => openStatusModal(complaint)}>
+                            <button 
+                              className="btn-update-status" 
+                              onClick={() => openStatusModal(complaint)}
+                              title={t.updateStatus}
+                            >
                               🔄 {t.updateStatus}
+                            </button>
+                            <button 
+                              className="btn-assign" 
+                              onClick={() => openAssignModal(complaint)}
+                              title={t.assignToStaff}
+                            >
+                              👥 {t.assignToStaff}
                             </button>
                           </div>
                         </td>
@@ -862,7 +966,7 @@ const AdminComplaints = () => {
                     ))
                   ) : (
                     <tr className="no-data">
-                      <td colSpan="9">
+                      <td colSpan="10">
                         <div className="no-data-content">
                           <span className="no-data-icon">📭</span>
                           <p>{t.noComplaintsFound}</p>
@@ -1053,6 +1157,7 @@ const AdminComplaints = () => {
                   <option value="in-progress">{t.inProgress}</option>
                   <option value="review">{t.underReview}</option>
                   <option value="resolved">{t.resolved}</option>
+                  <option value="rejected">{t.rejected}</option>
                 </select>
               </div>
             </div>
@@ -1066,6 +1171,66 @@ const AdminComplaints = () => {
                 disabled={updatingStatus || newStatus === selectedComplaint.status}
               >
                 {updatingStatus ? t.updating : t.update}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign to Staff Modal */}
+      {showAssignModal && selectedComplaintForAssign && (
+        <div className="modal-overlay" onClick={() => setShowAssignModal(false)}>
+          <div className="modal-content assign-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>👥 {language === 'np' ? 'स्टाफ तोक्नुहोस्' : 'Assign to Staff'}</h2>
+              <button className="modal-close" onClick={() => setShowAssignModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="detail-row">
+                <label>{t.ticketId}:</label>
+                <span>{selectedComplaintForAssign.ticketId}</span>
+              </div>
+              <div className="detail-row">
+                <label>{t.complainant}:</label>
+                <span>{selectedComplaintForAssign.name}</span>
+              </div>
+              <div className="form-group">
+                <label>{t.selectStaff} <span className="required">*</span></label>
+                <select 
+                  value={selectedStaff} 
+                  onChange={(e) => setSelectedStaff(JSON.parse(e.target.value))}
+                  className="staff-select"
+                  disabled={loadingStaff}
+                >
+                  <option value="">{language === 'np' ? 'स्टाफ चयन गर्नुहोस्' : 'Select Staff'}</option>
+                  {staffList.map(staff => (
+                    <option key={staff.id} value={JSON.stringify({ id: staff.id, email: staff.email, name: staff.name })}>
+                      {staff.name} ({staff.email}) - {staff.role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={() => setShowAssignModal(false)}>
+                {t.cancel}
+              </button>
+              <button 
+                className="btn-assign" 
+                onClick={() => {
+                  if (selectedStaff) {
+                    const staffData = typeof selectedStaff === 'string' ? JSON.parse(selectedStaff) : selectedStaff;
+                    assignToStaff(
+                      selectedComplaintForAssign.id, 
+                      staffData.id, 
+                      staffData.email, 
+                      selectedComplaintForAssign.type
+                    );
+                  }
+                }}
+                disabled={!selectedStaff || updatingStatus}
+              >
+                {updatingStatus ? t.assigning : t.assign}
               </button>
             </div>
           </div>
@@ -1160,7 +1325,6 @@ const AdminComplaints = () => {
           to { transform: rotate(360deg); }
         }
 
-        /* Dashboard Layout */
         .dashboard-layout {
           display: flex;
           min-height: calc(100vh - 70px);
@@ -1247,7 +1411,6 @@ const AdminComplaints = () => {
           color: #3b82f6;
         }
 
-        /* Stats Row */
         .stats-row {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
@@ -1290,7 +1453,6 @@ const AdminComplaints = () => {
         .stat-box-value { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
         .stat-box-label { font-size: 0.75rem; color: #64748b; margin-top: 4px; }
 
-        /* Filters */
         .filters-bar {
           display: flex;
           justify-content: space-between;
@@ -1360,7 +1522,6 @@ const AdminComplaints = () => {
           cursor: pointer;
         }
 
-        /* Table */
         .table-wrapper {
           overflow-x: auto;
           background: white;
@@ -1371,7 +1532,7 @@ const AdminComplaints = () => {
         .complaints-table {
           width: 100%;
           border-collapse: collapse;
-          min-width: 1000px;
+          min-width: 1200px;
         }
 
         .complaints-table th,
@@ -1418,6 +1579,7 @@ const AdminComplaints = () => {
         .status-progress { background: #dbeafe; color: #2563eb; }
         .status-resolved { background: #d1fae5; color: #059669; }
         .status-review { background: #e0e7ff; color: #4f46e5; }
+        .status-rejected { background: #fee2e2; color: #dc2626; }
 
         .priority-high { background: #fee2e2; color: #dc2626; }
         .priority-medium { background: #fef3c7; color: #d97706; }
@@ -1428,35 +1590,64 @@ const AdminComplaints = () => {
 
         .action-buttons {
           display: flex;
-          gap: 8px;
+          gap: 10px;
           flex-wrap: wrap;
+          align-items: center;
         }
 
-        .view-btn, .update-status-btn {
-          padding: 6px 12px;
+        .btn-view, .btn-update-status, .btn-assign {
+          padding: 8px 16px;
           border-radius: 8px;
-          font-size: 0.7rem;
+          font-size: 0.8rem;
           cursor: pointer;
           transition: all 0.2s;
           display: inline-flex;
           align-items: center;
-          gap: 4px;
+          justify-content: center;
+          gap: 8px;
           border: none;
+          font-weight: 500;
+          white-space: nowrap;
         }
 
-        .view-btn { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
-        .update-status-btn { background: linear-gradient(135deg, #10b981, #059669); color: white; }
-
-        .view-btn:hover, .update-status-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        .btn-view { 
+          background: linear-gradient(135deg, #3b82f6, #2563eb); 
+          color: white; 
+        }
+        .btn-update-status { 
+          background: linear-gradient(135deg, #10b981, #059669); 
+          color: white; 
+        }
+        .btn-assign { 
+          background: linear-gradient(135deg, #8b5cf6, #7c3aed); 
+          color: white; 
         }
 
-        .no-data { text-align: center; padding: 60px !important; }
-        .no-data-content { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .no-data-icon { font-size: 3rem; }
+        .btn-view:hover, .btn-update-status:hover, .btn-assign:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
 
-        /* Pagination */
+        .btn-view:active, .btn-update-status:active, .btn-assign:active {
+          transform: translateY(0);
+        }
+
+        .no-data {
+          text-align: center;
+          padding: 60px !important;
+        }
+
+        .no-data-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .no-data-icon {
+          font-size: 3rem;
+        }
+
         .pagination {
           display: flex;
           justify-content: center;
@@ -1485,7 +1676,6 @@ const AdminComplaints = () => {
         .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .pagination-info { color: #64748b; font-size: 0.85rem; }
 
-        /* Modal */
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -1509,7 +1699,9 @@ const AdminComplaints = () => {
           overflow-y: auto;
         }
 
-        .status-modal { max-width: 500px; }
+        .status-modal, .assign-modal {
+          max-width: 500px;
+        }
 
         .modal-header {
           display: flex;
@@ -1534,6 +1726,7 @@ const AdminComplaints = () => {
         .modal-close:hover { color: #475569; }
 
         .modal-body { padding: 24px; }
+        
         .detail-section { margin-bottom: 24px; }
         .detail-section h4 {
           font-size: 0.9rem;
@@ -1543,12 +1736,53 @@ const AdminComplaints = () => {
           padding-bottom: 6px;
           border-bottom: 2px solid #e2e8f0;
         }
-        .detail-row { display: flex; margin-bottom: 12px; flex-wrap: wrap; }
-        .detail-row label { width: 130px; font-weight: 600; color: #0f172a; }
-        .detail-row span, .detail-row p { flex: 1; color: #334155; }
+        
+        .detail-row {
+          display: flex;
+          margin-bottom: 12px;
+          flex-wrap: wrap;
+        }
+        
+        .detail-row label {
+          width: 130px;
+          font-weight: 600;
+          color: #0f172a;
+        }
+        
+        .detail-row span, .detail-row p {
+          flex: 1;
+          color: #334155;
+        }
+        
         .detail-row.full-width { flex-direction: column; }
         .detail-row.full-width label { width: 100%; margin-bottom: 8px; }
         .description-text { line-height: 1.6; white-space: pre-wrap; }
+
+        .form-group {
+          margin-bottom: 20px;
+        }
+
+        .form-group label {
+          display: block;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: #0f172a;
+          font-size: 0.85rem;
+        }
+
+        .required {
+          color: #ef4444;
+        }
+
+        .staff-select {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          font-size: 0.85rem;
+          font-family: inherit;
+          margin-top: 8px;
+        }
 
         .status-select {
           flex: 1;
@@ -1569,22 +1803,27 @@ const AdminComplaints = () => {
           background: white;
         }
 
-        .btn-close, .btn-update-status, .btn-cancel, .btn-update {
+        .btn-close, .btn-update-status, .btn-cancel, .btn-update, .btn-assign {
           padding: 10px 24px;
           border-radius: 10px;
           cursor: pointer;
           font-weight: 500;
           border: none;
         }
+        
         .btn-close { background: #e2e8f0; color: #475569; }
-        .btn-update-status { background: linear-gradient(135deg, #10b981, #059669); color: white; }
         .btn-cancel { background: #e2e8f0; color: #475569; }
         .btn-update { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
-        .btn-update:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-update:disabled, .btn-assign:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
 
-        /* Responsive */
         @media (max-width: 1200px) {
           .stats-row { grid-template-columns: repeat(2, 1fr); }
+          .action-buttons { flex-direction: column; }
+          .btn-view, .btn-update-status, .btn-assign { width: 100%; justify-content: center; }
         }
 
         @media (max-width: 768px) {
@@ -1596,7 +1835,12 @@ const AdminComplaints = () => {
           .filter-select { width: 100%; }
           .stats-row { grid-template-columns: 1fr; }
           .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
-          .action-buttons { flex-direction: column; }
+          .action-buttons { flex-direction: column; width: 100%; }
+          .btn-view, .btn-update-status, .btn-assign { 
+            width: 100%; 
+            justify-content: center;
+            padding: 10px 16px;
+          }
           .detail-row { flex-direction: column; }
           .detail-row label { width: 100%; margin-bottom: 4px; }
           .modal-footer { flex-direction: column; }
@@ -1605,6 +1849,10 @@ const AdminComplaints = () => {
 
         @media (max-width: 480px) {
           .complaints-table th, .complaints-table td { padding: 8px; font-size: 0.7rem; }
+          .btn-view, .btn-update-status, .btn-assign { 
+            padding: 8px 12px; 
+            font-size: 0.7rem;
+          }
         }
       `}</style>
     </div>
