@@ -111,7 +111,7 @@ const protect = (req, res, next) => {
     }
 
     db.get(
-        `SELECT id, name, name_en, email, phone, role, status FROM users WHERE id = ?`,
+        `SELECT id, name, name_en, email, phone, role, status, department, join_date, employee_id FROM users WHERE id = ?`,
         [decoded.id],
         (err, user) => {
             if (err) {
@@ -358,6 +358,9 @@ app.post('/api/auth/login', (req, res) => {
                 phone: user.phone,
                 role: user.role,
                 status: user.status,
+                department: user.department || 'Customer Support',
+                employeeId: user.employee_id || `EMP-${user.id.toString().padStart(3, '0')}`,
+                joinDate: user.join_date,
                 createdAt: user.created_at,
                 lastLogin: user.last_login
             };
@@ -398,6 +401,286 @@ app.post('/api/auth/refresh', protect, (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to refresh token' });
+    }
+});
+
+// ==================== STAFF PROFILE ROUTES ====================
+
+// GET /api/staff/profile - Get current staff profile
+app.get('/api/staff/profile', protect, staffOrAdmin, (req, res) => {
+    try {
+        db.get(
+            `SELECT id, name, name_en, email, phone, role, department, employee_id, join_date, 
+                    address, date_of_birth, gender, emergency_contact, emergency_contact_name, 
+                    blood_group, qualification, experience, languages, about, status, created_at, updated_at 
+             FROM users WHERE id = ?`,
+            [req.user.id],
+            (err, user) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, message: 'Database error' });
+                }
+                if (!user) {
+                    return res.status(404).json({ success: false, message: 'User not found' });
+                }
+                res.json({ success: true, data: user });
+            }
+        );
+    } catch (error) {
+        console.error('Error fetching staff profile:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// PUT /api/staff/profile - Update staff profile
+app.put('/api/staff/profile', protect, staffOrAdmin, (req, res) => {
+    try {
+        const {
+            name, name_en, email, phone, address, date_of_birth, gender,
+            emergency_contact, emergency_contact_name, blood_group, qualification,
+            experience, languages, about
+        } = req.body;
+
+        const sql = `UPDATE users SET 
+            name = COALESCE(?, name),
+            name_en = COALESCE(?, name_en),
+            email = COALESCE(?, email),
+            phone = COALESCE(?, phone),
+            address = COALESCE(?, address),
+            date_of_birth = COALESCE(?, date_of_birth),
+            gender = COALESCE(?, gender),
+            emergency_contact = COALESCE(?, emergency_contact),
+            emergency_contact_name = COALESCE(?, emergency_contact_name),
+            blood_group = COALESCE(?, blood_group),
+            qualification = COALESCE(?, qualification),
+            experience = COALESCE(?, experience),
+            languages = COALESCE(?, languages),
+            about = COALESCE(?, about),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?`;
+
+        db.run(sql, [
+            name, name_en, email, phone, address, date_of_birth, gender,
+            emergency_contact, emergency_contact_name, blood_group, qualification,
+            experience, languages, about, req.user.id
+        ], function(err) {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ success: false, message: err.message });
+            }
+            res.json({ success: true, message: 'Profile updated successfully' });
+        });
+    } catch (error) {
+        console.error('Error updating staff profile:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// PUT /api/staff/change-password - Change staff password
+app.put('/api/staff/change-password', protect, staffOrAdmin, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Current password and new password are required' });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+        }
+
+        db.get(`SELECT password FROM users WHERE id = ?`, [req.user.id], async (err, user) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: err.message });
+            }
+
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+            }
+
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            db.run(`UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [hashedPassword, req.user.id], function(err) {
+                if (err) {
+                    return res.status(500).json({ success: false, message: err.message });
+                }
+                res.json({ success: true, message: 'Password changed successfully' });
+            });
+        });
+    } catch (error) {
+        console.error('Error changing password:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// PUT /api/staff/notification-settings - Update notification settings
+app.put('/api/staff/notification-settings', protect, staffOrAdmin, (req, res) => {
+    try {
+        const {
+            email_notifications, sms_notifications, task_assignments,
+            complaint_updates, reports, reminders
+        } = req.body;
+
+        const sql = `UPDATE users SET 
+            email_notifications = COALESCE(?, email_notifications),
+            sms_notifications = COALESCE(?, sms_notifications),
+            task_assignments = COALESCE(?, task_assignments),
+            complaint_updates = COALESCE(?, complaint_updates),
+            reports = COALESCE(?, reports),
+            reminders = COALESCE(?, reminders),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?`;
+
+        db.run(sql, [
+            email_notifications ? 1 : 0,
+            sms_notifications ? 1 : 0,
+            task_assignments ? 1 : 0,
+            complaint_updates ? 1 : 0,
+            reports ? 1 : 0,
+            reminders ? 1 : 0,
+            req.user.id
+        ], function(err) {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ success: false, message: err.message });
+            }
+            res.json({ success: true, message: 'Notification settings updated successfully' });
+        });
+    } catch (error) {
+        console.error('Error updating notification settings:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ==================== STAFF TASKS ROUTES ====================
+
+// GET /api/staff/tasks - Get tasks for current staff
+app.get('/api/staff/tasks', protect, staffOrAdmin, (req, res) => {
+    try {
+        const { status, priority } = req.query;
+        let sql = `SELECT * FROM tasks WHERE assigned_to = ?`;
+        const params = [req.user.email];
+
+        if (status && status !== 'all') {
+            sql += ` AND status = ?`;
+            params.push(status);
+        }
+
+        if (priority && priority !== 'all') {
+            sql += ` AND priority = ?`;
+            params.push(priority);
+        }
+
+        sql += ` ORDER BY due_date ASC, created_at DESC`;
+
+        db.all(sql, params, (err, rows) => {
+            if (err) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            res.json({ success: true, data: rows || [] });
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// PUT /api/staff/tasks/:id/status - Update task status
+app.put('/api/staff/tasks/:id/status', protect, staffOrAdmin, (req, res) => {
+    try {
+        const { status } = req.body;
+        const validStatuses = ['pending', 'in-progress', 'completed'];
+
+        if (!status || !validStatuses.includes(status)) {
+            return res.status(400).json({ success: false, message: 'Invalid status' });
+        }
+
+        db.get(`SELECT id, assigned_to FROM tasks WHERE id = ?`, [req.params.id], (err, task) => {
+            if (err) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            if (!task) {
+                return res.status(404).json({ success: false, message: 'Task not found' });
+            }
+            if (task.assigned_to !== req.user.email && req.user.role !== 'admin') {
+                return res.status(403).json({ success: false, message: 'You are not authorized to update this task' });
+            }
+
+            let sql = `UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP`;
+            const params = [status];
+
+            if (status === 'completed') {
+                sql += `, completed_date = CURRENT_TIMESTAMP`;
+            }
+
+            sql += ` WHERE id = ?`;
+            params.push(req.params.id);
+
+            db.run(sql, params, function(err) {
+                if (err) {
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                res.json({ success: true, message: 'Task status updated successfully' });
+            });
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==================== STAFF DASHBOARD ROUTES ====================
+
+// GET /api/staff/dashboard - Staff dashboard statistics
+app.get('/api/staff/dashboard', protect, staffOrAdmin, (req, res) => {
+    try {
+        const stats = {
+            totalAssigned: 0,
+            pending: 0,
+            inProgress: 0,
+            resolved: 0,
+            review: 0,
+            tasksPending: 0,
+            tasksInProgress: 0,
+            tasksCompleted: 0
+        };
+
+        // Get complaint stats
+        db.get(`SELECT COUNT(*) as total FROM complaints WHERE assigned_to = ?`, [req.user.email], (err, result) => {
+            stats.totalAssigned = result?.total || 0;
+
+            db.get(`SELECT COUNT(*) as pending FROM complaints WHERE assigned_to = ? AND status = 'pending'`, [req.user.email], (err, result) => {
+                stats.pending = result?.pending || 0;
+
+                db.get(`SELECT COUNT(*) as inProgress FROM complaints WHERE assigned_to = ? AND status = 'in-progress'`, [req.user.email], (err, result) => {
+                    stats.inProgress = result?.inProgress || 0;
+
+                    db.get(`SELECT COUNT(*) as resolved FROM complaints WHERE assigned_to = ? AND status = 'resolved'`, [req.user.email], (err, result) => {
+                        stats.resolved = result?.resolved || 0;
+
+                        db.get(`SELECT COUNT(*) as review FROM complaints WHERE assigned_to = ? AND status = 'review'`, [req.user.email], (err, result) => {
+                            stats.review = result?.review || 0;
+
+                            // Get task stats
+                            db.get(`SELECT COUNT(*) as tasksPending FROM tasks WHERE assigned_to = ? AND status = 'pending'`, [req.user.email], (err, result) => {
+                                stats.tasksPending = result?.tasksPending || 0;
+
+                                db.get(`SELECT COUNT(*) as tasksInProgress FROM tasks WHERE assigned_to = ? AND status = 'in-progress'`, [req.user.email], (err, result) => {
+                                    stats.tasksInProgress = result?.tasksInProgress || 0;
+
+                                    db.get(`SELECT COUNT(*) as tasksCompleted FROM tasks WHERE assigned_to = ? AND status = 'completed'`, [req.user.email], (err, result) => {
+                                        stats.tasksCompleted = result?.tasksCompleted || 0;
+                                        res.json({ success: true, data: stats });
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error getting staff dashboard:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
@@ -557,6 +840,99 @@ app.get('/api/complaint-regarding/assigned-to-me', protect, staffOrAdmin, (req, 
     }
 });
 
+// GET /api/complaints/pending - Get pending complaints (staff/admin)
+app.get('/api/complaints/pending', protect, staffOrAdmin, (req, res) => {
+    try {
+        const { limit = 100, search } = req.query;
+        let sql = `SELECT * FROM complaints WHERE status IN ('pending', 'review')`;
+        const params = [];
+
+        if (search) {
+            sql += ` AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR complaint_number LIKE ?)`;
+            const searchPattern = `%${search}%`;
+            params.push(searchPattern, searchPattern, searchPattern, searchPattern);
+        }
+
+        sql += ` ORDER BY priority ASC, created_at DESC`;
+
+        if (limit && limit !== 'all') {
+            sql += ` LIMIT ?`;
+            params.push(parseInt(limit));
+        }
+
+        db.all(sql, params, (err, rows) => {
+            if (err) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            res.json({ success: true, data: rows || [] });
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/complaints/in-progress - Get in-progress complaints (staff/admin)
+app.get('/api/complaints/in-progress', protect, staffOrAdmin, (req, res) => {
+    try {
+        const { limit = 100, search } = req.query;
+        let sql = `SELECT * FROM complaints WHERE status = 'in-progress'`;
+        const params = [];
+
+        if (search) {
+            sql += ` AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR complaint_number LIKE ?)`;
+            const searchPattern = `%${search}%`;
+            params.push(searchPattern, searchPattern, searchPattern, searchPattern);
+        }
+
+        sql += ` ORDER BY updated_at DESC`;
+
+        if (limit && limit !== 'all') {
+            sql += ` LIMIT ?`;
+            params.push(parseInt(limit));
+        }
+
+        db.all(sql, params, (err, rows) => {
+            if (err) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            res.json({ success: true, data: rows || [] });
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/complaints/resolved - Get resolved complaints (staff/admin)
+app.get('/api/complaints/resolved', protect, staffOrAdmin, (req, res) => {
+    try {
+        const { limit = 100, search } = req.query;
+        let sql = `SELECT * FROM complaints WHERE status = 'resolved'`;
+        const params = [];
+
+        if (search) {
+            sql += ` AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR complaint_number LIKE ?)`;
+            const searchPattern = `%${search}%`;
+            params.push(searchPattern, searchPattern, searchPattern, searchPattern);
+        }
+
+        sql += ` ORDER BY resolved_at DESC, updated_at DESC`;
+
+        if (limit && limit !== 'all') {
+            sql += ` LIMIT ?`;
+            params.push(parseInt(limit));
+        }
+
+        db.all(sql, params, (err, rows) => {
+            if (err) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            res.json({ success: true, data: rows || [] });
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // PATCH /api/admin/complaints/:id/status - Update regular complaint status (staff/admin)
 app.patch('/api/admin/complaints/:id/status', protect, staffOrAdmin, (req, res) => {
     try {
@@ -690,7 +1066,7 @@ app.patch('/api/admin/complaint-regarding/:id/status', protect, staffOrAdmin, (r
 // PATCH /api/admin/complaints/:id/assign - Assign complaint to staff
 app.patch('/api/admin/complaints/:id/assign', protect, adminOnly, (req, res) => {
     try {
-        const { assignedTo, assignedById } = req.body;
+        const { assignedTo } = req.body;
         
         if (!assignedTo) {
             return res.status(400).json({
@@ -709,7 +1085,7 @@ app.patch('/api/admin/complaints/:id/assign', protect, adminOnly, (req, res) => 
             
             db.run(
                 `UPDATE complaints SET assigned_to = ?, assigned_by = ?, assigned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-                [assignedTo, assignedById || req.user.id, req.params.id],
+                [assignedTo, req.user.name, req.params.id],
                 function(err) {
                     if (err) {
                         console.error('Database error:', err);
@@ -732,7 +1108,7 @@ app.patch('/api/admin/complaints/:id/assign', protect, adminOnly, (req, res) => 
 // PATCH /api/admin/complaint-regarding/:id/assign - Assign complaint regarding to staff
 app.patch('/api/admin/complaint-regarding/:id/assign', protect, adminOnly, (req, res) => {
     try {
-        const { assignedTo, assignedById } = req.body;
+        const { assignedTo } = req.body;
         
         if (!assignedTo) {
             return res.status(400).json({
@@ -751,7 +1127,7 @@ app.patch('/api/admin/complaint-regarding/:id/assign', protect, adminOnly, (req,
             
             db.run(
                 `UPDATE complaint_regarding SET assigned_to = ?, assigned_by = ?, assigned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-                [assignedTo, assignedById || req.user.id, req.params.id],
+                [assignedTo, req.user.name, req.params.id],
                 function(err) {
                     if (err) {
                         console.error('Database error:', err);
@@ -771,45 +1147,21 @@ app.patch('/api/admin/complaint-regarding/:id/assign', protect, adminOnly, (req,
     }
 });
 
-// GET /api/staff/dashboard - Staff dashboard statistics
-app.get('/api/staff/dashboard', protect, staffOrAdmin, (req, res) => {
+// GET /api/staff/members - Get all staff members for assignment
+app.get('/api/staff/members', protect, adminOnly, (req, res) => {
     try {
-        const stats = {
-            totalAssigned: 0,
-            pending: 0,
-            inProgress: 0,
-            resolved: 0,
-            review: 0
-        };
-
-        db.get(`SELECT COUNT(*) as total FROM complaints WHERE assigned_to = ?`, [req.user.email], (err, result) => {
-            if (err) {
-                console.error('Error getting total complaints:', err);
-                return res.status(500).json({ success: false, message: 'Database error' });
+        db.all(
+            `SELECT id, name, name_en, email, role, department FROM users WHERE role = 'staff' AND status = 'active' ORDER BY name`,
+            [],
+            (err, rows) => {
+                if (err) {
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                res.json({ success: true, data: rows || [] });
             }
-            stats.totalAssigned = result?.total || 0;
-
-            db.get(`SELECT COUNT(*) as pending FROM complaints WHERE assigned_to = ? AND status = 'pending'`, [req.user.email], (err, result) => {
-                stats.pending = result?.pending || 0;
-
-                db.get(`SELECT COUNT(*) as inProgress FROM complaints WHERE assigned_to = ? AND status = 'in-progress'`, [req.user.email], (err, result) => {
-                    stats.inProgress = result?.inProgress || 0;
-
-                    db.get(`SELECT COUNT(*) as resolved FROM complaints WHERE assigned_to = ? AND status = 'resolved'`, [req.user.email], (err, result) => {
-                        stats.resolved = result?.resolved || 0;
-
-                        db.get(`SELECT COUNT(*) as review FROM complaints WHERE assigned_to = ? AND status = 'review'`, [req.user.email], (err, result) => {
-                            stats.review = result?.review || 0;
-
-                            res.json({ success: true, data: stats });
-                        });
-                    });
-                });
-            });
-        });
+        );
     } catch (error) {
-        console.error('Error getting staff dashboard:', error);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -820,7 +1172,7 @@ app.get('/api/users', protect, adminOnly, (req, res) => {
     try {
         const { page = 1, limit = 100, role, status, search } = req.query;
 
-        let sql = `SELECT id, name, name_en, email, phone, role, status, last_login, created_at, updated_at FROM users WHERE 1=1`;
+        let sql = `SELECT id, name, name_en, email, phone, role, status, department, employee_id, join_date, last_login, created_at, updated_at FROM users WHERE 1=1`;
         const params = [];
 
         if (role && role !== 'all') {
@@ -884,7 +1236,7 @@ app.get('/api/users', protect, adminOnly, (req, res) => {
 // POST /api/users - Create new user (admin can create staff)
 app.post('/api/users', protect, adminOnly, async (req, res) => {
     try {
-        const { name, nameEn, email, phone, role, password } = req.body;
+        const { name, nameEn, email, phone, role, password, department, employeeId, joinDate } = req.body;
 
         if (!name || !nameEn || !email || !phone || !password) {
             return res.status(400).json({ success: false, message: 'All fields are required' });
@@ -913,16 +1265,16 @@ app.post('/api/users', protect, adminOnly, async (req, res) => {
                     return res.status(500).json({ success: false, message: 'Error hashing password' });
                 }
 
-                const sql = `INSERT INTO users (name, name_en, email, phone, password, role, status, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`;
+                const sql = `INSERT INTO users (name, name_en, email, phone, password, role, department, employee_id, join_date, status, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`;
 
-                db.run(sql, [name, nameEn, email.toLowerCase(), phone, hashedPassword, role || 'user', 'active', req.user.id], function(err) {
+                db.run(sql, [name, nameEn, email.toLowerCase(), phone, hashedPassword, role || 'staff', department || 'Customer Support', employeeId || null, joinDate || null, 'active', req.user.id], function(err) {
                     if (err) {
                         return res.status(500).json({ success: false, message: err.message });
                     }
                     res.status(201).json({
                         success: true,
                         message: 'User created successfully',
-                        data: { id: this.lastID, name, nameEn, email, phone, role: role || 'user', status: 'active' }
+                        data: { id: this.lastID, name, nameEn, email, phone, role: role || 'staff', status: 'active' }
                     });
                 });
             });
@@ -936,7 +1288,7 @@ app.post('/api/users', protect, adminOnly, async (req, res) => {
 // PUT /api/users/:id - Update user
 app.put('/api/users/:id', protect, adminOnly, (req, res) => {
     try {
-        const { name, nameEn, email, phone, role, status } = req.body;
+        const { name, nameEn, email, phone, role, status, department, employeeId, joinDate } = req.body;
 
         if (!name || !nameEn || !email || !phone) {
             return res.status(400).json({ success: false, message: 'Name, email, and phone are required' });
@@ -958,9 +1310,9 @@ app.put('/api/users/:id', protect, adminOnly, (req, res) => {
                     return res.status(409).json({ success: false, message: 'Email or phone already exists' });
                 }
 
-                const sql = `UPDATE users SET name = ?, name_en = ?, email = ?, phone = ?, role = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+                const sql = `UPDATE users SET name = ?, name_en = ?, email = ?, phone = ?, role = ?, status = ?, department = ?, employee_id = ?, join_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
 
-                db.run(sql, [name, nameEn, email.toLowerCase(), phone, role || 'user', status || 'active', req.params.id], function(err) {
+                db.run(sql, [name, nameEn, email.toLowerCase(), phone, role || 'staff', status || 'active', department || 'Customer Support', employeeId || null, joinDate || null, req.params.id], function(err) {
                     if (err) {
                         return res.status(500).json({ success: false, message: err.message });
                     }
@@ -1070,7 +1422,9 @@ const createSampleStaffUsers = async () => {
             email: 'ram@ntc.gov.np',
             basePhone: '9841000011',
             password: 'staff123',
-            role: 'staff'
+            role: 'staff',
+            department: 'Technical Support',
+            employeeId: 'NTC-EMP-001'
         },
         {
             name: 'सीता शर्मा',
@@ -1078,7 +1432,9 @@ const createSampleStaffUsers = async () => {
             email: 'sita@ntc.gov.np',
             basePhone: '9841000022',
             password: 'staff123',
-            role: 'staff'
+            role: 'staff',
+            department: 'Customer Service',
+            employeeId: 'NTC-EMP-002'
         },
         {
             name: 'हरि प्रसाद',
@@ -1086,7 +1442,9 @@ const createSampleStaffUsers = async () => {
             email: 'hari@ntc.gov.np',
             basePhone: '9841000033',
             password: 'staff123',
-            role: 'staff'
+            role: 'staff',
+            department: 'Network Engineering',
+            employeeId: 'NTC-EMP-003'
         },
         {
             name: 'गीता अधिकारी',
@@ -1094,7 +1452,9 @@ const createSampleStaffUsers = async () => {
             email: 'gita@ntc.gov.np',
             basePhone: '9841000044',
             password: 'staff123',
-            role: 'staff'
+            role: 'staff',
+            department: 'Supervisor',
+            employeeId: 'NTC-EMP-004'
         },
         {
             name: 'विकास न्यौपाने',
@@ -1102,7 +1462,9 @@ const createSampleStaffUsers = async () => {
             email: 'bikas@ntc.gov.np',
             basePhone: '9841000055',
             password: 'staff123',
-            role: 'staff'
+            role: 'staff',
+            department: 'Billing',
+            employeeId: 'NTC-EMP-005'
         },
         {
             name: 'मिना काफ्ले',
@@ -1110,7 +1472,9 @@ const createSampleStaffUsers = async () => {
             email: 'mina@ntc.gov.np',
             basePhone: '9841000066',
             password: 'staff123',
-            role: 'staff'
+            role: 'staff',
+            department: 'HR Department',
+            employeeId: 'NTC-EMP-006'
         },
         {
             name: 'सुरज थापा',
@@ -1118,7 +1482,9 @@ const createSampleStaffUsers = async () => {
             email: 'suraj@ntc.gov.np',
             basePhone: '9841000077',
             password: 'staff123',
-            role: 'staff'
+            role: 'staff',
+            department: 'IT Support',
+            employeeId: 'NTC-EMP-007'
         },
         {
             name: 'प्रिया श्रेष्ठ',
@@ -1126,7 +1492,9 @@ const createSampleStaffUsers = async () => {
             email: 'priya@ntc.gov.np',
             basePhone: '9841000088',
             password: 'staff123',
-            role: 'staff'
+            role: 'staff',
+            department: 'Customer Service',
+            employeeId: 'NTC-EMP-008'
         },
         {
             name: 'विनोद न्यौपाने',
@@ -1134,7 +1502,9 @@ const createSampleStaffUsers = async () => {
             email: 'binod@ntc.gov.np',
             basePhone: '9841000099',
             password: 'staff123',
-            role: 'staff'
+            role: 'staff',
+            department: 'Technical Support',
+            employeeId: 'NTC-EMP-009'
         },
         {
             name: 'सुनिता कार्की',
@@ -1142,7 +1512,9 @@ const createSampleStaffUsers = async () => {
             email: 'sunita@ntc.gov.np',
             basePhone: '9841000100',
             password: 'staff123',
-            role: 'staff'
+            role: 'staff',
+            department: 'Billing',
+            employeeId: 'NTC-EMP-010'
         }
     ];
 
@@ -1167,9 +1539,9 @@ const createSampleStaffUsers = async () => {
             
             await new Promise((resolve, reject) => {
                 db.run(
-                    `INSERT INTO users (name, name_en, email, phone, password, role, status, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-                    [staff.name, staff.name_en, staff.email, phoneNumber, hashedPassword, staff.role, 'active'],
+                    `INSERT INTO users (name, name_en, email, phone, password, role, department, employee_id, status, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+                    [staff.name, staff.name_en, staff.email, phoneNumber, hashedPassword, staff.role, staff.department, staff.employeeId, 'active'],
                     function(err) {
                         if (err) {
                             reject(err);
@@ -1192,10 +1564,39 @@ const createSampleStaffUsers = async () => {
     }
 };
 
-// ==================== SETTINGS API ROUTES ====================
-// (Keep your existing settings routes here)
+// ==================== DATABASE SCHEMA UPDATE ====================
+
+// Add missing columns to users table
+const updateUsersTableSchema = () => {
+    const columns = [
+        'department TEXT',
+        'employee_id TEXT',
+        'join_date DATE',
+        'address TEXT',
+        'date_of_birth DATE',
+        'gender TEXT',
+        'emergency_contact TEXT',
+        'emergency_contact_name TEXT',
+        'blood_group TEXT',
+        'qualification TEXT',
+        'experience TEXT',
+        'languages TEXT',
+        'about TEXT',
+        'email_notifications INTEGER DEFAULT 1',
+        'sms_notifications INTEGER DEFAULT 0',
+        'task_assignments INTEGER DEFAULT 1',
+        'complaint_updates INTEGER DEFAULT 1',
+        'reports INTEGER DEFAULT 1',
+        'reminders INTEGER DEFAULT 1'
+    ];
+
+    columns.forEach(column => {
+        db.run(`ALTER TABLE users ADD COLUMN ${column}`, () => {});
+    });
+};
 
 // ==================== ERROR HANDLING ====================
+
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
 
@@ -1218,17 +1619,53 @@ const startServer = async () => {
     try {
         await initDatabase();
 
-        // Add missing columns if needed
-        db.run(`ALTER TABLE complaints ADD COLUMN resolution TEXT`, () => {});
-        db.run(`ALTER TABLE complaints ADD COLUMN resolved_at DATETIME`, () => {});
-        db.run(`ALTER TABLE complaints ADD COLUMN assigned_to VARCHAR(100)`, () => {});
-        db.run(`ALTER TABLE complaints ADD COLUMN assigned_by INTEGER`, () => {});
-        db.run(`ALTER TABLE complaints ADD COLUMN assigned_at DATETIME`, () => {});
-        db.run(`ALTER TABLE complaint_regarding ADD COLUMN resolution TEXT`, () => {});
-        db.run(`ALTER TABLE complaint_regarding ADD COLUMN resolved_at DATETIME`, () => {});
-        db.run(`ALTER TABLE complaint_regarding ADD COLUMN assigned_to VARCHAR(100)`, () => {});
-        db.run(`ALTER TABLE complaint_regarding ADD COLUMN assigned_by INTEGER`, () => {});
-        db.run(`ALTER TABLE complaint_regarding ADD COLUMN assigned_at DATETIME`, () => {});
+        // Update users table schema
+        updateUsersTableSchema();
+
+        // Add missing columns to complaints table
+        const complaintColumns = [
+            'resolution TEXT',
+            'resolved_at DATETIME',
+            'assigned_to VARCHAR(100)',
+            'assigned_by INTEGER',
+            'assigned_at DATETIME'
+        ];
+        complaintColumns.forEach(column => {
+            db.run(`ALTER TABLE complaints ADD COLUMN ${column}`, () => {});
+        });
+
+        // Add missing columns to complaint_regarding table
+        const regardingColumns = [
+            'resolution TEXT',
+            'resolved_at DATETIME',
+            'assigned_to VARCHAR(100)',
+            'assigned_by INTEGER',
+            'assigned_at DATETIME'
+        ];
+        regardingColumns.forEach(column => {
+            db.run(`ALTER TABLE complaint_regarding ADD COLUMN ${column}`, () => {});
+        });
+
+        // Create tasks table if not exists
+        db.run(`CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            title_np TEXT,
+            description TEXT,
+            description_np TEXT,
+            status TEXT DEFAULT 'pending',
+            priority TEXT DEFAULT 'medium',
+            assigned_to VARCHAR(100),
+            assigned_by INTEGER,
+            assigned_date DATETIME,
+            due_date DATE,
+            completed_date DATETIME,
+            related_complaint_id INTEGER,
+            related_ticket_id VARCHAR(50),
+            notes TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
 
         // Create default admin user if not exists
         db.get(`SELECT id FROM users WHERE email = ?`, ['admin@example.com'], async (err, user) => {
@@ -1240,9 +1677,9 @@ const startServer = async () => {
             if (!user) {
                 const hashedPassword = await bcrypt.hash('admin123', 10);
                 db.run(
-                    `INSERT INTO users (name, name_en, email, phone, password, role, status, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-                    ['प्रशासक', 'Admin', 'admin@example.com', '9800000000', hashedPassword, 'admin', 'active'],
+                    `INSERT INTO users (name, name_en, email, phone, password, role, department, employee_id, status, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+                    ['प्रशासक', 'Admin', 'admin@example.com', '9800000000', hashedPassword, 'admin', 'Administration', 'ADMIN-001', 'active'],
                     function(err) {
                         if (err) {
                             console.error('Error creating admin user:', err);
@@ -1274,19 +1711,22 @@ const startServer = async () => {
             console.log(`   🔑 Password: admin123`);
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             console.log(`👥 STAFF LOGINS (10 staff members):`);
-            console.log(`   1. ram@ntc.gov.np / staff123`);
-            console.log(`   2. sita@ntc.gov.np / staff123`);
-            console.log(`   3. hari@ntc.gov.np / staff123`);
-            console.log(`   4. gita@ntc.gov.np / staff123`);
-            console.log(`   5. bikas@ntc.gov.np / staff123`);
-            console.log(`   6. mina@ntc.gov.np / staff123`);
-            console.log(`   7. suraj@ntc.gov.np / staff123`);
-            console.log(`   8. priya@ntc.gov.np / staff123`);
-            console.log(`   9. binod@ntc.gov.np / staff123`);
-            console.log(`  10. sunita@ntc.gov.np / staff123`);
+            console.log(`   1. ram@ntc.gov.np / staff123 (Technical Support)`);
+            console.log(`   2. sita@ntc.gov.np / staff123 (Customer Service)`);
+            console.log(`   3. hari@ntc.gov.np / staff123 (Network Engineering)`);
+            console.log(`   4. gita@ntc.gov.np / staff123 (Supervisor)`);
+            console.log(`   5. bikas@ntc.gov.np / staff123 (Billing)`);
+            console.log(`   6. mina@ntc.gov.np / staff123 (HR Department)`);
+            console.log(`   7. suraj@ntc.gov.np / staff123 (IT Support)`);
+            console.log(`   8. priya@ntc.gov.np / staff123 (Customer Service)`);
+            console.log(`   9. binod@ntc.gov.np / staff123 (Technical Support)`);
+            console.log(`  10. sunita@ntc.gov.np / staff123 (Billing)`);
             console.log(`=================================`);
             console.log(`📋 API Endpoints:`);
             console.log(`   POST /api/auth/login - Login`);
+            console.log(`   GET /api/staff/profile - Get staff profile`);
+            console.log(`   PUT /api/staff/profile - Update staff profile`);
+            console.log(`   PUT /api/staff/change-password - Change password`);
             console.log(`   GET /api/complaints - Get complaints`);
             console.log(`   PATCH /api/admin/complaints/:id/status - Update status`);
             console.log(`   PATCH /api/admin/complaints/:id/assign - Assign to staff`);

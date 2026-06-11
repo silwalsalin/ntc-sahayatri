@@ -14,11 +14,12 @@ const StaffContact = () => {
   const [activeTab, setActiveTab] = useState('contact');
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
 
   const [formData, setFormData] = useState({
@@ -34,6 +35,26 @@ const StaffContact = () => {
   const [teamMembers, setTeamMembers] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
 
   // Fetch contact data
   const fetchContactData = async () => {
@@ -69,28 +90,28 @@ const StaffContact = () => {
   // Get sample messages
   const getSampleMessages = () => {
     return [
-      { id: 1, from: 'Admin', message: 'Welcome to the team!', date: '2024-01-15', read: true },
-      { id: 2, from: 'Supervisor', message: 'Please submit your weekly report', date: '2024-01-20', read: false },
-      { id: 3, from: 'HR Department', message: 'Training session tomorrow at 10 AM', date: '2024-01-22', read: false }
+      { id: 1, from: 'Admin', message: language === 'np' ? 'टोलीमा स्वागत छ!' : 'Welcome to the team!', date: '2024-01-15', read: true },
+      { id: 2, from: 'Supervisor', message: language === 'np' ? 'कृपया आफ्नो साप्ताहिक रिपोर्ट पेश गर्नुहोस्' : 'Please submit your weekly report', date: '2024-01-20', read: false },
+      { id: 3, from: 'HR Department', message: language === 'np' ? 'भोलि बिहान १० बजे प्रशिक्षण सत्र' : 'Training session tomorrow at 10 AM', date: '2024-01-22', read: false }
     ];
   };
 
   // Get sample support tickets
   const getSampleTickets = () => {
     return [
-      { id: 1, subject: 'Login issue', status: 'resolved', date: '2024-01-10', priority: 'high' },
-      { id: 2, subject: 'Report generation error', status: 'in-progress', date: '2024-01-18', priority: 'medium' },
-      { id: 3, subject: 'Feature request', status: 'pending', date: '2024-01-20', priority: 'low' }
+      { id: 1, subject: language === 'np' ? 'लगइन समस्या' : 'Login issue', status: 'resolved', date: '2024-01-10', priority: 'high' },
+      { id: 2, subject: language === 'np' ? 'रिपोर्ट उत्पादन त्रुटि' : 'Report generation error', status: 'in-progress', date: '2024-01-18', priority: 'medium' },
+      { id: 3, subject: language === 'np' ? 'सुविधा अनुरोध' : 'Feature request', status: 'pending', date: '2024-01-20', priority: 'low' }
     ];
   };
 
-  // Get sample team members
+  // Get sample team members with multi-language support
   const getSampleTeamMembers = () => {
     return [
-      { id: 1, name: 'Admin', role: 'System Administrator', email: 'admin@ntc.gov.np', phone: '9841000001', avatar: '👨‍💼', online: true },
-      { id: 2, name: 'Supervisor', role: 'Team Supervisor', email: 'supervisor@ntc.gov.np', phone: '9841000002', avatar: '👩‍💼', online: true },
-      { id: 3, name: 'IT Support', role: 'Technical Support', email: 'support@ntc.gov.np', phone: '9841000003', avatar: '👨‍🔧', online: false },
-      { id: 4, name: 'HR Department', role: 'Human Resources', email: 'hr@ntc.gov.np', phone: '9841000004', avatar: '👩‍💼', online: true }
+      { id: 1, name: 'Admin', name_np: 'प्रशासक', role: 'System Administrator', role_np: 'प्रणाली प्रशासक', email: 'admin@ntc.gov.np', phone: '9841000001', avatar: '👨‍💼', online: true },
+      { id: 2, name: 'Supervisor', name_np: 'पर्यवेक्षक', role: 'Team Supervisor', role_np: 'टोली पर्यवेक्षक', email: 'supervisor@ntc.gov.np', phone: '9841000002', avatar: '👩‍💼', online: true },
+      { id: 3, name: 'IT Support', name_np: 'आईटी सहयोग', role: 'Technical Support', role_np: 'प्राविधिक सहयोग', email: 'support@ntc.gov.np', phone: '9841000003', avatar: '👨‍🔧', online: false },
+      { id: 4, name: 'HR Department', name_np: 'मानव संसाधन', role: 'Human Resources', role_np: 'मानव संसाधन', email: 'hr@ntc.gov.np', phone: '9841000004', avatar: '👩‍💼', online: true }
     ];
   };
 
@@ -98,6 +119,7 @@ const StaffContact = () => {
   const sendMessage = async () => {
     if (!formData.subject || !formData.message) {
       setError(language === 'np' ? 'कृपया विषय र सन्देश भर्नुहोस्' : 'Please fill subject and message');
+      setTimeout(() => setError(''), 3000);
       return;
     }
 
@@ -135,6 +157,7 @@ const StaffContact = () => {
   const createTicket = async () => {
     if (!formData.subject || !formData.message) {
       setError(language === 'np' ? 'कृपया विषय र विवरण भर्नुहोस्' : 'Please fill subject and description');
+      setTimeout(() => setError(''), 3000);
       return;
     }
 
@@ -220,6 +243,16 @@ const StaffContact = () => {
     return messages.filter(m => !m.read).length;
   };
 
+  // Helper function to get team member name
+  const getTeamMemberName = (member) => {
+    return language === 'np' ? (member.name_np || member.name) : member.name;
+  };
+
+  // Helper function to get team member role
+  const getTeamMemberRole = (member) => {
+    return language === 'np' ? (member.role_np || member.role) : member.role;
+  };
+
   const content = {
     np: {
       pageTitle: 'सम्पर्क र सहयोग',
@@ -275,7 +308,12 @@ const StaffContact = () => {
       officeAddress: 'कार्यालय ठेगाना',
       officeHours: 'कार्यालय समय',
       supportEmail: 'सहयोग इमेल',
-      supportPhone: 'सहयोग फोन'
+      supportPhone: 'सहयोग फोन',
+      previous: 'अघिल्लो',
+      next: 'अर्को',
+      page: 'पृष्ठ',
+      of: 'को',
+      close: 'बन्द गर्नुहोस्'
     },
     en: {
       pageTitle: 'Contact & Support',
@@ -331,7 +369,12 @@ const StaffContact = () => {
       officeAddress: 'Office Address',
       officeHours: 'Office Hours',
       supportEmail: 'Support Email',
-      supportPhone: 'Support Phone'
+      supportPhone: 'Support Phone',
+      previous: 'Previous',
+      next: 'Next',
+      page: 'Page',
+      of: 'of',
+      close: 'Close'
     }
   };
 
@@ -607,8 +650,8 @@ const StaffContact = () => {
                       <tbody>
                         {supportTickets.map(ticket => (
                           <tr key={ticket.id}>
-                            <td>{ticket.subject}</td>
-                            <td>{ticket.date}</td>
+                            <td className="ticket-subject">{ticket.subject}</td>
+                            <td className="ticket-date">{ticket.date}</td>
                             <td>
                               <span className={`priority-badge priority-${ticket.priority}`}>
                                 {ticket.priority === 'high' ? t.high : 
@@ -616,13 +659,13 @@ const StaffContact = () => {
                               </span>
                             </td>
                             <td>
-                              <span className={`status-badge status-${ticket.status}`}>
+                              <span className={`status-badge status-${ticket.status === 'in-progress' ? 'in-progress' : ticket.status}`}>
                                 {ticket.status === 'pending' ? t.pending :
                                  ticket.status === 'in-progress' ? t.inProgress : t.resolved}
                               </span>
                             </td>
                             <td>
-                              <button className="view-btn">{t.view}</button>
+                              <button className="view-btn" onClick={() => alert('View ticket details')}>{t.view}</button>
                             </td>
                           </tr>
                         ))}
@@ -682,8 +725,8 @@ const StaffContact = () => {
                         <span className={`online-status ${member.online ? 'online' : 'offline'}`}></span>
                       </div>
                       <div className="team-info">
-                        <h3>{member.name}</h3>
-                        <p>{member.role}</p>
+                        <h3>{getTeamMemberName(member)}</h3>
+                        <p>{getTeamMemberRole(member)}</p>
                         <div className="team-contact">
                           <a href={`mailto:${member.email}`} className="contact-link">📧 {t.email}</a>
                           <a href={`tel:${member.phone}`} className="contact-link">📞 {t.phone}</a>
@@ -748,7 +791,7 @@ const StaffContact = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -797,7 +840,6 @@ const StaffContact = () => {
 
         .main-content {
           flex: 1;
-          
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -842,6 +884,8 @@ const StaffContact = () => {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 24px;
+          flex-wrap: wrap;
+          gap: 16px;
         }
 
         .page-title {
@@ -963,6 +1007,7 @@ const StaffContact = () => {
           border-radius: 10px;
           font-size: 0.85rem;
           font-family: inherit;
+          transition: border-color 0.2s;
         }
 
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
@@ -973,6 +1018,7 @@ const StaffContact = () => {
         .form-row {
           display: flex;
           gap: 20px;
+          flex-wrap: wrap;
         }
 
         .form-group.half {
@@ -999,6 +1045,11 @@ const StaffContact = () => {
           background: #f8fafc;
           cursor: pointer;
           text-align: center;
+          transition: all 0.2s;
+        }
+
+        .file-input-label:hover {
+          background: #f1f5f9;
         }
 
         .form-actions {
@@ -1039,6 +1090,12 @@ const StaffContact = () => {
           padding: 20px;
           text-align: center;
           border: 1px solid #e2e8f0;
+          transition: all 0.2s;
+        }
+
+        .support-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .support-icon {
@@ -1077,6 +1134,8 @@ const StaffContact = () => {
           font-weight: 600;
           color: #0f172a;
           margin-bottom: 16px;
+          padding-left: 12px;
+          border-left: 3px solid #0288d1;
         }
 
         .tickets-table-wrapper {
@@ -1097,7 +1156,26 @@ const StaffContact = () => {
         .tickets-table th {
           background: #f8fafc;
           color: #64748b;
+          font-weight: 600;
+          font-size: 0.8rem;
+        }
+
+        .tickets-table td {
+          color: #334155;
+          font-size: 0.85rem;
+        }
+
+        .tickets-table tr:hover {
+          background: #fafcff;
+        }
+
+        .ticket-subject {
           font-weight: 500;
+          color: #0f172a;
+        }
+
+        .ticket-date {
+          color: #64748b;
         }
 
         .priority-badge, .status-badge {
@@ -1123,6 +1201,11 @@ const StaffContact = () => {
           border: none;
           border-radius: 6px;
           cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .view-btn:hover {
+          background: #cbd5e1;
         }
 
         .messages-list {
@@ -1173,6 +1256,8 @@ const StaffContact = () => {
           display: flex;
           justify-content: space-between;
           margin-bottom: 4px;
+          flex-wrap: wrap;
+          gap: 8px;
         }
 
         .message-date {
@@ -1253,12 +1338,19 @@ const StaffContact = () => {
         .team-contact {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .contact-link {
           font-size: 0.7rem;
           color: #0288d1;
           text-decoration: none;
+          transition: color 0.2s;
+        }
+
+        .contact-link:hover {
+          color: #0277bd;
+          text-decoration: underline;
         }
 
         .info-grid {
@@ -1274,6 +1366,12 @@ const StaffContact = () => {
           border: 1px solid #e2e8f0;
           padding: 24px;
           text-align: center;
+          transition: all 0.2s;
+        }
+
+        .info-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .info-icon {
@@ -1312,6 +1410,8 @@ const StaffContact = () => {
           font-weight: 600;
           color: #0f172a;
           margin-bottom: 16px;
+          padding-left: 12px;
+          border-left: 3px solid #0288d1;
         }
 
         .hours-list {
@@ -1340,6 +1440,10 @@ const StaffContact = () => {
         }
 
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;

@@ -20,11 +20,12 @@ const StaffDocumentation = () => {
   const [bookmarkedArticles, setBookmarkedArticles] = useState([]);
 
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567',
-    department: 'Customer Support'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
 
   const [documentation, setDocumentation] = useState([]);
@@ -32,6 +33,26 @@ const StaffDocumentation = () => {
   const [faqs, setFaqs] = useState([]);
   const [videoTutorials, setVideoTutorials] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
 
   // Fetch documentation
   const fetchDocumentation = async () => {
@@ -279,7 +300,6 @@ const StaffDocumentation = () => {
     setSelectedArticle(article);
     setShowModal(true);
     saveRecentlyViewed(article);
-    // Increment view count
     setDocumentation(prev =>
       prev.map(a =>
         a.id === article.id
@@ -292,6 +312,7 @@ const StaffDocumentation = () => {
   const closeModal = () => {
     setShowModal(false);
     setSelectedArticle(null);
+    document.body.style.overflow = 'unset';
   };
 
   const openVideoModal = (video) => {
@@ -302,6 +323,7 @@ const StaffDocumentation = () => {
   const closeVideoModal = () => {
     setShowVideoModal(false);
     setSelectedVideo(null);
+    document.body.style.overflow = 'unset';
   };
 
   const handleLogout = () => {
@@ -357,7 +379,7 @@ const StaffDocumentation = () => {
       no: 'होइन',
       backToDocs: 'कागजातमा फर्कनुहोस्',
       loading: 'लोड हुँदै...',
-      refresh: '리फ्रेस',
+      refresh: 'रिफ्रेस',
       welcome: 'स्वागत छ',
       dashboard: 'ड्यासबोर्ड',
       needMoreHelp: 'थप सहायता चाहियो?',
@@ -370,7 +392,12 @@ const StaffDocumentation = () => {
       intermediate: 'मध्यवर्ती',
       advanced: 'उन्नत',
       difficulty: 'कठिनाई',
-      tags: 'ट्यागहरू'
+      tags: 'ट्यागहरू',
+      previous: 'अघिल्लो',
+      next: 'अर्को',
+      page: 'पृष्ठ',
+      of: 'को',
+      close: 'बन्द गर्नुहोस्'
     },
     en: {
       pageTitle: 'Documentation & Help',
@@ -408,7 +435,12 @@ const StaffDocumentation = () => {
       intermediate: 'Intermediate',
       advanced: 'Advanced',
       difficulty: 'Difficulty',
-      tags: 'Tags'
+      tags: 'Tags',
+      previous: 'Previous',
+      next: 'Next',
+      page: 'Page',
+      of: 'of',
+      close: 'Close'
     }
   };
 
@@ -506,6 +538,7 @@ const StaffDocumentation = () => {
                 <button
                   className={`category-card ${selectedCategory === 'all' ? 'active' : ''}`}
                   onClick={() => setSelectedCategory('all')}
+                  style={{ '--category-color': '#0288d1' }}
                 >
                   <span className="category-icon">📚</span>
                   <span className="category-name">{t.allCategories}</span>
@@ -612,8 +645,8 @@ const StaffDocumentation = () => {
                     </div>
                     <div className="faq-helpful">
                       <span>{t.helpful}?</span>
-                      <button className="helpful-btn yes" onClick={() => {}}>👍 {faq.helpful}</button>
-                      <button className="helpful-btn no" onClick={() => {}}>👎 {faq.notHelpful}</button>
+                      <button className="helpful-btn yes" onClick={(e) => { e.stopPropagation(); }}>👍 {faq.helpful}</button>
+                      <button className="helpful-btn no" onClick={(e) => { e.stopPropagation(); }}>👎 {faq.notHelpful}</button>
                     </div>
                   </details>
                 ))}
@@ -708,7 +741,7 @@ const StaffDocumentation = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -757,7 +790,6 @@ const StaffDocumentation = () => {
 
         .main-content {
           flex: 1;
-     
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -806,6 +838,7 @@ const StaffDocumentation = () => {
           display: flex;
           align-items: center;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .announcement-icon {
@@ -833,6 +866,8 @@ const StaffDocumentation = () => {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 24px;
+          flex-wrap: wrap;
+          gap: 16px;
         }
 
         .page-title {
@@ -892,6 +927,8 @@ const StaffDocumentation = () => {
           font-weight: 600;
           color: #0f172a;
           margin-bottom: 16px;
+          padding-left: 12px;
+          border-left: 3px solid #0288d1;
         }
 
         .categories-grid {
@@ -1032,6 +1069,8 @@ const StaffDocumentation = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
         }
 
         .article-stats {
@@ -1186,6 +1225,7 @@ const StaffDocumentation = () => {
           align-items: center;
           gap: 12px;
           font-size: 0.75rem;
+          flex-wrap: wrap;
         }
 
         .helpful-btn {
@@ -1194,6 +1234,7 @@ const StaffDocumentation = () => {
           cursor: pointer;
           font-size: 0.7rem;
           border: none;
+          transition: all 0.2s;
         }
 
         .helpful-btn.yes {
@@ -1204,6 +1245,10 @@ const StaffDocumentation = () => {
         .helpful-btn.no {
           background: #fee2e2;
           color: #dc2626;
+        }
+
+        .helpful-btn:hover {
+          transform: scale(1.05);
         }
 
         .help-section {
@@ -1275,6 +1320,12 @@ const StaffDocumentation = () => {
           align-items: center;
           justify-content: center;
           z-index: 1100;
+          animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         .modal-content {
@@ -1284,6 +1335,12 @@ const StaffDocumentation = () => {
           width: 90%;
           max-height: 85vh;
           overflow-y: auto;
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(50px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
 
         .video-modal {
@@ -1299,6 +1356,7 @@ const StaffDocumentation = () => {
           position: sticky;
           top: 0;
           background: white;
+          border-radius: 20px 20px 0 0;
         }
 
         .modal-header h2 {
@@ -1312,6 +1370,11 @@ const StaffDocumentation = () => {
           font-size: 1.3rem;
           cursor: pointer;
           color: #94a3b8;
+          transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+          color: #ef4444;
         }
 
         .modal-body {
@@ -1398,6 +1461,10 @@ const StaffDocumentation = () => {
           color: #dc2626;
         }
 
+        .feedback-btn:hover {
+          transform: scale(1.05);
+        }
+
         .video-body {
           text-align: center;
         }
@@ -1424,6 +1491,7 @@ const StaffDocumentation = () => {
           border-top: 1px solid #e2e8f0;
           display: flex;
           justify-content: flex-end;
+          border-radius: 0 0 20px 20px;
         }
 
         .btn-close {
@@ -1434,9 +1502,18 @@ const StaffDocumentation = () => {
           border-radius: 8px;
           cursor: pointer;
           font-weight: 500;
+          transition: all 0.2s;
+        }
+
+        .btn-close:hover {
+          background: #cbd5e1;
         }
 
         @media (max-width: 768px) {
+          .dashboard-layout {
+            flex-direction: column;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
@@ -1460,6 +1537,10 @@ const StaffDocumentation = () => {
           }
           
           .recently-viewed-list {
+            flex-direction: column;
+          }
+          
+          .announcements-banner {
             flex-direction: column;
           }
         }
