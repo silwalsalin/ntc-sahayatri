@@ -136,36 +136,26 @@ const AdminSettingsGeneral = () => {
       if (generalRes.data.success && generalRes.data.data) {
         setGeneralSettings(prev => ({ ...prev, ...generalRes.data.data }));
         console.log('✅ General settings loaded');
-      } else {
-        console.log('⚠️ Using default general settings');
       }
 
       if (emailRes.data.success && emailRes.data.data) {
         setEmailSettings(prev => ({ ...prev, ...emailRes.data.data }));
         console.log('✅ Email settings loaded');
-      } else {
-        console.log('⚠️ Using default email settings');
       }
 
       if (securityRes.data.success && securityRes.data.data) {
         setSecuritySettings(prev => ({ ...prev, ...securityRes.data.data }));
         console.log('✅ Security settings loaded');
-      } else {
-        console.log('⚠️ Using default security settings');
       }
 
       if (backupRes.data.success && backupRes.data.data) {
         setBackupSettings(prev => ({ ...prev, ...backupRes.data.data }));
         console.log('✅ Backup settings loaded');
-      } else {
-        console.log('⚠️ Using default backup settings');
       }
 
       if (notificationRes.data.success && notificationRes.data.data) {
         setNotificationSettings(prev => ({ ...prev, ...notificationRes.data.data }));
         console.log('✅ Notification settings loaded');
-      } else {
-        console.log('⚠️ Using default notification settings');
       }
 
     } catch (error) {
@@ -203,7 +193,7 @@ const AdminSettingsGeneral = () => {
         dateFormat: generalSettings.dateFormat,
         timeFormat: generalSettings.timeFormat,
         defaultLanguage: generalSettings.defaultLanguage,
-        itemsPerPage: generalSettings.itemsPerPage,
+        itemsPerPage: parseInt(generalSettings.itemsPerPage),
         enableRegistration: generalSettings.enableRegistration,
         enablePublicComplaints: generalSettings.enablePublicComplaints,
         maintenanceMode: generalSettings.maintenanceMode
@@ -235,7 +225,7 @@ const AdminSettingsGeneral = () => {
 
       const dataToSend = {
         smtpHost: emailSettings.smtpHost,
-        smtpPort: emailSettings.smtpPort,
+        smtpPort: parseInt(emailSettings.smtpPort),
         smtpUser: emailSettings.smtpUser,
         smtpPassword: emailSettings.smtpPassword,
         smtpEncryption: emailSettings.smtpEncryption,
@@ -272,7 +262,21 @@ const AdminSettingsGeneral = () => {
         'Content-Type': 'application/json'
       };
 
-      const response = await axios.put(`${API_URL}/admin/settings/security`, securitySettings, { headers });
+      const dataToSend = {
+        sessionTimeout: parseInt(securitySettings.sessionTimeout),
+        maxLoginAttempts: parseInt(securitySettings.maxLoginAttempts),
+        lockoutDuration: parseInt(securitySettings.lockoutDuration),
+        passwordExpiryDays: parseInt(securitySettings.passwordExpiryDays),
+        minPasswordLength: parseInt(securitySettings.minPasswordLength),
+        requireUppercase: securitySettings.requireUppercase,
+        requireLowercase: securitySettings.requireLowercase,
+        requireNumbers: securitySettings.requireNumbers,
+        requireSpecialChars: securitySettings.requireSpecialChars,
+        twoFactorAuth: securitySettings.twoFactorAuth,
+        ipWhitelist: securitySettings.ipWhitelist || ''
+      };
+
+      const response = await axios.put(`${API_URL}/admin/settings/security`, dataToSend, { headers });
       
       if (response.data.success) {
         setSecuritySettings(prev => ({ ...prev, updatedAt: new Date().toISOString() }));
@@ -296,7 +300,15 @@ const AdminSettingsGeneral = () => {
         'Content-Type': 'application/json'
       };
 
-      const response = await axios.put(`${API_URL}/admin/settings/backup`, backupSettings, { headers });
+      const dataToSend = {
+        autoBackup: backupSettings.autoBackup,
+        backupFrequency: backupSettings.backupFrequency,
+        backupTime: backupSettings.backupTime,
+        backupRetention: parseInt(backupSettings.backupRetention),
+        backupLocation: backupSettings.backupLocation
+      };
+
+      const response = await axios.put(`${API_URL}/admin/settings/backup`, dataToSend, { headers });
       
       if (response.data.success) {
         setBackupSettings(prev => ({ ...prev, updatedAt: new Date().toISOString() }));
@@ -320,7 +332,20 @@ const AdminSettingsGeneral = () => {
         'Content-Type': 'application/json'
       };
 
-      const response = await axios.put(`${API_URL}/admin/settings/notifications`, notificationSettings, { headers });
+      const dataToSend = {
+        emailNotifications: notificationSettings.emailNotifications,
+        smsNotifications: notificationSettings.smsNotifications,
+        pushNotifications: notificationSettings.pushNotifications,
+        notifyNewComplaint: notificationSettings.notifyNewComplaint,
+        notifyComplaintUpdate: notificationSettings.notifyComplaintUpdate,
+        notifyComplaintResolved: notificationSettings.notifyComplaintResolved,
+        notifyNewUser: notificationSettings.notifyNewUser,
+        notifySystemUpdate: notificationSettings.notifySystemUpdate,
+        adminEmail: notificationSettings.adminEmail || '',
+        adminPhone: notificationSettings.adminPhone || ''
+      };
+
+      const response = await axios.put(`${API_URL}/admin/settings/notifications`, dataToSend, { headers });
       
       if (response.data.success) {
         setNotificationSettings(prev => ({ ...prev, updatedAt: new Date().toISOString() }));
@@ -333,12 +358,12 @@ const AdminSettingsGeneral = () => {
     }
   };
 
-  // UPDATE BUTTON HANDLER - Save all settings
+  // UPDATE BUTTON HANDLER - Save all settings from ALL sections
   const handleUpdateSettings = async () => {
     setUpdating(true);
 
     try {
-      // Save all sections in parallel
+      // Save ALL sections in parallel
       const results = await Promise.all([
         saveGeneralSettings(),
         saveEmailSettings(),
@@ -351,7 +376,7 @@ const AdminSettingsGeneral = () => {
       
       if (allSaved) {
         showToast(
-          language === 'np' ? '✅ सेटिङ्स सफलतापूर्वक अपडेट गरियो' : '✅ Settings updated successfully', 
+          language === 'np' ? '✅ सबै सेटिङ्स सफलतापूर्वक अपडेट गरियो' : '✅ All settings updated successfully', 
           'success'
         );
         // Refresh settings to get updated timestamps
@@ -550,7 +575,7 @@ const AdminSettingsGeneral = () => {
       securitySettings: 'सुरक्षा सेटिङ्स',
       backupSettings: 'ब्याकअप सेटिङ्स',
       notificationSettings: 'सूचना सेटिङ्स',
-      updateSettings: 'सेटिङ्स अपडेट गर्नुहोस्',
+      updateSettings: 'सबै सेटिङ्स अपडेट गर्नुहोस्',
       updating: 'अपडेट गर्दै...',
       siteName: 'साइटको नाम',
       siteDescription: 'साइटको विवरण',
@@ -630,7 +655,7 @@ const AdminSettingsGeneral = () => {
       securitySettings: 'Security Settings',
       backupSettings: 'Backup Settings',
       notificationSettings: 'Notification Settings',
-      updateSettings: 'Update Settings',
+      updateSettings: 'Update All Settings',
       updating: 'Updating...',
       siteName: 'Site Name',
       siteDescription: 'Site Description',
@@ -759,7 +784,7 @@ const AdminSettingsGeneral = () => {
                 {updating ? (
                   <><span className="spinner"></span> {t.updating}</>
                 ) : (
-                  <>🔄 {t.updateSettings}</>
+                  <>💾 {t.updateSettings}</>
                 )}
               </button>
             </div>
@@ -1568,32 +1593,35 @@ const AdminSettingsGeneral = () => {
         }
 
         .update-btn {
-          background: linear-gradient(135deg, #10b981, #059669);
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
           color: white;
           border: none;
           padding: 10px 28px;
-          border-radius: 10px;
+          border-radius: 8px;
           cursor: pointer;
           font-weight: 600;
           transition: all 0.2s;
           display: flex;
           align-items: center;
           gap: 8px;
+          font-size: 0.9rem;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .update-btn:hover:not(:disabled) {
           transform: translateY(-2px);
-          box-shadow: 0 4px 15px rgba(16,185,129,0.4);
+          box-shadow: 0 4px 12px rgba(59,130,246,0.4);
         }
 
         .update-btn:disabled {
           opacity: 0.7;
           cursor: not-allowed;
+          transform: none;
         }
 
         .spinner {
-          width: 16px;
-          height: 16px;
+          width: 18px;
+          height: 18px;
           border: 2px solid white;
           border-top-color: transparent;
           border-radius: 50%;
@@ -1825,6 +1853,12 @@ const AdminSettingsGeneral = () => {
             align-items: flex-start;
           }
           
+          .update-btn {
+            width: 100%;
+            justify-content: center;
+            padding: 12px;
+          }
+          
           .form-grid {
             grid-template-columns: 1fr;
           }
@@ -1856,11 +1890,6 @@ const AdminSettingsGeneral = () => {
           .info-row {
             flex-direction: column;
             gap: 4px;
-          }
-          
-          .update-btn {
-            width: 100%;
-            justify-content: center;
           }
         }
       `}</style>
