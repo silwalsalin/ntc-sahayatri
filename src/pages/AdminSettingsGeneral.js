@@ -9,9 +9,8 @@ const AdminSettingsGeneral = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
-  const [saveSuccess, setSaveSuccess] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   // General Settings State
@@ -31,13 +30,14 @@ const AdminSettingsGeneral = () => {
     itemsPerPage: 10,
     enableRegistration: true,
     enablePublicComplaints: true,
-    maintenanceMode: false
+    maintenanceMode: false,
+    updatedAt: null
   });
 
   // Email Settings State
   const [emailSettings, setEmailSettings] = useState({
     smtpHost: 'smtp.gmail.com',
-    smtpPort: '587',
+    smtpPort: 587,
     smtpUser: '',
     smtpPassword: '',
     smtpEncryption: 'tls',
@@ -47,7 +47,8 @@ const AdminSettingsGeneral = () => {
     sendComplaintConfirmation: true,
     sendComplaintUpdate: true,
     sendComplaintResolved: true,
-    sendNewsletter: false
+    sendNewsletter: false,
+    updatedAt: null
   });
 
   // Security Settings State
@@ -62,7 +63,8 @@ const AdminSettingsGeneral = () => {
     requireNumbers: true,
     requireSpecialChars: true,
     twoFactorAuth: false,
-    ipWhitelist: ''
+    ipWhitelist: '',
+    updatedAt: null
   });
 
   // Backup Settings State
@@ -71,9 +73,10 @@ const AdminSettingsGeneral = () => {
     backupFrequency: 'daily',
     backupTime: '02:00',
     backupRetention: 30,
-    backupLocation: '/backups/',
-    lastBackup: '',
-    lastBackupSize: ''
+    backupLocation: './backups/',
+    lastBackup: null,
+    lastBackupSize: null,
+    updatedAt: null
   });
 
   // Notification Settings State
@@ -87,14 +90,15 @@ const AdminSettingsGeneral = () => {
     notifyNewUser: true,
     notifySystemUpdate: true,
     adminEmail: '',
-    adminPhone: ''
+    adminPhone: '',
+    updatedAt: null
   });
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
   // Helper function to get auth token
   const getAuthToken = () => {
-    return localStorage.getItem('token') || localStorage.getItem('adminToken');
+    return localStorage.getItem('adminToken') || localStorage.getItem('token');
   };
 
   // Show toast notification
@@ -111,6 +115,7 @@ const AdminSettingsGeneral = () => {
       
       if (!token) {
         console.error('No auth token found');
+        setLoading(false);
         return;
       }
       
@@ -119,158 +124,255 @@ const AdminSettingsGeneral = () => {
         'Content-Type': 'application/json'
       };
 
-      // Fetch general settings
-      try {
-        const generalResponse = await axios.get(`${API_URL}/settings/general`, { headers });
-        if (generalResponse.data.success && generalResponse.data.data) {
-          setGeneralSettings(prev => ({ ...prev, ...generalResponse.data.data }));
-          console.log('✅ General settings loaded');
-        }
-      } catch (error) {
-        console.error('Error fetching general settings:', error.response?.data || error.message);
+      // Fetch all settings in parallel
+      const [generalRes, emailRes, securityRes, backupRes, notificationRes] = await Promise.all([
+        axios.get(`${API_URL}/admin/settings/general`, { headers }).catch(() => ({ data: { success: false } })),
+        axios.get(`${API_URL}/admin/settings/email`, { headers }).catch(() => ({ data: { success: false } })),
+        axios.get(`${API_URL}/admin/settings/security`, { headers }).catch(() => ({ data: { success: false } })),
+        axios.get(`${API_URL}/admin/settings/backup`, { headers }).catch(() => ({ data: { success: false } })),
+        axios.get(`${API_URL}/admin/settings/notifications`, { headers }).catch(() => ({ data: { success: false } }))
+      ]);
+
+      if (generalRes.data.success && generalRes.data.data) {
+        setGeneralSettings(prev => ({ ...prev, ...generalRes.data.data }));
+        console.log('✅ General settings loaded');
+      } else {
+        console.log('⚠️ Using default general settings');
       }
 
-      // Fetch email settings
-      try {
-        const emailResponse = await axios.get(`${API_URL}/settings/email`, { headers });
-        if (emailResponse.data.success && emailResponse.data.data) {
-          setEmailSettings(prev => ({ ...prev, ...emailResponse.data.data }));
-          console.log('✅ Email settings loaded');
-        }
-      } catch (error) {
-        console.error('Error fetching email settings:', error.response?.data || error.message);
+      if (emailRes.data.success && emailRes.data.data) {
+        setEmailSettings(prev => ({ ...prev, ...emailRes.data.data }));
+        console.log('✅ Email settings loaded');
+      } else {
+        console.log('⚠️ Using default email settings');
       }
 
-      // Fetch security settings
-      try {
-        const securityResponse = await axios.get(`${API_URL}/settings/security`, { headers });
-        if (securityResponse.data.success && securityResponse.data.data) {
-          setSecuritySettings(prev => ({ ...prev, ...securityResponse.data.data }));
-          console.log('✅ Security settings loaded');
-        }
-      } catch (error) {
-        console.error('Error fetching security settings:', error.response?.data || error.message);
+      if (securityRes.data.success && securityRes.data.data) {
+        setSecuritySettings(prev => ({ ...prev, ...securityRes.data.data }));
+        console.log('✅ Security settings loaded');
+      } else {
+        console.log('⚠️ Using default security settings');
       }
 
-      // Fetch backup settings
-      try {
-        const backupResponse = await axios.get(`${API_URL}/settings/backup`, { headers });
-        if (backupResponse.data.success && backupResponse.data.data) {
-          setBackupSettings(prev => ({ ...prev, ...backupResponse.data.data }));
-          console.log('✅ Backup settings loaded');
-        }
-      } catch (error) {
-        console.error('Error fetching backup settings:', error.response?.data || error.message);
+      if (backupRes.data.success && backupRes.data.data) {
+        setBackupSettings(prev => ({ ...prev, ...backupRes.data.data }));
+        console.log('✅ Backup settings loaded');
+      } else {
+        console.log('⚠️ Using default backup settings');
       }
 
-      // Fetch notification settings
-      try {
-        const notificationResponse = await axios.get(`${API_URL}/settings/notifications`, { headers });
-        if (notificationResponse.data.success && notificationResponse.data.data) {
-          setNotificationSettings(prev => ({ ...prev, ...notificationResponse.data.data }));
-          console.log('✅ Notification settings loaded');
-        }
-      } catch (error) {
-        console.error('Error fetching notification settings:', error.response?.data || error.message);
+      if (notificationRes.data.success && notificationRes.data.data) {
+        setNotificationSettings(prev => ({ ...prev, ...notificationRes.data.data }));
+        console.log('✅ Notification settings loaded');
+      } else {
+        console.log('⚠️ Using default notification settings');
       }
 
     } catch (error) {
       console.error('Error fetching settings:', error);
-      showToast(language === 'np' ? 'सेटिङ्स लोड गर्न असफल। पूर्वनिर्धारित मान प्रयोग गरिँदै।' : 'Failed to load settings. Using defaults.', 'error');
+      showToast(
+        language === 'np' ? 'सेटिङ्स लोड गर्न असफल। पूर्वनिर्धारित मान प्रयोग गरिँदै।' : 'Failed to load settings. Using defaults.', 
+        'error'
+      );
     } finally {
       setTimeout(() => setLoading(false), 500);
     }
   };
 
-  // Save all settings to backend
-  const saveSettings = async (section, data) => {
+  // Save general settings
+  const saveGeneralSettings = async () => {
     try {
       const token = getAuthToken();
-      
-      if (!token) {
-        console.error('No auth token found');
-        return false;
-      }
+      if (!token) return false;
       
       const headers = { 
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
 
-      let endpoint = '';
-      switch (section) {
-        case 'general':
-          endpoint = `${API_URL}/settings/general`;
-          break;
-        case 'email':
-          endpoint = `${API_URL}/settings/email`;
-          break;
-        case 'security':
-          endpoint = `${API_URL}/settings/security`;
-          break;
-        case 'backup':
-          endpoint = `${API_URL}/settings/backup`;
-          break;
-        case 'notifications':
-          endpoint = `${API_URL}/settings/notifications`;
-          break;
-        default:
-          return false;
-      }
+      const dataToSend = {
+        siteName: generalSettings.siteName,
+        siteName_np: generalSettings.siteName_np,
+        siteDescription: generalSettings.siteDescription,
+        siteDescription_np: generalSettings.siteDescription_np,
+        siteEmail: generalSettings.siteEmail,
+        sitePhone: generalSettings.sitePhone,
+        siteAddress: generalSettings.siteAddress,
+        siteAddress_np: generalSettings.siteAddress_np,
+        timezone: generalSettings.timezone,
+        dateFormat: generalSettings.dateFormat,
+        timeFormat: generalSettings.timeFormat,
+        defaultLanguage: generalSettings.defaultLanguage,
+        itemsPerPage: generalSettings.itemsPerPage,
+        enableRegistration: generalSettings.enableRegistration,
+        enablePublicComplaints: generalSettings.enablePublicComplaints,
+        maintenanceMode: generalSettings.maintenanceMode
+      };
 
-      console.log(`Saving ${section} settings to:`, endpoint);
-      const response = await axios.put(endpoint, data, { headers });
+      const response = await axios.put(`${API_URL}/admin/settings/general`, dataToSend, { headers });
       
       if (response.data.success) {
-        console.log(`✅ ${section} settings saved successfully`);
+        setGeneralSettings(prev => ({ ...prev, updatedAt: new Date().toISOString() }));
         return true;
-      } else {
-        console.error(`❌ Failed to save ${section} settings:`, response.data.message);
-        return false;
       }
+      return false;
     } catch (error) {
-      console.error(`Error saving ${section} settings:`, error.response?.data || error.message);
+      console.error('Error saving general settings:', error.response?.data || error.message);
       return false;
     }
   };
 
-  // Save all settings
-  const handleSaveSettings = async () => {
-    setSaving(true);
-    setSaveSuccess(false);
+  // Save email settings
+  const saveEmailSettings = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) return false;
+      
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const dataToSend = {
+        smtpHost: emailSettings.smtpHost,
+        smtpPort: emailSettings.smtpPort,
+        smtpUser: emailSettings.smtpUser,
+        smtpPassword: emailSettings.smtpPassword,
+        smtpEncryption: emailSettings.smtpEncryption,
+        fromEmail: emailSettings.fromEmail,
+        fromName: emailSettings.fromName,
+        fromName_np: emailSettings.fromName_np,
+        sendComplaintConfirmation: emailSettings.sendComplaintConfirmation,
+        sendComplaintUpdate: emailSettings.sendComplaintUpdate,
+        sendComplaintResolved: emailSettings.sendComplaintResolved,
+        sendNewsletter: emailSettings.sendNewsletter
+      };
+
+      const response = await axios.put(`${API_URL}/admin/settings/email`, dataToSend, { headers });
+      
+      if (response.data.success) {
+        setEmailSettings(prev => ({ ...prev, updatedAt: new Date().toISOString() }));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error saving email settings:', error.response?.data || error.message);
+      return false;
+    }
+  };
+
+  // Save security settings
+  const saveSecuritySettings = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) return false;
+      
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const response = await axios.put(`${API_URL}/admin/settings/security`, securitySettings, { headers });
+      
+      if (response.data.success) {
+        setSecuritySettings(prev => ({ ...prev, updatedAt: new Date().toISOString() }));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error saving security settings:', error.response?.data || error.message);
+      return false;
+    }
+  };
+
+  // Save backup settings
+  const saveBackupSettings = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) return false;
+      
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const response = await axios.put(`${API_URL}/admin/settings/backup`, backupSettings, { headers });
+      
+      if (response.data.success) {
+        setBackupSettings(prev => ({ ...prev, updatedAt: new Date().toISOString() }));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error saving backup settings:', error.response?.data || error.message);
+      return false;
+    }
+  };
+
+  // Save notification settings
+  const saveNotificationSettings = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) return false;
+      
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const response = await axios.put(`${API_URL}/admin/settings/notifications`, notificationSettings, { headers });
+      
+      if (response.data.success) {
+        setNotificationSettings(prev => ({ ...prev, updatedAt: new Date().toISOString() }));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error saving notification settings:', error.response?.data || error.message);
+      return false;
+    }
+  };
+
+  // UPDATE BUTTON HANDLER - Save all settings
+  const handleUpdateSettings = async () => {
+    setUpdating(true);
 
     try {
-      // Save all sections
+      // Save all sections in parallel
       const results = await Promise.all([
-        saveSettings('general', generalSettings),
-        saveSettings('email', emailSettings),
-        saveSettings('security', securitySettings),
-        saveSettings('backup', backupSettings),
-        saveSettings('notifications', notificationSettings)
+        saveGeneralSettings(),
+        saveEmailSettings(),
+        saveSecuritySettings(),
+        saveBackupSettings(),
+        saveNotificationSettings()
       ]);
 
       const allSaved = results.every(result => result === true);
       
       if (allSaved) {
-        setSaveSuccess(true);
-        showToast(language === 'np' ? 'सेटिङ्स सफलतापूर्वक सुरक्षित गरियो' : 'Settings saved successfully', 'success');
-        setTimeout(() => setSaveSuccess(false), 3000);
-        // Refresh settings to confirm save
+        showToast(
+          language === 'np' ? '✅ सेटिङ्स सफलतापूर्वक अपडेट गरियो' : '✅ Settings updated successfully', 
+          'success'
+        );
+        // Refresh settings to get updated timestamps
         await fetchSettings();
       } else {
         const failedCount = results.filter(r => r === false).length;
         showToast(
           language === 'np' 
-            ? `${failedCount} सेटिङ्स सुरक्षित गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।` 
-            : `Failed to save ${failedCount} settings. Please try again.`, 
+            ? `❌ ${failedCount} सेटिङ्स अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।` 
+            : `❌ Failed to update ${failedCount} settings. Please try again.`, 
           'error'
         );
       }
     } catch (error) {
-      console.error('Error saving settings:', error);
-      showToast(language === 'np' ? 'सेटिङ्स सुरक्षित गर्न असफल' : 'Failed to save settings', 'error');
+      console.error('Error updating settings:', error);
+      showToast(
+        language === 'np' ? '❌ सेटिङ्स अपडेट गर्न असफल' : '❌ Failed to update settings', 
+        'error'
+      );
     } finally {
-      setSaving(false);
+      setUpdating(false);
     }
   };
 
@@ -280,7 +382,10 @@ const AdminSettingsGeneral = () => {
       const token = getAuthToken();
       
       if (!token) {
-        showToast(language === 'np' ? 'प्रमाणीकरण त्रुटि। कृपया पुन: लगइन गर्नुहोस्।' : 'Authentication error. Please login again.', 'error');
+        showToast(
+          language === 'np' ? 'प्रमाणीकरण त्रुटि। कृपया पुन: लगइन गर्नुहोस्।' : 'Authentication error. Please login again.', 
+          'error'
+        );
         return;
       }
       
@@ -289,10 +394,13 @@ const AdminSettingsGeneral = () => {
         'Content-Type': 'application/json'
       };
       
-      const response = await axios.post(`${API_URL}/settings/backup/now`, {}, { headers });
+      const response = await axios.post(`${API_URL}/admin/settings/backup/now`, {}, { headers });
       
       if (response.data.success) {
-        showToast(language === 'np' ? 'ब्याकअप सफलतापूर्वक पूरा भयो' : 'Backup completed successfully', 'success');
+        showToast(
+          language === 'np' ? '💾 ब्याकअप सफलतापूर्वक पूरा भयो' : '💾 Backup completed successfully', 
+          'success'
+        );
         // Update last backup info
         if (response.data.data) {
           setBackupSettings(prev => ({
@@ -301,12 +409,20 @@ const AdminSettingsGeneral = () => {
             lastBackupSize: response.data.data.size
           }));
         }
+        // Refresh backup settings
+        await saveBackupSettings();
       } else {
-        showToast(language === 'np' ? 'ब्याकअप असफल' : 'Backup failed', 'error');
+        showToast(
+          language === 'np' ? '❌ ब्याकअप असफल' : '❌ Backup failed', 
+          'error'
+        );
       }
     } catch (error) {
       console.error('Error creating backup:', error);
-      showToast(language === 'np' ? 'ब्याकअप सिर्जना गर्न असफल' : 'Failed to create backup', 'error');
+      showToast(
+        language === 'np' ? '❌ ब्याकअप सिर्जना गर्न असफल' : '❌ Failed to create backup', 
+        'error'
+      );
     }
   };
 
@@ -316,7 +432,10 @@ const AdminSettingsGeneral = () => {
       const token = getAuthToken();
       
       if (!token) {
-        showToast(language === 'np' ? 'प्रमाणीकरण त्रुटि। कृपया पुन: लगइन गर्नुहोस्।' : 'Authentication error. Please login again.', 'error');
+        showToast(
+          language === 'np' ? 'प्रमाणीकरण त्रुटि। कृपया पुन: लगइन गर्नुहोस्।' : 'Authentication error. Please login again.', 
+          'error'
+        );
         return;
       }
       
@@ -327,7 +446,7 @@ const AdminSettingsGeneral = () => {
       
       const testEmailTo = notificationSettings.adminEmail || emailSettings.fromEmail || 'admin@example.com';
       
-      const response = await axios.post(`${API_URL}/settings/email/test`, {
+      const response = await axios.post(`${API_URL}/admin/settings/email/test`, {
         to: testEmailTo,
         subject: language === 'np' ? 'एनटीसी सहयात्रीबाट परीक्षण इमेल' : 'Test Email from NTC Sahayatri',
         message: language === 'np' 
@@ -336,13 +455,22 @@ const AdminSettingsGeneral = () => {
       }, { headers });
       
       if (response.data.success) {
-        showToast(language === 'np' ? `परीक्षण इमेल ${testEmailTo} मा सफलतापूर्वक पठाइयो` : `Test email sent successfully to ${testEmailTo}`, 'success');
+        showToast(
+          language === 'np' ? `✉️ परीक्षण इमेल ${testEmailTo} मा सफलतापूर्वक पठाइयो` : `✉️ Test email sent successfully to ${testEmailTo}`, 
+          'success'
+        );
       } else {
-        showToast(language === 'np' ? 'परीक्षण इमेल पठाउन असफल' : 'Failed to send test email', 'error');
+        showToast(
+          language === 'np' ? '❌ परीक्षण इमेल पठाउन असफल' : '❌ Failed to send test email', 
+          'error'
+        );
       }
     } catch (error) {
       console.error('Error sending test email:', error);
-      showToast(language === 'np' ? 'परीक्षण इमेल पठाउन असफल' : 'Failed to send test email', 'error');
+      showToast(
+        language === 'np' ? '❌ परीक्षण इमेल पठाउन असफल' : '❌ Failed to send test email', 
+        'error'
+      );
     }
   };
 
@@ -403,6 +531,17 @@ const AdminSettingsGeneral = () => {
     }));
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return language === 'np' ? 'कहिल्यै' : 'Never';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return language === 'np' ? 'कहिल्यै' : 'Never';
+      return date.toLocaleString(language === 'np' ? 'ne-NP' : 'en-US');
+    } catch {
+      return language === 'np' ? 'कहिल्यै' : 'Never';
+    }
+  };
+
   const content = {
     np: {
       settings: 'सेटिङ्स',
@@ -411,9 +550,8 @@ const AdminSettingsGeneral = () => {
       securitySettings: 'सुरक्षा सेटिङ्स',
       backupSettings: 'ब्याकअप सेटिङ्स',
       notificationSettings: 'सूचना सेटिङ्स',
-      saveSettings: 'सेटिङ्स सुरक्षित गर्नुहोस्',
-      saving: 'सुरक्षित गर्दै...',
-      saved: 'सुरक्षित गरियो',
+      updateSettings: 'सेटिङ्स अपडेट गर्नुहोस्',
+      updating: 'अपडेट गर्दै...',
       siteName: 'साइटको नाम',
       siteDescription: 'साइटको विवरण',
       siteEmail: 'साइट इमेल',
@@ -473,7 +611,6 @@ const AdminSettingsGeneral = () => {
       none: 'कुनै पनि होइन',
       hours12: '१२ घण्टा',
       hours24: '२४ घण्टा',
-      saveSuccess: 'सेटिङ्स सफलतापूर्वक सुरक्षित गरियो',
       loading: 'लोड हुँदैछ...',
       testEmail: 'परीक्षण इमेल पठाउनुहोस्',
       backupNow: 'अहिले ब्याकअप गर्नुहोस्',
@@ -483,7 +620,8 @@ const AdminSettingsGeneral = () => {
       email: 'इमेल',
       security: 'सुरक्षा',
       backup: 'ब्याकअप',
-      notifications: 'सूचनाहरू'
+      notifications: 'सूचनाहरू',
+      updatedAt: 'अन्तिम अपडेट'
     },
     en: {
       settings: 'Settings',
@@ -492,9 +630,8 @@ const AdminSettingsGeneral = () => {
       securitySettings: 'Security Settings',
       backupSettings: 'Backup Settings',
       notificationSettings: 'Notification Settings',
-      saveSettings: 'Save Settings',
-      saving: 'Saving...',
-      saved: 'Saved',
+      updateSettings: 'Update Settings',
+      updating: 'Updating...',
       siteName: 'Site Name',
       siteDescription: 'Site Description',
       siteEmail: 'Site Email',
@@ -554,7 +691,6 @@ const AdminSettingsGeneral = () => {
       none: 'None',
       hours12: '12 Hours',
       hours24: '24 Hours',
-      saveSuccess: 'Settings saved successfully',
       loading: 'Loading...',
       testEmail: 'Send Test Email',
       backupNow: 'Backup Now',
@@ -564,7 +700,8 @@ const AdminSettingsGeneral = () => {
       email: 'Email',
       security: 'Security',
       backup: 'Backup',
-      notifications: 'Notifications'
+      notifications: 'Notifications',
+      updatedAt: 'Last Updated'
     }
   };
 
@@ -602,7 +739,7 @@ const AdminSettingsGeneral = () => {
 
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
-      <div className="dashboard-layout">
+      <div className="dashboard-wrapper">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
@@ -615,23 +752,17 @@ const AdminSettingsGeneral = () => {
                 <p>{t.generalSettings}</p>
               </div>
               <button 
-                className={`save-btn ${saving ? 'saving' : ''}`} 
-                onClick={handleSaveSettings}
-                disabled={saving}
+                className={`update-btn ${updating ? 'updating' : ''}`} 
+                onClick={handleUpdateSettings}
+                disabled={updating}
               >
-                {saving ? (
-                  <>⏳ {t.saving}</>
+                {updating ? (
+                  <><span className="spinner"></span> {t.updating}</>
                 ) : (
-                  <>💾 {t.saveSettings}</>
+                  <>🔄 {t.updateSettings}</>
                 )}
               </button>
             </div>
-
-            {saveSuccess && (
-              <div className="success-message">
-                ✓ {t.saveSuccess}
-              </div>
-            )}
 
             {/* Tabs */}
             <div className="settings-tabs">
@@ -653,6 +784,13 @@ const AdminSettingsGeneral = () => {
                 <div className="settings-card">
                   <h3>{t.generalSettings}</h3>
                   
+                  {generalSettings.updatedAt && (
+                    <div className="last-updated">
+                      <span className="updated-label">{t.updatedAt}:</span>
+                      <span className="updated-value">{formatDate(generalSettings.updatedAt)}</span>
+                    </div>
+                  )}
+                  
                   <div className="form-grid">
                     <div className="form-group">
                       <label>{t.siteName} (English)</label>
@@ -661,6 +799,7 @@ const AdminSettingsGeneral = () => {
                         name="siteName"
                         value={generalSettings.siteName}
                         onChange={handleGeneralChange}
+                        placeholder="Enter site name in English"
                       />
                     </div>
                     <div className="form-group">
@@ -670,6 +809,7 @@ const AdminSettingsGeneral = () => {
                         name="siteName_np"
                         value={generalSettings.siteName_np}
                         onChange={handleGeneralChange}
+                        placeholder="साइटको नाम नेपालीमा"
                       />
                     </div>
                     <div className="form-group full-width">
@@ -679,6 +819,7 @@ const AdminSettingsGeneral = () => {
                         value={generalSettings.siteDescription}
                         onChange={handleGeneralChange}
                         rows="2"
+                        placeholder="Enter site description in English"
                       />
                     </div>
                     <div className="form-group full-width">
@@ -688,6 +829,7 @@ const AdminSettingsGeneral = () => {
                         value={generalSettings.siteDescription_np}
                         onChange={handleGeneralChange}
                         rows="2"
+                        placeholder="साइटको विवरण नेपालीमा"
                       />
                     </div>
                     <div className="form-group">
@@ -697,6 +839,7 @@ const AdminSettingsGeneral = () => {
                         name="siteEmail"
                         value={generalSettings.siteEmail}
                         onChange={handleGeneralChange}
+                        placeholder="support@example.com"
                       />
                     </div>
                     <div className="form-group">
@@ -706,6 +849,7 @@ const AdminSettingsGeneral = () => {
                         name="sitePhone"
                         value={generalSettings.sitePhone}
                         onChange={handleGeneralChange}
+                        placeholder="01-1234567"
                       />
                     </div>
                     <div className="form-group full-width">
@@ -715,6 +859,7 @@ const AdminSettingsGeneral = () => {
                         name="siteAddress"
                         value={generalSettings.siteAddress}
                         onChange={handleGeneralChange}
+                        placeholder="Enter address in English"
                       />
                     </div>
                     <div className="form-group full-width">
@@ -724,6 +869,7 @@ const AdminSettingsGeneral = () => {
                         name="siteAddress_np"
                         value={generalSettings.siteAddress_np}
                         onChange={handleGeneralChange}
+                        placeholder="ठेगाना नेपालीमा"
                       />
                     </div>
                     <div className="form-group">
@@ -808,6 +954,13 @@ const AdminSettingsGeneral = () => {
                 <div className="settings-card">
                   <h3>{t.emailSettings}</h3>
                   
+                  {emailSettings.updatedAt && (
+                    <div className="last-updated">
+                      <span className="updated-label">{t.updatedAt}:</span>
+                      <span className="updated-value">{formatDate(emailSettings.updatedAt)}</span>
+                    </div>
+                  )}
+                  
                   <div className="form-grid">
                     <div className="form-group">
                       <label>{t.smtpHost}</label>
@@ -816,15 +969,17 @@ const AdminSettingsGeneral = () => {
                         name="smtpHost"
                         value={emailSettings.smtpHost}
                         onChange={handleEmailChange}
+                        placeholder="smtp.gmail.com"
                       />
                     </div>
                     <div className="form-group">
                       <label>{t.smtpPort}</label>
                       <input
-                        type="text"
+                        type="number"
                         name="smtpPort"
                         value={emailSettings.smtpPort}
                         onChange={handleEmailChange}
+                        placeholder="587"
                       />
                     </div>
                     <div className="form-group">
@@ -834,6 +989,7 @@ const AdminSettingsGeneral = () => {
                         name="smtpUser"
                         value={emailSettings.smtpUser}
                         onChange={handleEmailChange}
+                        placeholder="user@gmail.com"
                       />
                     </div>
                     <div className="form-group">
@@ -843,7 +999,7 @@ const AdminSettingsGeneral = () => {
                         name="smtpPassword"
                         value={emailSettings.smtpPassword}
                         onChange={handleEmailChange}
-                        placeholder="********"
+                        placeholder="Enter SMTP password"
                       />
                     </div>
                     <div className="form-group">
@@ -861,6 +1017,7 @@ const AdminSettingsGeneral = () => {
                         name="fromEmail"
                         value={emailSettings.fromEmail}
                         onChange={handleEmailChange}
+                        placeholder="notifications@example.com"
                       />
                     </div>
                     <div className="form-group">
@@ -870,6 +1027,7 @@ const AdminSettingsGeneral = () => {
                         name="fromName"
                         value={emailSettings.fromName}
                         onChange={handleEmailChange}
+                        placeholder="Sender Name"
                       />
                     </div>
                     <div className="form-group">
@@ -879,6 +1037,7 @@ const AdminSettingsGeneral = () => {
                         name="fromName_np"
                         value={emailSettings.fromName_np}
                         onChange={handleEmailChange}
+                        placeholder="पठाउनेको नाम"
                       />
                     </div>
                   </div>
@@ -925,6 +1084,13 @@ const AdminSettingsGeneral = () => {
               <div className="settings-section">
                 <div className="settings-card">
                   <h3>{t.securitySettings}</h3>
+                  
+                  {securitySettings.updatedAt && (
+                    <div className="last-updated">
+                      <span className="updated-label">{t.updatedAt}:</span>
+                      <span className="updated-value">{formatDate(securitySettings.updatedAt)}</span>
+                    </div>
+                  )}
                   
                   <div className="form-grid">
                     <div className="form-group">
@@ -1053,6 +1219,13 @@ const AdminSettingsGeneral = () => {
                 <div className="settings-card">
                   <h3>{t.backupSettings}</h3>
                   
+                  {backupSettings.updatedAt && (
+                    <div className="last-updated">
+                      <span className="updated-label">{t.updatedAt}:</span>
+                      <span className="updated-value">{formatDate(backupSettings.updatedAt)}</span>
+                    </div>
+                  )}
+                  
                   <div className="checkbox-group">
                     <label className="checkbox-label">
                       <input
@@ -1109,7 +1282,7 @@ const AdminSettingsGeneral = () => {
                     <div className="backup-info">
                       <div className="info-row">
                         <span className="info-label">{t.lastBackup}:</span>
-                        <span className="info-value">{backupSettings.lastBackup || 'N/A'}</span>
+                        <span className="info-value">{formatDate(backupSettings.lastBackup)}</span>
                       </div>
                       <div className="info-row">
                         <span className="info-label">{t.lastBackupSize}:</span>
@@ -1130,6 +1303,13 @@ const AdminSettingsGeneral = () => {
               <div className="settings-section">
                 <div className="settings-card">
                   <h3>{t.notificationSettings}</h3>
+                  
+                  {notificationSettings.updatedAt && (
+                    <div className="last-updated">
+                      <span className="updated-label">{t.updatedAt}:</span>
+                      <span className="updated-value">{formatDate(notificationSettings.updatedAt)}</span>
+                    </div>
+                  )}
                   
                   <div className="checkbox-group">
                     <label className="checkbox-label">
@@ -1169,6 +1349,7 @@ const AdminSettingsGeneral = () => {
                         name="adminEmail"
                         value={notificationSettings.adminEmail}
                         onChange={handleNotificationChange}
+                        placeholder="admin@example.com"
                       />
                     </div>
                     <div className="form-group">
@@ -1178,6 +1359,7 @@ const AdminSettingsGeneral = () => {
                         name="adminPhone"
                         value={notificationSettings.adminPhone}
                         onChange={handleNotificationChange}
+                        placeholder="98xxxxxxxx"
                       />
                     </div>
                   </div>
@@ -1246,15 +1428,14 @@ const AdminSettingsGeneral = () => {
         .admin-settings {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          height: 100vh;
+          min-height: 100vh;
           width: 100%;
-          overflow: hidden;
           position: relative;
         }
 
         .toast-notification {
           position: fixed;
-          top: 200px;
+          top: 80px;
           right: 20px;
           z-index: 3000;
           display: flex;
@@ -1311,21 +1492,20 @@ const AdminSettingsGeneral = () => {
           to { transform: rotate(360deg); }
         }
 
-        .dashboard-layout {
+        .dashboard-wrapper {
           display: flex;
-          height: calc(100vh - 195px);
-          margin-top: 195px;
+          min-height: calc(100vh - 70px);
+          margin-top: 70px;
           position: relative;
           width: 100%;
-          overflow: hidden;
         }
 
         .sidebar-container {
           position: fixed;
-          top: 195px;
+          top: 70px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 195px);
+          height: calc(100vh - 70px);
           background: white;
           border-right: 1px solid #e2e8f0;
           z-index: 100;
@@ -1336,9 +1516,8 @@ const AdminSettingsGeneral = () => {
           flex: 1;
           margin-left: 260px;
           width: calc(100% - 260px);
-          height: 100%;
-          overflow-y: auto;
-          overflow-x: hidden;
+          min-height: 100%;
+          overflow-x: auto;
           position: relative;
         }
 
@@ -1354,6 +1533,10 @@ const AdminSettingsGeneral = () => {
         .main-container::-webkit-scrollbar-thumb {
           background: #3b82f6;
           border-radius: 10px;
+        }
+
+        .main-container::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
         }
 
         .content-wrapper {
@@ -1384,34 +1567,38 @@ const AdminSettingsGeneral = () => {
           font-size: 0.85rem;
         }
 
-        .save-btn {
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
+        .update-btn {
+          background: linear-gradient(135deg, #10b981, #059669);
           color: white;
           border: none;
-          padding: 10px 24px;
+          padding: 10px 28px;
           border-radius: 10px;
           cursor: pointer;
-          font-weight: 500;
+          font-weight: 600;
           transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
-        .save-btn:hover:not(:disabled) {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+        .update-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 15px rgba(16,185,129,0.4);
         }
 
-        .save-btn:disabled {
+        .update-btn:disabled {
           opacity: 0.7;
           cursor: not-allowed;
         }
 
-        .success-message {
-          background: #d1fae5;
-          color: #059669;
-          padding: 12px 16px;
-          border-radius: 10px;
-          margin-bottom: 20px;
-          border-left: 4px solid #059669;
+        .spinner {
+          width: 16px;
+          height: 16px;
+          border: 2px solid white;
+          border-top-color: transparent;
+          border-radius: 50%;
+          animation: spin 0.6s linear infinite;
+          display: inline-block;
         }
 
         .settings-tabs {
@@ -1474,9 +1661,28 @@ const AdminSettingsGeneral = () => {
           font-size: 1.1rem;
           font-weight: 600;
           color: #0f172a;
-          margin-bottom: 24px;
+          margin-bottom: 20px;
           padding-bottom: 12px;
           border-bottom: 2px solid #e2e8f0;
+        }
+
+        .last-updated {
+          display: flex;
+          gap: 8px;
+          padding: 10px 12px;
+          background: #f8fafc;
+          border-radius: 8px;
+          margin-bottom: 20px;
+          font-size: 0.75rem;
+        }
+
+        .updated-label {
+          font-weight: 600;
+          color: #475569;
+        }
+
+        .updated-value {
+          color: #64748b;
         }
 
         .form-grid {
@@ -1592,16 +1798,8 @@ const AdminSettingsGeneral = () => {
         }
 
         @media (max-width: 768px) {
-          .admin-settings {
-            height: auto;
-            overflow: auto;
-          }
-          
-          .dashboard-layout {
+          .dashboard-wrapper {
             flex-direction: column;
-            height: auto;
-            margin-top: 150px;
-            overflow: visible;
           }
           
           .sidebar-container {
@@ -1658,6 +1856,11 @@ const AdminSettingsGeneral = () => {
           .info-row {
             flex-direction: column;
             gap: 4px;
+          }
+          
+          .update-btn {
+            width: 100%;
+            justify-content: center;
           }
         }
       `}</style>

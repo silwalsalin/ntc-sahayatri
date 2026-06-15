@@ -15,8 +15,9 @@ const AdminReportsComplaints = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedPriority, setSelectedPriority] = useState('all');
+  const [activeTab, setActiveTab] = useState('overview');
 
-  // Sample report data
+  // Enhanced sample report data with more user details
   const [reportData, setReportData] = useState({
     summary: {
       totalComplaints: 1247,
@@ -61,12 +62,208 @@ const AdminReportsComplaints = () => {
       { month: 'नोभेम्बर', enMonth: 'November', count: 190 },
       { month: 'डिसेम्बर', enMonth: 'December', count: 198 }
     ],
-    topComplaints: [
-      { id: 1, ticketId: 'NTC-2024-001', name: 'रमेश केसी', enName: 'Ramesh KC', category: 'internet', date: '२०८०-०१-१५', enDate: '2024-01-15', status: 'in-progress', priority: 'high' },
-      { id: 2, ticketId: 'NTC-2024-002', name: 'सीता शर्मा', enName: 'Sita Sharma', category: 'recharge', date: '२०८०-०१-१८', enDate: '2024-01-18', status: 'resolved', priority: 'medium' },
-      { id: 3, ticketId: 'NTC-2024-003', name: 'हरि प्रसाद', enName: 'Hari Prasad', category: 'activation', date: '२०८०-०१-२०', enDate: '2024-01-20', status: 'pending', priority: 'low' },
-      { id: 4, ticketId: 'NTC-2024-004', name: 'गीता अधिकारी', enName: 'Gita Adhikari', category: 'billing', date: '२०८०-०१-२२', enDate: '2024-01-22', status: 'pending', priority: 'high' },
-      { id: 5, ticketId: 'NTC-2024-005', name: 'विकास न्यौपाने', enName: 'Bikas Neupane', category: 'signal', date: '२०८०-०१-२५', enDate: '2024-01-25', status: 'in-progress', priority: 'medium' }
+    // Enhanced complaints with full user details
+    allComplaints: [
+      { 
+        id: 1, 
+        ticketId: 'NTC-2024-001', 
+        name: 'रमेश केसी', 
+        enName: 'Ramesh KC',
+        phone: '9841234567',
+        email: 'ramesh.kc@example.com',
+        location: 'काठमाडौं',
+        enLocation: 'Kathmandu',
+        category: 'internet', 
+        date: '२०८०-०१-१५', 
+        enDate: '2024-01-15', 
+        status: 'in-progress', 
+        priority: 'high',
+        description: 'इन्टरनेट जडानमा समस्या',
+        enDescription: 'Internet connection issue',
+        assignedTo: 'प्राविधिक टोली',
+        enAssignedTo: 'Technical Team',
+        channel: 'website'
+      },
+      { 
+        id: 2, 
+        ticketId: 'NTC-2024-002', 
+        name: 'सीता शर्मा', 
+        enName: 'Sita Sharma',
+        phone: '9842345678',
+        email: 'sita.sharma@example.com',
+        location: 'ललितपुर',
+        enLocation: 'Lalitpur',
+        category: 'recharge', 
+        date: '२०८०-०१-१८', 
+        enDate: '2024-01-18', 
+        status: 'resolved', 
+        priority: 'medium',
+        description: 'रिचार्ज नभएको',
+        enDescription: 'Recharge not credited',
+        assignedTo: 'ग्राहक सहायता',
+        enAssignedTo: 'Customer Support',
+        channel: 'phone'
+      },
+      { 
+        id: 3, 
+        ticketId: 'NTC-2024-003', 
+        name: 'हरि प्रसाद', 
+        enName: 'Hari Prasad',
+        phone: '9843456789',
+        email: 'hari.prasad@example.com',
+        location: 'भक्तपुर',
+        enLocation: 'Bhaktapur',
+        category: 'activation', 
+        date: '२०८०-०१-२०', 
+        enDate: '2024-01-20', 
+        status: 'pending', 
+        priority: 'low',
+        description: 'सिम सक्रियता हुन सकेन',
+        enDescription: 'SIM activation failed',
+        assignedTo: 'प्रशासन',
+        enAssignedTo: 'Administration',
+        channel: 'whatsapp'
+      },
+      { 
+        id: 4, 
+        ticketId: 'NTC-2024-004', 
+        name: 'गीता अधिकारी', 
+        enName: 'Gita Adhikari',
+        phone: '9844567890',
+        email: 'gita.adhikari@example.com',
+        location: 'पोखरा',
+        enLocation: 'Pokhara',
+        category: 'billing', 
+        date: '२०८०-०१-२२', 
+        enDate: '2024-01-22', 
+        status: 'pending', 
+        priority: 'high',
+        description: 'बिलमा त्रुटि भएको',
+        enDescription: 'Billing error',
+        assignedTo: 'बिलिङ विभाग',
+        enAssignedTo: 'Billing Department',
+        channel: 'email'
+      },
+      { 
+        id: 5, 
+        ticketId: 'NTC-2024-005', 
+        name: 'विकास न्यौपाने', 
+        enName: 'Bikas Neupane',
+        phone: '9845678901',
+        email: 'bikas.neupane@example.com',
+        location: 'बुटवल',
+        enLocation: 'Butwal',
+        category: 'network', 
+        date: '२०८०-०१-२५', 
+        enDate: '2024-01-25', 
+        status: 'in-progress', 
+        priority: 'medium',
+        description: 'नेटवर्क कभरेज नभएको',
+        enDescription: 'No network coverage',
+        assignedTo: 'नेटवर्क टोली',
+        enAssignedTo: 'Network Team',
+        channel: 'facebook'
+      },
+      { 
+        id: 6, 
+        ticketId: 'NTC-2024-006', 
+        name: 'मिना बस्नेत', 
+        enName: 'Mina Basnet',
+        phone: '9846789012',
+        email: 'mina.basnet@example.com',
+        location: 'धरान',
+        enLocation: 'Dharan',
+        category: 'technical', 
+        date: '२०८०-०१-२८', 
+        enDate: '2024-01-28', 
+        status: 'resolved', 
+        priority: 'high',
+        description: 'प्राविधिक सहायता आवश्यक',
+        enDescription: 'Technical assistance needed',
+        assignedTo: 'प्राविधिक सहायता',
+        enAssignedTo: 'Tech Support',
+        channel: 'website'
+      },
+      { 
+        id: 7, 
+        ticketId: 'NTC-2024-007', 
+        name: 'सुरज थापा', 
+        enName: 'Suraj Thapa',
+        phone: '9847890123',
+        email: 'suraj.thapa@example.com',
+        location: 'हेटौंडा',
+        enLocation: 'Hetauda',
+        category: 'internet', 
+        date: '२०८०-०१-३०', 
+        enDate: '2024-01-30', 
+        status: 'pending', 
+        priority: 'medium',
+        description: 'इन्टरनेट गति सुस्त',
+        enDescription: 'Slow internet speed',
+        assignedTo: 'आईपी कोर टोली',
+        enAssignedTo: 'IP Core Team',
+        channel: 'phone'
+      },
+      { 
+        id: 8, 
+        ticketId: 'NTC-2024-008', 
+        name: 'अन्जना कार्की', 
+        enName: 'Anjana Karki',
+        phone: '9848901234',
+        email: 'anjana.karki@example.com',
+        location: 'विराटनगर',
+        enLocation: 'Biratnagar',
+        category: 'billing', 
+        date: '२०८०-०२-०२', 
+        enDate: '2024-02-02', 
+        status: 'in-progress', 
+        priority: 'high',
+        description: 'दोहोरो बिल कटौती',
+        enDescription: 'Double billing deduction',
+        assignedTo: 'वित्त विभाग',
+        enAssignedTo: 'Finance Department',
+        channel: 'whatsapp'
+      },
+      { 
+        id: 9, 
+        ticketId: 'NTC-2024-009', 
+        name: 'राजन पौडेल', 
+        enName: 'Rajan Paudel',
+        phone: '9849012345',
+        email: 'rajan.paudel@example.com',
+        location: 'नेपालगन्ज',
+        enLocation: 'Nepalgunj',
+        category: 'network', 
+        date: '२०८०-०२-०५', 
+        enDate: '2024-02-05', 
+        status: 'resolved', 
+        priority: 'low',
+        description: 'नेटवर्क ड्रप हुने समस्या',
+        enDescription: 'Network dropping issue',
+        assignedTo: 'नेटवर्क टोली',
+        enAssignedTo: 'Network Team',
+        channel: 'email'
+      },
+      { 
+        id: 10, 
+        ticketId: 'NTC-2024-010', 
+        name: 'सम्झना लामिछाने', 
+        enName: 'Samjhana Lamichhane',
+        phone: '9850123456',
+        email: 'samjhana.l@example.com',
+        location: 'चितवन',
+        enLocation: 'Chitwan',
+        category: 'technical', 
+        date: '२०८०-०२-०८', 
+        enDate: '2024-02-08', 
+        status: 'in-progress', 
+        priority: 'high',
+        description: 'फोनमा आवाज नआउने',
+        enDescription: 'No voice on phone',
+        assignedTo: 'प्राविधिक सहायता',
+        enAssignedTo: 'Tech Support',
+        channel: 'facebook'
+      }
     ],
     channelBreakdown: [
       { name: 'वेबसाइट पोर्टल', enName: 'Website Portal', count: 587, percentage: 47.1 },
@@ -125,7 +322,7 @@ const AdminReportsComplaints = () => {
       statusBreakdown: 'स्थिति अनुसार विभाजन',
       priorityBreakdown: 'प्राथमिकता अनुसार विभाजन',
       monthlyTrend: 'मासिक प्रवृत्ति',
-      topComplaints: 'शीर्ष गुनासोहरू',
+      allComplaints: 'सबै गुनासोहरू',
       channelBreakdown: 'च्यानल अनुसार विभाजन',
       reportGenerated: 'रिपोर्ट उत्पन्न गरियो',
       noDataFound: 'कुनै डाटा फेला परेन',
@@ -149,6 +346,19 @@ const AdminReportsComplaints = () => {
       status: 'स्थिति',
       priority: 'प्राथमिकता',
       channel: 'च्यानल',
+      ticketId: 'टिकट नं.',
+      complainant: 'उजुरीकर्ता',
+      phone: 'फोन नं.',
+      email: 'इमेल',
+      location: 'स्थान',
+      date: 'मिति',
+      description: 'विवरण',
+      assignedTo: 'जिम्मेवार',
+      actions: 'कार्यहरू',
+      viewDetails: 'विवरण हेर्नुहोस्',
+      overallOverview: 'समग्र अवलोकन',
+      userComplaintsDetails: 'प्रयोगकर्ता गुनासो विवरण',
+      loading: 'लोड हुँदै...',
       january: 'जनवरी',
       february: 'फेब्रुअरी',
       march: 'मार्च',
@@ -161,7 +371,10 @@ const AdminReportsComplaints = () => {
       october: 'अक्टोबर',
       november: 'नोभेम्बर',
       december: 'डिसेम्बर',
-      loading: 'लोड हुँदै...'
+      resetFilters: 'फिल्टर रिसेट गर्नुहोस्',
+      showing: 'देखाउँदै',
+      of: 'को',
+      entries: 'प्रविष्टिहरू'
     },
     en: {
       complaintsReports: 'Complaints Reports',
@@ -199,7 +412,7 @@ const AdminReportsComplaints = () => {
       statusBreakdown: 'Status Breakdown',
       priorityBreakdown: 'Priority Breakdown',
       monthlyTrend: 'Monthly Trend',
-      topComplaints: 'Top Complaints',
+      allComplaints: 'All Complaints',
       channelBreakdown: 'Channel Breakdown',
       reportGenerated: 'Report Generated',
       noDataFound: 'No data found',
@@ -223,6 +436,19 @@ const AdminReportsComplaints = () => {
       status: 'Status',
       priority: 'Priority',
       channel: 'Channel',
+      ticketId: 'Ticket ID',
+      complainant: 'Complainant',
+      phone: 'Phone',
+      email: 'Email',
+      location: 'Location',
+      date: 'Date',
+      description: 'Description',
+      assignedTo: 'Assigned To',
+      actions: 'Actions',
+      viewDetails: 'View Details',
+      overallOverview: 'Overall Overview',
+      userComplaintsDetails: 'User Complaints Details',
+      loading: 'Loading...',
       january: 'January',
       february: 'February',
       march: 'March',
@@ -235,12 +461,34 @@ const AdminReportsComplaints = () => {
       october: 'October',
       november: 'November',
       december: 'December',
-      loading: 'Loading...'
+      resetFilters: 'Reset Filters',
+      showing: 'Showing',
+      of: 'of',
+      entries: 'entries'
     }
   };
 
   const t = content[language];
   const currentData = reportData;
+
+  // Filter complaints based on selected filters
+  const getFilteredComplaints = () => {
+    let filtered = [...currentData.allComplaints];
+    
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(c => c.category === selectedCategory);
+    }
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(c => c.status === selectedStatus);
+    }
+    if (selectedPriority !== 'all') {
+      filtered = filtered.filter(c => c.priority === selectedPriority);
+    }
+    
+    return filtered;
+  };
+
+  const filteredComplaints = getFilteredComplaints();
 
   const getCategoryText = (category) => {
     const categories = {
@@ -316,6 +564,21 @@ const AdminReportsComplaints = () => {
     window.print();
   };
 
+  const handleResetFilters = () => {
+    setSelectedCategory('all');
+    setSelectedStatus('all');
+    setSelectedPriority('all');
+    setDateRange('month');
+    setReportType('summary');
+  };
+
+  const handleViewDetails = (complaint) => {
+    const details = language === 'np' 
+      ? `टिकट: ${complaint.ticketId}\nनाम: ${complaint.name}\nफोन: ${complaint.phone}\nइमेल: ${complaint.email}\nस्थान: ${complaint.location}\nप्रकार: ${getCategoryText(complaint.category)}\nविवरण: ${complaint.description}\nजिम्मेवार: ${complaint.assignedTo}`
+      : `Ticket: ${complaint.ticketId}\nName: ${complaint.enName}\nPhone: ${complaint.phone}\nEmail: ${complaint.email}\nLocation: ${complaint.enLocation}\nCategory: ${getCategoryText(complaint.category)}\nDescription: ${complaint.enDescription}\nAssigned To: ${complaint.enAssignedTo}`;
+    alert(details);
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -346,6 +609,22 @@ const AdminReportsComplaints = () => {
                 <button className="export-btn excel" onClick={handleExportExcel}>📊 {t.exportExcel}</button>
                 <button className="export-btn print" onClick={handlePrint}>🖨️ {t.print}</button>
               </div>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="tab-navigation">
+              <button 
+                className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
+                onClick={() => setActiveTab('overview')}
+              >
+                📈 {t.overallOverview}
+              </button>
+              <button 
+                className={`tab-btn ${activeTab === 'complaints' ? 'active' : ''}`}
+                onClick={() => setActiveTab('complaints')}
+              >
+                📋 {t.allComplaints}
+              </button>
             </div>
 
             {/* Filters Section */}
@@ -444,203 +723,261 @@ const AdminReportsComplaints = () => {
                 </select>
               </div>
 
-              <button className="generate-btn" onClick={handleGenerateReport}>
-                🔄 {t.generateReport}
-              </button>
-            </div>
-
-            {/* Summary Cards */}
-            <div className="summary-cards">
-              <div className="summary-card">
-                <div className="card-icon blue">📋</div>
-                <div className="card-info">
-                  <div className="card-value">{currentData.summary.totalComplaints}</div>
-                  <div className="card-label">{t.totalComplaints}</div>
-                </div>
-              </div>
-              <div className="summary-card">
-                <div className="card-icon orange">⏳</div>
-                <div className="card-info">
-                  <div className="card-value">{currentData.summary.pendingComplaints}</div>
-                  <div className="card-label">{t.pendingComplaints}</div>
-                </div>
-              </div>
-              <div className="summary-card">
-                <div className="card-icon yellow">🔄</div>
-                <div className="card-info">
-                  <div className="card-value">{currentData.summary.inProgressComplaints}</div>
-                  <div className="card-label">{t.inProgressComplaints}</div>
-                </div>
-              </div>
-              <div className="summary-card">
-                <div className="card-icon green">✅</div>
-                <div className="card-info">
-                  <div className="card-value">{currentData.summary.resolvedComplaints}</div>
-                  <div className="card-label">{t.resolvedComplaints}</div>
-                </div>
-              </div>
-              <div className="summary-card">
-                <div className="card-icon purple">⏱️</div>
-                <div className="card-info">
-                  <div className="card-value">{currentData.summary.avgResolutionDays} {language === 'np' ? 'दिन' : 'days'}</div>
-                  <div className="card-label">{t.avgResolutionDays}</div>
-                </div>
-              </div>
-              <div className="summary-card">
-                <div className="card-icon pink">⭐</div>
-                <div className="card-info">
-                  <div className="card-value">{currentData.summary.satisfactionRate}%</div>
-                  <div className="card-label">{t.satisfactionRate}</div>
-                </div>
+              <div className="filter-actions">
+                <button className="generate-btn" onClick={handleGenerateReport}>
+                  🔄 {t.generateReport}
+                </button>
+                <button className="reset-btn" onClick={handleResetFilters}>
+                  🔄 {t.resetFilters}
+                </button>
               </div>
             </div>
 
-            {/* Growth Indicator */}
-            <div className="growth-card">
-              <div className="growth-info">
-                <span className="growth-label">{t.thisMonth}:</span>
-                <span className="growth-value">{currentData.summary.thisMonth}</span>
-              </div>
-              <div className="growth-info">
-                <span className="growth-label">{t.lastMonth}:</span>
-                <span className="growth-value">{currentData.summary.lastMonth}</span>
-              </div>
-              <div className="growth-info">
-                <span className="growth-label">{t.growth}:</span>
-                <span className="growth-value positive">+{currentData.summary.growth}%</span>
-              </div>
-            </div>
-
-            {/* Charts Section */}
-            <div className="charts-grid">
-              {/* Category Breakdown */}
-              <div className="chart-card">
-                <h3>{t.categoryBreakdown}</h3>
-                <div className="chart-content">
-                  {currentData.categoryBreakdown.map((item, idx) => (
-                    <div key={idx} className="chart-bar-item">
-                      <div className="chart-label">
-                        <span>{language === 'np' ? item.name : item.enName}</span>
-                        <span>{item.count} ({item.percentage}%)</span>
-                      </div>
-                      <div className="chart-bar-bg">
-                        <div 
-                          className="chart-bar-fill" 
-                          style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${200 + idx * 30}, 70%, 55%)` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Status Breakdown */}
-              <div className="chart-card">
-                <h3>{t.statusBreakdown}</h3>
-                <div className="pie-chart-container">
-                  {currentData.statusBreakdown.map((item, idx) => (
-                    <div key={idx} className="pie-segment-info">
-                      <div className="pie-color" style={{ backgroundColor: `hsl(${120 + idx * 90}, 70%, 55%)` }} />
-                      <div className="pie-label">
-                        <span>{language === 'np' ? item.name : item.enName}</span>
-                        <span>{item.count} ({item.percentage}%)</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Priority Breakdown */}
-              <div className="chart-card">
-                <h3>{t.priorityBreakdown}</h3>
-                <div className="pie-chart-container">
-                  {currentData.priorityBreakdown.map((item, idx) => (
-                    <div key={idx} className="pie-segment-info">
-                      <div className="pie-color" style={{ backgroundColor: `hsl(${0 + idx * 45}, 70%, 55%)` }} />
-                      <div className="pie-label">
-                        <span>{language === 'np' ? item.name : item.enName}</span>
-                        <span>{item.count} ({item.percentage}%)</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Channel Breakdown */}
-              <div className="chart-card">
-                <h3>{t.channelBreakdown}</h3>
-                <div className="chart-content">
-                  {currentData.channelBreakdown.map((item, idx) => (
-                    <div key={idx} className="chart-bar-item">
-                      <div className="chart-label">
-                        <span>{language === 'np' ? item.name : item.enName}</span>
-                        <span>{item.count} ({item.percentage}%)</span>
-                      </div>
-                      <div className="chart-bar-bg">
-                        <div 
-                          className="chart-bar-fill" 
-                          style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${280 + idx * 20}, 70%, 55%)` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Monthly Trend */}
-            <div className="trend-card">
-              <h3>{t.monthlyTrend}</h3>
-              <div className="trend-chart">
-                {currentData.monthlyTrend.map((item, idx) => (
-                  <div key={idx} className="trend-bar-item">
-                    <div className="trend-label">{getMonthText(item.month)}</div>
-                    <div className="trend-bar-bg">
-                      <div 
-                        className="trend-bar-fill" 
-                        style={{ 
-                          height: `${(item.count / Math.max(...currentData.monthlyTrend.map(m => m.count))) * 100}%`,
-                          backgroundColor: `hsl(${210 + idx * 5}, 70%, 55%)`
-                        }}
-                      >
-                        <span className="trend-value">{item.count}</span>
-                      </div>
+            {/* Overview Tab Content */}
+            {activeTab === 'overview' && (
+              <>
+                {/* Summary Cards */}
+                <div className="summary-cards">
+                  <div className="summary-card">
+                    <div className="card-icon blue">📋</div>
+                    <div className="card-info">
+                      <div className="card-value">{currentData.summary.totalComplaints.toLocaleString()}</div>
+                      <div className="card-label">{t.totalComplaints}</div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div className="summary-card">
+                    <div className="card-icon orange">⏳</div>
+                    <div className="card-info">
+                      <div className="card-value">{currentData.summary.pendingComplaints.toLocaleString()}</div>
+                      <div className="card-label">{t.pendingComplaints}</div>
+                    </div>
+                  </div>
+                  <div className="summary-card">
+                    <div className="card-icon yellow">🔄</div>
+                    <div className="card-info">
+                      <div className="card-value">{currentData.summary.inProgressComplaints.toLocaleString()}</div>
+                      <div className="card-label">{t.inProgressComplaints}</div>
+                    </div>
+                  </div>
+                  <div className="summary-card">
+                    <div className="card-icon green">✅</div>
+                    <div className="card-info">
+                      <div className="card-value">{currentData.summary.resolvedComplaints.toLocaleString()}</div>
+                      <div className="card-label">{t.resolvedComplaints}</div>
+                    </div>
+                  </div>
+                  <div className="summary-card">
+                    <div className="card-icon purple">⏱️</div>
+                    <div className="card-info">
+                      <div className="card-value">{currentData.summary.avgResolutionDays} {language === 'np' ? 'दिन' : 'days'}</div>
+                      <div className="card-label">{t.avgResolutionDays}</div>
+                    </div>
+                  </div>
+                  <div className="summary-card">
+                    <div className="card-icon pink">⭐</div>
+                    <div className="card-info">
+                      <div className="card-value">{currentData.summary.satisfactionRate}%</div>
+                      <div className="card-label">{t.satisfactionRate}</div>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Top Complaints Table */}
-            <div className="table-card">
-              <h3>{t.topComplaints}</h3>
-              <div className="table-wrapper">
-                <table className="reports-table">
-                  <thead>
-                    <tr>
-                      <th>{t.ticketId}</th>
-                      <th>{t.complainant}</th>
-                      <th>{t.category}</th>
-                      <th>{t.date}</th>
-                      <th>{t.status}</th>
-                      <th>{t.priority}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentData.topComplaints.map((complaint) => (
-                      <tr key={complaint.id}>
-                        <td className="ticket-id">{complaint.ticketId}</td>
-                        <td>{language === 'np' ? complaint.name : complaint.enName}</td>
-                        <td>{getCategoryText(complaint.category)}</td>
-                        <td>{language === 'np' ? complaint.date : complaint.enDate}</td>
-                        <td><span className={`status-badge status-${complaint.status}`}>{getStatusText(complaint.status)}</span></td>
-                        <td><span className={`priority-badge priority-${complaint.priority}`}>{getPriorityText(complaint.priority)}</span></td>
-                      </tr>
+                {/* Growth Indicator */}
+                <div className="growth-card">
+                  <div className="growth-info">
+                    <span className="growth-label">{t.thisMonth}:</span>
+                    <span className="growth-value">{currentData.summary.thisMonth}</span>
+                  </div>
+                  <div className="growth-info">
+                    <span className="growth-label">{t.lastMonth}:</span>
+                    <span className="growth-value">{currentData.summary.lastMonth}</span>
+                  </div>
+                  <div className="growth-info">
+                    <span className="growth-label">{t.growth}:</span>
+                    <span className="growth-value positive">+{currentData.summary.growth}%</span>
+                  </div>
+                </div>
+
+                {/* Charts Section */}
+                <div className="charts-grid">
+                  {/* Category Breakdown */}
+                  <div className="chart-card">
+                    <h3>{t.categoryBreakdown}</h3>
+                    <div className="chart-content">
+                      {currentData.categoryBreakdown.map((item, idx) => (
+                        <div key={idx} className="chart-bar-item">
+                          <div className="chart-label">
+                            <span>{language === 'np' ? item.name : item.enName}</span>
+                            <span>{item.count} ({item.percentage}%)</span>
+                          </div>
+                          <div className="chart-bar-bg">
+                            <div 
+                              className="chart-bar-fill" 
+                              style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${200 + idx * 30}, 70%, 55%)` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Status Breakdown */}
+                  <div className="chart-card">
+                    <h3>{t.statusBreakdown}</h3>
+                    <div className="pie-chart-container">
+                      {currentData.statusBreakdown.map((item, idx) => (
+                        <div key={idx} className="pie-segment-info">
+                          <div className="pie-color" style={{ backgroundColor: `hsl(${120 + idx * 90}, 70%, 55%)` }} />
+                          <div className="pie-label">
+                            <span>{language === 'np' ? item.name : item.enName}</span>
+                            <span>{item.count} ({item.percentage}%)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Priority Breakdown */}
+                  <div className="chart-card">
+                    <h3>{t.priorityBreakdown}</h3>
+                    <div className="pie-chart-container">
+                      {currentData.priorityBreakdown.map((item, idx) => (
+                        <div key={idx} className="pie-segment-info">
+                          <div className="pie-color" style={{ backgroundColor: `hsl(${0 + idx * 45}, 70%, 55%)` }} />
+                          <div className="pie-label">
+                            <span>{language === 'np' ? item.name : item.enName}</span>
+                            <span>{item.count} ({item.percentage}%)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Channel Breakdown */}
+                  <div className="chart-card">
+                    <h3>{t.channelBreakdown}</h3>
+                    <div className="chart-content">
+                      {currentData.channelBreakdown.map((item, idx) => (
+                        <div key={idx} className="chart-bar-item">
+                          <div className="chart-label">
+                            <span>{language === 'np' ? item.name : item.enName}</span>
+                            <span>{item.count} ({item.percentage}%)</span>
+                          </div>
+                          <div className="chart-bar-bg">
+                            <div 
+                              className="chart-bar-fill" 
+                              style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${280 + idx * 20}, 70%, 55%)` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Monthly Trend */}
+                <div className="trend-card">
+                  <h3>{t.monthlyTrend}</h3>
+                  <div className="trend-chart">
+                    {currentData.monthlyTrend.map((item, idx) => (
+                      <div key={idx} className="trend-bar-item">
+                        <div className="trend-label">{getMonthText(item.month)}</div>
+                        <div className="trend-bar-bg">
+                          <div 
+                            className="trend-bar-fill" 
+                            style={{ 
+                              height: `${(item.count / Math.max(...currentData.monthlyTrend.map(m => m.count))) * 100}%`,
+                              backgroundColor: `hsl(${210 + idx * 5}, 70%, 55%)`
+                            }}
+                          >
+                            <span className="trend-value">{item.count}</span>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Complaints Details Tab - Full User Details Table */}
+            {activeTab === 'complaints' && (
+              <div className="table-card">
+                <div className="table-header">
+                  <h3>👥 {t.userComplaintsDetails}</h3>
+                  <div className="table-stats">
+                    {t.showing} {filteredComplaints.length} {t.of} {currentData.allComplaints.length} {t.entries}
+                  </div>
+                </div>
+                <div className="table-wrapper">
+                  <table className="reports-table">
+                    <thead>
+                      <tr>
+                        <th>{t.ticketId}</th>
+                        <th>{t.complainant}</th>
+                        <th>{t.phone}</th>
+                        <th>{t.email}</th>
+                        <th>{t.location}</th>
+                        <th>{t.category}</th>
+                        <th>{t.date}</th>
+                        <th>{t.status}</th>
+                        <th>{t.priority}</th>
+                        <th>{t.description}</th>
+                        <th>{t.assignedTo}</th>
+                        <th>{t.actions}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredComplaints.length > 0 ? (
+                        filteredComplaints.map((complaint) => (
+                          <tr key={complaint.id}>
+                            <td className="ticket-id">{complaint.ticketId}</td>
+                            <td>
+                              <div className="user-name">{language === 'np' ? complaint.name : complaint.enName}</div>
+                            </td>
+                            <td className="phone-number">{complaint.phone}</td>
+                            <td className="email-address">{complaint.email}</td>
+                            <td>{language === 'np' ? complaint.location : complaint.enLocation}</td>
+                            <td>{getCategoryText(complaint.category)}</td>
+                            <td>{language === 'np' ? complaint.date : complaint.enDate}</td>
+                            <td>
+                              <span className={`status-badge status-${complaint.status}`}>
+                                {getStatusText(complaint.status)}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`priority-badge priority-${complaint.priority}`}>
+                                {getPriorityText(complaint.priority)}
+                              </span>
+                            </td>
+                            <td className="description-cell">
+                              <div className="description-text" title={language === 'np' ? complaint.description : complaint.enDescription}>
+                                {language === 'np' ? complaint.description : complaint.enDescription}
+                              </div>
+                            </td>
+                            <td>{language === 'np' ? complaint.assignedTo : complaint.enAssignedTo}</td>
+                            <td>
+                              <button 
+                                className="view-details-btn"
+                                onClick={() => handleViewDetails(complaint)}
+                              >
+                                👁️ {t.viewDetails}
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="12" className="no-data">
+                            {t.noDataFound}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -655,9 +992,8 @@ const AdminReportsComplaints = () => {
         .admin-reports {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          height: 100vh;
+          min-height: 100vh;
           width: 100%;
-          overflow: hidden;
           position: relative;
         }
 
@@ -686,8 +1022,8 @@ const AdminReportsComplaints = () => {
         /* Dashboard Layout */
         .dashboard-layout {
           display: flex;
-          height: calc(100vh - 195px);
-          margin-top: 195px;
+          height: calc(100vh - 80px);
+          margin-top: 80px;
           position: relative;
           width: 100%;
           overflow: hidden;
@@ -696,10 +1032,10 @@ const AdminReportsComplaints = () => {
         /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
-          top: 195px;
+          top: 80px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 195px);
+          height: calc(100vh - 80px);
           background: white;
           border-right: 1px solid #e2e8f0;
           z-index: 100;
@@ -802,6 +1138,44 @@ const AdminReportsComplaints = () => {
           background: #bfdbfe;
         }
 
+        /* Tab Navigation */
+        .tab-navigation {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 24px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .tab-btn {
+          padding: 12px 24px;
+          background: transparent;
+          border: none;
+          font-size: 0.9rem;
+          font-weight: 500;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.2s;
+          position: relative;
+        }
+
+        .tab-btn:hover {
+          color: #3b82f6;
+        }
+
+        .tab-btn.active {
+          color: #3b82f6;
+        }
+
+        .tab-btn.active::after {
+          content: '';
+          position: absolute;
+          bottom: -1px;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: #3b82f6;
+        }
+
         /* Filters */
         .filters-section {
           background: white;
@@ -852,7 +1226,12 @@ const AdminReportsComplaints = () => {
           color: #64748b;
         }
 
-        .generate-btn {
+        .filter-actions {
+          display: flex;
+          gap: 12px;
+        }
+
+        .generate-btn, .reset-btn {
           background: linear-gradient(135deg, #3b82f6, #2563eb);
           color: white;
           border: none;
@@ -861,11 +1240,20 @@ const AdminReportsComplaints = () => {
           cursor: pointer;
           font-weight: 500;
           height: 42px;
+          transition: all 0.2s;
         }
 
-        .generate-btn:hover {
+        .generate-btn:hover, .reset-btn:hover {
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+        }
+
+        .reset-btn {
+          background: linear-gradient(135deg, #64748b, #475569);
+        }
+
+        .reset-btn:hover {
+          box-shadow: 0 4px 12px rgba(100,116,139,0.3);
         }
 
         /* Summary Cards */
@@ -1113,13 +1501,27 @@ const AdminReportsComplaints = () => {
           border: 1px solid #e2e8f0;
         }
 
+        .table-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          padding-bottom: 12px;
+          border-bottom: 2px solid #e2e8f0;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
         .table-card h3 {
           font-size: 1rem;
           font-weight: 600;
           color: #0f172a;
-          margin-bottom: 20px;
-          padding-bottom: 12px;
-          border-bottom: 2px solid #e2e8f0;
+          margin: 0;
+        }
+
+        .table-stats {
+          font-size: 0.75rem;
+          color: #64748b;
         }
 
         .table-wrapper {
@@ -1129,6 +1531,7 @@ const AdminReportsComplaints = () => {
         .reports-table {
           width: 100%;
           border-collapse: collapse;
+          min-width: 1200px;
         }
 
         .reports-table th,
@@ -1142,6 +1545,7 @@ const AdminReportsComplaints = () => {
           color: #64748b;
           font-weight: 500;
           font-size: 0.75rem;
+          background: #f8fafc;
         }
 
         .reports-table td {
@@ -1149,10 +1553,34 @@ const AdminReportsComplaints = () => {
           font-size: 0.8rem;
         }
 
+        .reports-table tr:hover {
+          background: #f8fafc;
+        }
+
         .ticket-id {
           font-family: monospace;
           font-weight: 600;
           color: #3b82f6;
+        }
+
+        .user-name {
+          font-weight: 500;
+        }
+
+        .phone-number, .email-address {
+          font-family: monospace;
+          font-size: 0.75rem;
+        }
+
+        .description-cell {
+          max-width: 200px;
+        }
+
+        .description-text {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 180px;
         }
 
         .status-badge, .priority-badge {
@@ -1170,6 +1598,28 @@ const AdminReportsComplaints = () => {
         .priority-high { background: #fee2e2; color: #dc2626; }
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #e0e7ff; color: #4f46e5; }
+
+        .view-details-btn {
+          background: transparent;
+          border: 1px solid #3b82f6;
+          color: #3b82f6;
+          padding: 4px 12px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.7rem;
+          transition: all 0.2s;
+        }
+
+        .view-details-btn:hover {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .no-data {
+          text-align: center;
+          padding: 40px;
+          color: #64748b;
+        }
 
         /* Responsive */
         @media (max-width: 1200px) {
@@ -1190,7 +1640,7 @@ const AdminReportsComplaints = () => {
           .dashboard-layout {
             flex-direction: column;
             height: auto;
-            margin-top: 150px;
+            margin-top: 70px;
             overflow: visible;
           }
           
@@ -1230,6 +1680,15 @@ const AdminReportsComplaints = () => {
             flex-direction: row;
           }
           
+          .filter-actions {
+            width: 100%;
+            flex-direction: column;
+          }
+          
+          .generate-btn, .reset-btn {
+            width: 100%;
+          }
+          
           .summary-cards {
             grid-template-columns: repeat(2, 1fr);
           }
@@ -1264,6 +1723,11 @@ const AdminReportsComplaints = () => {
           .action-buttons-header {
             flex-wrap: wrap;
           }
+
+          .table-header {
+            flex-direction: column;
+            align-items: flex-start;
+          }
         }
 
         @media (max-width: 480px) {
@@ -1275,6 +1739,27 @@ const AdminReportsComplaints = () => {
           .reports-table td {
             padding: 8px;
             font-size: 0.7rem;
+          }
+        }
+
+        @media print {
+          .sidebar-container,
+          .action-buttons-header,
+          .filter-actions,
+          .tab-navigation,
+          .view-details-btn {
+            display: none;
+          }
+          
+          .main-container {
+            margin-left: 0;
+          }
+          
+          .summary-cards,
+          .charts-grid,
+          .trend-card,
+          .table-card {
+            break-inside: avoid;
           }
         }
       `}</style>

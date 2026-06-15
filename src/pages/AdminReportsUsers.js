@@ -1,6 +1,7 @@
 // src/pages/AdminReportsUsers.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 
@@ -15,73 +16,406 @@ const AdminReportsUsers = () => {
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  // Sample report data
   const [reportData, setReportData] = useState({
     summary: {
-      totalUsers: 8956,
-      activeUsers: 7234,
-      inactiveUsers: 1200,
-      suspendedUsers: 522,
-      newUsersThisMonth: 234,
-      newUsersLastMonth: 198,
-      growth: 18.2,
-      totalComplaints: 1247,
-      avgComplaintsPerUser: 0.14,
-      satisfactionRate: 78.5
+      totalUsers: 0,
+      activeUsers: 0,
+      inactiveUsers: 0,
+      suspendedUsers: 0,
+      newUsersThisMonth: 0,
+      newUsersLastMonth: 0,
+      growth: 0,
+      totalComplaints: 0,
+      avgComplaintsPerUser: 0,
+      satisfactionRate: 0
     },
-    roleBreakdown: [
-      { name: 'प्रयोगकर्ता', enName: 'Users', count: 8456, percentage: 94.4 },
-      { name: 'कर्मचारी', enName: 'Staff', count: 412, percentage: 4.6 },
-      { name: 'प्रशासक', enName: 'Admin', count: 88, percentage: 1.0 }
-    ],
-    statusBreakdown: [
-      { name: 'सक्रिय', enName: 'Active', count: 7234, percentage: 80.8 },
-      { name: 'निष्क्रिय', enName: 'Inactive', count: 1200, percentage: 13.4 },
-      { name: 'निलम्बित', enName: 'Suspended', count: 522, percentage: 5.8 }
-    ],
-    monthlyTrend: [
-      { month: 'जनवरी', enMonth: 'January', count: 745 },
-      { month: 'फेब्रुअरी', enMonth: 'February', count: 782 },
-      { month: 'मार्च', enMonth: 'March', count: 810 },
-      { month: 'अप्रिल', enMonth: 'April', count: 845 },
-      { month: 'मे', enMonth: 'May', count: 878 },
-      { month: 'जुन', enMonth: 'June', count: 912 },
-      { month: 'जुलाई', enMonth: 'July', count: 945 },
-      { month: 'अगस्ट', enMonth: 'August', count: 978 },
-      { month: 'सेप्टेम्बर', enMonth: 'September', count: 1012 },
-      { month: 'अक्टोबर', enMonth: 'October', count: 1045 },
-      { month: 'नोभेम्बर', enMonth: 'November', count: 1089 },
-      { month: 'डिसेम्बर', enMonth: 'December', count: 1123 }
-    ],
-    activityBreakdown: [
-      { name: 'उच्च सक्रिय', enName: 'Highly Active', count: 2345, percentage: 26.2 },
-      { name: 'मध्यम सक्रिय', enName: 'Moderately Active', count: 4567, percentage: 51.0 },
-      { name: 'कम सक्रिय', enName: 'Low Activity', count: 2044, percentage: 22.8 }
-    ],
-    topUsers: [
-      { id: 1, name: 'रमेश केसी', enName: 'Ramesh KC', email: 'ramesh@example.com', complaints: 12, resolved: 10, satisfaction: 4.8, status: 'active' },
-      { id: 2, name: 'सीता शर्मा', enName: 'Sita Sharma', email: 'sita@example.com', complaints: 9, resolved: 8, satisfaction: 4.5, status: 'active' },
-      { id: 3, name: 'विकास न्यौपाने', enName: 'Bikas Neupane', email: 'bikas@example.com', complaints: 8, resolved: 6, satisfaction: 4.2, status: 'active' },
-      { id: 4, name: 'गीता अधिकारी', enName: 'Gita Adhikari', email: 'gita@example.com', complaints: 7, resolved: 7, satisfaction: 5.0, status: 'active' },
-      { id: 5, name: 'हरि प्रसाद', enName: 'Hari Prasad', email: 'hari@example.com', complaints: 6, resolved: 5, satisfaction: 4.0, status: 'inactive' }
-    ],
-    registrationMethod: [
-      { name: 'वेबसाइट', enName: 'Website', count: 4567, percentage: 51.0 },
-      { name: 'मोबाइल एप', enName: 'Mobile App', count: 3890, percentage: 43.4 },
-      { name: 'कर्मचारी', enName: 'Staff', count: 499, percentage: 5.6 }
-    ]
+    roleBreakdown: [],
+    statusBreakdown: [],
+    monthlyTrend: [],
+    activityBreakdown: [],
+    topUsers: [],
+    registrationMethod: []
   });
 
-  // Check authentication
+  const [backendStatus, setBackendStatus] = useState('checking');
+  const [users, setUsers] = useState([]);
+  const [complaints, setComplaints] = useState([]);
+
+  // Fetch users and complaints from database
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        setBackendStatus('disconnected');
+        setReportData(getSampleReportData());
+        setLoading(false);
+        return;
+      }
+
+      // Fetch all users
+      const usersResponse = await axios.get('http://localhost:5000/api/admin/users', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Fetch all complaints
+      const complaintsResponse = await axios.get('http://localhost:5000/api/admin/complaints', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (usersResponse.data.success && Array.isArray(usersResponse.data.data)) {
+        const usersData = usersResponse.data.data;
+        const complaintsData = complaintsResponse.data.data || [];
+        
+        setUsers(usersData);
+        setComplaints(complaintsData);
+        
+        // Calculate all statistics
+        const summary = calculateSummaryStats(usersData, complaintsData);
+        const roleBreakdown = calculateRoleBreakdown(usersData);
+        const statusBreakdown = calculateStatusBreakdown(usersData);
+        const monthlyTrend = calculateMonthlyTrend(usersData);
+        const activityBreakdown = calculateActivityBreakdown(usersData, complaintsData);
+        const topUsers = getTopUsers(usersData, complaintsData);
+        const registrationMethod = calculateRegistrationMethod(usersData);
+        
+        setReportData({
+          summary,
+          roleBreakdown,
+          statusBreakdown,
+          monthlyTrend,
+          activityBreakdown,
+          topUsers,
+          registrationMethod
+        });
+        setBackendStatus('connected');
+      } else {
+        setReportData(getSampleReportData());
+        setBackendStatus('disconnected');
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setReportData(getSampleReportData());
+      setBackendStatus('disconnected');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate summary statistics
+  const calculateSummaryStats = (usersData, complaintsData) => {
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+    const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1;
+    const lastMonthYear = thisMonth === 0 ? thisYear - 1 : thisYear;
+
+    const activeUsers = usersData.filter(u => u.status === 'active').length;
+    const inactiveUsers = usersData.filter(u => u.status === 'inactive').length;
+    const suspendedUsers = usersData.filter(u => u.status === 'suspended').length;
+    const totalUsers = usersData.length;
+    
+    const newUsersThisMonth = usersData.filter(u => {
+      const createdDate = new Date(u.createdAt);
+      return createdDate.getMonth() === thisMonth && createdDate.getFullYear() === thisYear;
+    }).length;
+    
+    const newUsersLastMonth = usersData.filter(u => {
+      const createdDate = new Date(u.createdAt);
+      return createdDate.getMonth() === lastMonth && createdDate.getFullYear() === lastMonthYear;
+    }).length;
+    
+    const growth = newUsersLastMonth > 0 
+      ? ((newUsersThisMonth - newUsersLastMonth) / newUsersLastMonth) * 100 
+      : 0;
+    
+    const totalComplaints = complaintsData.length;
+    const avgComplaintsPerUser = totalUsers > 0 ? (totalComplaints / totalUsers).toFixed(2) : 0;
+    
+    const resolvedComplaints = complaintsData.filter(c => c.status === 'resolved' || c.status === 'Resolved').length;
+    const satisfactionRate = totalComplaints > 0 ? ((resolvedComplaints / totalComplaints) * 100).toFixed(1) : 0;
+
+    return {
+      totalUsers,
+      activeUsers,
+      inactiveUsers,
+      suspendedUsers,
+      newUsersThisMonth,
+      newUsersLastMonth,
+      growth: parseFloat(growth.toFixed(1)),
+      totalComplaints,
+      avgComplaintsPerUser: parseFloat(avgComplaintsPerUser),
+      satisfactionRate: parseFloat(satisfactionRate)
+    };
+  };
+
+  // Calculate role breakdown
+  const calculateRoleBreakdown = (usersData) => {
+    const roles = {
+      user: { count: 0, name: 'प्रयोगकर्ता', enName: 'User' },
+      staff: { count: 0, name: 'कर्मचारी', enName: 'Staff' },
+      admin: { count: 0, name: 'प्रशासक', enName: 'Admin' }
+    };
+    
+    usersData.forEach(user => {
+      const role = user.role || 'user';
+      if (roles[role]) {
+        roles[role].count++;
+      } else {
+        roles.user.count++;
+      }
+    });
+    
+    const total = usersData.length;
+    return Object.values(roles).map(role => ({
+      name: role.name,
+      enName: role.enName,
+      count: role.count,
+      percentage: total > 0 ? parseFloat(((role.count / total) * 100).toFixed(1)) : 0
+    }));
+  };
+
+  // Calculate status breakdown
+  const calculateStatusBreakdown = (usersData) => {
+    const statuses = {
+      active: { count: 0, name: 'सक्रिय', enName: 'Active' },
+      inactive: { count: 0, name: 'निष्क्रिय', enName: 'Inactive' },
+      suspended: { count: 0, name: 'निलम्बित', enName: 'Suspended' }
+    };
+    
+    usersData.forEach(user => {
+      const status = user.status || 'inactive';
+      if (statuses[status]) {
+        statuses[status].count++;
+      } else {
+        statuses.inactive.count++;
+      }
+    });
+    
+    const total = usersData.length;
+    return Object.values(statuses).map(status => ({
+      name: status.name,
+      enName: status.enName,
+      count: status.count,
+      percentage: total > 0 ? parseFloat(((status.count / total) * 100).toFixed(1)) : 0
+    }));
+  };
+
+  // Calculate monthly trend
+  const calculateMonthlyTrend = (usersData) => {
+    const months = [];
+    const monthNames = {
+      np: ['जनवरी', 'फेब्रुअरी', 'मार्च', 'अप्रिल', 'मे', 'जुन', 'जुलाई', 'अगस्ट', 'सेप्टेम्बर', 'अक्टोबर', 'नोभेम्बर', 'डिसेम्बर'],
+      en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    };
+    
+    const currentYear = new Date().getFullYear();
+    
+    for (let i = 0; i < 12; i++) {
+      const monthCount = usersData.filter(user => {
+        const createdDate = new Date(user.createdAt);
+        return createdDate.getMonth() === i && createdDate.getFullYear() === currentYear;
+      }).length;
+      
+      months.push({
+        month: monthNames.np[i],
+        enMonth: monthNames.en[i],
+        count: monthCount
+      });
+    }
+    
+    return months;
+  };
+
+  // Calculate activity breakdown based on complaints
+  const calculateActivityBreakdown = (usersData, complaintsData) => {
+    const complaintsPerUser = {};
+    complaintsData.forEach(complaint => {
+      const userId = complaint.userId || complaint.user_id;
+      if (userId) {
+        complaintsPerUser[userId] = (complaintsPerUser[userId] || 0) + 1;
+      }
+    });
+    
+    let highlyActive = 0;
+    let moderatelyActive = 0;
+    let lowActivity = 0;
+    
+    usersData.forEach(user => {
+      const userComplaints = complaintsPerUser[user.id] || 0;
+      if (userComplaints > 10) {
+        highlyActive++;
+      } else if (userComplaints > 3) {
+        moderatelyActive++;
+      } else {
+        lowActivity++;
+      }
+    });
+    
+    const total = usersData.length;
+    return [
+      { name: 'उच्च सक्रिय', enName: 'Highly Active', count: highlyActive, percentage: total > 0 ? parseFloat(((highlyActive / total) * 100).toFixed(1)) : 0 },
+      { name: 'मध्यम सक्रिय', enName: 'Moderately Active', count: moderatelyActive, percentage: total > 0 ? parseFloat(((moderatelyActive / total) * 100).toFixed(1)) : 0 },
+      { name: 'कम सक्रिय', enName: 'Low Activity', count: lowActivity, percentage: total > 0 ? parseFloat(((lowActivity / total) * 100).toFixed(1)) : 0 }
+    ];
+  };
+
+  // Get top users by complaints
+  const getTopUsers = (usersData, complaintsData) => {
+    const complaintsByUser = {};
+    
+    complaintsData.forEach(complaint => {
+      const userId = complaint.userId || complaint.user_id;
+      if (!userId) return;
+      
+      if (!complaintsByUser[userId]) {
+        complaintsByUser[userId] = {
+          total: 0,
+          resolved: 0,
+          pending: 0,
+          inProgress: 0
+        };
+      }
+      complaintsByUser[userId].total++;
+      
+      if (complaint.status === 'resolved' || complaint.status === 'Resolved') {
+        complaintsByUser[userId].resolved++;
+      } else if (complaint.status === 'pending' || complaint.status === 'Pending') {
+        complaintsByUser[userId].pending++;
+      } else if (complaint.status === 'in-progress' || complaint.status === 'In Progress') {
+        complaintsByUser[userId].inProgress++;
+      }
+    });
+    
+    const userStats = usersData.map(user => {
+      const userComplaints = complaintsByUser[user.id] || { total: 0, resolved: 0, pending: 0, inProgress: 0 };
+      const satisfaction = userComplaints.total > 0 
+        ? (userComplaints.resolved / userComplaints.total) * 5 
+        : 0;
+      
+      return {
+        id: user.id,
+        name: user.name || user.fullName || user.full_name || 'N/A',
+        enName: user.nameEn || user.name || 'N/A',
+        email: user.email,
+        phone: user.phone || user.mobile || 'N/A',
+        complaints: userComplaints.total,
+        resolved: userComplaints.resolved,
+        pending: userComplaints.pending,
+        inProgress: userComplaints.inProgress,
+        satisfaction: parseFloat(satisfaction.toFixed(1)),
+        status: user.status || 'inactive',
+        role: user.role || 'user',
+        registeredAt: user.createdAt || user.created_at
+      };
+    });
+    
+    // Filter by selected status
+    let filtered = userStats;
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(user => user.status === selectedStatus);
+    }
+    
+    if (selectedRole !== 'all') {
+      filtered = filtered.filter(user => user.role === selectedRole);
+    }
+    
+    // Sort by complaints and take top 10
+    return filtered.sort((a, b) => b.complaints - a.complaints).slice(0, 10);
+  };
+
+  // Calculate registration method
+  const calculateRegistrationMethod = (usersData) => {
+    const methods = {
+      website: { count: 0, name: 'वेबसाइट', enName: 'Website' },
+      mobile: { count: 0, name: 'मोबाइल एप', enName: 'Mobile App' },
+      staff: { count: 0, name: 'कर्मचारी', enName: 'Staff' }
+    };
+    
+    usersData.forEach(user => {
+      const method = user.registrationMethod || user.registration_method || 'website';
+      if (methods[method]) {
+        methods[method].count++;
+      } else {
+        methods.website.count++;
+      }
+    });
+    
+    const total = usersData.length;
+    return Object.values(methods).map(method => ({
+      name: method.name,
+      enName: method.enName,
+      count: method.count,
+      percentage: total > 0 ? parseFloat(((method.count / total) * 100).toFixed(1)) : 0
+    }));
+  };
+
+  // Get sample report data (fallback)
+  const getSampleReportData = () => {
+    return {
+      summary: {
+        totalUsers: 1250,
+        activeUsers: 980,
+        inactiveUsers: 200,
+        suspendedUsers: 70,
+        newUsersThisMonth: 45,
+        newUsersLastMonth: 52,
+        growth: -13.5,
+        totalComplaints: 342,
+        avgComplaintsPerUser: 0.27,
+        satisfactionRate: 72.5
+      },
+      roleBreakdown: [
+        { name: 'प्रयोगकर्ता', enName: 'Users', count: 1150, percentage: 92.0 },
+        { name: 'कर्मचारी', enName: 'Staff', count: 85, percentage: 6.8 },
+        { name: 'प्रशासक', enName: 'Admin', count: 15, percentage: 1.2 }
+      ],
+      statusBreakdown: [
+        { name: 'सक्रिय', enName: 'Active', count: 980, percentage: 78.4 },
+        { name: 'निष्क्रिय', enName: 'Inactive', count: 200, percentage: 16.0 },
+        { name: 'निलम्बित', enName: 'Suspended', count: 70, percentage: 5.6 }
+      ],
+      monthlyTrend: [
+        { month: 'जनवरी', enMonth: 'January', count: 85 },
+        { month: 'फेब्रुअरी', enMonth: 'February', count: 92 },
+        { month: 'मार्च', enMonth: 'March', count: 78 },
+        { month: 'अप्रिल', enMonth: 'April', count: 95 },
+        { month: 'मे', enMonth: 'May', count: 88 },
+        { month: 'जुन', enMonth: 'June', count: 102 },
+        { month: 'जुलाई', enMonth: 'July', count: 110 },
+        { month: 'अगस्ट', enMonth: 'August', count: 95 },
+        { month: 'सेप्टेम्बर', enMonth: 'September', count: 88 },
+        { month: 'अक्टोबर', enMonth: 'October', count: 92 },
+        { month: 'नोभेम्बर', enMonth: 'November', count: 78 },
+        { month: 'डिसेम्बर', enMonth: 'December', count: 45 }
+      ],
+      activityBreakdown: [
+        { name: 'उच्च सक्रिय', enName: 'Highly Active', count: 45, percentage: 3.6 },
+        { name: 'मध्यम सक्रिय', enName: 'Moderately Active', count: 234, percentage: 18.7 },
+        { name: 'कम सक्रिय', enName: 'Low Activity', count: 971, percentage: 77.7 }
+      ],
+      topUsers: [
+        { id: 1, name: 'राम बहादुर', enName: 'Ram Bahadur', email: 'ram@example.com', phone: '9841234567', complaints: 12, resolved: 8, pending: 2, inProgress: 2, satisfaction: 3.3, status: 'active', role: 'user' },
+        { id: 2, name: 'सीता शर्मा', enName: 'Sita Sharma', email: 'sita@example.com', phone: '9812345678', complaints: 9, resolved: 7, pending: 1, inProgress: 1, satisfaction: 3.9, status: 'active', role: 'user' }
+      ],
+      registrationMethod: [
+        { name: 'वेबसाइट', enName: 'Website', count: 680, percentage: 54.4 },
+        { name: 'मोबाइल एप', enName: 'Mobile App', count: 520, percentage: 41.6 },
+        { name: 'कर्मचारी', enName: 'Staff', count: 50, percentage: 4.0 }
+      ]
+    };
+  };
+
+  // Check authentication and load data
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
     const user = localStorage.getItem('adminUser');
     if (!token || !user) {
       navigate('/admin-login');
     } else {
-      setTimeout(() => setLoading(false), 500);
+      fetchData();
     }
-  }, [navigate]);
+  }, [navigate, selectedStatus, selectedRole]);
 
   const content = {
     np: {
@@ -137,15 +471,19 @@ const AdminReportsUsers = () => {
       status: 'स्थिति',
       name: 'नाम',
       email: 'इमेल',
+      phone: 'फोन',
       complaints: 'गुनासो',
       resolved: 'समाधान',
+      pending: 'विचाराधीन',
+      inProgress: 'प्रगतिमा',
       satisfaction: 'सन्तुष्टि',
       highlyActive: 'उच्च सक्रिय',
       moderatelyActive: 'मध्यम सक्रिय',
       lowActivity: 'कम सक्रिय',
       website: 'वेबसाइट',
       mobileApp: 'मोबाइल एप',
-      loading: 'लोड हुँदै...'
+      loading: 'लोड हुँदै...',
+      backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।'
     },
     en: {
       usersReports: 'Users Reports',
@@ -200,28 +538,25 @@ const AdminReportsUsers = () => {
       status: 'Status',
       name: 'Name',
       email: 'Email',
+      phone: 'Phone',
       complaints: 'Complaints',
       resolved: 'Resolved',
+      pending: 'Pending',
+      inProgress: 'In Progress',
       satisfaction: 'Satisfaction',
       highlyActive: 'Highly Active',
       moderatelyActive: 'Moderately Active',
       lowActivity: 'Low Activity',
       website: 'Website',
       mobileApp: 'Mobile App',
-      loading: 'Loading...'
+      loading: 'Loading...',
+      backendNotConnected: 'Backend server not connected. Showing sample data.'
     }
   };
 
   const t = content[language];
   const currentData = reportData;
-
-  const getRoleText = (role) => {
-    const roles = {
-      np: { user: 'प्रयोगकर्ता', staff: 'कर्मचारी', admin: 'प्रशासक' },
-      en: { user: 'User', staff: 'Staff', admin: 'Admin' }
-    };
-    return roles[language][role] || role;
-  };
+  const maxTrendCount = Math.max(...currentData.monthlyTrend.map(m => m.count), 1);
 
   const getStatusText = (status) => {
     const statuses = {
@@ -241,24 +576,20 @@ const AdminReportsUsers = () => {
   };
 
   const getMonthText = (month) => {
-    const months = {
-      np: {
+    if (language === 'np') {
+      const monthMap = {
         'January': 'जनवरी', 'February': 'फेब्रुअरी', 'March': 'मार्च',
         'April': 'अप्रिल', 'May': 'मे', 'June': 'जुन',
         'July': 'जुलाई', 'August': 'अगस्ट', 'September': 'सेप्टेम्बर',
         'October': 'अक्टोबर', 'November': 'नोभेम्बर', 'December': 'डिसेम्बर'
-      },
-      en: {
-        'जनवरी': 'January', 'फेब्रुअरी': 'February', 'मार्च': 'March',
-        'अप्रिल': 'April', 'मे': 'May', 'जुन': 'June',
-        'जुलाई': 'July', 'अगस्ट': 'August', 'सेप्टेम्बर': 'September',
-        'अक्टोबर': 'October', 'नोभेम्बर': 'November', 'डिसेम्बर': 'December'
-      }
-    };
-    return months[language][month] || month;
+      };
+      return monthMap[month] || month;
+    }
+    return month;
   };
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
+    await fetchData();
     alert(t.reportGenerated);
   };
 
@@ -287,13 +618,20 @@ const AdminReportsUsers = () => {
     <div className="admin-reports-users">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
-      <div className="dashboard-layout">
+      <div className="dashboard-wrapper">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
         <div className="main-container">
           <div className="content-wrapper">
+            {/* Backend Status Banner */}
+            {backendStatus === 'disconnected' && (
+              <div className="backend-warning">
+                ⚠️ {t.backendNotConnected}
+              </div>
+            )}
+
             <div className="page-header">
               <div>
                 <h1>👥 {t.usersReports}</h1>
@@ -331,7 +669,6 @@ const AdminReportsUsers = () => {
                     value={customStartDate}
                     onChange={(e) => setCustomStartDate(e.target.value)}
                     className="date-input"
-                    placeholder={t.startDate}
                   />
                   <span>—</span>
                   <input
@@ -339,7 +676,6 @@ const AdminReportsUsers = () => {
                     value={customEndDate}
                     onChange={(e) => setCustomEndDate(e.target.value)}
                     className="date-input"
-                    placeholder={t.endDate}
                   />
                 </div>
               )}
@@ -448,7 +784,9 @@ const AdminReportsUsers = () => {
               </div>
               <div className="growth-info">
                 <span className="growth-label">{t.growth}:</span>
-                <span className="growth-value positive">+{currentData.summary.growth}%</span>
+                <span className={`growth-value ${currentData.summary.growth >= 0 ? 'positive' : 'negative'}`}>
+                  {currentData.summary.growth >= 0 ? '+' : ''}{currentData.summary.growth}%
+                </span>
               </div>
               <div className="growth-info">
                 <span className="growth-label">{t.totalComplaints}:</span>
@@ -553,12 +891,12 @@ const AdminReportsUsers = () => {
               <div className="trend-chart">
                 {currentData.monthlyTrend.map((item, idx) => (
                   <div key={idx} className="trend-bar-item">
-                    <div className="trend-label">{getMonthText(item.month)}</div>
+                    <div className="trend-label">{getMonthText(item.enMonth)}</div>
                     <div className="trend-bar-bg">
                       <div 
                         className="trend-bar-fill" 
                         style={{ 
-                          height: `${(item.count / Math.max(...currentData.monthlyTrend.map(m => m.count))) * 100}%`,
+                          height: `${(item.count / maxTrendCount) * 100}%`,
                           backgroundColor: `hsl(${210 + idx * 5}, 70%, 55%)`
                         }}
                       >
@@ -579,6 +917,7 @@ const AdminReportsUsers = () => {
                     <tr>
                       <th>{t.name}</th>
                       <th>{t.email}</th>
+                      <th>{t.phone}</th>
                       <th>{t.complaints}</th>
                       <th>{t.resolved}</th>
                       <th>{t.satisfaction}</th>
@@ -586,24 +925,36 @@ const AdminReportsUsers = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentData.topUsers.map((user) => (
-                      <tr key={user.id}>
-                        <td className="user-name">{language === 'np' ? user.name : user.enName}</td>
-                        <td>{user.email}</td>
-                        <td>{user.complaints}</td>
-                        <td>{user.resolved}</td>
-                        <td>
-                          <div className="satisfaction-star">
-                            <span>⭐</span> {user.satisfaction}
+                    {currentData.topUsers.length > 0 ? (
+                      currentData.topUsers.map((user) => (
+                        <tr key={user.id}>
+                          <td className="user-name">{language === 'np' ? user.name : user.enName}</td>
+                          <td className="user-email">{user.email}</td>
+                          <td>{user.phone}</td>
+                          <td className="complaint-count">{user.complaints}</td>
+                          <td className="resolved-count">{user.resolved}</td>
+                          <td>
+                            <div className="satisfaction-star">
+                              <span>⭐</span> {user.satisfaction}
+                            </div>
+                          </td>
+                          <td>
+                            <span className={`status-badge ${getStatusClass(user.status)}`}>
+                              {getStatusText(user.status)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="7" className="no-data">
+                          <div className="no-data-content">
+                            <span className="no-data-icon">📭</span>
+                            <p>{t.noDataFound}</p>
                           </div>
                         </td>
-                        <td>
-                          <span className={`status-badge ${getStatusClass(user.status)}`}>
-                            {getStatusText(user.status)}
-                          </span>
-                        </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -622,9 +973,8 @@ const AdminReportsUsers = () => {
         .admin-reports-users {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          height: 100vh;
+          min-height: 100vh;
           width: 100%;
-          overflow: hidden;
           position: relative;
         }
 
@@ -650,37 +1000,32 @@ const AdminReportsUsers = () => {
           to { transform: rotate(360deg); }
         }
 
-        /* Dashboard Layout */
-        .dashboard-layout {
+        .dashboard-wrapper {
           display: flex;
-          height: calc(100vh - 195px);
-          margin-top: 195px;
+          min-height: calc(100vh - 70px);
+          margin-top: 70px;
           position: relative;
           width: 100%;
-          overflow: hidden;
         }
 
-        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
-          top: 195px;
+          top: 70px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 195px);
+          height: calc(100vh - 70px);
           background: white;
           border-right: 1px solid #e2e8f0;
           z-index: 100;
           overflow-y: auto;
         }
 
-        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
           margin-left: 260px;
           width: calc(100% - 260px);
-          height: 100%;
-          overflow-y: auto;
-          overflow-x: hidden;
+          min-height: 100%;
+          overflow-x: auto;
           position: relative;
         }
 
@@ -707,6 +1052,15 @@ const AdminReportsUsers = () => {
           min-height: 100%;
         }
 
+        .backend-warning {
+          background: #ff9800;
+          color: white;
+          padding: 10px 16px;
+          border-radius: 8px;
+          margin-bottom: 20px;
+          text-align: center;
+        }
+
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -714,6 +1068,8 @@ const AdminReportsUsers = () => {
           margin-bottom: 24px;
           padding-bottom: 16px;
           border-bottom: 2px solid #e2e8f0;
+          flex-wrap: wrap;
+          gap: 16px;
         }
 
         .page-header h1 {
@@ -731,6 +1087,7 @@ const AdminReportsUsers = () => {
         .action-buttons-header {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .export-btn {
@@ -742,34 +1099,13 @@ const AdminReportsUsers = () => {
           transition: all 0.2s;
         }
 
-        .export-btn.pdf {
-          background: #fee2e2;
-          color: #dc2626;
-        }
+        .export-btn.pdf { background: #fee2e2; color: #dc2626; }
+        .export-btn.pdf:hover { background: #fecaca; }
+        .export-btn.excel { background: #d1fae5; color: #059669; }
+        .export-btn.excel:hover { background: #a7f3d0; }
+        .export-btn.print { background: #dbeafe; color: #2563eb; }
+        .export-btn.print:hover { background: #bfdbfe; }
 
-        .export-btn.pdf:hover {
-          background: #fecaca;
-        }
-
-        .export-btn.excel {
-          background: #d1fae5;
-          color: #059669;
-        }
-
-        .export-btn.excel:hover {
-          background: #a7f3d0;
-        }
-
-        .export-btn.print {
-          background: #dbeafe;
-          color: #2563eb;
-        }
-
-        .export-btn.print:hover {
-          background: #bfdbfe;
-        }
-
-        /* Filters */
         .filters-section {
           background: white;
           border-radius: 16px;
@@ -835,7 +1171,6 @@ const AdminReportsUsers = () => {
           box-shadow: 0 4px 12px rgba(59,130,246,0.3);
         }
 
-        /* Summary Cards */
         .summary-cards {
           display: grid;
           grid-template-columns: repeat(6, 1fr);
@@ -876,22 +1211,10 @@ const AdminReportsUsers = () => {
         .card-icon.blue { background: #dbeafe; color: #2563eb; }
         .card-icon.pink { background: #fce7f3; color: #db2777; }
 
-        .card-info {
-          flex: 1;
-        }
+        .card-info { flex: 1; }
+        .card-value { font-size: 1.3rem; font-weight: 700; color: #0f172a; }
+        .card-label { font-size: 0.7rem; color: #64748b; }
 
-        .card-value {
-          font-size: 1.3rem;
-          font-weight: 700;
-          color: #0f172a;
-        }
-
-        .card-label {
-          font-size: 0.7rem;
-          color: #64748b;
-        }
-
-        /* Growth Card */
         .growth-card {
           background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
           border-radius: 16px;
@@ -904,28 +1227,12 @@ const AdminReportsUsers = () => {
           gap: 16px;
         }
 
-        .growth-info {
-          text-align: center;
-        }
+        .growth-info { text-align: center; }
+        .growth-label { font-size: 0.75rem; color: #0369a1; display: block; margin-bottom: 4px; }
+        .growth-value { font-size: 1.2rem; font-weight: 700; color: #0c4a6e; }
+        .growth-value.positive { color: #059669; }
+        .growth-value.negative { color: #dc2626; }
 
-        .growth-label {
-          font-size: 0.75rem;
-          color: #0369a1;
-          display: block;
-          margin-bottom: 4px;
-        }
-
-        .growth-value {
-          font-size: 1.2rem;
-          font-weight: 700;
-          color: #0c4a6e;
-        }
-
-        .growth-value.positive {
-          color: #059669;
-        }
-
-        /* Charts Grid */
         .charts-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -949,38 +1256,12 @@ const AdminReportsUsers = () => {
           border-bottom: 2px solid #e2e8f0;
         }
 
-        .chart-content {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
+        .chart-content { display: flex; flex-direction: column; gap: 16px; }
+        .chart-bar-item { width: 100%; }
+        .chart-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.8rem; color: #475569; }
+        .chart-bar-bg { background: #f1f5f9; border-radius: 8px; overflow: hidden; height: 8px; }
+        .chart-bar-fill { height: 100%; border-radius: 8px; transition: width 0.5s; }
 
-        .chart-bar-item {
-          width: 100%;
-        }
-
-        .chart-label {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 6px;
-          font-size: 0.8rem;
-          color: #475569;
-        }
-
-        .chart-bar-bg {
-          background: #f1f5f9;
-          border-radius: 8px;
-          overflow: hidden;
-          height: 8px;
-        }
-
-        .chart-bar-fill {
-          height: 100%;
-          border-radius: 8px;
-          transition: width 0.5s;
-        }
-
-        /* Trend Chart */
         .trend-card {
           background: white;
           border-radius: 16px;
@@ -1015,39 +1296,11 @@ const AdminReportsUsers = () => {
           height: 100%;
         }
 
-        .trend-label {
-          font-size: 0.7rem;
-          color: #64748b;
-        }
+        .trend-label { font-size: 0.7rem; color: #64748b; }
+        .trend-bar-bg { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+        .trend-bar-fill { width: 100%; max-width: 50px; border-radius: 8px 8px 0 0; position: relative; transition: height 0.5s; min-height: 30px; }
+        .trend-value { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-size: 0.7rem; font-weight: 600; color: #475569; white-space: nowrap; }
 
-        .trend-bar-bg {
-          flex: 1;
-          width: 100%;
-          display: flex;
-          align-items: flex-end;
-          justify-content: center;
-        }
-
-        .trend-bar-fill {
-          width: 40px;
-          border-radius: 8px 8px 0 0;
-          position: relative;
-          transition: height 0.5s;
-          min-height: 30px;
-        }
-
-        .trend-value {
-          position: absolute;
-          top: -22px;
-          left: 50%;
-          transform: translateX(-50%);
-          font-size: 0.7rem;
-          font-weight: 600;
-          color: #475569;
-          white-space: nowrap;
-        }
-
-        /* Table Card */
         .table-card {
           background: white;
           border-radius: 16px;
@@ -1064,166 +1317,55 @@ const AdminReportsUsers = () => {
           border-bottom: 2px solid #e2e8f0;
         }
 
-        .table-wrapper {
-          overflow-x: auto;
-        }
+        .table-wrapper { overflow-x: auto; }
+        .reports-table { width: 100%; border-collapse: collapse; }
+        .reports-table th, .reports-table td { padding: 12px; text-align: left; border-bottom: 1px solid #f1f5f9; }
+        .reports-table th { color: #64748b; font-weight: 500; font-size: 0.75rem; }
+        .reports-table td { color: #334155; font-size: 0.8rem; }
 
-        .reports-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
+        .user-name { font-weight: 600; color: #0f172a; }
+        .user-email { color: #64748b; }
+        .complaint-count { font-weight: 600; color: #dc2626; }
+        .resolved-count { font-weight: 600; color: #059669; }
 
-        .reports-table th,
-        .reports-table td {
-          padding: 12px;
-          text-align: left;
-          border-bottom: 1px solid #f1f5f9;
-        }
-
-        .reports-table th {
-          color: #64748b;
-          font-weight: 500;
-          font-size: 0.75rem;
-        }
-
-        .reports-table td {
-          color: #334155;
-          font-size: 0.8rem;
-        }
-
-        .user-name {
-          font-weight: 600;
-          color: #0f172a;
-        }
-
-        .status-badge {
-          display: inline-block;
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-size: 0.7rem;
-          font-weight: 500;
-        }
-
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 500; }
         .status-active { background: #d1fae5; color: #059669; }
         .status-inactive { background: #fef3c7; color: #d97706; }
         .status-suspended { background: #fee2e2; color: #dc2626; }
 
-        .satisfaction-star {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
+        .satisfaction-star { display: flex; align-items: center; gap: 4px; }
 
-        /* Responsive */
+        .no-data { text-align: center; padding: 40px !important; }
+        .no-data-content { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .no-data-icon { font-size: 2rem; }
+
         @media (max-width: 1200px) {
-          .summary-cards {
-            grid-template-columns: repeat(3, 1fr);
-          }
-          .charts-grid {
-            grid-template-columns: 1fr;
-          }
+          .summary-cards { grid-template-columns: repeat(3, 1fr); }
+          .charts-grid { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 768px) {
-          .admin-reports-users {
-            height: auto;
-            overflow: auto;
-          }
-          
-          .dashboard-layout {
-            flex-direction: column;
-            height: auto;
-            margin-top: 150px;
-            overflow: visible;
-          }
-          
-          .sidebar-container {
-            position: relative;
-            top: 0;
-            width: 100%;
-            height: auto;
-            margin-bottom: 20px;
-          }
-          
-          .main-container {
-            margin-left: 0;
-            width: 100%;
-            overflow-y: visible;
-          }
-          
-          .content-wrapper {
-            padding: 16px;
-          }
-          
-          .page-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 12px;
-          }
-          
-          .filters-section {
-            flex-direction: column;
-          }
-          
-          .filter-group {
-            width: 100%;
-          }
-          
-          .date-range {
-            flex-direction: row;
-          }
-          
-          .summary-cards {
-            grid-template-columns: repeat(2, 1fr);
-          }
-          
-          .trend-chart {
-            height: auto;
-            flex-direction: column;
-          }
-          
-          .trend-bar-item {
-            flex-direction: row;
-            width: 100%;
-            justify-content: space-between;
-          }
-          
-          .trend-bar-bg {
-            width: 60%;
-          }
-          
-          .trend-bar-fill {
-            width: 100%;
-            height: 30px !important;
-            border-radius: 8px;
-          }
-          
-          .trend-value {
-            top: 50%;
-            left: 12px;
-            transform: translateY(-50%);
-          }
-          
-          .action-buttons-header {
-            flex-wrap: wrap;
-          }
-          
-          .growth-card {
-            flex-direction: column;
-            align-items: center;
-          }
+          .dashboard-wrapper { flex-direction: column; }
+          .sidebar-container { position: relative; top: 0; width: 100%; height: auto; margin-bottom: 20px; }
+          .main-container { margin-left: 0; width: 100%; overflow-y: visible; }
+          .content-wrapper { padding: 16px; }
+          .page-header { flex-direction: column; align-items: flex-start; }
+          .filters-section { flex-direction: column; }
+          .filter-group { width: 100%; }
+          .date-range { flex-direction: row; }
+          .summary-cards { grid-template-columns: repeat(2, 1fr); }
+          .trend-chart { height: auto; flex-direction: column; }
+          .trend-bar-item { flex-direction: row; width: 100%; justify-content: space-between; }
+          .trend-bar-bg { width: 60%; }
+          .trend-bar-fill { height: 30px !important; border-radius: 8px; max-width: 100%; }
+          .trend-value { top: 50%; left: 12px; transform: translateY(-50%); }
+          .action-buttons-header { width: 100%; }
+          .growth-card { flex-direction: column; align-items: center; }
         }
 
         @media (max-width: 480px) {
-          .summary-cards {
-            grid-template-columns: 1fr;
-          }
-          
-          .reports-table th,
-          .reports-table td {
-            padding: 8px;
-            font-size: 0.7rem;
-          }
+          .summary-cards { grid-template-columns: 1fr; }
+          .reports-table th, .reports-table td { padding: 8px; font-size: 0.7rem; }
         }
       `}</style>
     </div>

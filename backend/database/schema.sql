@@ -244,7 +244,25 @@ CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_phone ON users(phone);
 CREATE INDEX idx_users_role ON users(role);
 CREATE INDEX idx_users_status ON users(status);
+-- Create admin_settings table
+CREATE TABLE IF NOT EXISTS admin_settings (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  section VARCHAR(50) NOT NULL UNIQUE,
+  settings JSON NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by INT,
+  updated_by INT,
+  INDEX idx_section (section)
+);
 
+-- Insert default settings if not exists
+INSERT IGNORE INTO admin_settings (section, settings) VALUES
+('general', '{"siteName":"NTC Sahayatri","siteName_np":"एनटीसी सहयात्री","siteDescription":"Complaint Tracking System for Nepal Telecom","siteDescription_np":"नेपाल दूरसञ्चारको लागि गुनासो ट्र्याकिङ प्रणाली","siteEmail":"support@ntc.com.np","sitePhone":"01-4960008","siteAddress":"Bhadrakali Plaza, Kathmandu","siteAddress_np":"भद्रकाली प्लाजा, काठमाडौं","timezone":"Asia/Kathmandu","dateFormat":"YYYY-MM-DD","timeFormat":"24h","defaultLanguage":"np","itemsPerPage":10,"enableRegistration":true,"enablePublicComplaints":true,"maintenanceMode":false}'),
+('email', '{"smtpHost":"smtp.gmail.com","smtpPort":587,"smtpUser":"","smtpPassword":"","smtpEncryption":"tls","fromEmail":"notifications@ntc.com.np","fromName":"NTC Sahayatri","fromName_np":"एनटीसी सहयात्री","sendComplaintConfirmation":true,"sendComplaintUpdate":true,"sendComplaintResolved":true,"sendNewsletter":false}'),
+('security', '{"sessionTimeout":30,"maxLoginAttempts":5,"lockoutDuration":15,"passwordExpiryDays":90,"minPasswordLength":8,"requireUppercase":true,"requireLowercase":true,"requireNumbers":true,"requireSpecialChars":true,"twoFactorAuth":false,"ipWhitelist":""}'),
+('backup', '{"autoBackup":true,"backupFrequency":"daily","backupTime":"02:00","backupRetention":30,"backupLocation":"./backups/"}'),
+('notifications', '{"emailNotifications":true,"smsNotifications":false,"pushNotifications":true,"notifyNewComplaint":true,"notifyComplaintUpdate":true,"notifyComplaintResolved":true,"notifyNewUser":true,"notifySystemUpdate":true,"adminEmail":"","adminPhone":""}');
 -- Create indexes
 CREATE INDEX idx_complaint_regarding_complaint_number ON complaint_regarding(complaint_number);
 CREATE INDEX idx_complaint_regarding_status ON complaint_regarding(status);

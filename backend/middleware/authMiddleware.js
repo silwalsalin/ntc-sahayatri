@@ -105,6 +105,185 @@ const staffOrAdmin = (req, res, next) => {
     }
 };
 
+// Settings specific middleware
+const canViewSettings = (req, res, next) => {
+    if (req.user && (req.user.role === 'admin')) {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to view settings.' 
+        });
+    }
+};
+
+const canEditSettings = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to modify settings.' 
+        });
+    }
+};
+
+const canViewGeneralSettings = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to view general settings.' 
+        });
+    }
+};
+
+const canEditGeneralSettings = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to modify general settings.' 
+        });
+    }
+};
+
+const canViewEmailSettings = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to view email settings.' 
+        });
+    }
+};
+
+const canEditEmailSettings = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to modify email settings.' 
+        });
+    }
+};
+
+const canViewSecuritySettings = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to view security settings.' 
+        });
+    }
+};
+
+const canEditSecuritySettings = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to modify security settings.' 
+        });
+    }
+};
+
+const canViewBackupSettings = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to view backup settings.' 
+        });
+    }
+};
+
+const canEditBackupSettings = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to modify backup settings.' 
+        });
+    }
+};
+
+const canViewNotificationSettings = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to view notification settings.' 
+        });
+    }
+};
+
+const canEditNotificationSettings = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to modify notification settings.' 
+        });
+    }
+};
+
+const canPerformBackup = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to perform backup operations.' 
+        });
+    }
+};
+
+const canSendTestEmail = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Admin access required to send test emails.' 
+        });
+    }
+};
+
+// Combined settings access middleware
+const settingsAccess = {
+    view: (req, res, next) => {
+        if (req.user && req.user.role === 'admin') {
+            next();
+        } else {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Admin access required to access settings.' 
+            });
+        }
+    },
+    edit: (req, res, next) => {
+        if (req.user && req.user.role === 'admin') {
+            next();
+        } else {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Admin access required to modify settings.' 
+            });
+        }
+    }
+};
+
 // Optional: Get current user profile
 const getCurrentUser = async (req, res) => {
     try {
@@ -141,10 +320,27 @@ const getCurrentUser = async (req, res) => {
     }
 };
 
+// Export all middleware
 module.exports = { 
     protect, 
     adminOnly, 
     staffOnly, 
     staffOrAdmin,
-    getCurrentUser 
+    getCurrentUser,
+    // Settings specific middleware
+    canViewSettings,
+    canEditSettings,
+    canViewGeneralSettings,
+    canEditGeneralSettings,
+    canViewEmailSettings,
+    canEditEmailSettings,
+    canViewSecuritySettings,
+    canEditSecuritySettings,
+    canViewBackupSettings,
+    canEditBackupSettings,
+    canViewNotificationSettings,
+    canEditNotificationSettings,
+    canPerformBackup,
+    canSendTestEmail,
+    settingsAccess
 };
