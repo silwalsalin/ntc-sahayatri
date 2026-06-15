@@ -1,5 +1,5 @@
 // src/pages/StaffDocumentation.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import StaffHeader from '../components/StaffHeader';
@@ -18,6 +18,11 @@ const StaffDocumentation = () => {
   const [backendStatus, setBackendStatus] = useState('checking');
   const [recentlyViewed, setRecentlyViewed] = useState([]);
   const [bookmarkedArticles, setBookmarkedArticles] = useState([]);
+  const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
+  const [sortBy, setSortBy] = useState('popular');
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
+
+  const searchInputRef = useRef(null);
 
   const [staffData, setStaffData] = useState({
     id: null,
@@ -33,6 +38,12 @@ const StaffDocumentation = () => {
   const [faqs, setFaqs] = useState([]);
   const [videoTutorials, setVideoTutorials] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
 
   // Load staff data from localStorage
   useEffect(() => {
@@ -91,19 +102,19 @@ const StaffDocumentation = () => {
     }
   };
 
-  // Get sample categories
+  // Get sample categories with enhanced data
   const getSampleCategories = () => {
     return [
-      { id: 'getting-started', name: 'Getting Started', name_np: 'सुरु गर्दै', icon: '🚀', color: '#3b82f6', count: 8 },
-      { id: 'complaints', name: 'Complaint Management', name_np: 'गुनासो व्यवस्थापन', icon: '📋', color: '#10b981', count: 12 },
-      { id: 'tasks', name: 'Task Management', name_np: 'कार्य व्यवस्थापन', icon: '✅', color: '#f59e0b', count: 6 },
-      { id: 'reports', name: 'Reports & Analytics', name_np: 'रिपोर्ट र विश्लेषण', icon: '📊', color: '#8b5cf6', count: 5 },
-      { id: 'performance', name: 'Performance', name_np: 'प्रदर्शन', icon: '⭐', color: '#ec4899', count: 4 },
-      { id: 'faq', name: 'FAQ', name_np: 'बारम्बार सोधिने प्रश्नहरू', icon: '❓', color: '#64748b', count: 15 }
+      { id: 'getting-started', name: 'Getting Started', name_np: 'सुरु गर्दै', icon: '🚀', color: '#3b82f6', count: 8, description: 'Learn the basics of the staff portal' },
+      { id: 'complaints', name: 'Complaint Management', name_np: 'गुनासो व्यवस्थापन', icon: '📋', color: '#10b981', count: 12, description: 'Handle customer complaints effectively' },
+      { id: 'tasks', name: 'Task Management', name_np: 'कार्य व्यवस्थापन', icon: '✅', color: '#f59e0b', count: 6, description: 'Manage your daily tasks efficiently' },
+      { id: 'reports', name: 'Reports & Analytics', name_np: 'रिपोर्ट र विश्लेषण', icon: '📊', color: '#8b5cf6', count: 5, description: 'Generate and analyze reports' },
+      { id: 'performance', name: 'Performance', name_np: 'प्रदर्शन', icon: '⭐', color: '#ec4899', count: 4, description: 'Track and improve your performance' },
+      { id: 'faq', name: 'FAQ', name_np: 'बारम्बार सोधिने प्रश्नहरू', icon: '❓', color: '#64748b', count: 15, description: 'Frequently asked questions' }
     ];
   };
 
-  // Get sample articles
+  // Get sample articles with enhanced content
   const getSampleArticles = () => {
     return [
       {
@@ -112,7 +123,7 @@ const StaffDocumentation = () => {
         title_np: 'स्टाफ पोर्टल सुरु गर्दै',
         enTitle: 'Getting Started with Staff Portal',
         category: 'getting-started',
-        content: 'Learn how to navigate and use the staff portal effectively. This comprehensive guide covers everything from login to advanced features...',
+        content: 'Learn how to navigate and use the staff portal effectively. This comprehensive guide covers everything from login to advanced features including dashboard navigation, complaint management, and reporting tools.',
         content_np: 'स्टाफ पोर्टल प्रभावकारी रूपमा नेभिगेट गर्न र प्रयोग गर्न सिक्नुहोस्। यो व्यापक गाइडले लगइनदेखि उन्नत सुविधाहरू सम्म सबै कुरा समावेश गर्दछ...',
         enContent: 'Learn how to navigate and use the staff portal effectively...',
         author: 'Admin',
@@ -121,7 +132,8 @@ const StaffDocumentation = () => {
         likes: 45,
         views: 1200,
         difficulty: 'beginner',
-        tags: ['guide', 'tutorial', 'basics']
+        tags: ['guide', 'tutorial', 'basics'],
+        featured: true
       },
       {
         id: 2,
@@ -129,7 +141,7 @@ const StaffDocumentation = () => {
         title_np: 'गुनासो कसरी ह्यान्डल गर्ने',
         enTitle: 'How to Handle Complaints',
         category: 'complaints',
-        content: 'Step-by-step guide to managing and resolving customer complaints efficiently. Learn best practices for complaint resolution...',
+        content: 'Step-by-step guide to managing and resolving customer complaints efficiently. Learn best practices for complaint resolution, communication strategies, and follow-up procedures.',
         content_np: 'ग्राहक गुनासो प्रभावकारी रूपमा व्यवस्थापन र समाधान गर्न चरण-दर-चरण गाइड। गुनासो समाधानको लागि उत्तम अभ्यासहरू सिक्नुहोस्...',
         enContent: 'Step-by-step guide to managing and resolving customer complaints...',
         author: 'Support Team',
@@ -138,7 +150,8 @@ const StaffDocumentation = () => {
         likes: 32,
         views: 890,
         difficulty: 'intermediate',
-        tags: ['complaints', 'resolution', 'customer-service']
+        tags: ['complaints', 'resolution', 'customer-service'],
+        featured: true
       },
       {
         id: 3,
@@ -146,7 +159,7 @@ const StaffDocumentation = () => {
         title_np: 'कार्य व्यवस्थापन गाइड',
         enTitle: 'Task Management Guide',
         category: 'tasks',
-        content: 'Complete guide to managing your tasks efficiently. Learn how to prioritize, track, and complete tasks on time...',
+        content: 'Complete guide to managing your tasks efficiently. Learn how to prioritize, track, and complete tasks on time using the task management system.',
         content_np: 'तपाईंको कार्यहरू प्रभावकारी रूपमा व्यवस्थापन गर्न पूर्ण गाइड। कार्यहरूलाई प्राथमिकता दिन, ट्र्याक गर्न र समयमै पूरा गर्न सिक्नुहोस्...',
         enContent: 'Complete guide to managing your tasks efficiently...',
         author: 'Admin',
@@ -155,7 +168,8 @@ const StaffDocumentation = () => {
         likes: 28,
         views: 650,
         difficulty: 'beginner',
-        tags: ['tasks', 'productivity', 'management']
+        tags: ['tasks', 'productivity', 'management'],
+        featured: false
       },
       {
         id: 4,
@@ -163,7 +177,7 @@ const StaffDocumentation = () => {
         title_np: 'रिपोर्टहरू बुझ्दै',
         enTitle: 'Understanding Reports',
         category: 'reports',
-        content: 'How to generate and interpret various reports. This guide explains all report types and their uses...',
+        content: 'How to generate and interpret various reports. This guide explains all report types and their uses, including daily, weekly, monthly, and custom reports.',
         content_np: 'विभिन्न रिपोर्टहरू कसरी उत्पन्न र व्याख्या गर्ने। यो गाइडले सबै रिपोर्ट प्रकार र तिनीहरूको प्रयोगहरू व्याख्या गर्दछ...',
         enContent: 'How to generate and interpret various reports...',
         author: 'Analytics Team',
@@ -172,7 +186,8 @@ const StaffDocumentation = () => {
         likes: 22,
         views: 540,
         difficulty: 'intermediate',
-        tags: ['reports', 'analytics', 'data']
+        tags: ['reports', 'analytics', 'data'],
+        featured: false
       },
       {
         id: 5,
@@ -180,7 +195,7 @@ const StaffDocumentation = () => {
         title_np: 'तपाईंको प्रदर्शन सुधार गर्दै',
         enTitle: 'Improving Your Performance',
         category: 'performance',
-        content: 'Tips and tricks to improve your performance metrics. Learn how to achieve better results and exceed targets...',
+        content: 'Tips and tricks to improve your performance metrics. Learn how to achieve better results and exceed targets with proven strategies.',
         content_np: 'तपाईंको प्रदर्शन मेट्रिक्स सुधार गर्न टिप्स र ट्रिक्स। कसरी राम्रो परिणाम प्राप्त गर्ने र लक्ष्यहरू भन्दा बढी गर्ने सिक्नुहोस्...',
         enContent: 'Tips and tricks to improve your performance metrics...',
         author: 'HR Team',
@@ -189,7 +204,8 @@ const StaffDocumentation = () => {
         likes: 38,
         views: 720,
         difficulty: 'advanced',
-        tags: ['performance', 'productivity', 'goals']
+        tags: ['performance', 'productivity', 'goals'],
+        featured: true
       }
     ];
   };
@@ -202,7 +218,7 @@ const StaffDocumentation = () => {
         question: 'How do I change my password?',
         question_np: 'म कसरी मेरो पासवर्ड परिवर्तन गर्छु?',
         enQuestion: 'How do I change my password?',
-        answer: 'Go to Profile > Security Settings > Change Password. Enter your current password and new password, then click Save.',
+        answer: 'Go to Profile > Security Settings > Change Password. Enter your current password and new password, then click Save. Make sure your new password is at least 6 characters long.',
         answer_np: 'प्रोफाइल > सुरक्षा सेटिङ्स > पासवर्ड परिवर्तन गर्नुहोस्। आफ्नो हालको पासवर्ड र नयाँ पासवर्ड प्रविष्ट गर्नुहोस्, त्यसपछि सुरक्षित गर्नुहोस् क्लिक गर्नुहोस्।',
         enAnswer: 'Go to Profile > Security Settings > Change Password...',
         category: 'getting-started',
@@ -214,12 +230,24 @@ const StaffDocumentation = () => {
         question: 'How to update complaint status?',
         question_np: 'गुनासो स्थिति कसरी अपडेट गर्ने?',
         enQuestion: 'How to update complaint status?',
-        answer: 'Click on the complaint from the list, then select "Update Status" from the dropdown menu. Choose the new status and add any notes.',
+        answer: 'Click on the complaint from the list, then select "Update Status" from the dropdown menu. Choose the new status and add any notes or resolution details before saving.',
         answer_np: 'सूचीबाट गुनासोमा क्लिक गर्नुहोस्, त्यसपछि ड्रपडाउन मेनुबाट "स्थिति अपडेट गर्नुहोस्" चयन गर्नुहोस्। नयाँ स्थिति छान्नुहोस् र कुनै नोटहरू थप्नुहोस्।',
         enAnswer: 'Click on the complaint from the list...',
         category: 'complaints',
         helpful: 38,
         notHelpful: 2
+      },
+      {
+        id: 3,
+        question: 'How to generate reports?',
+        question_np: 'रिपोर्ट कसरी उत्पन्न गर्ने?',
+        enQuestion: 'How to generate reports?',
+        answer: 'Navigate to Reports section, select the report type, choose date range, and click "Generate Report". You can export reports in PDF, Excel, or CSV format.',
+        answer_np: 'रिपोर्ट सेक्सनमा जानुहोस्, रिपोर्ट प्रकार चयन गर्नुहोस्, मिति दायरा छान्नुहोस्, र "रिपोर्ट उत्पन्न गर्नुहोस्" क्लिक गर्नुहोस्।',
+        enAnswer: 'Navigate to Reports section, select the report type...',
+        category: 'reports',
+        helpful: 30,
+        notHelpful: 1
       }
     ];
   };
@@ -227,9 +255,9 @@ const StaffDocumentation = () => {
   // Get sample videos
   const getSampleVideos = () => {
     return [
-      { id: 1, title: 'Staff Portal Overview', title_np: 'स्टाफ पोर्टल अवलोकन', duration: '5:30', thumbnail: '🎬', category: 'getting-started' },
-      { id: 2, title: 'Handling Complaints Tutorial', title_np: 'गुनासो ह्यान्डलिङ ट्युटोरियल', duration: '8:15', thumbnail: '🎬', category: 'complaints' },
-      { id: 3, title: 'Task Management Tips', title_np: 'कार्य व्यवस्थापन सुझावहरू', duration: '6:45', thumbnail: '🎬', category: 'tasks' }
+      { id: 1, title: 'Staff Portal Overview', title_np: 'स्टाफ पोर्टल अवलोकन', duration: '5:30', thumbnail: '🎬', category: 'getting-started', views: 1250 },
+      { id: 2, title: 'Handling Complaints Tutorial', title_np: 'गुनासो ह्यान्डलिङ ट्युटोरियल', duration: '8:15', thumbnail: '🎬', category: 'complaints', views: 890 },
+      { id: 3, title: 'Task Management Tips', title_np: 'कार्य व्यवस्थापन सुझावहरू', duration: '6:45', thumbnail: '🎬', category: 'tasks', views: 650 }
     ];
   };
 
@@ -279,8 +307,10 @@ const StaffDocumentation = () => {
     let updated;
     if (bookmarkedArticles.find(a => a.id === article.id)) {
       updated = bookmarkedArticles.filter(a => a.id !== article.id);
+      showToast(language === 'np' ? 'बुकमार्क हटाइयो' : 'Bookmark removed', 'info');
     } else {
       updated = [article, ...bookmarkedArticles];
+      showToast(language === 'np' ? 'बुकमार्क थपियो' : 'Bookmark added', 'success');
     }
     setBookmarkedArticles(updated);
     localStorage.setItem('bookmarkedDocs', JSON.stringify(updated));
@@ -294,6 +324,7 @@ const StaffDocumentation = () => {
           : article
       )
     );
+    showToast(language === 'np' ? 'धन्यवाद! तपाईंको प्रतिक्रिया दर्ता भयो' : 'Thanks! Your feedback recorded', 'success');
   };
 
   const openArticle = (article) => {
@@ -307,6 +338,7 @@ const StaffDocumentation = () => {
           : a
       )
     );
+    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
@@ -318,6 +350,7 @@ const StaffDocumentation = () => {
   const openVideoModal = (video) => {
     setSelectedVideo(video);
     setShowVideoModal(true);
+    document.body.style.overflow = 'hidden';
   };
 
   const closeVideoModal = () => {
@@ -333,17 +366,44 @@ const StaffDocumentation = () => {
     navigate('/');
   };
 
-  // Filter articles
-  const filteredArticles = documentation.filter(article => {
-    const matchesCategory = selectedCategory === 'all' || article.category === selectedCategory;
-    const matchesSearch = searchTerm === '' ||
-      article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (article.title_np && article.title_np.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      article.enTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      article.enContent.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  // Get articles to display based on filters and sorting
+  const getArticlesToDisplay = () => {
+    let articles = [...documentation];
+    
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      articles = articles.filter(article => article.category === selectedCategory);
+    }
+    
+    // Filter by bookmarks
+    if (showBookmarksOnly) {
+      articles = articles.filter(article => bookmarkedArticles.find(a => a.id === article.id));
+    }
+    
+    // Filter by search
+    if (searchTerm) {
+      articles = articles.filter(article =>
+        article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (article.title_np && article.title_np.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        article.enTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        article.enContent.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Sort articles
+    if (sortBy === 'popular') {
+      articles.sort((a, b) => b.views - a.views);
+    } else if (sortBy === 'newest') {
+      articles.sort((a, b) => new Date(b.date) - new Date(a.date));
+    } else if (sortBy === 'oldest') {
+      articles.sort((a, b) => new Date(a.date) - new Date(b.date));
+    } else if (sortBy === 'mostLiked') {
+      articles.sort((a, b) => b.likes - a.likes);
+    }
+    
+    return articles;
+  };
 
   // Filter FAQs
   const filteredFaqs = faqs.filter(faq => {
@@ -354,6 +414,8 @@ const StaffDocumentation = () => {
       faq.enQuestion.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const articlesToDisplay = getArticlesToDisplay();
 
   const content = {
     np: {
@@ -397,7 +459,19 @@ const StaffDocumentation = () => {
       next: 'अर्को',
       page: 'पृष्ठ',
       of: 'को',
-      close: 'बन्द गर्नुहोस्'
+      close: 'बन्द गर्नुहोस्',
+      showBookmarks: 'बुकमार्क देखाउनुहोस्',
+      showAll: 'सबै देखाउनुहोस्',
+      sortBy: 'क्रमबद्ध गर्नुहोस्',
+      popular: 'लोकप्रिय',
+      newest: 'नयाँ',
+      oldest: 'पुरानो',
+      mostLiked: 'सबैभन्दा मनपराइएको',
+      clearSearch: 'खोजी सफा गर्नुहोस्',
+      noResults: 'कुनै परिणाम फेला परेन',
+      tryDifferentSearch: 'कृपया फरक खोजी शब्द प्रयास गर्नुहोस्',
+      featured: 'विशेष',
+      videoViews: 'पटक हेरिएको'
     },
     en: {
       pageTitle: 'Documentation & Help',
@@ -440,7 +514,19 @@ const StaffDocumentation = () => {
       next: 'Next',
       page: 'Page',
       of: 'of',
-      close: 'Close'
+      close: 'Close',
+      showBookmarks: 'Show Bookmarks',
+      showAll: 'Show All',
+      sortBy: 'Sort By',
+      popular: 'Most Popular',
+      newest: 'Newest First',
+      oldest: 'Oldest First',
+      mostLiked: 'Most Liked',
+      clearSearch: 'Clear Search',
+      noResults: 'No results found',
+      tryDifferentSearch: 'Please try a different search term',
+      featured: 'Featured',
+      videoViews: 'views'
     }
   };
 
@@ -473,6 +559,16 @@ const StaffDocumentation = () => {
 
   return (
     <div className="staff-documentation">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+        </div>
+      )}
+
       <StaffHeader 
         language={language}
         setLanguage={setLanguage}
@@ -514,21 +610,29 @@ const StaffDocumentation = () => {
 
             {/* Page Header */}
             <div className="page-header">
-              <h1 className="page-title">{t.documentation}</h1>
+              <div>
+                <h1 className="page-title">{t.documentation}</h1>
+                <p className="page-subtitle">Find answers, guides, and resources to help you succeed</p>
+              </div>
               <button className="refresh-btn" onClick={fetchDocumentation}>
                 🔄 {t.refresh}
               </button>
             </div>
 
-            {/* Search Bar */}
-            <div className="search-bar">
-              <span className="search-icon">🔍</span>
+            {/* Enhanced Search Bar - No Icon */}
+            <div className="search-bar-enhanced">
               <input
                 type="text"
                 placeholder={t.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                ref={searchInputRef}
               />
+              {searchTerm && (
+                <button className="clear-search-btn" onClick={() => setSearchTerm('')}>
+                  ✕
+                </button>
+              )}
             </div>
 
             {/* Categories Section */}
@@ -559,13 +663,41 @@ const StaffDocumentation = () => {
               </div>
             </div>
 
+            {/* Filters and Sorting Bar */}
+            <div className="filters-bar">
+              <div className="filter-buttons">
+                <button 
+                  className={`filter-btn ${!showBookmarksOnly ? 'active' : ''}`}
+                  onClick={() => setShowBookmarksOnly(false)}
+                >
+                  📄 {t.showAll}
+                </button>
+                <button 
+                  className={`filter-btn ${showBookmarksOnly ? 'active' : ''}`}
+                  onClick={() => setShowBookmarksOnly(true)}
+                >
+                  🔖 {t.showBookmarks} ({bookmarkedArticles.length})
+                </button>
+              </div>
+              <div className="sort-dropdown">
+                <label>{t.sortBy}:</label>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                  <option value="popular">{t.popular}</option>
+                  <option value="newest">{t.newest}</option>
+                  <option value="oldest">{t.oldest}</option>
+                  <option value="mostLiked">{t.mostLiked}</option>
+                </select>
+              </div>
+            </div>
+
             {/* Recently Viewed Section */}
-            {recentlyViewed.length > 0 && (
+            {recentlyViewed.length > 0 && !showBookmarksOnly && (
               <div className="recently-viewed-section">
                 <h2>🕐 {t.recentlyViewed}</h2>
                 <div className="recently-viewed-list">
                   {recentlyViewed.map(article => (
                     <button key={article.id} className="recent-item" onClick={() => openArticle(article)}>
+                      <span className="recent-icon">📄</span>
                       <span>{language === 'np' ? article.title_np || article.title : article.title}</span>
                       <small>{article.date}</small>
                     </button>
@@ -576,10 +708,11 @@ const StaffDocumentation = () => {
 
             {/* Articles Section */}
             <div className="articles-section">
-              <h2>{t.popularArticles}</h2>
+              <h2>{showBookmarksOnly ? t.bookmarks : t.popularArticles}</h2>
               <div className="articles-grid">
-                {filteredArticles.map((article) => (
-                  <div key={article.id} className="article-card" onClick={() => openArticle(article)}>
+                {articlesToDisplay.map((article) => (
+                  <div key={article.id} className={`article-card ${article.featured ? 'featured' : ''}`} onClick={() => openArticle(article)}>
+                    {article.featured && <span className="featured-badge">⭐ {t.featured}</span>}
                     <div className="article-header">
                       <span className="article-category-badge" style={{ backgroundColor: getCategoryColor(article.category) }}>
                         {getCategoryIcon(article.category)} {getCategoryName(article.category)}
@@ -593,21 +726,30 @@ const StaffDocumentation = () => {
                         <span>👁️ {article.views}</span>
                         <span>❤️ {article.likes}</span>
                       </div>
-                      <button 
-                        className={`bookmark-btn ${bookmarkedArticles.find(a => a.id === article.id) ? 'active' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); toggleBookmark(article); }}
-                      >
-                        {bookmarkedArticles.find(a => a.id === article.id) ? '🔖' : '📑'}
-                      </button>
-                      <button className="read-more-btn">{t.readMore} →</button>
+                      <div className="article-actions">
+                        <button 
+                          className={`bookmark-btn ${bookmarkedArticles.find(a => a.id === article.id) ? 'active' : ''}`}
+                          onClick={(e) => { e.stopPropagation(); toggleBookmark(article); }}
+                          title={bookmarkedArticles.find(a => a.id === article.id) ? t.bookmarked : t.bookmark}
+                        >
+                          {bookmarkedArticles.find(a => a.id === article.id) ? '🔖' : '📑'}
+                        </button>
+                        <button className="read-more-btn">{t.readMore} →</button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-              {filteredArticles.length === 0 && (
+              {articlesToDisplay.length === 0 && (
                 <div className="empty-state">
                   <span className="empty-icon">📭</span>
-                  <p>{language === 'np' ? 'कुनै लेख फेला परेन' : 'No articles found'}</p>
+                  <p>{t.noResults}</p>
+                  <small>{t.tryDifferentSearch}</small>
+                  {searchTerm && (
+                    <button className="clear-search-btn-empty" onClick={() => setSearchTerm('')}>
+                      {t.clearSearch}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -623,6 +765,9 @@ const StaffDocumentation = () => {
                       <span className="video-duration">{video.duration}</span>
                     </div>
                     <h4>{language === 'np' ? (video.title_np || video.title) : video.title}</h4>
+                    <div className="video-stats">
+                      <span>👁️ {video.views || 0} {t.videoViews}</span>
+                    </div>
                     <button className="watch-btn">▶ {t.watchVideo}</button>
                   </div>
                 ))}
@@ -645,8 +790,8 @@ const StaffDocumentation = () => {
                     </div>
                     <div className="faq-helpful">
                       <span>{t.helpful}?</span>
-                      <button className="helpful-btn yes" onClick={(e) => { e.stopPropagation(); }}>👍 {faq.helpful}</button>
-                      <button className="helpful-btn no" onClick={(e) => { e.stopPropagation(); }}>👎 {faq.notHelpful}</button>
+                      <button className="helpful-btn yes" onClick={(e) => { e.stopPropagation(); showToast(t.yes, 'success'); }}>👍 {faq.helpful}</button>
+                      <button className="helpful-btn no" onClick={(e) => { e.stopPropagation(); showToast(t.no, 'info'); }}>👎 {faq.notHelpful}</button>
                     </div>
                   </details>
                 ))}
@@ -654,7 +799,7 @@ const StaffDocumentation = () => {
               {filteredFaqs.length === 0 && (
                 <div className="empty-state">
                   <span className="empty-icon">❓</span>
-                  <p>{language === 'np' ? 'कुनै FAQ फेला परेन' : 'No FAQs found'}</p>
+                  <p>{t.noResults}</p>
                 </div>
               )}
             </div>
@@ -711,6 +856,12 @@ const StaffDocumentation = () => {
               </div>
             </div>
             <div className="modal-footer">
+              <button 
+                className={`bookmark-modal-btn ${bookmarkedArticles.find(a => a.id === selectedArticle.id) ? 'active' : ''}`}
+                onClick={() => toggleBookmark(selectedArticle)}
+              >
+                {bookmarkedArticles.find(a => a.id === selectedArticle.id) ? '🔖 ' + t.bookmarked : '📑 ' + t.bookmark}
+              </button>
               <button className="btn-close" onClick={closeModal}>{t.backToDocs}</button>
             </div>
           </div>
@@ -731,6 +882,11 @@ const StaffDocumentation = () => {
                   <span className="video-play-icon">▶</span>
                   <p>{t.watchVideo}: {selectedVideo.title}</p>
                   <small>{t.duration}: {selectedVideo.duration}</small>
+                  <div className="video-actions">
+                    <button className="watch-now-btn" onClick={() => window.open('#', '_blank')}>
+                      ▶ Play Now
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -755,6 +911,32 @@ const StaffDocumentation = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 80px;
+          right: 20px;
+          z-index: 2000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 350px;
+        }
+
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         .loading-container {
@@ -864,7 +1046,7 @@ const StaffDocumentation = () => {
         .page-header {
           display: flex;
           justify-content: space-between;
-          align-items: center;
+          align-items: flex-start;
           margin-bottom: 24px;
           flex-wrap: wrap;
           gap: 16px;
@@ -874,6 +1056,12 @@ const StaffDocumentation = () => {
           font-size: 1.5rem;
           font-weight: 600;
           color: #0f172a;
+          margin-bottom: 4px;
+        }
+
+        .page-subtitle {
+          color: #64748b;
+          font-size: 0.85rem;
         }
 
         .refresh-btn {
@@ -893,7 +1081,8 @@ const StaffDocumentation = () => {
           color: #0288d1;
         }
 
-        .search-bar {
+        /* Enhanced Search Bar - No Icon */
+        .search-bar-enhanced {
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
@@ -904,18 +1093,86 @@ const StaffDocumentation = () => {
           align-items: center;
         }
 
-        .search-icon {
-          font-size: 1.2rem;
-          color: #94a3b8;
-          margin-right: 12px;
-        }
-
-        .search-bar input {
+        .search-bar-enhanced input {
           flex: 1;
           border: none;
           outline: none;
           font-size: 0.95rem;
           background: transparent;
+        }
+
+        .search-bar-enhanced input:focus {
+          outline: none;
+        }
+
+        .clear-search-btn {
+          background: none;
+          border: none;
+          font-size: 1rem;
+          cursor: pointer;
+          color: #94a3b8;
+          padding: 4px 8px;
+          border-radius: 50%;
+          transition: all 0.2s;
+        }
+
+        .clear-search-btn:hover {
+          background: #f1f5f9;
+          color: #475569;
+        }
+
+        .filters-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 20px;
+          margin-bottom: 24px;
+          padding: 16px 20px;
+          background: white;
+          border-radius: 16px;
+          border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
+        }
+
+        .filter-buttons {
+          display: flex;
+          gap: 12px;
+        }
+
+        .filter-btn {
+          padding: 6px 16px;
+          border-radius: 20px;
+          cursor: pointer;
+          font-weight: 500;
+          transition: all 0.2s;
+          border: 1px solid #e2e8f0;
+          background: white;
+          color: #475569;
+        }
+
+        .filter-btn.active {
+          background: #0288d1;
+          color: white;
+          border-color: #0288d1;
+        }
+
+        .sort-dropdown {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .sort-dropdown label {
+          font-size: 0.8rem;
+          color: #64748b;
+        }
+
+        .sort-dropdown select {
+          padding: 6px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          background: white;
+          cursor: pointer;
         }
 
         .categories-section, .articles-section, .videos-section, .faq-section, .help-section, .recently-viewed-section {
@@ -1003,6 +1260,11 @@ const StaffDocumentation = () => {
         .recent-item:hover {
           background: #f8fafc;
           border-color: #0288d1;
+          transform: translateX(4px);
+        }
+
+        .recent-icon {
+          font-size: 1rem;
         }
 
         .recent-item small {
@@ -1023,11 +1285,29 @@ const StaffDocumentation = () => {
           padding: 20px;
           cursor: pointer;
           transition: all 0.2s;
+          position: relative;
+        }
+
+        .article-card.featured {
+          border: 2px solid #f59e0b;
+          background: linear-gradient(135deg, #ffffff, #fffbeb);
         }
 
         .article-card:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .featured-badge {
+          position: absolute;
+          top: -10px;
+          right: 12px;
+          background: #f59e0b;
+          color: white;
+          padding: 2px 10px;
+          border-radius: 20px;
+          font-size: 0.7rem;
+          font-weight: 500;
         }
 
         .article-header {
@@ -1080,12 +1360,19 @@ const StaffDocumentation = () => {
           color: #94a3b8;
         }
 
+        .article-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
         .bookmark-btn {
           background: none;
           border: none;
           font-size: 1rem;
           cursor: pointer;
           padding: 4px;
+          transition: all 0.2s;
         }
 
         .bookmark-btn.active {
@@ -1099,6 +1386,11 @@ const StaffDocumentation = () => {
           font-size: 0.8rem;
           font-weight: 500;
           cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .read-more-btn:hover {
+          transform: translateX(4px);
         }
 
         .videos-grid {
@@ -1146,6 +1438,12 @@ const StaffDocumentation = () => {
         .video-card h4 {
           font-size: 0.9rem;
           font-weight: 500;
+          margin-bottom: 8px;
+        }
+
+        .video-stats {
+          font-size: 0.7rem;
+          color: #94a3b8;
           margin-bottom: 12px;
         }
 
@@ -1157,6 +1455,11 @@ const StaffDocumentation = () => {
           border-radius: 20px;
           font-size: 0.75rem;
           cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .watch-btn:hover {
+          transform: scale(1.05);
         }
 
         .faq-list {
@@ -1170,6 +1473,11 @@ const StaffDocumentation = () => {
           border: 1px solid #e2e8f0;
           border-radius: 12px;
           overflow: hidden;
+          transition: all 0.2s;
+        }
+
+        .faq-item:hover {
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .faq-question {
@@ -1182,6 +1490,11 @@ const StaffDocumentation = () => {
           gap: 12px;
           cursor: pointer;
           list-style: none;
+          transition: background 0.2s;
+        }
+
+        .faq-question:hover {
+          background: #f1f5f9;
         }
 
         .faq-question::-webkit-details-marker {
@@ -1261,6 +1574,12 @@ const StaffDocumentation = () => {
           padding: 32px;
           text-align: center;
           color: white;
+          transition: all 0.2s;
+        }
+
+        .help-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.15);
         }
 
         .help-icon {
@@ -1307,6 +1626,21 @@ const StaffDocumentation = () => {
           font-size: 3rem;
           display: block;
           margin-bottom: 12px;
+        }
+
+        .clear-search-btn-empty {
+          margin-top: 12px;
+          padding: 6px 16px;
+          background: #e2e8f0;
+          border: none;
+          border-radius: 20px;
+          cursor: pointer;
+          font-size: 0.8rem;
+          transition: all 0.2s;
+        }
+
+        .clear-search-btn-empty:hover {
+          background: #cbd5e1;
         }
 
         .modal-overlay {
@@ -1486,12 +1820,50 @@ const StaffDocumentation = () => {
           margin-bottom: 16px;
         }
 
+        .video-actions {
+          margin-top: 16px;
+        }
+
+        .watch-now-btn {
+          padding: 8px 24px;
+          background: #0288d1;
+          color: white;
+          border: none;
+          border-radius: 30px;
+          cursor: pointer;
+          font-size: 0.9rem;
+          transition: all 0.2s;
+        }
+
+        .watch-now-btn:hover {
+          background: #0277bd;
+          transform: scale(1.05);
+        }
+
         .modal-footer {
           padding: 16px 24px;
           border-top: 1px solid #e2e8f0;
           display: flex;
           justify-content: flex-end;
+          gap: 12px;
           border-radius: 0 0 20px 20px;
+          flex-wrap: wrap;
+        }
+
+        .bookmark-modal-btn {
+          padding: 8px 20px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: 500;
+          transition: all 0.2s;
+        }
+
+        .bookmark-modal-btn.active {
+          background: #fef3c7;
+          border-color: #f59e0b;
+          color: #d97706;
         }
 
         .btn-close {
@@ -1542,6 +1914,19 @@ const StaffDocumentation = () => {
           
           .announcements-banner {
             flex-direction: column;
+          }
+          
+          .filters-bar {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          
+          .filter-buttons {
+            justify-content: center;
+          }
+          
+          .sort-dropdown {
+            justify-content: center;
           }
         }
       `}</style>

@@ -159,7 +159,7 @@ const AdminComplaintsPending = () => {
     }
   }, [API_URL]);
 
-  // Transform regular complaint data
+  // Transform regular complaint data with assigned staff info
   const transformRegularComplaint = (complaint) => ({
     id: complaint.id,
     complaintId: complaint.id,
@@ -181,8 +181,12 @@ const AdminComplaintsPending = () => {
     channel: 'वेबसाइट पोर्टल',
     enChannel: 'Website Portal',
     priority: mapPriority(complaint.priority),
-    assignedTo: complaint.assigned_to || (language === 'np' ? 'प्रशासक' : 'Administrator'),
-    enAssignedTo: complaint.assigned_to || 'Administrator',
+    assignedTo: complaint.assigned_to || null,
+    assignedToName: complaint.assigned_to_name || complaint.assigned_to || null,
+    assignedBy: complaint.assigned_by || null,
+    assignedByName: complaint.assigned_by_name || null,
+    assignedAt: complaint.assigned_at ? formatNepaliDate(complaint.assigned_at) : null,
+    enAssignedTo: complaint.assigned_to || null,
     daysPending: calculateDaysPending(complaint.created_at),
     submittedDate: complaint.created_at,
     referenceNumber: null,
@@ -192,7 +196,7 @@ const AdminComplaintsPending = () => {
     type: 'regular'
   });
 
-  // Transform complaint regarding data
+  // Transform complaint regarding data with assigned staff info
   const transformRegardingComplaint = (complaint) => ({
     id: complaint.id,
     complaintId: complaint.id,
@@ -214,8 +218,12 @@ const AdminComplaintsPending = () => {
     channel: complaint.preferred_contact === 'phone' ? 'फोन' : complaint.preferred_contact === 'email' ? 'इमेल' : 'एसएमएस',
     enChannel: complaint.preferred_contact === 'phone' ? 'Phone' : complaint.preferred_contact === 'email' ? 'Email' : 'SMS',
     priority: mapPriority(complaint.priority),
-    assignedTo: complaint.assigned_to || (language === 'np' ? 'प्रशासक' : 'Administrator'),
-    enAssignedTo: complaint.assigned_to || 'Administrator',
+    assignedTo: complaint.assigned_to || null,
+    assignedToName: complaint.assigned_to_name || complaint.assigned_to || null,
+    assignedBy: complaint.assigned_by || null,
+    assignedByName: complaint.assigned_by_name || null,
+    assignedAt: complaint.assigned_at ? formatNepaliDate(complaint.assigned_at) : null,
+    enAssignedTo: complaint.assigned_to || null,
     daysPending: calculateDaysPending(complaint.created_at),
     submittedDate: complaint.created_at,
     referenceNumber: complaint.reference_number || null,
@@ -271,6 +279,7 @@ const AdminComplaintsPending = () => {
       regardingComplaints: 'गुनासो सम्बन्धी',
       ticketId: 'टिकेट नम्बर',
       complainant: 'उजुरीकर्ता',
+      assignedStaff: 'तोकिएको स्टाफ',
       category: 'प्रकार',
       date: 'मिति',
       daysPending: 'दिन बाँकी',
@@ -284,7 +293,10 @@ const AdminComplaintsPending = () => {
       email: 'इमेल',
       phone: 'फोन',
       registeredDate: 'दर्ता मिति',
-      assignedTo: 'तोकिएको टोली',
+      assignedTo: 'तोकिएको व्यक्ति',
+      assignedBy: 'तोक्ने व्यक्ति',
+      assignedDate: 'तोकिएको मिति',
+      notAssigned: 'तोकिएको छैन',
       close: 'बन्द गर्नुहोस्',
       all: 'सबै',
       high: 'उच्च',
@@ -308,7 +320,8 @@ const AdminComplaintsPending = () => {
       complaintInfo: 'गुनासो जानकारी',
       complainantInfo: 'उजुरीकर्ताको जानकारी',
       addressInfo: 'ठेगाना जानकारी',
-      dateInfo: 'मिति जानकारी'
+      dateInfo: 'मिति जानकारी',
+      assignmentInfo: 'तोकिएको जानकारी'
     },
     en: {
       pendingComplaints: 'Pending Complaints',
@@ -322,6 +335,7 @@ const AdminComplaintsPending = () => {
       regardingComplaints: 'Complaint Regarding',
       ticketId: 'Ticket ID',
       complainant: 'Complainant',
+      assignedStaff: 'Assigned Staff',
       category: 'Category',
       date: 'Date',
       daysPending: 'Days Pending',
@@ -336,6 +350,9 @@ const AdminComplaintsPending = () => {
       phone: 'Phone',
       registeredDate: 'Registered Date',
       assignedTo: 'Assigned To',
+      assignedBy: 'Assigned By',
+      assignedDate: 'Assigned Date',
+      notAssigned: 'Not Assigned',
       close: 'Close',
       all: 'All',
       high: 'High',
@@ -359,7 +376,8 @@ const AdminComplaintsPending = () => {
       complaintInfo: 'Complaint Information',
       complainantInfo: 'Complainant Information',
       addressInfo: 'Address Information',
-      dateInfo: 'Date Information'
+      dateInfo: 'Date Information',
+      assignmentInfo: 'Assignment Information'
     }
   };
 
@@ -391,7 +409,23 @@ const AdminComplaintsPending = () => {
   };
 
   const getAssignedTo = (complaint) => {
-    return language === 'np' ? complaint.assignedTo : complaint.enAssignedTo;
+    if (complaint.assignedToName) {
+      return language === 'np' ? complaint.assignedToName : complaint.assignedToName;
+    }
+    if (complaint.assignedTo) {
+      return complaint.assignedTo;
+    }
+    return t.notAssigned;
+  };
+
+  const getAssignedByName = (complaint) => {
+    if (complaint.assignedByName) {
+      return complaint.assignedByName;
+    }
+    if (complaint.assignedBy) {
+      return complaint.assignedBy;
+    }
+    return '-';
   };
 
   const getComplaintTypeText = (complaint) => {
@@ -424,6 +458,11 @@ const AdminComplaintsPending = () => {
       if (days >= 3) return 'Important';
       return 'Normal';
     }
+  };
+
+  // Check if complaint has assigned staff
+  const hasAssignedStaff = (complaint) => {
+    return complaint.assignedTo !== null || complaint.assignedToName !== null;
   };
 
   // Categories for filter
@@ -481,11 +520,13 @@ const AdminComplaintsPending = () => {
   const openModal = (complaint) => {
     setSelectedComplaint(complaint);
     setShowModal(true);
+    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSelectedComplaint(null);
+    document.body.style.overflow = 'unset';
   };
 
   // Refresh data
@@ -502,7 +543,9 @@ const AdminComplaintsPending = () => {
     high: allPendingComplaints.filter(c => c.priority === 'high').length,
     medium: allPendingComplaints.filter(c => c.priority === 'medium').length,
     low: allPendingComplaints.filter(c => c.priority === 'low').length,
-    critical: allPendingComplaints.filter(c => c.daysPending >= 10).length
+    critical: allPendingComplaints.filter(c => c.daysPending >= 10).length,
+    assigned: allPendingComplaints.filter(c => hasAssignedStaff(c)).length,
+    unassigned: allPendingComplaints.filter(c => !hasAssignedStaff(c)).length
   };
 
   if (loading) {
@@ -559,6 +602,10 @@ const AdminComplaintsPending = () => {
                     <span className="critical-label">{t.urgentAttention}</span>
                   </div>
                 )}
+                <div>
+                  <span className="assigned-count">{stats.assigned}</span>
+                  <span className="assigned-label">तोकिएको</span>
+                </div>
                 <button className="refresh-btn-small" onClick={refreshData} title={t.refresh}>
                   🔄
                 </button>
@@ -589,10 +636,10 @@ const AdminComplaintsPending = () => {
                 </div>
               </div>
               <div className="stat-card">
-                <div className="stat-card-icon critical">⚠️</div>
+                <div className="stat-card-icon assigned">👤</div>
                 <div className="stat-card-info">
-                  <div className="stat-card-value">{stats.critical}</div>
-                  <div className="stat-card-label">{t.urgentAttention}</div>
+                  <div className="stat-card-value">{stats.assigned}</div>
+                  <div className="stat-card-label">तोकिएको</div>
                 </div>
               </div>
             </div>
@@ -650,12 +697,12 @@ const AdminComplaintsPending = () => {
                   <tr>
                     <th>{t.ticketId}</th>
                     <th>{t.complainant}</th>
+                    <th>{t.assignedStaff}</th>
                     <th>{t.category}</th>
                     <th>{t.subject}</th>
                     <th>{t.date}</th>
                     <th>{t.daysPending}</th>
                     <th>{t.priority}</th>
-                    <th>{t.complaintType}</th>
                     <th>{t.actions}</th>
                   </tr>
                 </thead>
@@ -669,6 +716,18 @@ const AdminComplaintsPending = () => {
                             <strong>{language === 'np' ? complaint.name : complaint.enName}</strong>
                             <small>{complaint.phone}</small>
                           </div>
+                        </td>
+                        <td className="assigned-staff-cell">
+                          {hasAssignedStaff(complaint) ? (
+                            <div className="assigned-info">
+                              <span className="staff-name">{getAssignedTo(complaint)}</span>
+                              {complaint.assignedAt && (
+                                <span className="assigned-date">📅 {complaint.assignedAt}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="not-assigned-badge">{t.notAssigned}</span>
+                          )}
                         </td>
                         <td>{getCategoryText(complaint)}</td>
                         <td>{complaint.subject || '-'}</td>
@@ -684,11 +743,6 @@ const AdminComplaintsPending = () => {
                         <td>
                           <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
                             {getPriorityText(complaint.priority)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`type-badge ${getComplaintTypeClass(complaint)}`}>
-                            {getComplaintTypeText(complaint)}
                           </span>
                         </td>
                         <td>
@@ -828,7 +882,25 @@ const AdminComplaintsPending = () => {
               </div>
 
               <div className="detail-section">
-                <h4>📊 {t.statusInfo}</h4>
+                <h4>👥 {t.assignmentInfo}</h4>
+                <div className="detail-row">
+                  <label>{t.assignedTo}:</label>
+                  <span>{getAssignedTo(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.assignedBy}:</label>
+                  <span>{getAssignedByName(selectedComplaint)}</span>
+                </div>
+                {selectedComplaint.assignedAt && (
+                  <div className="detail-row">
+                    <label>{t.assignedDate}:</label>
+                    <span>{selectedComplaint.assignedAt}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="detail-section">
+                <h4>📊 {t.dateInfo}</h4>
                 <div className="detail-row">
                   <label>{t.registeredDate}:</label>
                   <span>{getDate(selectedComplaint)}</span>
@@ -836,10 +908,6 @@ const AdminComplaintsPending = () => {
                 <div className="detail-row">
                   <label>{t.channel}:</label>
                   <span>{getChannel(selectedComplaint)}</span>
-                </div>
-                <div className="detail-row">
-                  <label>{t.assignedTo}:</label>
-                  <span>{getAssignedTo(selectedComplaint)}</span>
                 </div>
                 {selectedComplaint.preferredContact && (
                   <div className="detail-row">
@@ -856,7 +924,7 @@ const AdminComplaintsPending = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -1019,6 +1087,7 @@ const AdminComplaintsPending = () => {
           padding: 8px 20px;
           background: linear-gradient(135deg, #fef3c7, #fde68a);
           border-radius: 12px;
+          flex-wrap: wrap;
         }
 
         .pending-count {
@@ -1030,6 +1099,18 @@ const AdminComplaintsPending = () => {
         .pending-label {
           font-size: 0.7rem;
           color: #b45309;
+          display: block;
+        }
+
+        .assigned-count {
+          font-size: 1.8rem;
+          font-weight: 700;
+          color: #059669;
+        }
+
+        .assigned-label {
+          font-size: 0.7rem;
+          color: #047857;
           display: block;
         }
 
@@ -1086,6 +1167,12 @@ const AdminComplaintsPending = () => {
           align-items: center;
           gap: 12px;
           border: 1px solid #e2e8f0;
+          transition: all 0.2s;
+        }
+
+        .stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
         .stat-card-icon {
@@ -1098,6 +1185,8 @@ const AdminComplaintsPending = () => {
           font-size: 1.2rem;
           background: #f8fafc;
         }
+
+        .stat-card-icon.assigned { background: #d1fae5; color: #059669; }
 
         .stat-card-value {
           font-size: 1.3rem;
@@ -1191,7 +1280,7 @@ const AdminComplaintsPending = () => {
         .complaints-table {
           width: 100%;
           border-collapse: collapse;
-          min-width: 1000px;
+          min-width: 1100px;
         }
 
         .complaints-table th,
@@ -1229,6 +1318,35 @@ const AdminComplaintsPending = () => {
 
         .complainant-info strong { display: block; }
         .complainant-info small { font-size: 0.7rem; color: #64748b; }
+
+        .assigned-staff-cell {
+          min-width: 120px;
+        }
+
+        .assigned-info {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .staff-name {
+          font-weight: 500;
+          color: #0f172a;
+        }
+
+        .assigned-date {
+          font-size: 0.65rem;
+          color: #64748b;
+        }
+
+        .not-assigned-badge {
+          display: inline-block;
+          padding: 4px 8px;
+          background: #f1f5f9;
+          color: #475569;
+          border-radius: 12px;
+          font-size: 0.7rem;
+        }
 
         .priority-badge, .type-badge {
           display: inline-block;

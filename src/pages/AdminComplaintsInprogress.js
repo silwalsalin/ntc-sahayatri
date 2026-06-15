@@ -83,21 +83,6 @@ const AdminComplaintsInProgress = () => {
     return priorityMap[priority] || 'medium';
   };
 
-  // Helper function to convert status to Nepali
-  const getStatusInNepali = (status) => {
-    const statusMap = {
-      'pending': 'विचाराधीन',
-      'in-progress': 'प्रगतिमा',
-      'inprogress': 'प्रगतिमा',
-      'In Progress': 'प्रगतिमा',
-      'review': 'समीक्षामा',
-      'resolved': 'समाधान भयो',
-      'closed': 'बन्द',
-      'rejected': 'अस्वीकृत'
-    };
-    return statusMap[status?.toLowerCase()] || status || 'प्रगतिमा';
-  };
-
   // Check if complaint is in-progress
   const isInProgress = (status) => {
     const inProgressStatuses = ['in-progress', 'inprogress', 'In Progress', 'प्रगतिमा'];
@@ -148,7 +133,7 @@ const AdminComplaintsInProgress = () => {
       
       // Fetch regular complaints
       try {
-        const regularResponse = await axios.get(`${API_URL}/complaints/public`, { headers });
+        const regularResponse = await axios.get(`${API_URL}/complaints`, { headers });
         if (regularResponse.data.success && Array.isArray(regularResponse.data.data)) {
           regularData = regularResponse.data.data
             .filter(complaint => isInProgress(complaint.status))
@@ -160,7 +145,7 @@ const AdminComplaintsInProgress = () => {
       
       // Fetch complaint regarding
       try {
-        const regardingResponse = await axios.get(`${API_URL}/complaints/regarding/public`, { headers });
+        const regardingResponse = await axios.get(`${API_URL}/complaint-regarding`, { headers });
         if (regardingResponse.data.success && Array.isArray(regardingResponse.data.data)) {
           regardingData = regardingResponse.data.data
             .filter(complaint => isInProgress(complaint.status))
@@ -193,7 +178,7 @@ const AdminComplaintsInProgress = () => {
     }
   }, [API_URL]);
 
-  // Transform regular complaint data
+  // Transform regular complaint data with assigned staff info
   const transformRegularComplaint = (complaint) => {
     const progress = calculateProgressPercent(complaint.created_at, complaint.status);
     return {
@@ -217,7 +202,11 @@ const AdminComplaintsInProgress = () => {
       channel: 'वेबसाइट पोर्टल',
       enChannel: 'Website Portal',
       priority: mapPriority(complaint.priority),
-      assignedTo: complaint.assigned_to || (language === 'np' ? 'प्रशासक' : 'Administrator'),
+      assignedTo: complaint.assigned_to || null,
+      assignedToName: complaint.assigned_to_name || complaint.assigned_to || null,
+      assignedBy: complaint.assigned_by || null,
+      assignedByName: complaint.assigned_by_name || null,
+      assignedAt: complaint.assigned_at ? formatNepaliDate(complaint.assigned_at) : null,
       enAssignedTo: complaint.assigned_to || 'Administrator',
       progressPercent: progress,
       lastUpdateNp: complaint.updated_at ? formatNepaliDate(complaint.updated_at) : formatNepaliDate(complaint.created_at),
@@ -233,7 +222,7 @@ const AdminComplaintsInProgress = () => {
     };
   };
 
-  // Transform complaint regarding data
+  // Transform complaint regarding data with assigned staff info
   const transformRegardingComplaint = (complaint) => {
     const progress = calculateProgressPercent(complaint.created_at, complaint.status);
     return {
@@ -257,7 +246,11 @@ const AdminComplaintsInProgress = () => {
       channel: complaint.preferred_contact === 'phone' ? 'फोन' : complaint.preferred_contact === 'email' ? 'इमेल' : 'एसएमएस',
       enChannel: complaint.preferred_contact === 'phone' ? 'Phone' : complaint.preferred_contact === 'email' ? 'Email' : 'SMS',
       priority: mapPriority(complaint.priority),
-      assignedTo: complaint.assigned_to || (language === 'np' ? 'प्रशासक' : 'Administrator'),
+      assignedTo: complaint.assigned_to || null,
+      assignedToName: complaint.assigned_to_name || complaint.assigned_to || null,
+      assignedBy: complaint.assigned_by || null,
+      assignedByName: complaint.assigned_by_name || null,
+      assignedAt: complaint.assigned_at ? formatNepaliDate(complaint.assigned_at) : null,
       enAssignedTo: complaint.assigned_to || 'Administrator',
       progressPercent: progress,
       lastUpdateNp: complaint.updated_at ? formatNepaliDate(complaint.updated_at) : formatNepaliDate(complaint.created_at),
@@ -306,7 +299,7 @@ const AdminComplaintsInProgress = () => {
       if (complaintType === 'regular') {
         endpoint = `${API_URL}/admin/complaints/${complaintId}/status`;
       } else {
-        endpoint = `${API_URL}/admin/complaints/regarding/${complaintId}/status`;
+        endpoint = `${API_URL}/admin/complaint-regarding/${complaintId}/status`;
       }
       
       const response = await axios.patch(
@@ -337,7 +330,7 @@ const AdminComplaintsInProgress = () => {
     }
   };
 
-  // Update progress locally (simulated)
+  // Update progress locally
   const updateProgress = async (complaintId, newProgress, complaintType) => {
     setAllInProgressComplaints(prev => prev.map(complaint =>
       complaint.complaintId === complaintId
@@ -386,6 +379,7 @@ const AdminComplaintsInProgress = () => {
       regardingComplaints: 'गुनासो सम्बन्धी',
       ticketId: 'टिकेट नम्बर',
       complainant: 'उजुरीकर्ता',
+      assignedStaff: 'तोकिएको स्टाफ',
       category: 'प्रकार',
       subject: 'विषय',
       date: 'मिति',
@@ -405,7 +399,10 @@ const AdminComplaintsInProgress = () => {
       email: 'इमेल',
       phone: 'फोन',
       registeredDate: 'दर्ता मिति',
-      assignedTo: 'तोकिएको टोली',
+      assignedTo: 'तोकिएको व्यक्ति',
+      assignedBy: 'तोक्ने व्यक्ति',
+      assignedDate: 'तोकिएको मिति',
+      notAssigned: 'तोकिएको छैन',
       close: 'बन्द गर्नुहोस्',
       all: 'सबै',
       high: 'उच्च',
@@ -437,6 +434,7 @@ const AdminComplaintsInProgress = () => {
       complainantInfo: 'उजुरीकर्ताको जानकारी',
       addressInfo: 'ठेगाना जानकारी',
       dateInfo: 'मिति जानकारी',
+      assignmentInfo: 'तोकिएको जानकारी',
       enterProgress: 'प्रगति प्रतिशत प्रविष्ट गर्नुहोस्',
       resolution: 'समाधान विवरण',
       optional: 'वैकल्पिक'
@@ -453,6 +451,7 @@ const AdminComplaintsInProgress = () => {
       regardingComplaints: 'Complaint Regarding',
       ticketId: 'Ticket ID',
       complainant: 'Complainant',
+      assignedStaff: 'Assigned Staff',
       category: 'Category',
       subject: 'Subject',
       date: 'Date',
@@ -473,6 +472,9 @@ const AdminComplaintsInProgress = () => {
       phone: 'Phone',
       registeredDate: 'Registered Date',
       assignedTo: 'Assigned To',
+      assignedBy: 'Assigned By',
+      assignedDate: 'Assigned Date',
+      notAssigned: 'Not Assigned',
       close: 'Close',
       all: 'All',
       high: 'High',
@@ -504,6 +506,7 @@ const AdminComplaintsInProgress = () => {
       complainantInfo: 'Complainant Information',
       addressInfo: 'Address Information',
       dateInfo: 'Date Information',
+      assignmentInfo: 'Assignment Information',
       enterProgress: 'Enter progress percentage',
       resolution: 'Resolution Details',
       optional: 'Optional'
@@ -575,7 +578,23 @@ const AdminComplaintsInProgress = () => {
   };
 
   const getAssignedTo = (complaint) => {
-    return language === 'np' ? complaint.assignedTo : complaint.enAssignedTo;
+    if (complaint.assignedToName) {
+      return language === 'np' ? complaint.assignedToName : complaint.assignedToName;
+    }
+    if (complaint.assignedTo) {
+      return complaint.assignedTo;
+    }
+    return t.notAssigned;
+  };
+
+  const getAssignedByName = (complaint) => {
+    if (complaint.assignedByName) {
+      return complaint.assignedByName;
+    }
+    if (complaint.assignedBy) {
+      return complaint.assignedBy;
+    }
+    return '-';
   };
 
   const getComplaintTypeText = (complaint) => {
@@ -594,6 +613,11 @@ const AdminComplaintsInProgress = () => {
     if (percent >= 50) return 'progress-medium';
     if (percent >= 25) return 'progress-low';
     return 'progress-start';
+  };
+
+  // Check if complaint has assigned staff
+  const hasAssignedStaff = (complaint) => {
+    return complaint.assignedTo !== null || complaint.assignedToName !== null;
   };
 
   // Filter complaints
@@ -627,12 +651,14 @@ const AdminComplaintsInProgress = () => {
     setSelectedComplaint(complaint);
     setProgressValue(complaint.progressPercent || 0);
     setShowModal(true);
+    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSelectedComplaint(null);
     setProgressValue(0);
+    document.body.style.overflow = 'unset';
   };
 
   const openStatusModal = (complaint) => {
@@ -646,6 +672,7 @@ const AdminComplaintsInProgress = () => {
     setShowStatusModal(false);
     setSelectedComplaint(null);
     setNewStatus('');
+    document.body.style.overflow = 'unset';
   };
 
   const handleProgressUpdate = () => {
@@ -676,7 +703,9 @@ const AdminComplaintsInProgress = () => {
     low: allInProgressComplaints.filter(c => c.priority === 'low').length,
     averageProgress: averageProgress,
     regular: allInProgressComplaints.filter(c => c.type === 'regular').length,
-    regarding: allInProgressComplaints.filter(c => c.type === 'regarding').length
+    regarding: allInProgressComplaints.filter(c => c.type === 'regarding').length,
+    assigned: allInProgressComplaints.filter(c => hasAssignedStaff(c)).length,
+    unassigned: allInProgressComplaints.filter(c => !hasAssignedStaff(c)).length
   };
 
   if (loading) {
@@ -731,6 +760,10 @@ const AdminComplaintsInProgress = () => {
                   <span className="stat-value">{stats.averageProgress}%</span>
                   <span className="stat-label">{t.averageProgress}</span>
                 </div>
+                <div className="stat-card-small">
+                  <span className="stat-value">{stats.assigned}</span>
+                  <span className="stat-label">तोकिएको</span>
+                </div>
                 <button className="refresh-btn-small" onClick={refreshData} title={t.refresh}>
                   🔄
                 </button>
@@ -761,10 +794,10 @@ const AdminComplaintsInProgress = () => {
                 </div>
               </div>
               <div className="stat-card">
-                <div className="stat-card-icon type">📋</div>
+                <div className="stat-card-icon assigned">👤</div>
                 <div className="stat-card-info">
-                  <div className="stat-card-value">{stats.regular}</div>
-                  <div className="stat-card-label">{t.regularComplaints}</div>
+                  <div className="stat-card-value">{stats.assigned}</div>
+                  <div className="stat-card-label">तोकिएको</div>
                 </div>
               </div>
             </div>
@@ -822,12 +855,12 @@ const AdminComplaintsInProgress = () => {
                   <tr>
                     <th>{t.ticketId}</th>
                     <th>{t.complainant}</th>
+                    <th>{t.assignedStaff}</th>
                     <th>{t.category}</th>
                     <th>{t.subject}</th>
                     <th>{t.date}</th>
                     <th>{t.progress}</th>
                     <th>{t.priority}</th>
-                    <th>{t.complaintType}</th>
                     <th>{t.actions}</th>
                 </tr>
                 </thead>
@@ -841,6 +874,18 @@ const AdminComplaintsInProgress = () => {
                             <strong>{language === 'np' ? complaint.name : complaint.enName}</strong>
                             <small>{complaint.phone}</small>
                           </div>
+                        </td>
+                        <td className="assigned-staff-cell">
+                          {hasAssignedStaff(complaint) ? (
+                            <div className="assigned-info">
+                              <span className="staff-name">{getAssignedTo(complaint)}</span>
+                              {complaint.assignedAt && (
+                                <span className="assigned-date">📅 {complaint.assignedAt}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="not-assigned-badge">{t.notAssigned}</span>
+                          )}
                         </td>
                         <td>{getCategoryText(complaint)}</td>
                         <td>{complaint.subject || '-'}</td>
@@ -859,11 +904,6 @@ const AdminComplaintsInProgress = () => {
                         <td>
                           <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
                             {getPriorityText(complaint.priority)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`type-badge ${getComplaintTypeClass(complaint)}`}>
-                            {getComplaintTypeText(complaint)}
                           </span>
                         </td>
                         <td>
@@ -987,6 +1027,24 @@ const AdminComplaintsInProgress = () => {
               </div>
 
               <div className="detail-section">
+                <h4>👥 {t.assignmentInfo}</h4>
+                <div className="detail-row">
+                  <label>{t.assignedTo}:</label>
+                  <span>{getAssignedTo(selectedComplaint)}</span>
+                </div>
+                <div className="detail-row">
+                  <label>{t.assignedBy}:</label>
+                  <span>{getAssignedByName(selectedComplaint)}</span>
+                </div>
+                {selectedComplaint.assignedAt && (
+                  <div className="detail-row">
+                    <label>{t.assignedDate}:</label>
+                    <span>{selectedComplaint.assignedAt}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="detail-section">
                 <h4>📝 {t.description}</h4>
                 <div className="detail-row full-width">
                   <p>{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
@@ -994,7 +1052,7 @@ const AdminComplaintsInProgress = () => {
               </div>
 
               <div className="detail-section">
-                <h4>📊 {t.statusInfo}</h4>
+                <h4>📊 {t.dateInfo}</h4>
                 <div className="detail-row">
                   <label>{t.priority}:</label>
                   <span className={`priority-badge ${getPriorityClass(selectedComplaint.priority)}`}>
@@ -1017,16 +1075,6 @@ const AdminComplaintsInProgress = () => {
                   <label>{t.channel}:</label>
                   <span>{getChannel(selectedComplaint)}</span>
                 </div>
-                <div className="detail-row">
-                  <label>{t.assignedTo}:</label>
-                  <span>{getAssignedTo(selectedComplaint)}</span>
-                </div>
-                {selectedComplaint.preferredContact && (
-                  <div className="detail-row">
-                    <label>{t.preferredContact}:</label>
-                    <span>{selectedComplaint.preferredContact}</span>
-                  </div>
-                )}
                 <div className="detail-row">
                   <label>{t.progress}:</label>
                   <div className="progress-update">
@@ -1110,7 +1158,7 @@ const AdminComplaintsInProgress = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -1340,6 +1388,8 @@ const AdminComplaintsInProgress = () => {
           background: #f8fafc;
         }
 
+        .stat-card-icon.assigned { background: #d1fae5; color: #059669; }
+
         .stat-card-value {
           font-size: 1.3rem;
           font-weight: 700;
@@ -1432,7 +1482,7 @@ const AdminComplaintsInProgress = () => {
         .complaints-table {
           width: 100%;
           border-collapse: collapse;
-          min-width: 1000px;
+          min-width: 1100px;
         }
 
         .complaints-table th,
@@ -1470,6 +1520,35 @@ const AdminComplaintsInProgress = () => {
 
         .complainant-info strong { display: block; }
         .complainant-info small { font-size: 0.7rem; color: #64748b; }
+
+        .assigned-staff-cell {
+          min-width: 120px;
+        }
+
+        .assigned-info {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .staff-name {
+          font-weight: 500;
+          color: #0f172a;
+        }
+
+        .assigned-date {
+          font-size: 0.65rem;
+          color: #64748b;
+        }
+
+        .not-assigned-badge {
+          display: inline-block;
+          padding: 4px 8px;
+          background: #f1f5f9;
+          color: #475569;
+          border-radius: 12px;
+          font-size: 0.7rem;
+        }
 
         .priority-badge, .type-badge {
           display: inline-block;
