@@ -31,8 +31,6 @@ import AdminContact from './pages/AdminContact';
 import StaffDashboard from './pages/StaffDashboard';
 import StaffComplaintsAssigned from './pages/StaffComplaintsAssigned';
 import StaffComplaintSolve from './pages/StaffComplaintSolve';
-import StaffComplaintsMy from './pages/StaffComplaintsMy';
-import StaffComplaintsAll from './pages/StaffComplaintsAll';
 import StaffCmplaintsPending from './pages/StaffComplaintsPending';
 import StaffComplaintsInprogress from './pages/StaffComplaintsInprogress';
 import StaffComplaintsResolved from './pages/StaffComplaintsResolved';
@@ -82,8 +80,7 @@ function App() {
           <Route path="/staff-dashboard" element={<StaffDashboard />} />
           <Route path="/staff/complaints/assigned" element={<StaffComplaintsAssigned />} />
           <Route path="/staff/complaints/solve/:id" element={<StaffComplaintSolve />} />
-          <Route path="/staff/complaints/my" element={<StaffComplaintsMy />} />
-          <Route path="/staff/complaints/all" element={<StaffComplaintsAll />} />
+        
           <Route path="/staff/complaints/pending" element={<StaffCmplaintsPending />} />
           <Route path="/staff/complaints/in-progress" element={<StaffComplaintsInprogress />} />
           <Route path="/staff/complaints/resolved" element={<StaffComplaintsResolved />} />

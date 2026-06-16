@@ -20,9 +20,7 @@ const StaffSidebar = ({ language, staffName = "Staff User", staffRole = "Support
     np: {
       dashboard: 'ड्यासबोर्ड',
       complaints: 'गुनासोहरू',
-      allComplaints: 'सबै गुनासो',
-      assignedToMe: 'मलाई तोकिएको',
-      myComplaints: 'मेरो गुनासो',
+    assignedToMe: 'मलाई तोकिएको',
       pendingComplaints: 'विचाराधीन',
       inProgressComplaints: 'प्रगतिमा',
       resolvedComplaints: 'समाधान',
@@ -48,9 +46,9 @@ const StaffSidebar = ({ language, staffName = "Staff User", staffRole = "Support
     en: {
       dashboard: 'Dashboard',
       complaints: 'Complaints',
-      allComplaints: 'All Complaints',
+     
       assignedToMe: 'Assigned to Me',
-      myComplaints: 'My Complaints',
+     
       pendingComplaints: 'Pending',
       inProgressComplaints: 'In Progress',
       resolvedComplaints: 'Resolved',
@@ -91,8 +89,6 @@ const StaffSidebar = ({ language, staffName = "Staff User", staffRole = "Support
       label: t.complaints,
       children: [
         { id: 'assigned-to-me', icon: '👤', label: t.assignedToMe, path: '/staff/complaints/assigned' },
-        { id: 'my-complaints', icon: '📝', label: t.myComplaints, path: '/staff/complaints/my' },
-        { id: 'all-complaints', icon: '📚', label: t.allComplaints, path: '/staff/complaints/all' },
         { id: 'pending-complaints', icon: '⏳', label: t.pendingComplaints, path: '/staff/complaints/pending' },
         { id: 'in-progress-complaints', icon: '🔄', label: t.inProgressComplaints, path: '/staff/complaints/in-progress' },
         { id: 'resolved-complaints', icon: '✅', label: t.resolvedComplaints, path: '/staff/complaints/resolved' }
