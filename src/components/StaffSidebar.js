@@ -89,9 +89,6 @@ const StaffSidebar = ({ language, staffName = "Staff User", staffRole = "Support
       label: t.complaints,
       children: [
         { id: 'assigned-to-me', icon: '👤', label: t.assignedToMe, path: '/staff/complaints/assigned' },
-        { id: 'pending-complaints', icon: '⏳', label: t.pendingComplaints, path: '/staff/complaints/pending' },
-        { id: 'in-progress-complaints', icon: '🔄', label: t.inProgressComplaints, path: '/staff/complaints/in-progress' },
-        { id: 'resolved-complaints', icon: '✅', label: t.resolvedComplaints, path: '/staff/complaints/resolved' }
       ]
     },
     {
