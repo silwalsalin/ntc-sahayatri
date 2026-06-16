@@ -12,6 +12,14 @@ const AdminSettingsSecurity = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [show2FAModal, setShow2FAModal] = useState(false);
+  
+  // Notification State
+  const [notification, setNotification] = useState({
+    show: false,
+    type: 'success', // 'success', 'error', 'warning', 'info'
+    message: '',
+    title: ''
+  });
 
   // Security Settings State
   const [securitySettings, setSecuritySettings] = useState({
@@ -98,6 +106,25 @@ const AdminSettingsSecurity = () => {
     }
   }, [navigate]);
 
+  // Auto-hide notification after 5 seconds
+  useEffect(() => {
+    if (notification.show) {
+      const timer = setTimeout(() => {
+        setNotification(prev => ({ ...prev, show: false }));
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification.show]);
+
+  const showNotification = (type, message, title = '') => {
+    setNotification({
+      show: true,
+      type,
+      message,
+      title
+    });
+  };
+
   const content = {
     np: {
       securitySettings: 'सुरक्षा सेटिङ्स',
@@ -161,7 +188,9 @@ const AdminSettingsSecurity = () => {
       updatePassword: 'पासवर्ड अपडेट गर्नुहोस्',
       cancel: 'रद्द गर्नुहोस्',
       saveSuccess: 'सेटिङ्स सफलतापूर्वक सुरक्षित गरियो',
+      saveError: 'सेटिङ्स सुरक्षित गर्न असफल भयो',
       passwordChanged: 'पासवर्ड सफलतापूर्वक परिवर्तन गरियो',
+      passwordChangeError: 'पासवर्ड परिवर्तन गर्न असफल भयो',
       passwordMismatch: 'पासवर्ड मेल खाएन',
       passwordTooShort: 'पासवर्ड धेरै छोटो छ',
       passwordWeak: 'पासवर्ड कमजोर छ',
@@ -174,7 +203,14 @@ const AdminSettingsSecurity = () => {
       generateBackupCodes: 'ब्याकअप कोडहरू उत्पन्न गर्नुहोस्',
       scanQRCode: 'QR कोड स्क्यान गर्नुहोस्',
       enterCode: 'कोड प्रविष्ट गर्नुहोस्',
-      verify: 'प्रमाणित गर्नुहोस्'
+      verify: 'प्रमाणित गर्नुहोस्',
+      backupCodesGeneratedSuccess: 'ब्याकअप कोडहरू सफलतापूर्वक उत्पन्न गरियो',
+      twoFASetupSuccess: 'दुई-चरण प्रमाणीकरण सफलतापूर्वक सेटअप गरियो',
+      settingsUpdated: 'सेटिङ्स अपडेट गरियो',
+      error: 'त्रुटि',
+      success: 'सफलता',
+      warning: 'चेतावनी',
+      info: 'सूचना'
     },
     en: {
       securitySettings: 'Security Settings',
@@ -238,7 +274,9 @@ const AdminSettingsSecurity = () => {
       updatePassword: 'Update Password',
       cancel: 'Cancel',
       saveSuccess: 'Settings saved successfully',
+      saveError: 'Failed to save settings',
       passwordChanged: 'Password changed successfully',
+      passwordChangeError: 'Failed to change password',
       passwordMismatch: 'Passwords do not match',
       passwordTooShort: 'Password is too short',
       passwordWeak: 'Password is weak',
@@ -251,7 +289,14 @@ const AdminSettingsSecurity = () => {
       generateBackupCodes: 'Generate Backup Codes',
       scanQRCode: 'Scan QR Code',
       enterCode: 'Enter Code',
-      verify: 'Verify'
+      verify: 'Verify',
+      backupCodesGeneratedSuccess: 'Backup codes generated successfully',
+      twoFASetupSuccess: 'Two-Factor Authentication setup successful',
+      settingsUpdated: 'Settings updated',
+      error: 'Error',
+      success: 'Success',
+      warning: 'Warning',
+      info: 'Info'
     }
   };
 
@@ -263,6 +308,12 @@ const AdminSettingsSecurity = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    
+    // Show notification for individual setting changes
+    if (type === 'checkbox') {
+      const status = checked ? 'enabled' : 'disabled';
+      showNotification('info', `${name} ${status}`, t.settingsUpdated);
+    }
   };
 
   const handlePasswordChange = (e) => {
@@ -281,9 +332,11 @@ const AdminSettingsSecurity = () => {
       errors.newPassword = 'Required';
     } else if (passwordData.newPassword.length < securitySettings.minPasswordLength) {
       errors.newPassword = t.passwordTooShort;
+      showNotification('error', t.passwordTooShort, t.error);
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       errors.confirmPassword = t.passwordMismatch;
+      showNotification('error', t.passwordMismatch, t.error);
     }
     
     setPasswordErrors(errors);
@@ -294,17 +347,24 @@ const AdminSettingsSecurity = () => {
     setSaving(true);
     setSaveSuccess(false);
     
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setSaving(false);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
-    alert(t.saveSuccess);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setSaving(false);
+      setSaveSuccess(true);
+      showNotification('success', t.saveSuccess, t.success);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      setSaving(false);
+      showNotification('error', t.saveError, t.error);
+    }
   };
 
   const handleUpdatePassword = () => {
     if (validatePassword()) {
-      alert(t.passwordChanged);
+      // Simulate password update
+      showNotification('success', t.passwordChanged, t.success);
       setShowPasswordModal(false);
       setPasswordData({
         currentPassword: '',
@@ -316,6 +376,24 @@ const AdminSettingsSecurity = () => {
 
   const handleSetup2FA = () => {
     setShow2FAModal(true);
+  };
+
+  const handleVerify2FA = () => {
+    showNotification('success', t.twoFASetupSuccess, t.success);
+    setShow2FAModal(false);
+    setSecuritySettings(prev => ({
+      ...prev,
+      twoFactorAuth: true,
+      backupCodesGenerated: true
+    }));
+  };
+
+  const handleGenerateBackupCodes = () => {
+    showNotification('success', t.backupCodesGeneratedSuccess, t.success);
+    setSecuritySettings(prev => ({
+      ...prev,
+      backupCodesGenerated: true
+    }));
   };
 
   if (loading) {
@@ -624,7 +702,7 @@ const AdminSettingsSecurity = () => {
                   </div>
                   <div className="backup-codes-info">
                     <span>{t.backupCodesGenerated}: {securitySettings.backupCodesGenerated ? '✓' : '✗'}</span>
-                    <button className="generate-codes-btn" onClick={() => alert(t.generateBackupCodes)}>
+                    <button className="generate-codes-btn" onClick={handleGenerateBackupCodes}>
                       🔑 {t.generateBackupCodes}
                     </button>
                   </div>
@@ -856,6 +934,31 @@ const AdminSettingsSecurity = () => {
         </div>
       </div>
 
+      {/* Notification Component */}
+      {notification.show && (
+        <div className={`notification-container ${notification.type}`}>
+          <div className="notification-icon">
+            {notification.type === 'success' && '✅'}
+            {notification.type === 'error' && '❌'}
+            {notification.type === 'warning' && '⚠️'}
+            {notification.type === 'info' && 'ℹ️'}
+          </div>
+          <div className="notification-content">
+            {notification.title && (
+              <div className="notification-title">{notification.title}</div>
+            )}
+            <div className="notification-message">{notification.message}</div>
+          </div>
+          <button 
+            className="notification-close"
+            onClick={() => setNotification(prev => ({ ...prev, show: false }))}
+          >
+            ✕
+          </button>
+          <div className="notification-progress-bar"></div>
+        </div>
+      )}
+
       {/* Change Password Modal */}
       {showPasswordModal && (
         <div className="modal-overlay" onClick={() => setShowPasswordModal(false)}>
@@ -923,15 +1026,14 @@ const AdminSettingsSecurity = () => {
               </div>
               <div className="backup-codes">
                 <p>{t.generateBackupCodes}</p>
-                <button className="generate-btn">🔑 {t.generateBackupCodes}</button>
+                <button className="generate-btn" onClick={handleGenerateBackupCodes}>
+                  🔑 {t.generateBackupCodes}
+                </button>
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn-cancel" onClick={() => setShow2FAModal(false)}>{t.cancel}</button>
-              <button className="btn-save" onClick={() => {
-                alert(t.saveSuccess);
-                setShow2FAModal(false);
-              }}>{t.verify}</button>
+              <button className="btn-save" onClick={handleVerify2FA}>{t.verify}</button>
             </div>
           </div>
         </div>
@@ -1266,6 +1368,123 @@ const AdminSettingsSecurity = () => {
           font-size: 0.75rem;
         }
 
+        /* Notification Styles */
+        .notification-container {
+          position: fixed;
+          top: 80px;
+          right: 20px;
+          background: white;
+          border-radius: 12px;
+          padding: 16px 20px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          z-index: 9999;
+          min-width: 300px;
+          max-width: 450px;
+          animation: slideInRight 0.5s ease;
+          border-left: 5px solid #3b82f6;
+          overflow: hidden;
+        }
+
+        .notification-container.success {
+          border-left-color: #10b981;
+        }
+
+        .notification-container.error {
+          border-left-color: #ef4444;
+        }
+
+        .notification-container.warning {
+          border-left-color: #f59e0b;
+        }
+
+        .notification-container.info {
+          border-left-color: #3b82f6;
+        }
+
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+
+        .notification-icon {
+          font-size: 1.5rem;
+          line-height: 1;
+        }
+
+        .notification-content {
+          flex: 1;
+        }
+
+        .notification-title {
+          font-weight: 600;
+          font-size: 0.9rem;
+          color: #0f172a;
+          margin-bottom: 4px;
+        }
+
+        .notification-message {
+          font-size: 0.85rem;
+          color: #475569;
+        }
+
+        .notification-close {
+          background: none;
+          border: none;
+          color: #94a3b8;
+          cursor: pointer;
+          font-size: 1.1rem;
+          padding: 4px;
+          line-height: 1;
+          transition: color 0.2s;
+        }
+
+        .notification-close:hover {
+          color: #475569;
+        }
+
+        .notification-progress-bar {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          height: 3px;
+          background: inherit;
+          animation: progressBar 5s linear forwards;
+        }
+
+        .notification-container.success .notification-progress-bar {
+          background: #10b981;
+        }
+
+        .notification-container.error .notification-progress-bar {
+          background: #ef4444;
+        }
+
+        .notification-container.warning .notification-progress-bar {
+          background: #f59e0b;
+        }
+
+        .notification-container.info .notification-progress-bar {
+          background: #3b82f6;
+        }
+
+        @keyframes progressBar {
+          from {
+            width: 100%;
+          }
+          to {
+            width: 0%;
+          }
+        }
+
         /* Modal */
         .modal-overlay {
           position: fixed;
@@ -1471,6 +1690,13 @@ const AdminSettingsSecurity = () => {
           .checkbox-group {
             flex-direction: column;
             gap: 12px;
+          }
+
+          .notification-container {
+            min-width: auto;
+            max-width: 90%;
+            right: 10px;
+            top: 70px;
           }
         }
 

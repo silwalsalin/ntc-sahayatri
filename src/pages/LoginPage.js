@@ -518,16 +518,8 @@ const LoginPage = () => {
             <div className="demo-credentials">
               <div className="demo-title">{t.demoCredentials}</div>
               <div className="demo-info">
-                <div className="demo-card">
-                  <div className="demo-role">👨‍💼 {t.adminLogin}</div>
-                  <code>admin@example.com</code>
-                  <code>admin123</code>
-                </div>
-                <div className="demo-card">
-                  <div className="demo-role">👨‍💻 {t.staffLogin}</div>
-                  <code>staff@example.com</code>
-                  <code>staff123</code>
-                </div>
+                
+              
               </div>
               <div className="demo-note">
                 <p className="demo-note-text">
@@ -547,15 +539,6 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="footer-content">
-          <div className="footer-copyright">
-            <p>{t.footerTagline}</p>
-            <p className="copyright-text">{t.copyright}</p>
-          </div>
-        </div>
-      </footer>
 
       <style jsx>{`
         * {

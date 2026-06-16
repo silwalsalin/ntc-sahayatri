@@ -575,8 +575,8 @@ const AdminSettingsGeneral = () => {
       securitySettings: 'सुरक्षा सेटिङ्स',
       backupSettings: 'ब्याकअप सेटिङ्स',
       notificationSettings: 'सूचना सेटिङ्स',
-      updateSettings: 'सबै सेटिङ्स अपडेट गर्नुहोस्',
-      updating: 'अपडेट गर्दै...',
+      saveSettings: 'सेटिङ्स सुरक्षित गर्नुहोस्',
+      updating: 'सुरक्षित गर्दै...',
       siteName: 'साइटको नाम',
       siteDescription: 'साइटको विवरण',
       siteEmail: 'साइट इमेल',
@@ -655,8 +655,8 @@ const AdminSettingsGeneral = () => {
       securitySettings: 'Security Settings',
       backupSettings: 'Backup Settings',
       notificationSettings: 'Notification Settings',
-      updateSettings: 'Update All Settings',
-      updating: 'Updating...',
+      saveSettings: 'Save Settings',
+      updating: 'Saving...',
       siteName: 'Site Name',
       siteDescription: 'Site Description',
       siteEmail: 'Site Email',
@@ -777,14 +777,24 @@ const AdminSettingsGeneral = () => {
                 <p>{t.generalSettings}</p>
               </div>
               <button 
-                className={`update-btn ${updating ? 'updating' : ''}`} 
+                className={`save-btn ${updating ? 'updating' : ''}`} 
                 onClick={handleUpdateSettings}
                 disabled={updating}
               >
                 {updating ? (
-                  <><span className="spinner"></span> {t.updating}</>
+                  <>
+                    <span className="spinner"></span> 
+                    {t.updating}
+                  </>
                 ) : (
-                  <>💾 {t.updateSettings}</>
+                  <>
+                    <svg className="save-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                      <polyline points="17 21 17 13 7 13 7 21" />
+                      <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    {t.saveSettings}
+                  </>
                 )}
               </button>
             </div>
@@ -1592,40 +1602,54 @@ const AdminSettingsGeneral = () => {
           font-size: 0.85rem;
         }
 
-        .update-btn {
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
+        .save-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          padding: 12px 28px;
+          background: linear-gradient(135deg, #10b981, #059669);
           color: white;
           border: none;
-          padding: 10px 28px;
-          border-radius: 8px;
-          cursor: pointer;
+          border-radius: 10px;
+          font-size: 0.95rem;
           font-weight: 600;
-          transition: all 0.2s;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 0.9rem;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+          font-family: inherit;
         }
 
-        .update-btn:hover:not(:disabled) {
+        .save-btn:hover:not(:disabled) {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(59,130,246,0.4);
+          box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
         }
 
-        .update-btn:disabled {
+        .save-btn:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        .save-btn:disabled {
           opacity: 0.7;
           cursor: not-allowed;
-          transform: none;
+        }
+
+        .save-btn.updating {
+          background: linear-gradient(135deg, #64748b, #475569);
+          box-shadow: none;
+        }
+
+        .save-icon {
+          width: 20px;
+          height: 20px;
         }
 
         .spinner {
-          width: 18px;
-          height: 18px;
-          border: 2px solid white;
-          border-top-color: transparent;
+          width: 20px;
+          height: 20px;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          border-top-color: white;
           border-radius: 50%;
-          animation: spin 0.6s linear infinite;
+          animation: spin 0.8s linear infinite;
           display: inline-block;
         }
 
@@ -1653,6 +1677,7 @@ const AdminSettingsGeneral = () => {
           font-weight: 500;
           color: #64748b;
           transition: all 0.2s;
+          font-family: inherit;
         }
 
         .tab-btn:hover {
@@ -1745,6 +1770,7 @@ const AdminSettingsGeneral = () => {
           font-size: 0.85rem;
           font-family: inherit;
           transition: all 0.2s;
+          background: white;
         }
 
         .form-group input:focus,
@@ -1796,6 +1822,7 @@ const AdminSettingsGeneral = () => {
           color: #475569;
           margin-top: 20px;
           transition: all 0.2s;
+          font-family: inherit;
         }
 
         .test-email-btn:hover, .manual-backup-btn:hover {
@@ -1814,6 +1841,11 @@ const AdminSettingsGeneral = () => {
           display: flex;
           justify-content: space-between;
           padding: 8px 0;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .info-row:last-child {
+          border-bottom: none;
         }
 
         .info-label {
@@ -1853,7 +1885,7 @@ const AdminSettingsGeneral = () => {
             align-items: flex-start;
           }
           
-          .update-btn {
+          .save-btn {
             width: 100%;
             justify-content: center;
             padding: 12px;
