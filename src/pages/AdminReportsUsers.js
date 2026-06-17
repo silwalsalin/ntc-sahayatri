@@ -640,7 +640,7 @@ const AdminReportsUsers = () => {
     <div className="admin-reports-users">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
-      <div className="dashboard-wrapper">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
@@ -989,7 +989,7 @@ const AdminReportsUsers = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         /* ===== RESET & BASE ===== */
         * {
           margin: 0;
@@ -1001,8 +1001,7 @@ const AdminReportsUsers = () => {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           min-height: 100vh;
-          width: 100%;
-          position: relative;
+          overflow-x: hidden;
         }
 
         /* ===== LOADING ===== */
@@ -1028,34 +1027,37 @@ const AdminReportsUsers = () => {
           to { transform: rotate(360deg); }
         }
 
-        /* ===== DASHBOARD LAYOUT ===== */
-        .dashboard-wrapper {
+        /* ===== LAYOUT - Same as AdminDashboard ===== */
+        .dashboard-layout {
           display: flex;
-          min-height: calc(100vh - 70px);
-          margin-top:200px;
+          height: calc(100vh - 195px);
+          margin-top: 195px;
           position: relative;
           width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
-          
+          top: 195px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 70px);
+          height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
           z-index: 100;
           overflow-y: auto;
-          box-shadow: 2px 0 8px rgba(0,0,0,0.05);
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
           margin-left: 260px;
           width: calc(100% - 260px);
-          min-height: 100%;
-          overflow-x: auto;
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
           position: relative;
         }
 
@@ -1522,35 +1524,35 @@ const AdminReportsUsers = () => {
           .charts-grid { grid-template-columns: 1fr; }
         }
 
-        @media (max-width: 992px) {
-          .sidebar-container {
-            width: 220px;
-          }
-          .main-container {
-            margin-left: 220px;
-            width: calc(100% - 220px);
-          }
-        }
-
         @media (max-width: 768px) {
-          .dashboard-wrapper { 
-            flex-direction: column; 
+          .admin-reports-users {
+            height: auto;
+            overflow: auto;
           }
-          .sidebar-container { 
-            position: relative; 
-            top: 0; 
-            width: 100%; 
-            height: auto; 
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
+          .sidebar-container {
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
             margin-bottom: 20px;
             border-right: none;
             border-bottom: 1px solid #e2e8f0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
           }
-          .main-container { 
-            margin-left: 0; 
-            width: 100%; 
-            overflow-y: visible; 
+          
+          .main-container {
+            margin-left: 0;
+            width: 100%;
+            overflow-y: visible;
           }
+          
           .content-wrapper { 
             padding: 16px; 
           }

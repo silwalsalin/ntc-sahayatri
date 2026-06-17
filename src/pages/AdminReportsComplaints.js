@@ -62,7 +62,6 @@ const AdminReportsComplaints = () => {
       { month: 'नोभेम्बर', enMonth: 'November', count: 190 },
       { month: 'डिसेम्बर', enMonth: 'December', count: 198 }
     ],
-    // Enhanced complaints with full user details
     allComplaints: [
       { 
         id: 1, 
@@ -982,7 +981,7 @@ const AdminReportsComplaints = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -993,8 +992,7 @@ const AdminReportsComplaints = () => {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           min-height: 100vh;
-          width: 100%;
-          position: relative;
+          overflow-x: hidden;
         }
 
         .loading-container {
@@ -1019,11 +1017,11 @@ const AdminReportsComplaints = () => {
           to { transform: rotate(360deg); }
         }
 
-        /* Dashboard Layout */
+        /* ===== LAYOUT - Same as AdminDashboard ===== */
         .dashboard-layout {
           display: flex;
-          height: calc(100vh - 80px);
-          margin-top: 200px;
+          height: calc(100vh - 195px);
+          margin-top: 195px;
           position: relative;
           width: 100%;
           overflow: hidden;
@@ -1032,10 +1030,10 @@ const AdminReportsComplaints = () => {
         /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
-         
+          top: 195px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 80px);
+          height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
           z-index: 100;
@@ -1076,6 +1074,7 @@ const AdminReportsComplaints = () => {
           min-height: 100%;
         }
 
+        /* ===== PAGE HEADER ===== */
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -1083,6 +1082,8 @@ const AdminReportsComplaints = () => {
           margin-bottom: 24px;
           padding-bottom: 16px;
           border-bottom: 2px solid #e2e8f0;
+          flex-wrap: wrap;
+          gap: 16px;
         }
 
         .page-header h1 {
@@ -1100,6 +1101,7 @@ const AdminReportsComplaints = () => {
         .action-buttons-header {
           display: flex;
           gap: 12px;
+          flex-wrap: wrap;
         }
 
         .export-btn {
@@ -1111,34 +1113,14 @@ const AdminReportsComplaints = () => {
           transition: all 0.2s;
         }
 
-        .export-btn.pdf {
-          background: #fee2e2;
-          color: #dc2626;
-        }
+        .export-btn.pdf { background: #fee2e2; color: #dc2626; }
+        .export-btn.pdf:hover { background: #fecaca; }
+        .export-btn.excel { background: #d1fae5; color: #059669; }
+        .export-btn.excel:hover { background: #a7f3d0; }
+        .export-btn.print { background: #dbeafe; color: #2563eb; }
+        .export-btn.print:hover { background: #bfdbfe; }
 
-        .export-btn.pdf:hover {
-          background: #fecaca;
-        }
-
-        .export-btn.excel {
-          background: #d1fae5;
-          color: #059669;
-        }
-
-        .export-btn.excel:hover {
-          background: #a7f3d0;
-        }
-
-        .export-btn.print {
-          background: #dbeafe;
-          color: #2563eb;
-        }
-
-        .export-btn.print:hover {
-          background: #bfdbfe;
-        }
-
-        /* Tab Navigation */
+        /* ===== TAB NAVIGATION ===== */
         .tab-navigation {
           display: flex;
           gap: 12px;
@@ -1158,14 +1140,8 @@ const AdminReportsComplaints = () => {
           position: relative;
         }
 
-        .tab-btn:hover {
-          color: #3b82f6;
-        }
-
-        .tab-btn.active {
-          color: #3b82f6;
-        }
-
+        .tab-btn:hover { color: #3b82f6; }
+        .tab-btn.active { color: #3b82f6; }
         .tab-btn.active::after {
           content: '';
           position: absolute;
@@ -1176,7 +1152,7 @@ const AdminReportsComplaints = () => {
           background: #3b82f6;
         }
 
-        /* Filters */
+        /* ===== FILTERS ===== */
         .filters-section {
           background: white;
           border-radius: 16px;
@@ -1222,9 +1198,7 @@ const AdminReportsComplaints = () => {
           align-items: center;
         }
 
-        .date-range span {
-          color: #64748b;
-        }
+        .date-range span { color: #64748b; }
 
         .filter-actions {
           display: flex;
@@ -1256,7 +1230,7 @@ const AdminReportsComplaints = () => {
           box-shadow: 0 4px 12px rgba(100,116,139,0.3);
         }
 
-        /* Summary Cards */
+        /* ===== SUMMARY CARDS ===== */
         .summary-cards {
           display: grid;
           grid-template-columns: repeat(6, 1fr);
@@ -1297,22 +1271,11 @@ const AdminReportsComplaints = () => {
         .card-icon.purple { background: #f3e8ff; color: #9333ea; }
         .card-icon.pink { background: #fce7f3; color: #db2777; }
 
-        .card-info {
-          flex: 1;
-        }
+        .card-info { flex: 1; }
+        .card-value { font-size: 1.3rem; font-weight: 700; color: #0f172a; }
+        .card-label { font-size: 0.7rem; color: #64748b; }
 
-        .card-value {
-          font-size: 1.3rem;
-          font-weight: 700;
-          color: #0f172a;
-        }
-
-        .card-label {
-          font-size: 0.7rem;
-          color: #64748b;
-        }
-
-        /* Growth Card */
+        /* ===== GROWTH CARD ===== */
         .growth-card {
           background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
           border-radius: 16px;
@@ -1321,30 +1284,16 @@ const AdminReportsComplaints = () => {
           display: flex;
           justify-content: space-around;
           border: 1px solid #bae6fd;
+          flex-wrap: wrap;
+          gap: 16px;
         }
 
-        .growth-info {
-          text-align: center;
-        }
+        .growth-info { text-align: center; }
+        .growth-label { font-size: 0.75rem; color: #0369a1; display: block; margin-bottom: 4px; }
+        .growth-value { font-size: 1.2rem; font-weight: 700; color: #0c4a6e; }
+        .growth-value.positive { color: #059669; }
 
-        .growth-label {
-          font-size: 0.75rem;
-          color: #0369a1;
-          display: block;
-          margin-bottom: 4px;
-        }
-
-        .growth-value {
-          font-size: 1.2rem;
-          font-weight: 700;
-          color: #0c4a6e;
-        }
-
-        .growth-value.positive {
-          color: #059669;
-        }
-
-        /* Charts Grid */
+        /* ===== CHARTS GRID ===== */
         .charts-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -1374,10 +1323,7 @@ const AdminReportsComplaints = () => {
           gap: 16px;
         }
 
-        .chart-bar-item {
-          width: 100%;
-        }
-
+        .chart-bar-item { width: 100%; }
         .chart-label {
           display: flex;
           justify-content: space-between;
@@ -1385,21 +1331,19 @@ const AdminReportsComplaints = () => {
           font-size: 0.8rem;
           color: #475569;
         }
-
         .chart-bar-bg {
           background: #f1f5f9;
           border-radius: 8px;
           overflow: hidden;
           height: 8px;
         }
-
         .chart-bar-fill {
           height: 100%;
           border-radius: 8px;
           transition: width 0.5s;
         }
 
-        /* Pie Chart Info */
+        /* ===== PIE CHART INFO ===== */
         .pie-chart-container {
           display: flex;
           flex-direction: column;
@@ -1426,7 +1370,7 @@ const AdminReportsComplaints = () => {
           color: #475569;
         }
 
-        /* Trend Chart */
+        /* ===== TREND CHART ===== */
         .trend-card {
           background: white;
           border-radius: 16px;
@@ -1461,11 +1405,7 @@ const AdminReportsComplaints = () => {
           height: 100%;
         }
 
-        .trend-label {
-          font-size: 0.7rem;
-          color: #64748b;
-        }
-
+        .trend-label { font-size: 0.7rem; color: #64748b; }
         .trend-bar-bg {
           flex: 1;
           width: 100%;
@@ -1473,7 +1413,6 @@ const AdminReportsComplaints = () => {
           align-items: flex-end;
           justify-content: center;
         }
-
         .trend-bar-fill {
           width: 40px;
           border-radius: 8px 8px 0 0;
@@ -1481,7 +1420,6 @@ const AdminReportsComplaints = () => {
           transition: height 0.5s;
           min-height: 30px;
         }
-
         .trend-value {
           position: absolute;
           top: -22px;
@@ -1493,7 +1431,7 @@ const AdminReportsComplaints = () => {
           white-space: nowrap;
         }
 
-        /* Table Card */
+        /* ===== TABLE CARD ===== */
         .table-card {
           background: white;
           border-radius: 16px;
@@ -1519,14 +1457,9 @@ const AdminReportsComplaints = () => {
           margin: 0;
         }
 
-        .table-stats {
-          font-size: 0.75rem;
-          color: #64748b;
-        }
+        .table-stats { font-size: 0.75rem; color: #64748b; }
 
-        .table-wrapper {
-          overflow-x: auto;
-        }
+        .table-wrapper { overflow-x: auto; }
 
         .reports-table {
           width: 100%;
@@ -1553,9 +1486,7 @@ const AdminReportsComplaints = () => {
           font-size: 0.8rem;
         }
 
-        .reports-table tr:hover {
-          background: #f8fafc;
-        }
+        .reports-table tr:hover { background: #f8fafc; }
 
         .ticket-id {
           font-family: monospace;
@@ -1563,19 +1494,10 @@ const AdminReportsComplaints = () => {
           color: #3b82f6;
         }
 
-        .user-name {
-          font-weight: 500;
-        }
+        .user-name { font-weight: 500; }
+        .phone-number, .email-address { font-family: monospace; font-size: 0.75rem; }
 
-        .phone-number, .email-address {
-          font-family: monospace;
-          font-size: 0.75rem;
-        }
-
-        .description-cell {
-          max-width: 200px;
-        }
-
+        .description-cell { max-width: 200px; }
         .description-text {
           white-space: nowrap;
           overflow: hidden;
@@ -1621,14 +1543,10 @@ const AdminReportsComplaints = () => {
           color: #64748b;
         }
 
-        /* Responsive */
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 1200px) {
-          .summary-cards {
-            grid-template-columns: repeat(3, 1fr);
-          }
-          .charts-grid {
-            grid-template-columns: 1fr;
-          }
+          .summary-cards { grid-template-columns: repeat(3, 1fr); }
+          .charts-grid { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 768px) {
@@ -1640,7 +1558,7 @@ const AdminReportsComplaints = () => {
           .dashboard-layout {
             flex-direction: column;
             height: auto;
-            margin-top: 70px;
+            margin-top: 150px;
             overflow: visible;
           }
           
@@ -1650,6 +1568,8 @@ const AdminReportsComplaints = () => {
             width: 100%;
             height: auto;
             margin-bottom: 20px;
+            border-right: none;
+            border-bottom: 1px solid #e2e8f0;
           }
           
           .main-container {
@@ -1658,9 +1578,7 @@ const AdminReportsComplaints = () => {
             overflow-y: visible;
           }
           
-          .content-wrapper {
-            padding: 16px;
-          }
+          .content-wrapper { padding: 16px; }
           
           .page-header {
             flex-direction: column;
@@ -1668,62 +1586,36 @@ const AdminReportsComplaints = () => {
             gap: 12px;
           }
           
-          .filters-section {
-            flex-direction: column;
-          }
+          .filters-section { flex-direction: column; }
+          .filter-group { width: 100%; }
+          .date-range { flex-direction: row; }
+          .filter-actions { width: 100%; flex-direction: column; }
+          .generate-btn, .reset-btn { width: 100%; }
           
-          .filter-group {
-            width: 100%;
-          }
-          
-          .date-range {
-            flex-direction: row;
-          }
-          
-          .filter-actions {
-            width: 100%;
-            flex-direction: column;
-          }
-          
-          .generate-btn, .reset-btn {
-            width: 100%;
-          }
-          
-          .summary-cards {
-            grid-template-columns: repeat(2, 1fr);
-          }
+          .summary-cards { grid-template-columns: repeat(2, 1fr); }
           
           .trend-chart {
             height: auto;
             flex-direction: column;
           }
-          
           .trend-bar-item {
             flex-direction: row;
             width: 100%;
             justify-content: space-between;
           }
-          
-          .trend-bar-bg {
-            width: 60%;
-          }
-          
+          .trend-bar-bg { width: 60%; }
           .trend-bar-fill {
             width: 100%;
             height: 30px !important;
             border-radius: 8px;
           }
-          
           .trend-value {
             top: 50%;
             left: 12px;
             transform: translateY(-50%);
           }
           
-          .action-buttons-header {
-            flex-wrap: wrap;
-          }
-
+          .action-buttons-header { flex-wrap: wrap; }
           .table-header {
             flex-direction: column;
             align-items: flex-start;
@@ -1731,10 +1623,7 @@ const AdminReportsComplaints = () => {
         }
 
         @media (max-width: 480px) {
-          .summary-cards {
-            grid-template-columns: 1fr;
-          }
-          
+          .summary-cards { grid-template-columns: 1fr; }
           .reports-table th,
           .reports-table td {
             padding: 8px;
@@ -1748,13 +1637,9 @@ const AdminReportsComplaints = () => {
           .filter-actions,
           .tab-navigation,
           .view-details-btn {
-            display: none;
+            display: none !important;
           }
-          
-          .main-container {
-            margin-left: 0;
-          }
-          
+          .main-container { margin-left: 0; }
           .summary-cards,
           .charts-grid,
           .trend-card,

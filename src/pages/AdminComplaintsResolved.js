@@ -86,22 +86,6 @@ const AdminComplaintsResolved = () => {
     return priorityMap[priority] || 'medium';
   };
 
-  // Helper function to convert status to Nepali
-  const getStatusInNepali = (status) => {
-    const statusMap = {
-      'pending': 'विचाराधीन',
-      'in-progress': 'प्रगतिमा',
-      'inprogress': 'प्रगतिमा',
-      'In Progress': 'प्रगतिमा',
-      'review': 'समीक्षामा',
-      'resolved': 'समाधान भयो',
-      'Resolved': 'समाधान भयो',
-      'closed': 'बन्द',
-      'rejected': 'अस्वीकृत'
-    };
-    return statusMap[status] || status || 'समाधान भयो';
-  };
-
   // Check if complaint is resolved
   const isResolved = (status) => {
     const resolvedStatuses = ['resolved', 'Resolved', 'समाधान भयो', 'closed', 'Closed'];
@@ -120,7 +104,7 @@ const AdminComplaintsResolved = () => {
       
       // Fetch regular complaints
       try {
-        const regularResponse = await axios.get(`${API_URL}/complaints/public`, { headers });
+        const regularResponse = await axios.get(`${API_URL}/complaints`, { headers });
         if (regularResponse.data.success && Array.isArray(regularResponse.data.data)) {
           regularData = regularResponse.data.data
             .filter(complaint => isResolved(complaint.status))
@@ -132,7 +116,7 @@ const AdminComplaintsResolved = () => {
       
       // Fetch complaint regarding
       try {
-        const regardingResponse = await axios.get(`${API_URL}/complaints/regarding/public`, { headers });
+        const regardingResponse = await axios.get(`${API_URL}/complaint-regarding`, { headers });
         if (regardingResponse.data.success && Array.isArray(regardingResponse.data.data)) {
           regardingData = regardingResponse.data.data
             .filter(complaint => isResolved(complaint.status))
@@ -782,7 +766,7 @@ const AdminComplaintsResolved = () => {
                     <th>{t.complaintType}</th>
                     <th>{t.satisfaction}</th>
                     <th>{t.actions}</th>
-                </tr>
+                  </tr>
                 </thead>
                 <tbody>
                   {paginatedComplaints.length > 0 ? (
@@ -1001,7 +985,7 @@ const AdminComplaintsResolved = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -1018,7 +1002,7 @@ const AdminComplaintsResolved = () => {
         /* Toast Notification */
         .toast-notification {
           position: fixed;
-          top: 200px;
+          top: 80px;
           right: 20px;
           z-index: 3000;
           display: flex;
@@ -1029,14 +1013,14 @@ const AdminComplaintsResolved = () => {
           border-radius: 12px;
           box-shadow: 0 4px 20px rgba(0,0,0,0.15);
           animation: slideInRight 0.3s ease;
-          max-width: 350px;
+          max-width: 400px;
         }
         
         .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
         .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
         .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
         
-        .toast-icon { font-size: 1.2rem; }
+        .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
         .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
         .toast-close {
           background: none;
@@ -1087,37 +1071,42 @@ const AdminComplaintsResolved = () => {
           to { transform: rotate(360deg); }
         }
 
-        /* Dashboard Layout */
+        /* ===== LAYOUT - Same as AdminDashboard ===== */
         .dashboard-layout {
           display: flex;
-          min-height: calc(100vh - 70px);
-          margin-top: 200px;
+          height: calc(100vh - 195px);
+          margin-top: 195px;
           position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
-        
+          top: 195px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 70px);
+          height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
           z-index: 100;
           overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
           margin-left: 260px;
           width: calc(100% - 260px);
-          min-height: calc(100vh - 70px);
-          overflow-x: auto;
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
         }
 
         .main-container::-webkit-scrollbar {
           width: 8px;
-          height: 8px;
         }
 
         .main-container::-webkit-scrollbar-track {
@@ -1132,8 +1121,10 @@ const AdminComplaintsResolved = () => {
 
         .content-wrapper {
           padding: 24px 32px;
+          min-height: 100%;
         }
 
+        /* ===== PAGE HEADER ===== */
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -1196,7 +1187,7 @@ const AdminComplaintsResolved = () => {
           box-shadow: 0 4px 12px rgba(139,92,246,0.3);
         }
 
-        /* Statistics Cards */
+        /* ===== STATISTICS CARDS ===== */
         .stats-row {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
@@ -1238,7 +1229,7 @@ const AdminComplaintsResolved = () => {
         .stat-value { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
         .stat-label { font-size: 0.75rem; color: #64748b; margin-top: 4px; }
 
-        /* Filters */
+        /* ===== FILTERS ===== */
         .filters-bar {
           display: flex;
           justify-content: space-between;
@@ -1308,7 +1299,7 @@ const AdminComplaintsResolved = () => {
           cursor: pointer;
         }
 
-        /* Table */
+        /* ===== TABLE ===== */
         .table-wrapper {
           overflow-x: auto;
           background: white;
@@ -1333,7 +1324,9 @@ const AdminComplaintsResolved = () => {
           background: #f8fafc;
           color: #64748b;
           font-weight: 500;
-          font-size: 0.8rem;
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
         }
 
         .complaints-table td {
@@ -1420,7 +1413,7 @@ const AdminComplaintsResolved = () => {
 
         .no-data-icon { font-size: 3rem; }
 
-        /* Pagination */
+        /* ===== PAGINATION ===== */
         .pagination {
           display: flex;
           justify-content: center;
@@ -1457,7 +1450,7 @@ const AdminComplaintsResolved = () => {
           font-size: 0.85rem;
         }
 
-        /* Modal */
+        /* ===== MODAL ===== */
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -1470,13 +1463,14 @@ const AdminComplaintsResolved = () => {
           justify-content: center;
           z-index: 1100;
           backdrop-filter: blur(4px);
+          padding: 20px;
         }
 
         .modal-content {
           background: white;
           border-radius: 20px;
           max-width: 650px;
-          width: 90%;
+          width: 100%;
           max-height: 85vh;
           overflow-y: auto;
         }
@@ -1529,18 +1523,22 @@ const AdminComplaintsResolved = () => {
           display: flex;
           margin-bottom: 12px;
           flex-wrap: wrap;
+          gap: 4px;
         }
 
         .detail-row label {
-          width: 130px;
+          width: 140px;
           font-weight: 600;
           color: #0f172a;
+          flex-shrink: 0;
         }
 
         .detail-row span,
         .detail-row p {
           flex: 1;
           color: #334155;
+          min-width: 0;
+          word-break: break-word;
         }
 
         .detail-row.full-width {
@@ -1586,7 +1584,7 @@ const AdminComplaintsResolved = () => {
         }
 
         .btn-close {
-          background: #f1f5f9;
+          background: #e2e8f0;
           color: #475569;
           border: none;
           padding: 10px 24px;
@@ -1596,44 +1594,79 @@ const AdminComplaintsResolved = () => {
           transition: all 0.2s;
         }
 
-        .btn-close:hover { background: #e2e8f0; }
+        .btn-close:hover { background: #cbd5e1; }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-          .sidebar-container {
-            display: none;
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1200px) {
+          .stats-row {
+            grid-template-columns: repeat(2, 1fr);
           }
+        }
+
+        @media (max-width: 768px) {
+          .admin-resolved-complaints {
+            height: auto;
+            overflow: auto;
+          }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
+          .sidebar-container {
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+            border-right: none;
+            border-bottom: 1px solid #e2e8f0;
+          }
+          
           .main-container {
             margin-left: 0;
             width: 100%;
+            overflow-y: visible;
           }
+          
           .content-wrapper {
             padding: 16px;
           }
+          
           .stats-row {
             grid-template-columns: 1fr;
           }
+          
           .filters-bar {
             flex-direction: column;
           }
+          
           .filter-group {
             width: 100%;
             flex-direction: column;
           }
+          
           .filter-select {
             width: 100%;
           }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 12px;
           }
+          
           .header-buttons {
             width: 100%;
           }
+          
           .detail-row {
             flex-direction: column;
           }
+          
           .detail-row label {
             width: 100%;
             margin-bottom: 4px;
@@ -1645,6 +1678,10 @@ const AdminComplaintsResolved = () => {
           .complaints-table td {
             padding: 8px;
             font-size: 0.7rem;
+          }
+          
+          .complaints-table {
+            min-width: 800px;
           }
         }
       `}</style>

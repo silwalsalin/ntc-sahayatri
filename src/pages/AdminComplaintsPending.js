@@ -941,7 +941,7 @@ const AdminComplaintsPending = () => {
         /* Toast Notification */
         .toast-notification {
           position: fixed;
-          top: 200px;
+          top: 80px;
           right: 20px;
           z-index: 3000;
           display: flex;
@@ -952,14 +952,14 @@ const AdminComplaintsPending = () => {
           border-radius: 12px;
           box-shadow: 0 4px 20px rgba(0,0,0,0.15);
           animation: slideInRight 0.3s ease;
-          max-width: 350px;
+          max-width: 400px;
         }
         
         .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
         .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
         .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
         
-        .toast-icon { font-size: 1.2rem; }
+        .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
         .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
         .toast-close {
           background: none;
@@ -1010,37 +1010,42 @@ const AdminComplaintsPending = () => {
           to { transform: rotate(360deg); }
         }
 
-        /* Dashboard Layout */
+        /* ===== LAYOUT - Same as AdminDashboard ===== */
         .dashboard-layout {
           display: flex;
-          min-height: calc(100vh - 70px);
-          margin-top: 200px;
+          height: calc(100vh - 195px);
+          margin-top: 195px;
           position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
-          
+          top: 195px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 70px);
+          height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
           z-index: 100;
           overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
           margin-left: 260px;
           width: calc(100% - 260px);
-          min-height: calc(100vh - 70px);
-          overflow-x: auto;
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          position: relative;
         }
 
         .main-container::-webkit-scrollbar {
           width: 8px;
-          height: 8px;
         }
 
         .main-container::-webkit-scrollbar-track {
@@ -1055,8 +1060,10 @@ const AdminComplaintsPending = () => {
 
         .content-wrapper {
           padding: 24px 32px;
+          min-height: 100%;
         }
 
+        /* ===== PAGE HEADER ===== */
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -1151,7 +1158,7 @@ const AdminComplaintsPending = () => {
           transform: rotate(180deg);
         }
 
-        /* Stats Row */
+        /* ===== STATS ROW ===== */
         .stats-row {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
@@ -1199,7 +1206,7 @@ const AdminComplaintsPending = () => {
           color: #64748b;
         }
 
-        /* Filters */
+        /* ===== FILTERS ===== */
         .filters-bar {
           display: flex;
           justify-content: space-between;
@@ -1269,7 +1276,7 @@ const AdminComplaintsPending = () => {
           cursor: pointer;
         }
 
-        /* Table */
+        /* ===== TABLE ===== */
         .table-wrapper {
           overflow-x: auto;
           background: white;
@@ -1294,7 +1301,9 @@ const AdminComplaintsPending = () => {
           background: #f8fafc;
           color: #64748b;
           font-weight: 500;
-          font-size: 0.8rem;
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
         }
 
         .complaints-table td {
@@ -1429,7 +1438,7 @@ const AdminComplaintsPending = () => {
           font-size: 3rem;
         }
 
-        /* Pagination */
+        /* ===== PAGINATION ===== */
         .pagination {
           display: flex;
           justify-content: center;
@@ -1465,7 +1474,7 @@ const AdminComplaintsPending = () => {
           font-size: 0.85rem;
         }
 
-        /* Modal */
+        /* ===== MODAL ===== */
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -1478,13 +1487,14 @@ const AdminComplaintsPending = () => {
           justify-content: center;
           z-index: 1100;
           backdrop-filter: blur(4px);
+          padding: 20px;
         }
 
         .modal-content {
           background: white;
           border-radius: 20px;
           max-width: 650px;
-          width: 90%;
+          width: 100%;
           max-height: 85vh;
           overflow-y: auto;
         }
@@ -1539,18 +1549,22 @@ const AdminComplaintsPending = () => {
           display: flex;
           margin-bottom: 12px;
           flex-wrap: wrap;
+          gap: 4px;
         }
 
         .detail-row label {
-          width: 130px;
+          width: 140px;
           font-weight: 600;
           color: #0f172a;
+          flex-shrink: 0;
         }
 
         .detail-row span,
         .detail-row p {
           flex: 1;
           color: #334155;
+          min-width: 0;
+          word-break: break-word;
         }
 
         .detail-row.full-width {
@@ -1576,23 +1590,25 @@ const AdminComplaintsPending = () => {
           position: sticky;
           bottom: 0;
           background: white;
+          flex-wrap: wrap;
         }
 
         .btn-close {
-          background: #f1f5f9;
+          background: #e2e8f0;
           color: #475569;
-          border: none;
           padding: 10px 24px;
           border-radius: 10px;
           cursor: pointer;
           font-weight: 500;
+          border: none;
+          font-size: 0.85rem;
         }
 
         .btn-close:hover {
-          background: #e2e8f0;
+          background: #cbd5e1;
         }
 
-        /* Responsive */
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 1200px) {
           .stats-row {
             grid-template-columns: repeat(2, 1fr);
@@ -1600,52 +1616,86 @@ const AdminComplaintsPending = () => {
         }
 
         @media (max-width: 768px) {
-          .sidebar-container {
-            display: none;
+          .admin-pending-complaints {
+            height: auto;
+            overflow: auto;
           }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
+          .sidebar-container {
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+            border-right: none;
+            border-bottom: 1px solid #e2e8f0;
+          }
+          
           .main-container {
             margin-left: 0;
             width: 100%;
+            overflow-y: visible;
           }
+          
           .content-wrapper {
             padding: 16px;
           }
-          .filters-bar {
-            flex-direction: column;
-          }
-          .filter-group {
-            width: 100%;
-            flex-direction: column;
-          }
-          .filter-select {
-            width: 100%;
-          }
-          .stats-row {
-            grid-template-columns: 1fr;
-          }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 12px;
           }
-          .action-buttons {
+          
+          .pending-stats {
+            width: 100%;
+            justify-content: flex-start;
+          }
+          
+          .filters-bar {
             flex-direction: column;
           }
-          .pending-stats {
+          
+          .filter-group {
+            width: 100%;
+            flex-direction: column;
+          }
+          
+          .filter-select {
+            width: 100%;
+          }
+          
+          .stats-row {
+            grid-template-columns: 1fr;
+          }
+          
+          .action-buttons {
             flex-wrap: wrap;
           }
+          
           .detail-row {
             flex-direction: column;
           }
+          
           .detail-row label {
             width: 100%;
             margin-bottom: 4px;
           }
+          
           .modal-footer {
             flex-direction: column;
           }
+          
           .modal-footer button {
             width: 100%;
+            justify-content: center;
           }
         }
 
@@ -1654,6 +1704,15 @@ const AdminComplaintsPending = () => {
           .complaints-table td {
             padding: 8px;
             font-size: 0.7rem;
+          }
+          
+          .complaints-table {
+            min-width: 800px;
+          }
+          
+          .view-details-btn {
+            padding: 4px 10px;
+            font-size: 0.65rem;
           }
         }
       `}</style>

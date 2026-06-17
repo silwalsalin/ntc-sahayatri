@@ -8,7 +8,6 @@ import Sidebar from '../components/Sidebar';
 const AdminComplaints = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,8 +38,6 @@ const AdminComplaints = () => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   }, []);
-
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   const fetchStaffList = async () => {
     setLoadingStaff(true);
@@ -777,21 +774,18 @@ const AdminComplaints = () => {
       )}
       
       <div className="dashboard-layout">
-        <div className={`sidebar-wrapper ${sidebarOpen ? 'open' : 'closed'}`}>
+        <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
         
-        <div className={`main-wrapper ${sidebarOpen ? 'with-sidebar' : 'full-width'}`}>
-          <div className="main-content">
+        <div className="main-container">
+          <div className="content-wrapper">
             <div className="page-header">
               <div>
                 <h1>{t.complaintsManagement}</h1>
                 <p>{t.allComplaints}</p>
               </div>
               <div className="header-actions">
-                <button className="toggle-sidebar-btn" onClick={toggleSidebar}>
-                  {sidebarOpen ? '◀ Hide Menu' : '▶ Show Menu'}
-                </button>
                 <button className="refresh-btn" onClick={refreshData}>
                   🔄 {t.refresh}
                 </button>
@@ -1351,65 +1345,56 @@ const AdminComplaints = () => {
         /* ===== LAYOUT - Same as AdminDashboard ===== */
         .dashboard-layout {
           display: flex;
-          height: calc(100vh - 70px);
-          margin-top: 200px;
+          height: calc(100vh - 195px);
+          margin-top: 195px;
           position: relative;
           width: 100%;
           overflow: hidden;
         }
 
-        .sidebar-wrapper {
+        /* Sidebar Container - Fixed */
+        .sidebar-container {
           position: fixed;
-          
+          top: 195px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 70px);
-          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          z-index: 100;
+          height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          transform: translateX(0);
+          z-index: 100;
           overflow-y: auto;
         }
 
-        .sidebar-wrapper.closed {
-          transform: translateX(-260px);
-        }
-
-        .main-wrapper {
+        /* Main Container - Scrollable */
+        .main-container {
           flex: 1;
-          width: calc(100% - 260px);
           margin-left: 260px;
+          width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
           overflow-x: hidden;
-          transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
         }
 
-        .main-wrapper.full-width {
-          margin-left: 0;
-          width: 100%;
-        }
-
-        .main-wrapper::-webkit-scrollbar {
+        .main-container::-webkit-scrollbar {
           width: 8px;
         }
 
-        .main-wrapper::-webkit-scrollbar-track {
+        .main-container::-webkit-scrollbar-track {
           background: #f1f1f1;
           border-radius: 10px;
         }
 
-        .main-wrapper::-webkit-scrollbar-thumb {
+        .main-container::-webkit-scrollbar-thumb {
           background: #3b82f6;
           border-radius: 10px;
         }
 
-        .main-wrapper::-webkit-scrollbar-thumb:hover {
+        .main-container::-webkit-scrollbar-thumb:hover {
           background: #2563eb;
         }
 
-        .main-content {
+        .content-wrapper {
           padding: 24px 32px;
           min-height: 100%;
         }
@@ -1441,43 +1426,24 @@ const AdminComplaints = () => {
         .header-actions {
           display: flex;
           gap: 12px;
-          align-items: center;
           flex-wrap: wrap;
         }
 
-        .toggle-sidebar-btn {
-          background: none;
-          border: 1px solid #e2e8f0;
+        .refresh-btn {
           padding: 8px 16px;
           border-radius: 8px;
           cursor: pointer;
-          color: #475569;
           font-weight: 500;
+          border: none;
           transition: all 0.2s;
           font-size: 0.85rem;
-        }
-
-        .toggle-sidebar-btn:hover {
-          background: #f8fafc;
-          border-color: #3b82f6;
-          color: #3b82f6;
-        }
-
-        .refresh-btn {
-          background: white;
-          border: 1px solid #e2e8f0;
-          padding: 8px 20px;
-          border-radius: 8px;
-          cursor: pointer;
-          color: #475569;
-          font-weight: 500;
-          transition: all 0.2s;
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
+          color: white;
         }
 
         .refresh-btn:hover {
-          background: #f8fafc;
-          border-color: #3b82f6;
-          color: #3b82f6;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(59,130,246,0.3);
         }
 
         /* ===== STATS ROW ===== */
@@ -1901,39 +1867,49 @@ const AdminComplaints = () => {
           cursor: not-allowed;
         }
 
-        /* ===== RESPONSIVE - Same as AdminDashboard ===== */
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 1200px) {
           .stats-row { grid-template-columns: repeat(2, 1fr); }
         }
 
         @media (max-width: 768px) {
-          .dashboard-layout { 
-            height: calc(100vh - 70px);
+          .admin-complaints {
+            height: auto;
+            overflow: auto;
           }
-          .sidebar-wrapper { 
-            top: 70px; 
-            height: calc(100vh - 70px); 
-            width: 220px;
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
           }
-          .sidebar-wrapper.closed {
-            transform: translateX(-220px);
+          
+          .sidebar-container {
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+            border-right: none;
+            border-bottom: 1px solid #e2e8f0;
           }
-          .main-wrapper { 
+          
+          .main-container {
             margin-left: 0;
             width: 100%;
+            overflow-y: visible;
           }
-          .main-content {
+          
+          .content-wrapper {
             padding: 16px;
           }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
-            gap: 12px;
           }
-          .header-actions {
-            width: 100%;
-            justify-content: flex-start;
-          }
+          
           .filters-bar { flex-direction: column; }
           .filter-group { width: 100%; flex-direction: column; }
           .filter-select { width: 100%; }
@@ -1948,16 +1924,10 @@ const AdminComplaints = () => {
         }
 
         @media (max-width: 480px) {
-          .sidebar-wrapper { 
-            width: 180px;
-          }
-          .sidebar-wrapper.closed {
-            transform: translateX(-180px);
-          }
           .complaints-table th, .complaints-table td { padding: 8px; font-size: 0.7rem; }
           .complaints-table { min-width: 700px; }
           .btn-view, .btn-update-status, .btn-assign { padding: 4px 8px; font-size: 0.7rem; min-width: 28px; min-height: 28px; }
-          .main-content { padding: 12px; }
+          .content-wrapper { padding: 12px; }
         }
       `}</style>
     </div>

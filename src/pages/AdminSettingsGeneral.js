@@ -764,7 +764,7 @@ const AdminSettingsGeneral = () => {
 
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
-      <div className="dashboard-wrapper">
+      <div className="dashboard-layout">
         <div className="sidebar-container">
           <Sidebar language={language} />
         </div>
@@ -1453,7 +1453,7 @@ const AdminSettingsGeneral = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -1464,8 +1464,7 @@ const AdminSettingsGeneral = () => {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           min-height: 100vh;
-          width: 100%;
-          position: relative;
+          overflow-x: hidden;
         }
 
         .toast-notification {
@@ -1481,14 +1480,14 @@ const AdminSettingsGeneral = () => {
           border-radius: 12px;
           box-shadow: 0 4px 20px rgba(0,0,0,0.15);
           animation: slideInRight 0.3s ease;
-          max-width: 350px;
+          max-width: 400px;
         }
         
         .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
         .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
         .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
         
-        .toast-icon { font-size: 1.2rem; }
+        .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
         .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
         .toast-close {
           background: none;
@@ -1527,32 +1526,37 @@ const AdminSettingsGeneral = () => {
           to { transform: rotate(360deg); }
         }
 
-        .dashboard-wrapper {
+        /* ===== LAYOUT - Same as AdminDashboard ===== */
+        .dashboard-layout {
           display: flex;
-          min-height: calc(100vh - 70px);
-          margin-top: 200px;
+          height: calc(100vh - 195px);
+          margin-top: 195px;
           position: relative;
           width: 100%;
+          overflow: hidden;
         }
 
+        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
-       
+          top: 195px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 70px);
+          height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
           z-index: 100;
           overflow-y: auto;
         }
 
+        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
           margin-left: 260px;
           width: calc(100% - 260px);
-          min-height: 100%;
-          overflow-x: auto;
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
           position: relative;
         }
 
@@ -1579,6 +1583,7 @@ const AdminSettingsGeneral = () => {
           min-height: 100%;
         }
 
+        /* ===== PAGE HEADER ===== */
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -1653,6 +1658,7 @@ const AdminSettingsGeneral = () => {
           display: inline-block;
         }
 
+        /* ===== SETTINGS TABS ===== */
         .settings-tabs {
           display: flex;
           gap: 8px;
@@ -1694,6 +1700,7 @@ const AdminSettingsGeneral = () => {
           font-size: 1.1rem;
         }
 
+        /* ===== SETTINGS SECTION ===== */
         .settings-section {
           animation: fadeIn 0.3s ease;
         }
@@ -1857,9 +1864,27 @@ const AdminSettingsGeneral = () => {
           color: #0f172a;
         }
 
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1200px) {
+          .form-grid {
+            grid-template-columns: 1fr;
+          }
+          .form-group.full-width {
+            grid-column: span 1;
+          }
+        }
+
         @media (max-width: 768px) {
-          .dashboard-wrapper {
+          .admin-settings {
+            height: auto;
+            overflow: auto;
+          }
+          
+          .dashboard-layout {
             flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
           }
           
           .sidebar-container {
@@ -1868,6 +1893,8 @@ const AdminSettingsGeneral = () => {
             width: 100%;
             height: auto;
             margin-bottom: 20px;
+            border-right: none;
+            border-bottom: 1px solid #e2e8f0;
           }
           
           .main-container {
@@ -1889,14 +1916,6 @@ const AdminSettingsGeneral = () => {
             width: 100%;
             justify-content: center;
             padding: 12px;
-          }
-          
-          .form-grid {
-            grid-template-columns: 1fr;
-          }
-          
-          .form-group.full-width {
-            grid-column: span 1;
           }
           
           .settings-tabs {
