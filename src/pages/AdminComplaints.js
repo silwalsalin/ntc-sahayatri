@@ -405,7 +405,7 @@ const AdminComplaints = () => {
         errorMessage = language === 'np' ? 'प्रमाणीकरण असफल। कृपया पुन: लगइन गर्नुहोस्।' : 'Authentication failed. Please login again.';
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminUser');
-        setTimeout(() => navigate('/admin-login'), 1500);
+        setTimeout(() => navigate('/login'), 1500);
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
@@ -426,7 +426,7 @@ const AdminComplaints = () => {
     const token = localStorage.getItem('adminToken');
     const user = localStorage.getItem('adminUser');
     if (!token || !user) {
-      navigate('/admin-login');
+      navigate('/login');
     } else {
       fetchAllComplaints();
     }
