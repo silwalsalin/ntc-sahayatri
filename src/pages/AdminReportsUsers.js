@@ -38,14 +38,19 @@ const AdminReportsUsers = () => {
   });
 
   const [backendStatus, setBackendStatus] = useState('checking');
-  const [users, setUsers] = useState([]);
-  const [complaints, setComplaints] = useState([]);
+
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+  // Helper function to get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('adminToken') || localStorage.getItem('token');
+  };
 
   // Fetch users and complaints from database
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = getAuthToken();
       if (!token) {
         setBackendStatus('disconnected');
         setReportData(getSampleReportData());
@@ -53,22 +58,25 @@ const AdminReportsUsers = () => {
         return;
       }
 
+      const headers = { Authorization: `Bearer ${token}` };
+
       // Fetch all users
-      const usersResponse = await axios.get('http://localhost:5000/api/admin/users', {
-        headers: { Authorization: `Bearer ${token}` }
+      const usersResponse = await axios.get(`${API_URL}/admin/users`, {
+        headers,
+        params: {
+          page: 1,
+          limit: 1000,
+          role: selectedRole !== 'all' ? selectedRole : undefined,
+          status: selectedStatus !== 'all' ? selectedStatus : undefined
+        }
       });
 
       // Fetch all complaints
-      const complaintsResponse = await axios.get('http://localhost:5000/api/admin/complaints', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const complaintsResponse = await axios.get(`${API_URL}/admin/complaints`, { headers });
 
       if (usersResponse.data.success && Array.isArray(usersResponse.data.data)) {
         const usersData = usersResponse.data.data;
         const complaintsData = complaintsResponse.data.data || [];
-        
-        setUsers(usersData);
-        setComplaints(complaintsData);
         
         // Calculate all statistics
         const summary = calculateSummaryStats(usersData, complaintsData);
@@ -116,12 +124,12 @@ const AdminReportsUsers = () => {
     const totalUsers = usersData.length;
     
     const newUsersThisMonth = usersData.filter(u => {
-      const createdDate = new Date(u.createdAt);
+      const createdDate = new Date(u.createdAt || u.created_at);
       return createdDate.getMonth() === thisMonth && createdDate.getFullYear() === thisYear;
     }).length;
     
     const newUsersLastMonth = usersData.filter(u => {
-      const createdDate = new Date(u.createdAt);
+      const createdDate = new Date(u.createdAt || u.created_at);
       return createdDate.getMonth() === lastMonth && createdDate.getFullYear() === lastMonthYear;
     }).length;
     
@@ -132,7 +140,9 @@ const AdminReportsUsers = () => {
     const totalComplaints = complaintsData.length;
     const avgComplaintsPerUser = totalUsers > 0 ? (totalComplaints / totalUsers).toFixed(2) : 0;
     
-    const resolvedComplaints = complaintsData.filter(c => c.status === 'resolved' || c.status === 'Resolved').length;
+    const resolvedComplaints = complaintsData.filter(c => 
+      c.status === 'resolved' || c.status === 'Resolved'
+    ).length;
     const satisfactionRate = totalComplaints > 0 ? ((resolvedComplaints / totalComplaints) * 100).toFixed(1) : 0;
 
     return {
@@ -213,7 +223,7 @@ const AdminReportsUsers = () => {
     
     for (let i = 0; i < 12; i++) {
       const monthCount = usersData.filter(user => {
-        const createdDate = new Date(user.createdAt);
+        const createdDate = new Date(user.createdAt || user.created_at);
         return createdDate.getMonth() === i && createdDate.getFullYear() === currentYear;
       }).length;
       
@@ -296,7 +306,7 @@ const AdminReportsUsers = () => {
       return {
         id: user.id,
         name: user.name || user.fullName || user.full_name || 'N/A',
-        enName: user.nameEn || user.name || 'N/A',
+        enName: user.name_en || user.nameEn || user.name || 'N/A',
         email: user.email,
         phone: user.phone || user.mobile || 'N/A',
         complaints: userComplaints.total,
@@ -306,7 +316,8 @@ const AdminReportsUsers = () => {
         satisfaction: parseFloat(satisfaction.toFixed(1)),
         status: user.status || 'inactive',
         role: user.role || 'user',
-        registeredAt: user.createdAt || user.created_at
+        registeredAt: user.createdAt || user.created_at,
+        department: user.department || 'N/A'
       };
     });
     
@@ -395,8 +406,9 @@ const AdminReportsUsers = () => {
         { name: 'कम सक्रिय', enName: 'Low Activity', count: 971, percentage: 77.7 }
       ],
       topUsers: [
-        { id: 1, name: 'राम बहादुर', enName: 'Ram Bahadur', email: 'ram@example.com', phone: '9841234567', complaints: 12, resolved: 8, pending: 2, inProgress: 2, satisfaction: 3.3, status: 'active', role: 'user' },
-        { id: 2, name: 'सीता शर्मा', enName: 'Sita Sharma', email: 'sita@example.com', phone: '9812345678', complaints: 9, resolved: 7, pending: 1, inProgress: 1, satisfaction: 3.9, status: 'active', role: 'user' }
+        { id: 1, name: 'राम बहादुर', enName: 'Ram Bahadur', email: 'ram@example.com', phone: '9841234567', complaints: 12, resolved: 8, pending: 2, inProgress: 2, satisfaction: 3.3, status: 'active', role: 'user', department: 'Customer Support' },
+        { id: 2, name: 'सीता शर्मा', enName: 'Sita Sharma', email: 'sita@example.com', phone: '9812345678', complaints: 9, resolved: 7, pending: 1, inProgress: 1, satisfaction: 3.9, status: 'active', role: 'user', department: 'Customer Support' },
+        { id: 3, name: 'कृष्ण प्रसाद', enName: 'Krishna Prasad', email: 'krishna@example.com', phone: '9801234567', complaints: 8, resolved: 6, pending: 1, inProgress: 1, satisfaction: 3.8, status: 'active', role: 'staff', department: 'Technical Support' }
       ],
       registrationMethod: [
         { name: 'वेबसाइट', enName: 'Website', count: 680, percentage: 54.4 },
@@ -408,7 +420,7 @@ const AdminReportsUsers = () => {
 
   // Check authentication and load data
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
+    const token = getAuthToken();
     const user = localStorage.getItem('adminUser');
     if (!token || !user) {
       navigate('/admin-login');
@@ -483,7 +495,8 @@ const AdminReportsUsers = () => {
       website: 'वेबसाइट',
       mobileApp: 'मोबाइल एप',
       loading: 'लोड हुँदै...',
-      backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।'
+      backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।',
+      department: 'विभाग'
     },
     en: {
       usersReports: 'Users Reports',
@@ -550,7 +563,8 @@ const AdminReportsUsers = () => {
       website: 'Website',
       mobileApp: 'Mobile App',
       loading: 'Loading...',
-      backendNotConnected: 'Backend server not connected. Showing sample data.'
+      backendNotConnected: 'Backend server not connected. Showing sample data.',
+      department: 'Department'
     }
   };
 
@@ -586,6 +600,14 @@ const AdminReportsUsers = () => {
       return monthMap[month] || month;
     }
     return month;
+  };
+
+  const getRoleText = (role) => {
+    const roles = {
+      np: { user: 'प्रयोगकर्ता', staff: 'कर्मचारी', admin: 'प्रशासक' },
+      en: { user: 'User', staff: 'Staff', admin: 'Admin' }
+    };
+    return roles[language][role] || role;
   };
 
   const handleGenerateReport = async () => {
@@ -918,6 +940,8 @@ const AdminReportsUsers = () => {
                       <th>{t.name}</th>
                       <th>{t.email}</th>
                       <th>{t.phone}</th>
+                      <th>{t.role}</th>
+                      <th>{t.department}</th>
                       <th>{t.complaints}</th>
                       <th>{t.resolved}</th>
                       <th>{t.satisfaction}</th>
@@ -931,6 +955,8 @@ const AdminReportsUsers = () => {
                           <td className="user-name">{language === 'np' ? user.name : user.enName}</td>
                           <td className="user-email">{user.email}</td>
                           <td>{user.phone}</td>
+                          <td>{getRoleText(user.role)}</td>
+                          <td>{user.department}</td>
                           <td className="complaint-count">{user.complaints}</td>
                           <td className="resolved-count">{user.resolved}</td>
                           <td>
@@ -947,7 +973,7 @@ const AdminReportsUsers = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="7" className="no-data">
+                        <td colSpan="9" className="no-data">
                           <div className="no-data-content">
                             <span className="no-data-icon">📭</span>
                             <p>{t.noDataFound}</p>
@@ -964,6 +990,7 @@ const AdminReportsUsers = () => {
       </div>
 
       <style jsx>{`
+        /* ===== RESET & BASE ===== */
         * {
           margin: 0;
           padding: 0;
@@ -978,6 +1005,7 @@ const AdminReportsUsers = () => {
           position: relative;
         }
 
+        /* ===== LOADING ===== */
         .loading-container {
           display: flex;
           flex-direction: column;
@@ -1000,17 +1028,18 @@ const AdminReportsUsers = () => {
           to { transform: rotate(360deg); }
         }
 
+        /* ===== DASHBOARD LAYOUT ===== */
         .dashboard-wrapper {
           display: flex;
           min-height: calc(100vh - 70px);
-          margin-top: 70px;
+          margin-top:200px;
           position: relative;
           width: 100%;
         }
 
         .sidebar-container {
           position: fixed;
-          top: 70px;
+          
           left: 0;
           width: 260px;
           height: calc(100vh - 70px);
@@ -1018,6 +1047,7 @@ const AdminReportsUsers = () => {
           border-right: 1px solid #e2e8f0;
           z-index: 100;
           overflow-y: auto;
+          box-shadow: 2px 0 8px rgba(0,0,0,0.05);
         }
 
         .main-container {
@@ -1052,15 +1082,19 @@ const AdminReportsUsers = () => {
           min-height: 100%;
         }
 
+        /* ===== BACKEND WARNING ===== */
         .backend-warning {
           background: #ff9800;
           color: white;
-          padding: 10px 16px;
-          border-radius: 8px;
-          margin-bottom: 20px;
+          padding: 12px 20px;
+          border-radius: 10px;
+          margin-bottom: 24px;
           text-align: center;
+          font-weight: 500;
+          box-shadow: 0 2px 8px rgba(255,152,0,0.3);
         }
 
+        /* ===== PAGE HEADER ===== */
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -1073,15 +1107,15 @@ const AdminReportsUsers = () => {
         }
 
         .page-header h1 {
-          font-size: 1.6rem;
-          font-weight: 600;
+          font-size: 1.8rem;
+          font-weight: 700;
           color: #0f172a;
           margin-bottom: 4px;
         }
 
         .page-header p {
           color: #64748b;
-          font-size: 0.85rem;
+          font-size: 0.9rem;
         }
 
         .action-buttons-header {
@@ -1091,86 +1125,100 @@ const AdminReportsUsers = () => {
         }
 
         .export-btn {
-          padding: 8px 16px;
-          border-radius: 8px;
+          padding: 10px 20px;
+          border-radius: 10px;
           cursor: pointer;
-          font-weight: 500;
+          font-weight: 600;
           border: none;
           transition: all 0.2s;
+          font-size: 0.85rem;
         }
 
         .export-btn.pdf { background: #fee2e2; color: #dc2626; }
-        .export-btn.pdf:hover { background: #fecaca; }
+        .export-btn.pdf:hover { background: #fecaca; transform: translateY(-1px); }
         .export-btn.excel { background: #d1fae5; color: #059669; }
-        .export-btn.excel:hover { background: #a7f3d0; }
+        .export-btn.excel:hover { background: #a7f3d0; transform: translateY(-1px); }
         .export-btn.print { background: #dbeafe; color: #2563eb; }
-        .export-btn.print:hover { background: #bfdbfe; }
+        .export-btn.print:hover { background: #bfdbfe; transform: translateY(-1px); }
 
+        /* ===== FILTERS ===== */
         .filters-section {
           background: white;
           border-radius: 16px;
-          padding: 24px;
+          padding: 24px 28px;
           margin-bottom: 24px;
           border: 1px solid #e2e8f0;
           display: flex;
           flex-wrap: wrap;
           gap: 20px;
           align-items: flex-end;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
 
         .filter-group {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
           min-width: 150px;
         }
 
         .filter-group label {
-          font-size: 0.75rem;
-          font-weight: 600;
+          font-size: 0.7rem;
+          font-weight: 700;
           color: #64748b;
           text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .filter-select, .date-input {
           padding: 10px 14px;
-          border: 1px solid #e2e8f0;
+          border: 1.5px solid #e2e8f0;
           border-radius: 10px;
           font-size: 0.85rem;
           background: white;
           cursor: pointer;
+          transition: border-color 0.2s;
         }
 
         .filter-select:focus, .date-input:focus {
           outline: none;
           border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
         }
 
         .date-range {
           flex-direction: row;
           align-items: center;
+          gap: 10px;
         }
 
         .date-range span {
           color: #64748b;
+          font-weight: 500;
         }
 
         .generate-btn {
           background: linear-gradient(135deg, #3b82f6, #2563eb);
           color: white;
           border: none;
-          padding: 10px 24px;
+          padding: 10px 28px;
           border-radius: 10px;
           cursor: pointer;
-          font-weight: 500;
+          font-weight: 600;
           height: 42px;
+          transition: all 0.2s;
+          font-size: 0.9rem;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .generate-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(59,130,246,0.35);
         }
 
+        /* ===== SUMMARY CARDS ===== */
         .summary-cards {
           display: grid;
           grid-template-columns: repeat(6, 1fr);
@@ -1181,27 +1229,29 @@ const AdminReportsUsers = () => {
         .summary-card {
           background: white;
           border-radius: 16px;
-          padding: 16px;
+          padding: 18px 20px;
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 14px;
           border: 1px solid #e2e8f0;
           transition: all 0.2s;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
 
         .summary-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          transform: translateY(-3px);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.08);
         }
 
         .card-icon {
-          width: 45px;
-          height: 45px;
-          border-radius: 12px;
+          width: 50px;
+          height: 50px;
+          border-radius: 14px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.5rem;
+          font-size: 1.6rem;
+          flex-shrink: 0;
         }
 
         .card-icon.purple { background: #f3e8ff; color: #9333ea; }
@@ -1211,14 +1261,15 @@ const AdminReportsUsers = () => {
         .card-icon.blue { background: #dbeafe; color: #2563eb; }
         .card-icon.pink { background: #fce7f3; color: #db2777; }
 
-        .card-info { flex: 1; }
-        .card-value { font-size: 1.3rem; font-weight: 700; color: #0f172a; }
-        .card-label { font-size: 0.7rem; color: #64748b; }
+        .card-info { flex: 1; min-width: 0; }
+        .card-value { font-size: 1.4rem; font-weight: 700; color: #0f172a; }
+        .card-label { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
 
+        /* ===== GROWTH CARD ===== */
         .growth-card {
           background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
           border-radius: 16px;
-          padding: 16px 24px;
+          padding: 18px 24px;
           margin-bottom: 24px;
           display: flex;
           justify-content: space-around;
@@ -1227,12 +1278,27 @@ const AdminReportsUsers = () => {
           gap: 16px;
         }
 
-        .growth-info { text-align: center; }
-        .growth-label { font-size: 0.75rem; color: #0369a1; display: block; margin-bottom: 4px; }
-        .growth-value { font-size: 1.2rem; font-weight: 700; color: #0c4a6e; }
+        .growth-info { 
+          text-align: center; 
+          flex: 1;
+          min-width: 80px;
+        }
+        .growth-label { 
+          font-size: 0.75rem; 
+          color: #0369a1; 
+          display: block; 
+          margin-bottom: 4px; 
+          font-weight: 500;
+        }
+        .growth-value { 
+          font-size: 1.2rem; 
+          font-weight: 700; 
+          color: #0c4a6e; 
+        }
         .growth-value.positive { color: #059669; }
         .growth-value.negative { color: #dc2626; }
 
+        /* ===== CHARTS ===== */
         .charts-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -1243,8 +1309,9 @@ const AdminReportsUsers = () => {
         .chart-card {
           background: white;
           border-radius: 16px;
-          padding: 20px;
+          padding: 24px;
           border: 1px solid #e2e8f0;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
 
         .chart-card h3 {
@@ -1256,18 +1323,42 @@ const AdminReportsUsers = () => {
           border-bottom: 2px solid #e2e8f0;
         }
 
-        .chart-content { display: flex; flex-direction: column; gap: 16px; }
-        .chart-bar-item { width: 100%; }
-        .chart-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.8rem; color: #475569; }
-        .chart-bar-bg { background: #f1f5f9; border-radius: 8px; overflow: hidden; height: 8px; }
-        .chart-bar-fill { height: 100%; border-radius: 8px; transition: width 0.5s; }
+        .chart-content { 
+          display: flex; 
+          flex-direction: column; 
+          gap: 16px; 
+        }
+        .chart-bar-item { 
+          width: 100%; 
+        }
+        .chart-label { 
+          display: flex; 
+          justify-content: space-between; 
+          margin-bottom: 6px; 
+          font-size: 0.8rem; 
+          color: #475569; 
+          font-weight: 500;
+        }
+        .chart-bar-bg { 
+          background: #f1f5f9; 
+          border-radius: 8px; 
+          overflow: hidden; 
+          height: 10px; 
+        }
+        .chart-bar-fill { 
+          height: 100%; 
+          border-radius: 8px; 
+          transition: width 0.6s ease; 
+        }
 
+        /* ===== TREND ===== */
         .trend-card {
           background: white;
           border-radius: 16px;
-          padding: 20px;
+          padding: 24px;
           margin-bottom: 24px;
           border: 1px solid #e2e8f0;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
 
         .trend-card h3 {
@@ -1283,8 +1374,9 @@ const AdminReportsUsers = () => {
           display: flex;
           align-items: flex-end;
           justify-content: space-around;
-          height: 250px;
-          gap: 12px;
+          height: 280px;
+          gap: 8px;
+          padding-top: 20px;
         }
 
         .trend-bar-item {
@@ -1296,16 +1388,49 @@ const AdminReportsUsers = () => {
           height: 100%;
         }
 
-        .trend-label { font-size: 0.7rem; color: #64748b; }
-        .trend-bar-bg { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
-        .trend-bar-fill { width: 100%; max-width: 50px; border-radius: 8px 8px 0 0; position: relative; transition: height 0.5s; min-height: 30px; }
-        .trend-value { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-size: 0.7rem; font-weight: 600; color: #475569; white-space: nowrap; }
+        .trend-label { 
+          font-size: 0.7rem; 
+          color: #64748b; 
+          font-weight: 500;
+        }
+        .trend-bar-bg { 
+          flex: 1; 
+          width: 100%; 
+          display: flex; 
+          align-items: flex-end; 
+          justify-content: center; 
+          min-height: 30px;
+        }
+        .trend-bar-fill { 
+          width: 80%; 
+          max-width: 50px; 
+          border-radius: 8px 8px 0 0; 
+          position: relative; 
+          transition: height 0.6s ease; 
+          min-height: 30px;
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+        }
+        .trend-value { 
+          position: absolute; 
+          top: -22px; 
+          left: 50%; 
+          transform: translateX(-50%); 
+          font-size: 0.7rem; 
+          font-weight: 700; 
+          color: #475569; 
+          white-space: nowrap; 
+        }
 
+        /* ===== TABLE ===== */
         .table-card {
           background: white;
           border-radius: 16px;
-          padding: 20px;
+          padding: 24px;
           border: 1px solid #e2e8f0;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          overflow: hidden;
         }
 
         .table-card h3 {
@@ -1317,55 +1442,207 @@ const AdminReportsUsers = () => {
           border-bottom: 2px solid #e2e8f0;
         }
 
-        .table-wrapper { overflow-x: auto; }
-        .reports-table { width: 100%; border-collapse: collapse; }
-        .reports-table th, .reports-table td { padding: 12px; text-align: left; border-bottom: 1px solid #f1f5f9; }
-        .reports-table th { color: #64748b; font-weight: 500; font-size: 0.75rem; }
-        .reports-table td { color: #334155; font-size: 0.8rem; }
+        .table-wrapper { 
+          overflow-x: auto; 
+          margin: 0 -4px;
+        }
+        .reports-table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          min-width: 800px; 
+        }
+        .reports-table th, .reports-table td { 
+          padding: 12px 14px; 
+          text-align: left; 
+          border-bottom: 1px solid #f1f5f9; 
+        }
+        .reports-table th { 
+          color: #64748b; 
+          font-weight: 600; 
+          font-size: 0.7rem; 
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+        .reports-table td { 
+          color: #334155; 
+          font-size: 0.8rem; 
+        }
 
-        .user-name { font-weight: 600; color: #0f172a; }
-        .user-email { color: #64748b; }
-        .complaint-count { font-weight: 600; color: #dc2626; }
-        .resolved-count { font-weight: 600; color: #059669; }
+        .user-name { 
+          font-weight: 600; 
+          color: #0f172a; 
+        }
+        .user-email { 
+          color: #64748b; 
+        }
+        .complaint-count { 
+          font-weight: 700; 
+          color: #dc2626; 
+        }
+        .resolved-count { 
+          font-weight: 700; 
+          color: #059669; 
+        }
 
-        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 500; }
+        .status-badge { 
+          display: inline-block; 
+          padding: 4px 14px; 
+          border-radius: 20px; 
+          font-size: 0.7rem; 
+          font-weight: 600; 
+        }
         .status-active { background: #d1fae5; color: #059669; }
         .status-inactive { background: #fef3c7; color: #d97706; }
         .status-suspended { background: #fee2e2; color: #dc2626; }
 
-        .satisfaction-star { display: flex; align-items: center; gap: 4px; }
+        .satisfaction-star { 
+          display: flex; 
+          align-items: center; 
+          gap: 6px; 
+          font-weight: 600;
+        }
 
-        .no-data { text-align: center; padding: 40px !important; }
-        .no-data-content { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-        .no-data-icon { font-size: 2rem; }
+        .no-data { 
+          text-align: center; 
+          padding: 50px !important; 
+        }
+        .no-data-content { 
+          display: flex; 
+          flex-direction: column; 
+          align-items: center; 
+          gap: 10px; 
+        }
+        .no-data-icon { 
+          font-size: 2.5rem; 
+        }
 
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 1200px) {
           .summary-cards { grid-template-columns: repeat(3, 1fr); }
           .charts-grid { grid-template-columns: 1fr; }
         }
 
+        @media (max-width: 992px) {
+          .sidebar-container {
+            width: 220px;
+          }
+          .main-container {
+            margin-left: 220px;
+            width: calc(100% - 220px);
+          }
+        }
+
         @media (max-width: 768px) {
-          .dashboard-wrapper { flex-direction: column; }
-          .sidebar-container { position: relative; top: 0; width: 100%; height: auto; margin-bottom: 20px; }
-          .main-container { margin-left: 0; width: 100%; overflow-y: visible; }
-          .content-wrapper { padding: 16px; }
-          .page-header { flex-direction: column; align-items: flex-start; }
-          .filters-section { flex-direction: column; }
-          .filter-group { width: 100%; }
-          .date-range { flex-direction: row; }
-          .summary-cards { grid-template-columns: repeat(2, 1fr); }
-          .trend-chart { height: auto; flex-direction: column; }
-          .trend-bar-item { flex-direction: row; width: 100%; justify-content: space-between; }
-          .trend-bar-bg { width: 60%; }
-          .trend-bar-fill { height: 30px !important; border-radius: 8px; max-width: 100%; }
-          .trend-value { top: 50%; left: 12px; transform: translateY(-50%); }
-          .action-buttons-header { width: 100%; }
-          .growth-card { flex-direction: column; align-items: center; }
+          .dashboard-wrapper { 
+            flex-direction: column; 
+          }
+          .sidebar-container { 
+            position: relative; 
+            top: 0; 
+            width: 100%; 
+            height: auto; 
+            margin-bottom: 20px;
+            border-right: none;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          }
+          .main-container { 
+            margin-left: 0; 
+            width: 100%; 
+            overflow-y: visible; 
+          }
+          .content-wrapper { 
+            padding: 16px; 
+          }
+          .page-header { 
+            flex-direction: column; 
+            align-items: flex-start; 
+          }
+          .filters-section { 
+            flex-direction: column; 
+            padding: 20px;
+          }
+          .filter-group { 
+            width: 100%; 
+          }
+          .date-range { 
+            flex-direction: row; 
+          }
+          .summary-cards { 
+            grid-template-columns: repeat(2, 1fr); 
+          }
+          .trend-chart { 
+            height: auto; 
+            flex-direction: column; 
+            gap: 12px;
+          }
+          .trend-bar-item { 
+            flex-direction: row; 
+            width: 100%; 
+            justify-content: space-between; 
+            height: auto;
+          }
+          .trend-bar-bg { 
+            width: 60%; 
+            min-height: 30px;
+          }
+          .trend-bar-fill { 
+            height: 30px !important; 
+            border-radius: 8px; 
+            max-width: 100%;
+            min-height: 30px;
+          }
+          .trend-value { 
+            top: 50%; 
+            left: 12px; 
+            transform: translateY(-50%); 
+          }
+          .action-buttons-header { 
+            width: 100%; 
+          }
+          .growth-card { 
+            flex-direction: row; 
+            flex-wrap: wrap;
+          }
+          .reports-table { 
+            min-width: 600px; 
+          }
         }
 
         @media (max-width: 480px) {
-          .summary-cards { grid-template-columns: 1fr; }
-          .reports-table th, .reports-table td { padding: 8px; font-size: 0.7rem; }
+          .summary-cards { 
+            grid-template-columns: 1fr; 
+          }
+          .reports-table th, .reports-table td { 
+            padding: 8px 10px; 
+            font-size: 0.7rem; 
+          }
+          .export-btn {
+            padding: 8px 14px;
+            font-size: 0.75rem;
+          }
+          .page-header h1 {
+            font-size: 1.3rem;
+          }
+          .filters-section {
+            padding: 16px;
+          }
+        }
+
+        /* ===== PRINT STYLES ===== */
+        @media print {
+          .sidebar-container, .action-buttons-header, .generate-btn, .export-btn {
+            display: none !important;
+          }
+          .main-container {
+            margin-left: 0 !important;
+            width: 100% !important;
+          }
+          .summary-card, .chart-card, .trend-card, .table-card {
+            break-inside: avoid;
+            box-shadow: none !important;
+            border: 1px solid #ddd !important;
+          }
         }
       `}</style>
     </div>

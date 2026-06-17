@@ -8,6 +8,7 @@ import Sidebar from '../components/Sidebar';
 const AdminComplaints = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,7 +27,6 @@ const AdminComplaints = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   
-  // State for complaints from backend
   const [regularComplaints, setRegularComplaints] = useState([]);
   const [regardingComplaints, setRegardingComplaints] = useState([]);
   const [allComplaints, setAllComplaints] = useState([]);
@@ -35,13 +35,13 @@ const AdminComplaints = () => {
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-  // Show toast notification
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   }, []);
 
-  // Fetch staff list from backend
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+
   const fetchStaffList = async () => {
     setLoadingStaff(true);
     try {
@@ -57,30 +57,20 @@ const AdminComplaints = () => {
       
       if (response.data.success && Array.isArray(response.data.data)) {
         setStaffList(response.data.data);
-        
         if (response.data.data.length === 0) {
-          showToast(language === 'np' ? 'कुनै स्टाफ प्रयोगकर्ता फेला परेन। कृपया पहिले स्टाफ प्रयोगकर्ता थप्नुहोस्।' : 'No staff users found. Please add staff users first.', 'info');
+          showToast(language === 'np' ? 'कुनै स्टाफ प्रयोगकर्ता फेला परेन।' : 'No staff users found.', 'info');
         }
       } else {
         setStaffList([]);
       }
     } catch (error) {
       console.error('Error fetching staff list:', error);
-      if (error.response?.status === 401) {
-        showToast('Authentication failed. Please login again.', 'error');
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
-        setTimeout(() => navigate('/admin-login'), 1500);
-      } else {
-        showToast(language === 'np' ? 'स्टाफ सूची लोड गर्न असफल' : 'Failed to load staff list', 'error');
-      }
       setStaffList([]);
     } finally {
       setLoadingStaff(false);
     }
   };
 
-  // Assign complaint to staff
   const assignToStaff = async (complaintId, staffId, staffEmail, staffName, complaintType) => {
     if (!complaintId || !staffId || !staffEmail) {
       showToast(language === 'np' ? 'अमान्य गुनासो वा स्टाफ डाटा' : 'Invalid complaint or staff data', 'error');
@@ -131,30 +121,15 @@ const AdminComplaints = () => {
     } catch (error) {
       console.error('Error assigning complaint:', error);
       let errorMessage = language === 'np' ? 'गुनासो तोक्न असफल' : 'Failed to assign complaint';
-      
-      if (error.response) {
-        if (error.response.status === 401) {
-          errorMessage = language === 'np' 
-            ? 'प्रमाणीकरण असफल। कृपया पुन: लगइन गर्नुहोस्।' 
-            : 'Authentication failed. Please login again.';
-          localStorage.removeItem('adminToken');
-          localStorage.removeItem('adminUser');
-          setTimeout(() => navigate('/admin-login'), 1500);
-        } else if (error.response.status === 403) {
-          errorMessage = language === 'np'
-            ? 'तपाईंलाई यो कार्य गर्न अनुमति छैन।'
-            : 'You do not have permission to perform this action.';
-        } else if (error.response.status === 404) {
-          errorMessage = language === 'np'
-            ? 'गुनासो वा स्टाफ फेला परेन।'
-            : 'Complaint or staff not found.';
-        } else if (error.response.data?.message) {
-          errorMessage = error.response.data.message;
-        }
-      } else if (error.request) {
-        errorMessage = language === 'np'
-          ? 'सर्भरमा जडान हुन सकेन। कृपया नेटवर्क जाँच गर्नुहोस्।'
-          : 'Cannot connect to server. Please check your network.';
+      if (error.response?.status === 401) {
+        errorMessage = language === 'np' 
+          ? 'प्रमाणीकरण असफल। कृपया पुन: लगइन गर्नुहोस्।' 
+          : 'Authentication failed. Please login again.';
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        setTimeout(() => navigate('/admin-login'), 1500);
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
       }
       showToast(errorMessage, 'error');
     } finally {
@@ -162,7 +137,6 @@ const AdminComplaints = () => {
     }
   };
 
-  // Fetch all complaints from both endpoints
   const fetchAllComplaints = useCallback(async () => {
     setLoading(true);
     try {
@@ -180,7 +154,6 @@ const AdminComplaints = () => {
       } catch (error) {
         console.error('Error fetching regular complaints:', error);
         if (error.code === 'ERR_NETWORK') {
-          showToast('Cannot connect to backend server. Please make sure the server is running.', 'error');
           setBackendStatus('disconnected');
         }
       }
@@ -212,9 +185,8 @@ const AdminComplaints = () => {
     } finally {
       setLoading(false);
     }
-  }, [API_URL, showToast]);
+  }, [API_URL]);
 
-  // Transform regular complaint data
   const transformRegularComplaint = (complaint) => ({
     id: complaint.id,
     complaintId: complaint.id,
@@ -252,7 +224,6 @@ const AdminComplaints = () => {
     complaintType: 'regular'
   });
 
-  // Transform complaint regarding data
   const transformRegardingComplaint = (complaint) => ({
     id: complaint.id,
     complaintId: complaint.id,
@@ -290,7 +261,6 @@ const AdminComplaints = () => {
     complaintType: 'regarding'
   });
 
-  // Get category Nepali translation
   const getCategoryNepali = (category) => {
     const categories = {
       'service': 'सेवा समस्या',
@@ -307,7 +277,6 @@ const AdminComplaints = () => {
     return categories[category] || 'सामान्य';
   };
 
-  // Map status from backend to component status
   const mapStatus = (status) => {
     if (!status) return 'pending';
     const statusMap = {
@@ -330,7 +299,6 @@ const AdminComplaints = () => {
     return statusMap[status] || 'pending';
   };
 
-  // Map priority from backend to component priority
   const mapPriority = (priority) => {
     if (!priority) return 'medium';
     const priorityMap = {
@@ -346,7 +314,6 @@ const AdminComplaints = () => {
     return priorityMap[priority] || 'medium';
   };
 
-  // Format date to Nepali format
   const formatNepaliDate = (date) => {
     if (!date) return '-';
     try {
@@ -361,7 +328,6 @@ const AdminComplaints = () => {
     }
   };
 
-  // Format date to English format
   const formatEnglishDate = (date) => {
     if (!date) return '-';
     try {
@@ -373,7 +339,6 @@ const AdminComplaints = () => {
     }
   };
 
-  // Update complaint status
   const updateComplaintStatus = async (complaintId, newStatusValue, complaintType) => {
     if (!complaintId || !newStatusValue) {
       showToast('Invalid complaint ID or status', 'error');
@@ -390,23 +355,12 @@ const AdminComplaints = () => {
       
       let backendStatus;
       switch (newStatusValue) {
-        case 'pending':
-          backendStatus = 'pending';
-          break;
-        case 'in-progress':
-          backendStatus = 'in-progress';
-          break;
-        case 'review':
-          backendStatus = 'review';
-          break;
-        case 'resolved':
-          backendStatus = 'resolved';
-          break;
-        case 'rejected':
-          backendStatus = 'rejected';
-          break;
-        default:
-          backendStatus = 'pending';
+        case 'pending': backendStatus = 'pending'; break;
+        case 'in-progress': backendStatus = 'in-progress'; break;
+        case 'review': backendStatus = 'review'; break;
+        case 'resolved': backendStatus = 'resolved'; break;
+        case 'rejected': backendStatus = 'rejected'; break;
+        default: backendStatus = 'pending';
       }
       
       let endpoint;
@@ -431,11 +385,7 @@ const AdminComplaints = () => {
         const updateComplaint = (complaint) => {
           const complaintIdToCheck = complaint.id || complaint.complaintId;
           if (complaintIdToCheck === complaintId) {
-            return { 
-              ...complaint, 
-              status: newStatusValue, 
-              rawStatus: backendStatus 
-            };
+            return { ...complaint, status: newStatusValue, rawStatus: backendStatus };
           }
           return complaint;
         };
@@ -453,38 +403,21 @@ const AdminComplaints = () => {
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      let errorMessage = language === 'np' 
-        ? 'स्थिति अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
-        : 'Failed to update status. Please try again.';
-      
-      if (error.response) {
-        if (error.response.status === 401) {
-          errorMessage = language === 'np' 
-            ? 'प्रमाणीकरण असफल। कृपया पुन: लगइन गर्नुहोस्।' 
-            : 'Authentication failed. Please login again.';
-          localStorage.removeItem('adminToken');
-          localStorage.removeItem('adminUser');
-          setTimeout(() => navigate('/admin-login'), 1500);
-        } else if (error.response.status === 403) {
-          errorMessage = language === 'np'
-            ? 'तपाईंलाई यो कार्य गर्न अनुमति छैन।'
-            : 'You do not have permission to perform this action.';
-        } else if (error.response.status === 404) {
-          errorMessage = language === 'np'
-            ? 'गुनासो फेला परेन।'
-            : 'Complaint not found.';
-        } else if (error.response.data?.message) {
-          errorMessage = error.response.data.message;
-        }
+      let errorMessage = language === 'np' ? 'स्थिति अपडेट गर्न असफल।' : 'Failed to update status.';
+      if (error.response?.status === 401) {
+        errorMessage = language === 'np' ? 'प्रमाणीकरण असफल। कृपया पुन: लगइन गर्नुहोस्।' : 'Authentication failed. Please login again.';
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        setTimeout(() => navigate('/admin-login'), 1500);
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
       }
-      
       showToast(errorMessage, 'error');
     } finally {
       setUpdatingStatus(false);
     }
   };
 
-  // Open assign modal
   const openAssignModal = (complaint) => {
     setSelectedComplaintForAssign(complaint);
     setSelectedStaff('');
@@ -492,7 +425,6 @@ const AdminComplaints = () => {
     fetchStaffList();
   };
 
-  // Check authentication and fetch data
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
     const user = localStorage.getItem('adminUser');
@@ -503,7 +435,6 @@ const AdminComplaints = () => {
     }
   }, [navigate, fetchAllComplaints]);
 
-  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, priorityFilter, typeFilter]);
@@ -528,7 +459,7 @@ const AdminComplaints = () => {
       priority: 'प्राथमिकता',
       actions: 'कार्यहरू',
       viewDetails: 'विवरण हेर्नुहोस्',
-      updateStatus: 'स्थिति अपडेट गर्नुहोस्',
+      updateStatus: 'स्थिति अपडेट',
       assignToStaff: 'स्टाफ तोक्नुहोस्',
       complaintDetails: 'गुनासोको विवरण',
       description: 'विवरण',
@@ -575,8 +506,6 @@ const AdminComplaints = () => {
       complaintInfo: 'गुनासो जानकारी',
       complainantInfo: 'उजुरीकर्ताको जानकारी',
       statusInfo: 'स्थिति जानकारी',
-      updateSuccess: 'स्थिति सफलतापूर्वक अपडेट गरियो',
-      updateError: 'स्थिति अपडेट गर्न असफल',
       selectStaff: 'स्टाफ चयन गर्नुहोस्',
       assign: 'तोक्नुहोस्',
       assigning: 'तोक्दै...',
@@ -650,8 +579,6 @@ const AdminComplaints = () => {
       complaintInfo: 'Complaint Information',
       complainantInfo: 'Complainant Information',
       statusInfo: 'Status Information',
-      updateSuccess: 'Status updated successfully',
-      updateError: 'Failed to update status',
       selectStaff: 'Select Staff',
       assign: 'Assign',
       assigning: 'Assigning...',
@@ -707,18 +634,10 @@ const AdminComplaints = () => {
 
   const getPriorityText = (priority) => {
     if (language === 'np') {
-      const priorityTexts = {
-        high: 'उच्च',
-        medium: 'मध्यम',
-        low: 'न्यून'
-      };
+      const priorityTexts = { high: 'उच्च', medium: 'मध्यम', low: 'न्यून' };
       return priorityTexts[priority] || priority;
     } else {
-      const priorityTexts = {
-        high: 'High',
-        medium: 'Medium',
-        low: 'Low'
-      };
+      const priorityTexts = { high: 'High', medium: 'Medium', low: 'Low' };
       return priorityTexts[priority] || priority;
     }
   };
@@ -753,7 +672,6 @@ const AdminComplaints = () => {
     return complaint.type === 'regular' ? 'type-regular' : 'type-regarding';
   };
 
-  // Filter complaints
   const filteredComplaints = allComplaints.filter(complaint => {
     const searchMatch = searchTerm === '' || 
       complaint.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -768,7 +686,6 @@ const AdminComplaints = () => {
     return searchMatch && statusMatch && priorityMatch && typeMatch;
   });
 
-  // Pagination
   const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
   const paginatedComplaints = filteredComplaints.slice(
     (currentPage - 1) * itemsPerPage,
@@ -815,7 +732,6 @@ const AdminComplaints = () => {
     }
   };
 
-  // Refresh data
   const refreshData = () => {
     setLoading(true);
     setCurrentPage(1);
@@ -823,7 +739,6 @@ const AdminComplaints = () => {
     showToast(language === 'np' ? 'डाटा रिफ्रेस गरियो' : 'Data refreshed', 'info');
   };
 
-  // Get statistics
   const stats = {
     total: allComplaints.length,
     pending: allComplaints.filter(c => c.status === 'pending').length,
@@ -857,25 +772,30 @@ const AdminComplaints = () => {
       
       {backendStatus === 'disconnected' && (
         <div className="backend-warning">
-          ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। कृपया सर्भर सुरु गर्नुहोस्।' : 'Backend server not connected. Please start the server.'}
+          ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन।' : 'Backend server not connected.'}
         </div>
       )}
       
       <div className="dashboard-layout">
-        <div className="sidebar-container">
-          <Sidebar language={language} userRole="admin" />
+        <div className={`sidebar-wrapper ${sidebarOpen ? 'open' : 'closed'}`}>
+          <Sidebar language={language} />
         </div>
         
-        <div className="main-container">
-          <div className="content-wrapper">
+        <div className={`main-wrapper ${sidebarOpen ? 'with-sidebar' : 'full-width'}`}>
+          <div className="main-content">
             <div className="page-header">
               <div>
                 <h1>{t.complaintsManagement}</h1>
                 <p>{t.allComplaints}</p>
               </div>
-              <button className="refresh-btn" onClick={refreshData}>
-                🔄 {t.refresh}
-              </button>
+              <div className="header-actions">
+                <button className="toggle-sidebar-btn" onClick={toggleSidebar}>
+                  {sidebarOpen ? '◀ Hide Menu' : '▶ Show Menu'}
+                </button>
+                <button className="refresh-btn" onClick={refreshData}>
+                  🔄 {t.refresh}
+                </button>
+              </div>
             </div>
 
             {/* Statistics Cards */}
@@ -1013,21 +933,21 @@ const AdminComplaints = () => {
                               onClick={() => openModal(complaint)}
                               title={t.viewDetails}
                             >
-                              👁️ {t.viewDetails}
+                              👁️
                             </button>
                             <button 
                               className="btn-update-status" 
                               onClick={() => openStatusModal(complaint)}
                               title={t.updateStatus}
                             >
-                              🔄 {t.updateStatus}
+                              🔄
                             </button>
                             <button 
                               className="btn-assign" 
                               onClick={() => openAssignModal(complaint)}
                               title={t.assignToStaff}
                             >
-                              👥 {t.assignToStaff}
+                              👥
                             </button>
                           </div>
                         </td>
@@ -1286,7 +1206,7 @@ const AdminComplaints = () => {
                           key={staff.id} 
                           value={staff.id}
                         >
-                          {language === 'np' ? staff.name : staff.name_en || staff.name} - {staff.email} ({staff.department || 'Staff'})
+                          {language === 'np' ? staff.name : staff.name_en || staff.name} - {staff.email}
                         </option>
                       ))
                     ) : (
@@ -1301,8 +1221,8 @@ const AdminComplaints = () => {
                     <span className="warning-icon">⚠️</span>
                     <span className="warning-text">
                       {language === 'np' 
-                        ? 'कुनै स्टाफ प्रयोगकर्ता फेला परेन। कृपया पहिले प्रयोगकर्ता व्यवस्थापनबाट स्टाफ थप्नुहोस्।' 
-                        : 'No staff users found. Please add staff users from user management first.'}
+                        ? 'कुनै स्टाफ प्रयोगकर्ता फेला परेन। कृपया पहिले स्टाफ थप्नुहोस्।' 
+                        : 'No staff users found. Please add staff users first.'}
                     </span>
                   </div>
                 )}
@@ -1352,13 +1272,12 @@ const AdminComplaints = () => {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           min-height: 100vh;
-          overflow-x: hidden;
+          overflow: hidden;
         }
 
-        /* Toast Notification */
         .toast-notification {
           position: fixed;
-          top: 200px;
+          top: 80px;
           right: 20px;
           z-index: 3000;
           display: flex;
@@ -1369,14 +1288,14 @@ const AdminComplaints = () => {
           border-radius: 12px;
           box-shadow: 0 4px 20px rgba(0,0,0,0.15);
           animation: slideInRight 0.3s ease;
-          max-width: 350px;
+          max-width: 400px;
         }
         
         .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
         .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
         .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
         
-        .toast-icon { font-size: 1.2rem; }
+        .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
         .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
         .toast-close {
           background: none;
@@ -1429,52 +1348,73 @@ const AdminComplaints = () => {
           to { transform: rotate(360deg); }
         }
 
+        /* ===== LAYOUT - Same as AdminDashboard ===== */
         .dashboard-layout {
           display: flex;
-          min-height: calc(100vh - 70px);
-          margin-top: 70px;
+          height: calc(100vh - 70px);
+          margin-top: 200px;
           position: relative;
+          width: 100%;
+          overflow: hidden;
         }
 
-        .sidebar-container {
+        .sidebar-wrapper {
           position: fixed;
-          top: 70px;
+          
           left: 0;
           width: 260px;
           height: calc(100vh - 70px);
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          z-index: 100;
           background: white;
           border-right: 1px solid #e2e8f0;
-          z-index: 100;
+          transform: translateX(0);
           overflow-y: auto;
         }
 
-        .main-container {
+        .sidebar-wrapper.closed {
+          transform: translateX(-260px);
+        }
+
+        .main-wrapper {
           flex: 1;
-          margin-left: 260px;
           width: calc(100% - 260px);
-          min-height: calc(100vh - 70px);
-          overflow-x: auto;
+          margin-left: 260px;
+          height: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+          transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .main-container::-webkit-scrollbar {
+        .main-wrapper.full-width {
+          margin-left: 0;
+          width: 100%;
+        }
+
+        .main-wrapper::-webkit-scrollbar {
           width: 8px;
-          height: 8px;
         }
 
-        .main-container::-webkit-scrollbar-track {
+        .main-wrapper::-webkit-scrollbar-track {
           background: #f1f1f1;
           border-radius: 10px;
         }
 
-        .main-container::-webkit-scrollbar-thumb {
+        .main-wrapper::-webkit-scrollbar-thumb {
           background: #3b82f6;
           border-radius: 10px;
         }
 
-        .content-wrapper {
-          padding: 24px 32px;
+        .main-wrapper::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
         }
 
+        .main-content {
+          padding: 24px 32px;
+          min-height: 100%;
+        }
+
+        /* ===== PAGE HEADER ===== */
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -1498,6 +1438,31 @@ const AdminComplaints = () => {
           font-size: 0.85rem;
         }
 
+        .header-actions {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .toggle-sidebar-btn {
+          background: none;
+          border: 1px solid #e2e8f0;
+          padding: 8px 16px;
+          border-radius: 8px;
+          cursor: pointer;
+          color: #475569;
+          font-weight: 500;
+          transition: all 0.2s;
+          font-size: 0.85rem;
+        }
+
+        .toggle-sidebar-btn:hover {
+          background: #f8fafc;
+          border-color: #3b82f6;
+          color: #3b82f6;
+        }
+
         .refresh-btn {
           background: white;
           border: 1px solid #e2e8f0;
@@ -1515,6 +1480,7 @@ const AdminComplaints = () => {
           color: #3b82f6;
         }
 
+        /* ===== STATS ROW ===== */
         .stats-row {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
@@ -1546,6 +1512,7 @@ const AdminComplaints = () => {
           align-items: center;
           justify-content: center;
           font-size: 1.8rem;
+          flex-shrink: 0;
         }
 
         .stat-box-icon.blue { background: #e3f2fd; color: #1565c0; }
@@ -1553,10 +1520,11 @@ const AdminComplaints = () => {
         .stat-box-icon.yellow { background: #fff8e1; color: #f9a825; }
         .stat-box-icon.green { background: #e8f5e9; color: #2e7d32; }
 
-        .stat-box-info { flex: 1; }
+        .stat-box-info { flex: 1; min-width: 0; }
         .stat-box-value { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
         .stat-box-label { font-size: 0.75rem; color: #64748b; margin-top: 4px; }
 
+        /* ===== FILTERS ===== */
         .filters-bar {
           display: flex;
           justify-content: space-between;
@@ -1626,6 +1594,7 @@ const AdminComplaints = () => {
           cursor: pointer;
         }
 
+        /* ===== TABLE ===== */
         .table-wrapper {
           overflow-x: auto;
           background: white;
@@ -1636,7 +1605,7 @@ const AdminComplaints = () => {
         .complaints-table {
           width: 100%;
           border-collapse: collapse;
-          min-width: 1200px;
+          min-width: 1000px;
         }
 
         .complaints-table th,
@@ -1650,7 +1619,9 @@ const AdminComplaints = () => {
           background: #f8fafc;
           color: #64748b;
           font-weight: 500;
-          font-size: 0.8rem;
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
         }
 
         .complaints-table td {
@@ -1668,7 +1639,7 @@ const AdminComplaints = () => {
           color: #3b82f6;
         }
 
-        .complainant-info strong { display: block; }
+        .complainant-info strong { display: block; font-weight: 600; }
         .complainant-info small { font-size: 0.7rem; color: #64748b; }
 
         .status-badge, .priority-badge, .type-badge {
@@ -1694,24 +1665,24 @@ const AdminComplaints = () => {
 
         .action-buttons {
           display: flex;
-          gap: 10px;
+          gap: 8px;
           flex-wrap: wrap;
           align-items: center;
         }
 
         .btn-view, .btn-update-status, .btn-assign {
-          padding: 8px 16px;
+          padding: 6px 12px;
           border-radius: 8px;
           font-size: 0.8rem;
           cursor: pointer;
           transition: all 0.2s;
+          border: none;
+          font-weight: 500;
+          min-width: 36px;
+          min-height: 36px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          border: none;
-          font-weight: 500;
-          white-space: nowrap;
         }
 
         .btn-view { 
@@ -1732,26 +1703,11 @@ const AdminComplaints = () => {
           box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
-        .btn-view:active, .btn-update-status:active, .btn-assign:active {
-          transform: translateY(0);
-        }
+        .no-data { text-align: center; padding: 60px !important; }
+        .no-data-content { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .no-data-icon { font-size: 3rem; }
 
-        .no-data {
-          text-align: center;
-          padding: 60px !important;
-        }
-
-        .no-data-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .no-data-icon {
-          font-size: 3rem;
-        }
-
+        /* ===== PAGINATION ===== */
         .pagination {
           display: flex;
           justify-content: center;
@@ -1780,6 +1736,7 @@ const AdminComplaints = () => {
         .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .pagination-info { color: #64748b; font-size: 0.85rem; }
 
+        /* ===== MODALS ===== */
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -1792,20 +1749,19 @@ const AdminComplaints = () => {
           justify-content: center;
           z-index: 1100;
           backdrop-filter: blur(4px);
+          padding: 20px;
         }
 
         .modal-content {
           background: white;
           border-radius: 20px;
           max-width: 650px;
-          width: 90%;
-          max-height: 85vh;
+          width: 100%;
+          max-height: 90vh;
           overflow-y: auto;
         }
 
-        .status-modal, .assign-modal {
-          max-width: 500px;
-        }
+        .status-modal, .assign-modal { max-width: 500px; }
 
         .modal-header {
           display: flex;
@@ -1845,47 +1801,38 @@ const AdminComplaints = () => {
           display: flex;
           margin-bottom: 12px;
           flex-wrap: wrap;
+          gap: 4px;
         }
         
         .detail-row label {
-          width: 130px;
+          width: 140px;
           font-weight: 600;
           color: #0f172a;
+          flex-shrink: 0;
         }
         
         .detail-row span, .detail-row p {
           flex: 1;
           color: #334155;
+          min-width: 0;
+          word-break: break-word;
         }
         
         .detail-row.full-width { flex-direction: column; }
         .detail-row.full-width label { width: 100%; margin-bottom: 8px; }
         .description-text { line-height: 1.6; white-space: pre-wrap; }
 
-        .form-group {
-          margin-bottom: 20px;
-        }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: #0f172a; font-size: 0.85rem; }
+        .required { color: #ef4444; }
 
-        .form-group label {
-          display: block;
-          font-weight: 600;
-          margin-bottom: 8px;
-          color: #0f172a;
-          font-size: 0.85rem;
-        }
-
-        .required {
-          color: #ef4444;
-        }
-
-        .staff-select {
+        .staff-select, .status-select {
           width: 100%;
           padding: 10px 14px;
           border: 1px solid #e2e8f0;
           border-radius: 10px;
           font-size: 0.85rem;
           font-family: inherit;
-          margin-top: 8px;
         }
 
         .loading-staff {
@@ -1896,7 +1843,6 @@ const AdminComplaints = () => {
           background: #f8fafc;
           border-radius: 8px;
           color: #1565c0;
-          margin-top: 8px;
         }
 
         .spinner-small {
@@ -1919,23 +1865,8 @@ const AdminComplaints = () => {
           border-left: 3px solid #f59e0b;
         }
 
-        .warning-icon {
-          font-size: 1rem;
-        }
-
-        .warning-text {
-          font-size: 0.75rem;
-          color: #92400e;
-          flex: 1;
-        }
-
-        .status-select {
-          flex: 1;
-          padding: 8px 12px;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          font-size: 0.9rem;
-        }
+        .warning-icon { font-size: 1rem; }
+        .warning-text { font-size: 0.75rem; color: #92400e; flex: 1; }
 
         .modal-footer {
           padding: 16px 24px;
@@ -1955,6 +1886,7 @@ const AdminComplaints = () => {
           cursor: pointer;
           font-weight: 500;
           border: none;
+          font-size: 0.85rem;
         }
         
         .btn-close { background: #e2e8f0; color: #475569; }
@@ -1962,45 +1894,70 @@ const AdminComplaints = () => {
         .btn-update { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
         .btn-update-status-modal { background: linear-gradient(135deg, #10b981, #059669); color: white; }
         .btn-assign-modal { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; }
+        .btn-assign { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; }
         
         .btn-update:disabled, .btn-assign:disabled {
-          opacity: 0.7;
+          opacity: 0.6;
           cursor: not-allowed;
         }
 
+        /* ===== RESPONSIVE - Same as AdminDashboard ===== */
         @media (max-width: 1200px) {
           .stats-row { grid-template-columns: repeat(2, 1fr); }
-          .action-buttons { flex-direction: column; }
-          .btn-view, .btn-update-status, .btn-assign { width: 100%; justify-content: center; }
         }
 
         @media (max-width: 768px) {
-          .sidebar-container { display: none; }
-          .main-container { margin-left: 0; width: 100%; }
-          .content-wrapper { padding: 16px; }
+          .dashboard-layout { 
+            height: calc(100vh - 70px);
+          }
+          .sidebar-wrapper { 
+            top: 70px; 
+            height: calc(100vh - 70px); 
+            width: 220px;
+          }
+          .sidebar-wrapper.closed {
+            transform: translateX(-220px);
+          }
+          .main-wrapper { 
+            margin-left: 0;
+            width: 100%;
+          }
+          .main-content {
+            padding: 16px;
+          }
+          .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
+          .header-actions {
+            width: 100%;
+            justify-content: flex-start;
+          }
           .filters-bar { flex-direction: column; }
           .filter-group { width: 100%; flex-direction: column; }
           .filter-select { width: 100%; }
           .stats-row { grid-template-columns: 1fr; }
-          .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
-          .action-buttons { flex-direction: column; width: 100%; }
-          .btn-view, .btn-update-status, .btn-assign { 
-            width: 100%; 
-            justify-content: center;
-            padding: 10px 16px;
-          }
+          .action-buttons { flex-wrap: wrap; }
+          .btn-view, .btn-update-status, .btn-assign { min-width: 32px; min-height: 32px; }
+          .modal-content { max-width: 95%; }
           .detail-row { flex-direction: column; }
           .detail-row label { width: 100%; margin-bottom: 4px; }
           .modal-footer { flex-direction: column; }
-          .modal-footer button { width: 100%; }
+          .modal-footer button { width: 100%; justify-content: center; }
         }
 
         @media (max-width: 480px) {
-          .complaints-table th, .complaints-table td { padding: 8px; font-size: 0.7rem; }
-          .btn-view, .btn-update-status, .btn-assign { 
-            padding: 8px 12px; 
-            font-size: 0.7rem;
+          .sidebar-wrapper { 
+            width: 180px;
           }
+          .sidebar-wrapper.closed {
+            transform: translateX(-180px);
+          }
+          .complaints-table th, .complaints-table td { padding: 8px; font-size: 0.7rem; }
+          .complaints-table { min-width: 700px; }
+          .btn-view, .btn-update-status, .btn-assign { padding: 4px 8px; font-size: 0.7rem; min-width: 28px; min-height: 28px; }
+          .main-content { padding: 12px; }
         }
       `}</style>
     </div>

@@ -1023,7 +1023,7 @@ const AdminReportsComplaints = () => {
         .dashboard-layout {
           display: flex;
           height: calc(100vh - 80px);
-          margin-top: 80px;
+          margin-top: 200px;
           position: relative;
           width: 100%;
           overflow: hidden;
@@ -1032,7 +1032,7 @@ const AdminReportsComplaints = () => {
         /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
-          top: 80px;
+         
           left: 0;
           width: 260px;
           height: calc(100vh - 80px);

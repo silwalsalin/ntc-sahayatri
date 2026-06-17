@@ -1248,13 +1248,13 @@ const AdminComplaintsInProgress = () => {
         .dashboard-layout {
           display: flex;
           min-height: calc(100vh - 70px);
-          margin-top: 70px;
+          margin-top: 200px;
           position: relative;
         }
 
         .sidebar-container {
           position: fixed;
-          top: 70px;
+       
           left: 0;
           width: 260px;
           height: calc(100vh - 70px);
