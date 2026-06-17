@@ -39,6 +39,75 @@ const AdminComplaints = () => {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   }, []);
 
+  // ===== DATE FORMATTING FUNCTIONS =====
+  
+  const formatNepaliDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      const year = d.getFullYear() - 57;
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  const formatEnglishDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  const formatFullDateTime = (date, lang) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      
+      if (lang === 'np') {
+        const year = d.getFullYear() - 57;
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+      } else {
+        return d.toLocaleString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+      }
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Get proper date from complaint (handles both regular and regarding)
+  const getComplaintDate = (complaint) => {
+    const dateFields = ['created_at', 'createdAt', 'submittedDate', 'date', 'updated_at', 'updatedAt'];
+    for (const field of dateFields) {
+      if (complaint[field]) {
+        return complaint[field];
+      }
+    }
+    return new Date().toISOString();
+  };
+
   const fetchStaffList = async () => {
     setLoadingStaff(true);
     try {
@@ -143,10 +212,12 @@ const AdminComplaints = () => {
       let regularData = [];
       let regardingData = [];
       
+      // Fetch regular complaints from /complaints
       try {
         const regularResponse = await axios.get(`${API_URL}/complaints`, { headers });
         if (regularResponse.data.success && Array.isArray(regularResponse.data.data)) {
           regularData = regularResponse.data.data.map(complaint => transformRegularComplaint(complaint));
+          console.log(`✅ Loaded ${regularData.length} regular complaints`);
         }
       } catch (error) {
         console.error('Error fetching regular complaints:', error);
@@ -155,10 +226,12 @@ const AdminComplaints = () => {
         }
       }
       
+      // Fetch regarding complaints from /complaint-regarding
       try {
         const regardingResponse = await axios.get(`${API_URL}/complaint-regarding`, { headers });
         if (regardingResponse.data.success && Array.isArray(regardingResponse.data.data)) {
           regardingData = regardingResponse.data.data.map(complaint => transformRegardingComplaint(complaint));
+          console.log(`✅ Loaded ${regardingData.length} regarding complaints`);
         }
       } catch (error) {
         console.error('Error fetching regarding complaints:', error);
@@ -167,10 +240,12 @@ const AdminComplaints = () => {
       setRegularComplaints(regularData);
       setRegardingComplaints(regardingData);
       
+      // Combine all complaints
       const combined = [...regularData, ...regardingData];
       combined.sort((a, b) => new Date(b.submittedDate) - new Date(a.submittedDate));
       setAllComplaints(combined);
       
+      console.log(`✅ Total complaints: ${combined.length}`);
       setBackendStatus('connected');
       
     } catch (error) {
@@ -184,79 +259,95 @@ const AdminComplaints = () => {
     }
   }, [API_URL]);
 
-  const transformRegularComplaint = (complaint) => ({
-    id: complaint.id,
-    complaintId: complaint.id,
-    ticketId: complaint.complaint_number || `NTC-${complaint.id}`,
-    name: complaint.name || 'N/A',
-    enName: complaint.name || 'N/A',
-    email: complaint.email || 'N/A',
-    phone: complaint.phone || 'N/A',
-    category: complaint.nature_of_complaint || 'general',
-    category_np: getCategoryNepali(complaint.nature_of_complaint),
-    category_en: complaint.nature_of_complaint || 'General',
-    subject: null,
-    description: complaint.description || 'N/A',
-    enDescription: complaint.description || 'N/A',
-    status: mapStatus(complaint.status),
-    rawStatus: complaint.status,
-    date: formatNepaliDate(complaint.created_at),
-    enDate: formatEnglishDate(complaint.created_at),
-    channel: 'वेबसाइट पोर्टल',
-    enChannel: 'Website Portal',
-    priority: mapPriority(complaint.priority),
-    assignedTo: complaint.assigned_to || 'Not Assigned',
-    assignedToName: complaint.assigned_to_name || complaint.assigned_to || 'Not Assigned',
-    enAssignedTo: complaint.assigned_to || 'Not Assigned',
-    assignedBy: complaint.assigned_by || null,
-    assignedByName: complaint.assigned_by_name || 'System',
-    resolvedDate: complaint.resolved_at ? formatNepaliDate(complaint.resolved_at) : null,
-    enResolvedDate: complaint.resolved_at ? formatEnglishDate(complaint.resolved_at) : null,
-    submittedDate: complaint.created_at,
-    referenceNumber: null,
-    landmark: null,
-    address: null,
-    preferredContact: null,
-    type: 'regular',
-    complaintType: 'regular'
-  });
+  // Transform regular complaint data from /complaints
+  const transformRegularComplaint = (complaint) => {
+    const createdDate = getComplaintDate(complaint);
+    
+    return {
+      id: complaint.id,
+      complaintId: complaint.id,
+      ticketId: complaint.complaint_number || `NTC-${complaint.id}`,
+      name: complaint.name || complaint.fullName || complaint.full_name || 'N/A',
+      enName: complaint.name || complaint.fullName || complaint.full_name || 'N/A',
+      email: complaint.email || 'N/A',
+      phone: complaint.phone || complaint.mobile || 'N/A',
+      category: complaint.nature_of_complaint || complaint.category || 'general',
+      category_np: getCategoryNepali(complaint.nature_of_complaint || complaint.category),
+      category_en: complaint.nature_of_complaint || complaint.category || 'General',
+      subject: complaint.subject || null,
+      description: complaint.description || complaint.message || 'N/A',
+      enDescription: complaint.description || complaint.message || 'N/A',
+      status: mapStatus(complaint.status),
+      rawStatus: complaint.status,
+      // Date fields with proper formatting
+      date: formatNepaliDate(createdDate),
+      enDate: formatEnglishDate(createdDate),
+      fullDate: formatFullDateTime(createdDate, 'np'),
+      enFullDate: formatFullDateTime(createdDate, 'en'),
+      channel: complaint.channel || 'वेबसाइट पोर्टल',
+      enChannel: complaint.channel || 'Website Portal',
+      priority: mapPriority(complaint.priority),
+      assignedTo: complaint.assigned_to || 'Not Assigned',
+      assignedToName: complaint.assigned_to_name || complaint.assigned_to || 'Not Assigned',
+      enAssignedTo: complaint.assigned_to || 'Not Assigned',
+      assignedBy: complaint.assigned_by || null,
+      assignedByName: complaint.assigned_by_name || 'System',
+      resolvedDate: complaint.resolved_at ? formatNepaliDate(complaint.resolved_at) : null,
+      enResolvedDate: complaint.resolved_at ? formatEnglishDate(complaint.resolved_at) : null,
+      submittedDate: createdDate,
+      referenceNumber: complaint.reference_number || null,
+      landmark: complaint.landmark || null,
+      address: complaint.address || complaint.street_address || null,
+      preferredContact: complaint.preferred_contact || null,
+      type: 'regular',
+      complaintType: 'regular'
+    };
+  };
 
-  const transformRegardingComplaint = (complaint) => ({
-    id: complaint.id,
-    complaintId: complaint.id,
-    ticketId: complaint.complaint_number || `CR-${complaint.id}`,
-    name: complaint.name || 'N/A',
-    enName: complaint.name || 'N/A',
-    email: complaint.email || 'N/A',
-    phone: complaint.phone || 'N/A',
-    category: complaint.complaint_type || 'general',
-    category_np: getCategoryNepali(complaint.complaint_type),
-    category_en: complaint.complaint_type || 'General',
-    subject: complaint.subject || null,
-    description: complaint.description || 'N/A',
-    enDescription: complaint.description || 'N/A',
-    status: mapStatus(complaint.status),
-    rawStatus: complaint.status,
-    date: formatNepaliDate(complaint.created_at),
-    enDate: formatEnglishDate(complaint.created_at),
-    channel: complaint.preferred_contact === 'phone' ? 'फोन' : complaint.preferred_contact === 'email' ? 'इमेल' : 'एसएमएस',
-    enChannel: complaint.preferred_contact === 'phone' ? 'Phone' : complaint.preferred_contact === 'email' ? 'Email' : 'SMS',
-    priority: mapPriority(complaint.priority),
-    assignedTo: complaint.assigned_to || 'Not Assigned',
-    assignedToName: complaint.assigned_to_name || complaint.assigned_to || 'Not Assigned',
-    enAssignedTo: complaint.assigned_to || 'Not Assigned',
-    assignedBy: complaint.assigned_by || null,
-    assignedByName: complaint.assigned_by_name || 'System',
-    resolvedDate: complaint.resolved_at ? formatNepaliDate(complaint.resolved_at) : null,
-    enResolvedDate: complaint.resolved_at ? formatEnglishDate(complaint.resolved_at) : null,
-    submittedDate: complaint.created_at,
-    referenceNumber: complaint.reference_number || null,
-    landmark: complaint.landmark || null,
-    address: complaint.address || null,
-    preferredContact: complaint.preferred_contact || null,
-    type: 'regarding',
-    complaintType: 'regarding'
-  });
+  // Transform regarding complaint data from /complaint-regarding
+  const transformRegardingComplaint = (complaint) => {
+    const createdDate = getComplaintDate(complaint);
+    
+    return {
+      id: complaint.id,
+      complaintId: complaint.id,
+      ticketId: complaint.complaint_number || `CR-${complaint.id}`,
+      name: complaint.name || complaint.fullName || complaint.full_name || 'N/A',
+      enName: complaint.name || complaint.fullName || complaint.full_name || 'N/A',
+      email: complaint.email || 'N/A',
+      phone: complaint.phone || complaint.mobile || 'N/A',
+      category: complaint.complaint_type || complaint.category || 'general',
+      category_np: getCategoryNepali(complaint.complaint_type || complaint.category),
+      category_en: complaint.complaint_type || complaint.category || 'General',
+      subject: complaint.subject || null,
+      description: complaint.description || complaint.message || 'N/A',
+      enDescription: complaint.description || complaint.message || 'N/A',
+      status: mapStatus(complaint.status),
+      rawStatus: complaint.status,
+      // Date fields with proper formatting
+      date: formatNepaliDate(createdDate),
+      enDate: formatEnglishDate(createdDate),
+      fullDate: formatFullDateTime(createdDate, 'np'),
+      enFullDate: formatFullDateTime(createdDate, 'en'),
+      channel: complaint.channel || complaint.preferred_contact === 'phone' ? 'फोन' : complaint.preferred_contact === 'email' ? 'इमेल' : 'एसएमएस',
+      enChannel: complaint.channel || complaint.preferred_contact === 'phone' ? 'Phone' : complaint.preferred_contact === 'email' ? 'Email' : 'SMS',
+      priority: mapPriority(complaint.priority),
+      assignedTo: complaint.assigned_to || 'Not Assigned',
+      assignedToName: complaint.assigned_to_name || complaint.assigned_to || 'Not Assigned',
+      enAssignedTo: complaint.assigned_to || 'Not Assigned',
+      assignedBy: complaint.assigned_by || null,
+      assignedByName: complaint.assigned_by_name || 'System',
+      resolvedDate: complaint.resolved_at ? formatNepaliDate(complaint.resolved_at) : null,
+      enResolvedDate: complaint.resolved_at ? formatEnglishDate(complaint.resolved_at) : null,
+      submittedDate: createdDate,
+      referenceNumber: complaint.reference_number || null,
+      landmark: complaint.landmark || null,
+      address: complaint.address || null,
+      preferredContact: complaint.preferred_contact || null,
+      type: 'regarding',
+      complaintType: 'regarding'
+    };
+  };
 
   const getCategoryNepali = (category) => {
     const categories = {
@@ -269,7 +360,10 @@ const AdminComplaints = () => {
       'activation': 'सक्रियता समस्या',
       'internet': 'इन्टरनेट सेवा',
       'general': 'सामान्य',
-      'other': 'अन्य'
+      'other': 'अन्य',
+      'complaint': 'गुनासो',
+      'suggestion': 'सुझाव',
+      'feedback': 'प्रतिक्रिया'
     };
     return categories[category] || 'सामान्य';
   };
@@ -291,7 +385,11 @@ const AdminComplaints = () => {
       'Under Review': 'review',
       'under review': 'review',
       'Rejected': 'rejected',
-      'rejected': 'rejected'
+      'rejected': 'rejected',
+      'open': 'pending',
+      'Open': 'pending',
+      'waiting': 'pending',
+      'Waiting': 'pending'
     };
     return statusMap[status] || 'pending';
   };
@@ -306,34 +404,11 @@ const AdminComplaints = () => {
       'medium': 'medium',
       'Medium': 'medium',
       'low': 'low',
-      'Low': 'low'
+      'Low': 'low',
+      'critical': 'high',
+      'Critical': 'high'
     };
     return priorityMap[priority] || 'medium';
-  };
-
-  const formatNepaliDate = (date) => {
-    if (!date) return '-';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '-';
-      const year = d.getFullYear() - 57;
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    } catch (error) {
-      return '-';
-    }
-  };
-
-  const formatEnglishDate = (date) => {
-    if (!date) return '-';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '-';
-      return d.toISOString().split('T')[0];
-    } catch (error) {
-      return '-';
-    }
   };
 
   const updateComplaintStatus = async (complaintId, newStatusValue, complaintType) => {
@@ -405,7 +480,7 @@ const AdminComplaints = () => {
         errorMessage = language === 'np' ? 'प्रमाणीकरण असफल। कृपया पुन: लगइन गर्नुहोस्।' : 'Authentication failed. Please login again.';
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminUser');
-        setTimeout(() => navigate('/login'), 1500);
+        setTimeout(() => navigate('/admin-login'), 1500);
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
@@ -426,7 +501,7 @@ const AdminComplaints = () => {
     const token = localStorage.getItem('adminToken');
     const user = localStorage.getItem('adminUser');
     if (!token || !user) {
-      navigate('/login');
+      navigate('/admin-login');
     } else {
       fetchAllComplaints();
     }
@@ -643,8 +718,21 @@ const AdminComplaints = () => {
     return language === 'np' ? complaint.category_np : complaint.category_en;
   };
 
+  // Get date with full date and time based on language
   const getDate = (complaint) => {
-    return language === 'np' ? complaint.date : complaint.enDate;
+    if (language === 'np') {
+      return complaint.fullDate || complaint.date || '-';
+    } else {
+      return complaint.enFullDate || complaint.enDate || '-';
+    }
+  };
+
+  const getRegisteredDate = (complaint) => {
+    if (language === 'np') {
+      return complaint.fullDate || '-';
+    } else {
+      return complaint.enFullDate || '-';
+    }
   };
 
   const getChannel = (complaint) => {
@@ -1078,7 +1166,7 @@ const AdminComplaints = () => {
                 </div>
                 <div className="detail-row">
                   <label>{t.registeredDate}:</label>
-                  <span>{getDate(selectedComplaint)}</span>
+                  <span>{getRegisteredDate(selectedComplaint)}</span>
                 </div>
                 {selectedComplaint.resolvedDate && (
                   <div className="detail-row">
