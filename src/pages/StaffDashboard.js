@@ -8,7 +8,6 @@ import StaffSidebar from '../components/StaffSidebar';
 const StaffDashboard = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   
   // Get staff data from localStorage (from login)
   const [staffData, setStaffData] = useState(() => {
@@ -75,7 +74,6 @@ const StaffDashboard = () => {
 
   // Fetch staff dashboard data from backend
   const fetchDashboardData = async () => {
-    setLoading(true);
     try {
       const token = getAuthToken();
       if (!token) {
@@ -135,8 +133,6 @@ const StaffDashboard = () => {
       console.error('Error fetching dashboard data:', error);
       // Set sample data if backend not available
       setSampleData();
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -259,7 +255,6 @@ const StaffDashboard = () => {
       medium: 'मध्यम',
       low: 'न्यून',
       markAsRead: 'पढेको चिन्ह लगाउनुहोस्',
-      loading: 'लोड हुँदै...',
       refresh: 'रिफ्रेस गर्नुहोस्',
       complaintId: 'गुनासो नम्बर',
       complainant: 'उजुरीकर्ता',
@@ -294,7 +289,6 @@ const StaffDashboard = () => {
       medium: 'Medium',
       low: 'Low',
       markAsRead: 'Mark as read',
-      loading: 'Loading...',
       refresh: 'Refresh',
       complaintId: 'Complaint ID',
       complainant: 'Complainant',
@@ -369,15 +363,6 @@ const StaffDashboard = () => {
       console.error('Error marking notification as read:', error);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="staff-dashboard">
@@ -571,7 +556,7 @@ const StaffDashboard = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -585,28 +570,6 @@ const StaffDashboard = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #0288d1;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         .dashboard-layout {

@@ -8,7 +8,6 @@ import StaffSidebar from '../components/StaffSidebar';
 const StaffTasks = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -62,7 +61,6 @@ const StaffTasks = () => {
 
   // Fetch tasks
   const fetchTasks = async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('staffToken');
       const response = await axios.get('http://localhost:5000/api/staff/tasks', {
@@ -84,8 +82,6 @@ const StaffTasks = () => {
       setTasks(getSampleTasks());
       calculateStats(getSampleTasks());
       setBackendStatus('disconnected');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -235,7 +231,6 @@ const StaffTasks = () => {
 
   // Show notification
   const showNotification = (message, type = 'info') => {
-    // You can implement a toast notification here
     alert(message);
   };
 
@@ -372,7 +367,6 @@ const StaffTasks = () => {
       highPriority: 'उच्च प्राथमिकता',
       mediumPriority: 'मध्यम प्राथमिकता',
       lowPriority: 'न्यून प्राथमिकता',
-      loading: 'लोड हुँदै...',
       refresh: 'रिफ्रेस',
       welcome: 'स्वागत छ',
       dashboard: 'ड्यासबोर्ड',
@@ -423,7 +417,6 @@ const StaffTasks = () => {
       highPriority: 'High Priority',
       mediumPriority: 'Medium Priority',
       lowPriority: 'Low Priority',
-      loading: 'Loading...',
       refresh: 'Refresh',
       welcome: 'Welcome',
       dashboard: 'Dashboard',
@@ -583,15 +576,6 @@ const StaffTasks = () => {
     localStorage.removeItem('staffRole');
     navigate('/');
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="staff-tasks">
@@ -946,28 +930,6 @@ const StaffTasks = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #0288d1;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         .dashboard-layout {

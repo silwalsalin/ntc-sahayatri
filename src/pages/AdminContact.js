@@ -7,7 +7,6 @@ import Sidebar from '../components/Sidebar';
 const AdminContact = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState('support');
@@ -30,8 +29,6 @@ const AdminContact = () => {
     const user = localStorage.getItem('adminUser');
     if (!token || !user) {
       navigate('/admin-login');
-    } else {
-      setTimeout(() => setLoading(false), 500);
     }
   }, [navigate]);
 
@@ -79,8 +76,7 @@ const AdminContact = () => {
       faq4A: 'माथिल्लो दायाँ कुनामा रहेको आफ्नो नाममा क्लिक गरी "प्रोफाइल" विकल्प चयन गर्नुहोस्।',
       connectWithUs: 'हामीसँग जोडिनुहोस्',
       socialMedia: 'सामाजिक सञ्जाल',
-      findUsOn: 'हामीलाई यहाँ पाउनुहोस्',
-      loading: 'लोड हुँदैछ...'
+      findUsOn: 'हामीलाई यहाँ पाउनुहोस्'
     },
     en: {
       contactSupport: 'Contact Support',
@@ -125,8 +121,7 @@ const AdminContact = () => {
       faq4A: 'Click on your name at the top right corner and select the "Profile" option.',
       connectWithUs: 'Connect With Us',
       socialMedia: 'Social Media',
-      findUsOn: 'Find us on',
-      loading: 'Loading...'
+      findUsOn: 'Find us on'
     }
   };
 
@@ -198,15 +193,6 @@ const AdminContact = () => {
   const handleLiveChat = () => {
     alert(t.liveChat);
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-contact">
@@ -445,28 +431,6 @@ const AdminContact = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         /* Dashboard Layout */

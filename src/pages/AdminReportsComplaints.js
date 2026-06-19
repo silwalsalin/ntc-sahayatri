@@ -7,7 +7,6 @@ import Sidebar from '../components/Sidebar';
 const AdminReportsComplaints = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('month');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -279,8 +278,6 @@ const AdminReportsComplaints = () => {
     const user = localStorage.getItem('adminUser');
     if (!token || !user) {
       navigate('/admin-login');
-    } else {
-      setTimeout(() => setLoading(false), 500);
     }
   }, [navigate]);
 
@@ -357,7 +354,6 @@ const AdminReportsComplaints = () => {
       viewDetails: 'विवरण हेर्नुहोस्',
       overallOverview: 'समग्र अवलोकन',
       userComplaintsDetails: 'प्रयोगकर्ता गुनासो विवरण',
-      loading: 'लोड हुँदै...',
       january: 'जनवरी',
       february: 'फेब्रुअरी',
       march: 'मार्च',
@@ -447,7 +443,6 @@ const AdminReportsComplaints = () => {
       viewDetails: 'View Details',
       overallOverview: 'Overall Overview',
       userComplaintsDetails: 'User Complaints Details',
-      loading: 'Loading...',
       january: 'January',
       february: 'February',
       march: 'March',
@@ -577,15 +572,6 @@ const AdminReportsComplaints = () => {
       : `Ticket: ${complaint.ticketId}\nName: ${complaint.enName}\nPhone: ${complaint.phone}\nEmail: ${complaint.email}\nLocation: ${complaint.enLocation}\nCategory: ${getCategoryText(complaint.category)}\nDescription: ${complaint.enDescription}\nAssigned To: ${complaint.enAssignedTo}`;
     alert(details);
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-reports">
@@ -993,28 +979,6 @@ const AdminReportsComplaints = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           min-height: 100vh;
           overflow-x: hidden;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         /* ===== LAYOUT - Same as AdminDashboard ===== */

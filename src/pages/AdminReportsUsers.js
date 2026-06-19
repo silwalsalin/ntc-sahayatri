@@ -8,7 +8,6 @@ import Sidebar from '../components/Sidebar';
 const AdminReportsUsers = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('month');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -48,13 +47,11 @@ const AdminReportsUsers = () => {
 
   // Fetch users and complaints from database
   const fetchData = async () => {
-    setLoading(true);
     try {
       const token = getAuthToken();
       if (!token) {
         setBackendStatus('disconnected');
         setReportData(getSampleReportData());
-        setLoading(false);
         return;
       }
 
@@ -105,8 +102,6 @@ const AdminReportsUsers = () => {
       console.error('Error fetching data:', error);
       setReportData(getSampleReportData());
       setBackendStatus('disconnected');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -494,7 +489,6 @@ const AdminReportsUsers = () => {
       lowActivity: 'कम सक्रिय',
       website: 'वेबसाइट',
       mobileApp: 'मोबाइल एप',
-      loading: 'लोड हुँदै...',
       backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।',
       department: 'विभाग'
     },
@@ -562,7 +556,6 @@ const AdminReportsUsers = () => {
       lowActivity: 'Low Activity',
       website: 'Website',
       mobileApp: 'Mobile App',
-      loading: 'Loading...',
       backendNotConnected: 'Backend server not connected. Showing sample data.',
       department: 'Department'
     }
@@ -626,15 +619,6 @@ const AdminReportsUsers = () => {
   const handlePrint = () => {
     window.print();
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-reports-users">
@@ -1002,29 +986,6 @@ const AdminReportsUsers = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           min-height: 100vh;
           overflow-x: hidden;
-        }
-
-        /* ===== LOADING ===== */
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         /* ===== LAYOUT - Same as AdminDashboard ===== */

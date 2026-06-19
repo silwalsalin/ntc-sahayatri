@@ -7,10 +7,8 @@ import Sidebar from '../components/Sidebar';
 const AdminProfile = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [adminName, setAdminName] = useState('Admin');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -41,39 +39,36 @@ const AdminProfile = () => {
 
   // Check authentication
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userRole = localStorage.getItem('userRole');
+    const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+    const user = localStorage.getItem('adminUser') || localStorage.getItem('user');
     const isLoggedIn = localStorage.getItem('isLoggedIn');
-    const user = localStorage.getItem('user');
     
-    if (!token || !isLoggedIn || userRole !== 'admin') {
-      navigate('/login');
-    } else {
-      try {
-        const userData = user ? JSON.parse(user) : {};
-        setProfileData(prev => ({
-          ...prev,
-          fullName: userData.fullName || userData.name || 'Admin User',
-          email: userData.email || 'admin@ntc.gov.np',
-          phoneNumber: userData.phoneNumber || '9841234567',
-          username: userData.username || 'admin',
-          department: userData.department || 'प्रशासन विभाग',
-          position: userData.position || 'प्रमुख प्रशासक',
-          officeLocation: userData.officeLocation || 'काठमाडौं',
-          joinDate: userData.joinDate || '2020-01-01',
-          bio: userData.bio || '',
-          currentProfileImage: userData.profileImage || null
-        }));
-        setAdminName(userData.fullName || userData.name || 'Admin');
-      } catch (e) {
-        console.error('Error parsing user data:', e);
-        setAdminName('Admin');
-      }
-      setTimeout(() => setLoading(false), 500);
+    if (!token || !isLoggedIn) {
+      navigate('/admin-login');
+      return;
+    }
+    
+    try {
+      const userData = user ? JSON.parse(user) : {};
+      setProfileData(prev => ({
+        ...prev,
+        fullName: userData.fullName || userData.name || 'Admin User',
+        email: userData.email || 'admin@ntc.gov.np',
+        phoneNumber: userData.phoneNumber || '9841234567',
+        username: userData.username || 'admin',
+        department: userData.department || 'प्रशासन विभाग',
+        position: userData.position || 'प्रमुख प्रशासक',
+        officeLocation: userData.officeLocation || 'काठमाडौं',
+        joinDate: userData.joinDate || '2020-01-01',
+        bio: userData.bio || '',
+        currentProfileImage: userData.profileImage || null
+      }));
+      setAdminName(userData.fullName || userData.name || 'Admin');
+    } catch (e) {
+      console.error('Error parsing user data:', e);
+      setAdminName('Admin');
     }
   }, [navigate]);
-
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   const content = {
     np: {
@@ -107,7 +102,6 @@ const AdminProfile = () => {
       success: 'प्रोफाइल सफलतापूर्वक अद्यावधिक गरियो',
       passwordSuccess: 'पासवर्ड सफलतापूर्वक परिवर्तन गरियो',
       error: 'अद्यावधिक गर्दा त्रुटि भयो',
-      loading: 'लोड हुँदैछ...',
       admin: 'प्रशासक',
       backToDashboard: 'ड्यासबोर्डमा फर्कनुहोस्'
     },
@@ -142,7 +136,6 @@ const AdminProfile = () => {
       success: 'Profile updated successfully',
       passwordSuccess: 'Password changed successfully',
       error: 'Error updating profile',
-      loading: 'Loading...',
       admin: 'Admin',
       backToDashboard: 'Back to Dashboard'
     }
@@ -248,11 +241,11 @@ const AdminProfile = () => {
       setAdminName(profileData.fullName);
       
       // Update localStorage
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const user = JSON.parse(localStorage.getItem('adminUser') || '{}');
       user.fullName = profileData.fullName;
       user.email = profileData.email;
       user.phoneNumber = profileData.phoneNumber;
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('adminUser', JSON.stringify(user));
       
       setTimeout(() => {
         setSuccessMessage('');
@@ -303,15 +296,6 @@ const AdminProfile = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="admin-profile">
       <Header 
@@ -322,21 +306,17 @@ const AdminProfile = () => {
       />
       
       <div className="dashboard-layout">
-        <div className={`sidebar-wrapper ${sidebarOpen ? 'open' : 'closed'}`}>
-          <Sidebar language={language} userRole="admin" />
+        <div className="sidebar-container">
+          <Sidebar language={language} />
         </div>
         
-        <div className={`main-wrapper ${sidebarOpen ? 'with-sidebar' : 'full-width'}`}>
-          <div className="main-content">
-            {/* Page Header */}
+        <div className="main-container">
+          <div className="content-wrapper">
             <div className="page-header">
               <div>
                 <h1>{t.title}</h1>
                 <p>{t.profileInfo}</p>
               </div>
-              <button className="toggle-sidebar-btn" onClick={toggleSidebar}>
-                {sidebarOpen ? '← Hide Menu' : '→ Show Menu'}
-              </button>
             </div>
 
             {/* Success/Error Messages */}
@@ -590,7 +570,7 @@ const AdminProfile = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -599,100 +579,69 @@ const AdminProfile = () => {
 
         .admin-profile {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
-          background: #f8fafc;
+          background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           min-height: 100vh;
           overflow: hidden;
         }
 
-        /* Loading State */
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-
-        /* Layout - Matching AdminDashboard */
+        /* ===== LAYOUT - Same as AdminComplaints ===== */
         .dashboard-layout {
           display: flex;
-          height: calc(100vh - 70px);
-          margin-top: 70px;
+          height: calc(100vh - 195px);
+          margin-top: 195px;
           position: relative;
           width: 100%;
           overflow: hidden;
         }
 
-        .sidebar-wrapper {
+        /* Sidebar Container - Fixed */
+        .sidebar-container {
           position: fixed;
-          top: 70px;
+          top: 195px;
           left: 0;
           width: 260px;
-          height: calc(100vh - 70px);
-          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          z-index: 100;
+          height: calc(100vh - 195px);
           background: white;
           border-right: 1px solid #e2e8f0;
-          transform: translateX(0);
+          z-index: 100;
+          overflow-y: auto;
         }
 
-        .sidebar-wrapper.closed {
-          transform: translateX(-260px);
-        }
-
-        .main-wrapper {
+        /* Main Container - Scrollable */
+        .main-container {
           flex: 1;
-          width: calc(100% - 260px);
           margin-left: 260px;
+          width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
           overflow-x: hidden;
-          transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
         }
 
-        .main-wrapper.full-width {
-          margin-left: 0;
-          width: 100%;
-        }
-
-        .main-wrapper::-webkit-scrollbar {
+        .main-container::-webkit-scrollbar {
           width: 8px;
         }
 
-        .main-wrapper::-webkit-scrollbar-track {
+        .main-container::-webkit-scrollbar-track {
           background: #f1f1f1;
           border-radius: 10px;
         }
 
-        .main-wrapper::-webkit-scrollbar-thumb {
+        .main-container::-webkit-scrollbar-thumb {
           background: #3b82f6;
           border-radius: 10px;
         }
 
-        .main-wrapper::-webkit-scrollbar-thumb:hover {
+        .main-container::-webkit-scrollbar-thumb:hover {
           background: #2563eb;
         }
 
-        .main-content {
+        .content-wrapper {
           padding: 24px 32px;
           min-height: 100%;
         }
 
-        /* Page Header */
+        /* ===== PAGE HEADER ===== */
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -714,24 +663,6 @@ const AdminProfile = () => {
         .page-header p {
           color: #64748b;
           font-size: 0.85rem;
-        }
-
-        .toggle-sidebar-btn {
-          background: #f1f5f9;
-          border: 1px solid #e2e8f0;
-          padding: 10px 20px;
-          border-radius: 10px;
-          cursor: pointer;
-          color: #475569;
-          font-weight: 500;
-          font-size: 0.85rem;
-          transition: all 0.2s;
-        }
-
-        .toggle-sidebar-btn:hover {
-          background: #e2e8f0;
-          border-color: #3b82f6;
-          color: #3b82f6;
         }
 
         /* Alerts */
@@ -968,12 +899,11 @@ const AdminProfile = () => {
           cursor: pointer;
           transition: all 0.2s;
           border: none;
-          background: #3b82f6;
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
           color: white;
         }
 
         .btn-submit:hover:not(:disabled) {
-          background: #2563eb;
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
@@ -983,7 +913,7 @@ const AdminProfile = () => {
           cursor: not-allowed;
         }
 
-        /* Responsive - Matching AdminDashboard */
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 1200px) {
           .form-grid {
             grid-template-columns: 1fr;
@@ -994,56 +924,94 @@ const AdminProfile = () => {
         }
 
         @media (max-width: 768px) {
+          .admin-profile {
+            height: auto;
+            overflow: auto;
+          }
+          
           .dashboard-layout {
-            margin-top: 120px;
-            height: calc(100vh - 120px);
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
           }
-          .sidebar-wrapper {
-            top: 120px;
-            height: calc(100vh - 120px);
+          
+          .sidebar-container {
+            position: relative;
+            top: 0;
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+            border-right: none;
+            border-bottom: 1px solid #e2e8f0;
           }
-          .main-wrapper {
+          
+          .main-container {
             margin-left: 0;
             width: 100%;
+            overflow-y: visible;
           }
-          .main-content {
+          
+          .content-wrapper {
             padding: 16px;
           }
+          
           .page-header {
             flex-direction: column;
             align-items: flex-start;
           }
+          
           .page-header h1 {
             font-size: 1.4rem;
           }
+          
           .form-card {
             padding: 20px;
           }
+          
           .profile-tabs {
             gap: 8px;
           }
+          
           .tab-btn {
             padding: 8px 16px;
             font-size: 0.8rem;
           }
+          
           .profile-image-container {
             width: 100px;
             height: 100px;
           }
+          
+          .form-actions {
+            flex-direction: column;
+          }
+          
+          .btn-submit {
+            width: 100%;
+            justify-content: center;
+          }
         }
 
         @media (max-width: 480px) {
-          .main-content {
+          .content-wrapper {
             padding: 12px;
           }
+          
           .form-card {
             padding: 16px;
           }
+          
           .profile-image-actions {
             flex-direction: column;
           }
+          
           .tab-btn span {
             display: none;
+          }
+          
+          .form-group {
+            gap: 4px;
           }
         }
       `}</style>

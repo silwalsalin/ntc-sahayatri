@@ -1,5 +1,5 @@
 // src/pages/StaffReportsDaily.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import StaffHeader from '../components/StaffHeader';
@@ -8,10 +8,10 @@ import StaffSidebar from '../components/StaffSidebar';
 const StaffReportsDaily = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportData, setReportData] = useState(null);
   const [backendStatus, setBackendStatus] = useState('checking');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const [staffData, setStaffData] = useState({
     id: null,
@@ -68,33 +68,8 @@ const StaffReportsDaily = () => {
     }
   };
 
-  // Fetch daily report
-  const fetchDailyReport = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('staffToken');
-      const response = await axios.get(`http://localhost:5000/api/staff/reports/daily?date=${selectedDate}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.data.success) {
-        setReportData(response.data.data);
-        setBackendStatus('connected');
-      } else {
-        setReportData(getSampleDailyReport());
-        setBackendStatus('disconnected');
-      }
-    } catch (error) {
-      console.error('Error fetching daily report:', error);
-      setReportData(getSampleDailyReport());
-      setBackendStatus('disconnected');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Get sample daily report with multi-language staff names
-  const getSampleDailyReport = () => {
+  const getSampleDailyReport = useCallback(() => {
     return {
       date: selectedDate,
       formattedDate: language === 'np' ? formatNepaliDate(selectedDate) : formatEnglishDate(selectedDate),
@@ -143,9 +118,38 @@ const StaffReportsDaily = () => {
         { time: '03:30 PM', action: language === 'np' ? 'दैनिक रिपोर्ट पेश गरियो' : 'Submitted daily report', type: 'report' }
       ]
     };
-  };
+  }, [selectedDate, language]);
 
-  // Check authentication
+  // Fetch daily report
+  const fetchDailyReport = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('staffToken');
+      if (!token) {
+        navigate('/');
+        return;
+      }
+      
+      const response = await axios.get(`http://localhost:5000/api/staff/reports/daily?date=${selectedDate}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        setReportData(response.data.data);
+        setBackendStatus('connected');
+      } else {
+        setReportData(getSampleDailyReport());
+        setBackendStatus('disconnected');
+      }
+    } catch (error) {
+      console.error('Error fetching daily report:', error);
+      setReportData(getSampleDailyReport());
+      setBackendStatus('disconnected');
+    } finally {
+      setIsInitialized(true);
+    }
+  }, [selectedDate, getSampleDailyReport, navigate]);
+
+  // Check authentication and initial load
   useEffect(() => {
     const token = localStorage.getItem('staffToken');
     const user = localStorage.getItem('staffUser');
@@ -155,20 +159,30 @@ const StaffReportsDaily = () => {
     } else {
       fetchDailyReport();
     }
-  }, [navigate]);
+  }, [navigate, fetchDailyReport]);
 
-  // Refresh when date changes
+  // Refresh when date changes (only after initialization)
   useEffect(() => {
-    if (selectedDate) {
+    if (isInitialized && selectedDate) {
       fetchDailyReport();
     }
-  }, [selectedDate, language]);
+  }, [selectedDate, isInitialized, fetchDailyReport]);
+
+  // Refresh when language changes (only after initialization)
+  useEffect(() => {
+    if (isInitialized && reportData) {
+      // Just update the sample data language without full reload
+      const updatedReport = getSampleDailyReport();
+      setReportData(updatedReport);
+    }
+  }, [language, isInitialized, reportData, getSampleDailyReport]);
 
   const handleDateChange = (e) => {
     setSelectedDate(e.target.value);
   };
 
   const handleExportReport = () => {
+    if (!reportData) return;
     const dataStr = JSON.stringify(reportData, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     const exportFileDefaultName = `daily_report_${selectedDate}.json`;
@@ -241,7 +255,6 @@ const StaffReportsDaily = () => {
       export: 'रिपोर्ट निर्यात गर्नुहोस्',
       print: 'प्रिन्ट गर्नुहोस्',
       refresh: 'रिफ्रेस',
-      loading: 'लोड हुँदै...',
       back: 'पछाडि फर्कनुहोस्',
       welcome: 'स्वागत छ',
       dashboard: 'ड्यासबोर्ड',
@@ -298,7 +311,6 @@ const StaffReportsDaily = () => {
       export: 'Export Report',
       print: 'Print',
       refresh: 'Refresh',
-      loading: 'Loading...',
       back: 'Back',
       welcome: 'Welcome',
       dashboard: 'Dashboard',
@@ -317,15 +329,6 @@ const StaffReportsDaily = () => {
   const getRoleDisplay = (staff) => {
     return language === 'np' ? staff.role : staff.enRole;
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="staff-reports-daily">
@@ -637,28 +640,6 @@ const StaffReportsDaily = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #0288d1;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         .dashboard-layout {

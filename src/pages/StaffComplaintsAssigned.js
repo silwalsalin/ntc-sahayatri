@@ -8,7 +8,6 @@ import StaffSidebar from '../components/StaffSidebar';
 const StaffComplaintsAssigned = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -73,7 +72,6 @@ const StaffComplaintsAssigned = () => {
 
   // Fetch assigned complaints
   const fetchAssignedComplaints = async () => {
-    setLoading(true);
     try {
       const token = getAuthToken();
       if (!token) {
@@ -122,8 +120,6 @@ const StaffComplaintsAssigned = () => {
         showToast('Session expired. Please login again.', 'error');
         setTimeout(() => navigate('/login'), 1500);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -412,7 +408,6 @@ const StaffComplaintsAssigned = () => {
       pendingCount: 'विचाराधीन',
       inProgressCount: 'प्रगतिमा',
       resolvedCount: 'समाधान',
-      loading: 'लोड हुँदै...',
       refresh: 'रिफ्रेस',
       welcome: 'स्वागत छ',
       dashboard: 'ड्यासबोर्ड',
@@ -473,7 +468,6 @@ const StaffComplaintsAssigned = () => {
       pendingCount: 'Pending',
       inProgressCount: 'In Progress',
       resolvedCount: 'Resolved',
-      loading: 'Loading...',
       refresh: 'Refresh',
       welcome: 'Welcome',
       dashboard: 'Dashboard',
@@ -603,19 +597,9 @@ const StaffComplaintsAssigned = () => {
   };
 
   const refreshData = () => {
-    setLoading(true);
     fetchAssignedComplaints();
     showToast(t.refresh, 'info');
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="staff-complaints-assigned">
@@ -1023,28 +1007,6 @@ const StaffComplaintsAssigned = () => {
         @keyframes slideInRight {
           from { transform: translateX(100%); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #0288d1;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         .dashboard-layout {

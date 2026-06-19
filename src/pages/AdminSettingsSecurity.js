@@ -7,7 +7,6 @@ import Sidebar from '../components/Sidebar';
 const AdminSettingsSecurity = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -101,8 +100,6 @@ const AdminSettingsSecurity = () => {
     const user = localStorage.getItem('adminUser');
     if (!token || !user) {
       navigate('/admin-login');
-    } else {
-      setTimeout(() => setLoading(false), 500);
     }
   }, [navigate]);
 
@@ -194,7 +191,6 @@ const AdminSettingsSecurity = () => {
       passwordMismatch: 'पासवर्ड मेल खाएन',
       passwordTooShort: 'पासवर्ड धेरै छोटो छ',
       passwordWeak: 'पासवर्ड कमजोर छ',
-      loading: 'लोड हुँदैछ...',
       lastPasswordChange: 'अन्तिम पासवर्ड परिवर्तन',
       lastLogin: 'अन्तिम लगइन',
       lastLoginIP: 'अन्तिम लगइन आईपी',
@@ -280,7 +276,6 @@ const AdminSettingsSecurity = () => {
       passwordMismatch: 'Passwords do not match',
       passwordTooShort: 'Password is too short',
       passwordWeak: 'Password is weak',
-      loading: 'Loading...',
       lastPasswordChange: 'Last Password Change',
       lastLogin: 'Last Login',
       lastLoginIP: 'Last Login IP',
@@ -395,15 +390,6 @@ const AdminSettingsSecurity = () => {
       backupCodesGenerated: true
     }));
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-security-settings">
@@ -1053,28 +1039,6 @@ const AdminSettingsSecurity = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         /* Dashboard Layout */

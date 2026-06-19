@@ -8,7 +8,6 @@ import Sidebar from '../components/Sidebar';
 const AdminNotifications = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedNotification, setSelectedNotification] = useState(null);
@@ -215,8 +214,6 @@ const AdminNotifications = () => {
       setBackendStatus('disconnected');
       // Load sample notifications if backend is not available
       loadSampleNotifications();
-    } finally {
-      setTimeout(() => setLoading(false), 500);
     }
   };
 
@@ -358,7 +355,6 @@ const AdminNotifications = () => {
       fillRequiredFields: 'कृपया सबै आवश्यक फिल्डहरू भर्नुहोस्',
       markReadSuccess: 'सूचना पढिएको रूपमा चिन्ह लगाइयो',
       deleteSuccess: 'सूचना सफलतापूर्वक हटाइयो',
-      loading: 'लोड हुँदैछ...',
       complaintDetails: 'गुनासो विवरण',
       ticketNumber: 'टिकेट नम्बर',
       complainant: 'उजुरीकर्ता',
@@ -404,7 +400,6 @@ const AdminNotifications = () => {
       fillRequiredFields: 'Please fill all required fields',
       markReadSuccess: 'Notification marked as read',
       deleteSuccess: 'Notification deleted successfully',
-      loading: 'Loading...',
       complaintDetails: 'Complaint Details',
       ticketNumber: 'Ticket Number',
       complainant: 'Complainant',
@@ -645,19 +640,9 @@ const AdminNotifications = () => {
   };
 
   const refreshData = () => {
-    setLoading(true);
     setCurrentPage(1);
     fetchComplaintsAndCreateNotifications();
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-notifications">
@@ -1085,28 +1070,6 @@ const AdminNotifications = () => {
           text-align: center;
           z-index: 100;
           font-size: 0.8rem;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         .dashboard-layout {

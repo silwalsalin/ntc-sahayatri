@@ -8,7 +8,6 @@ import Sidebar from '../components/Sidebar';
 const AdminComplaintsInProgress = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -123,7 +122,6 @@ const AdminComplaintsInProgress = () => {
 
   // Fetch all in-progress complaints from both tables
   const fetchInProgressComplaints = useCallback(async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -173,8 +171,6 @@ const AdminComplaintsInProgress = () => {
       console.error('Error fetching in-progress complaints:', error);
       setBackendStatus('disconnected');
       setAllInProgressComplaints([]);
-    } finally {
-      setLoading(false);
     }
   }, [API_URL]);
 
@@ -419,7 +415,6 @@ const AdminComplaintsInProgress = () => {
       updateStatus: 'स्थिति अपडेट गर्नुहोस्',
       updateSuccess: 'प्रगति सफलतापूर्वक अपडेट गरियो',
       resolveSuccess: 'गुनासो समाधान भएको रूपमा चिन्ह लगाइयो',
-      loading: 'लोड हुँदै...',
       refresh: 'रिफ्रेस',
       updateStatusTitle: 'स्थिति अपडेट गर्नुहोस्',
       selectNewStatus: 'नयाँ स्थिति चयन गर्नुहोस्',
@@ -491,7 +486,6 @@ const AdminComplaintsInProgress = () => {
       updateStatus: 'Update Status',
       updateSuccess: 'Progress updated successfully',
       resolveSuccess: 'Complaint marked as resolved',
-      loading: 'Loading...',
       refresh: 'Refresh',
       updateStatusTitle: 'Update Status',
       selectNewStatus: 'Select New Status',
@@ -689,7 +683,6 @@ const AdminComplaintsInProgress = () => {
 
   // Refresh data
   const refreshData = () => {
-    setLoading(true);
     setCurrentPage(1);
     fetchInProgressComplaints();
     showToast(language === 'np' ? 'डाटा रिफ्रेस गरियो' : 'Data refreshed', 'info');
@@ -707,15 +700,6 @@ const AdminComplaintsInProgress = () => {
     assigned: allInProgressComplaints.filter(c => hasAssignedStaff(c)).length,
     unassigned: allInProgressComplaints.filter(c => !hasAssignedStaff(c)).length
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-inprogress-complaints">
@@ -1220,28 +1204,6 @@ const AdminComplaintsInProgress = () => {
           text-align: center;
           z-index: 100;
           font-size: 0.85rem;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         /* ===== LAYOUT - Same as AdminDashboard ===== */

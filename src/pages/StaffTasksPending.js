@@ -8,7 +8,6 @@ import StaffSidebar from '../components/StaffSidebar';
 const StaffTasksPending = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [selectedTask, setSelectedTask] = useState(null);
@@ -60,7 +59,6 @@ const StaffTasksPending = () => {
 
   // Fetch pending tasks
   const fetchPendingTasks = async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('staffToken');
       const response = await axios.get('http://localhost:5000/api/staff/tasks/pending', {
@@ -82,8 +80,6 @@ const StaffTasksPending = () => {
       setTasks(getSamplePendingTasks());
       calculateStats(getSamplePendingTasks());
       setBackendStatus('disconnected');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -386,7 +382,6 @@ const StaffTasksPending = () => {
       lowPriority: 'न्यून प्राथमिकता',
       urgentPriority: 'अत्यावश्यक',
       overdue: 'म्याद गुज्रेको',
-      loading: 'लोड हुँदै...',
       refresh: 'रिफ्रेस',
       welcome: 'स्वागत छ',
       dashboard: 'ड्यासबोर्ड',
@@ -434,7 +429,6 @@ const StaffTasksPending = () => {
       lowPriority: 'Low Priority',
       urgentPriority: 'Urgent',
       overdue: 'Overdue',
-      loading: 'Loading...',
       refresh: 'Refresh',
       welcome: 'Welcome',
       dashboard: 'Dashboard',
@@ -589,15 +583,6 @@ const StaffTasksPending = () => {
     localStorage.removeItem('staffRole');
     navigate('/');
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="staff-tasks-pending">
@@ -917,28 +902,6 @@ const StaffTasksPending = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #0288d1;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         .dashboard-layout {

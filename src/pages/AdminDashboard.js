@@ -8,7 +8,6 @@ import Sidebar from '../components/Sidebar';
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [stats, setStats] = useState({
@@ -44,12 +43,10 @@ const AdminDashboard = () => {
 
   // Fetch data from backend
   const fetchData = async () => {
-    setLoading(true);
     try {
       const token = getAuthToken();
       if (!token) {
         setBackendStatus('disconnected');
-        setLoading(false);
         return;
       }
 
@@ -111,8 +108,6 @@ const AdminDashboard = () => {
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
         datasets: [65, 78, 82, 74, 88, 92]
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -333,7 +328,6 @@ const AdminDashboard = () => {
       actions: 'कार्यहरू',
       viewDetails: 'विवरण',
       monthlyTrend: 'मासिक प्रवृत्ति',
-      loading: 'लोड हुँदैछ...',
       backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।',
       refresh: 'रिफ्रेस',
       complaintDetails: 'गुनासोको विवरण',
@@ -375,7 +369,6 @@ const AdminDashboard = () => {
       actions: 'Actions',
       viewDetails: 'View',
       monthlyTrend: 'Monthly Trend',
-      loading: 'Loading...',
       backendNotConnected: 'Backend server not connected. Showing sample data.',
       refresh: 'Refresh',
       complaintDetails: 'Complaint Details',
@@ -455,15 +448,6 @@ const AdminDashboard = () => {
     fetchData();
     showToast(language === 'np' ? 'डाटा रिफ्रेस गरियो' : 'Data refreshed', 'info');
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-dashboard">
@@ -832,28 +816,6 @@ const AdminDashboard = () => {
           z-index: 100;
           font-size: 0.85rem;
           font-weight: 500;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         /* ===== LAYOUT - Same as AdminAnalytics ===== */

@@ -7,7 +7,6 @@ import Sidebar from '../components/Sidebar';
 const AdminDocumentation = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('getting-started');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -17,8 +16,6 @@ const AdminDocumentation = () => {
     const user = localStorage.getItem('adminUser');
     if (!token || !user) {
       navigate('/admin-login');
-    } else {
-      setTimeout(() => setLoading(false), 500);
     }
   }, [navigate]);
 
@@ -58,8 +55,7 @@ const AdminDocumentation = () => {
       wasThisHelpful: 'के यो सहायक थियो?',
       yes: 'हो',
       no: 'होइन',
-      feedback: 'प्रतिक्रिया',
-      loading: 'लोड हुँदैछ...'
+      feedback: 'प्रतिक्रिया'
     },
     en: {
       documentation: 'Documentation',
@@ -96,8 +92,7 @@ const AdminDocumentation = () => {
       wasThisHelpful: 'Was this helpful?',
       yes: 'Yes',
       no: 'No',
-      feedback: 'Feedback',
-      loading: 'Loading...'
+      feedback: 'Feedback'
     }
   };
 
@@ -435,15 +430,6 @@ const AdminDocumentation = () => {
     alert(helpful ? t.yes : t.no);
   };
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="admin-documentation">
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
@@ -573,28 +559,6 @@ const AdminDocumentation = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         /* Dashboard Layout */

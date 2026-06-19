@@ -8,7 +8,6 @@ import Sidebar from '../components/Sidebar';
 const AdminSettingsGeneral = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -110,12 +109,10 @@ const AdminSettingsGeneral = () => {
   // Fetch all settings from backend
   const fetchSettings = async () => {
     try {
-      setLoading(true);
       const token = getAuthToken();
       
       if (!token) {
         console.error('No auth token found');
-        setLoading(false);
         return;
       }
       
@@ -164,8 +161,6 @@ const AdminSettingsGeneral = () => {
         language === 'np' ? 'सेटिङ्स लोड गर्न असफल। पूर्वनिर्धारित मान प्रयोग गरिँदै।' : 'Failed to load settings. Using defaults.', 
         'error'
       );
-    } finally {
-      setTimeout(() => setLoading(false), 500);
     }
   };
 
@@ -636,7 +631,6 @@ const AdminSettingsGeneral = () => {
       none: 'कुनै पनि होइन',
       hours12: '१२ घण्टा',
       hours24: '२४ घण्टा',
-      loading: 'लोड हुँदैछ...',
       testEmail: 'परीक्षण इमेल पठाउनुहोस्',
       backupNow: 'अहिले ब्याकअप गर्नुहोस्',
       english: 'अंग्रेजी',
@@ -716,7 +710,6 @@ const AdminSettingsGeneral = () => {
       none: 'None',
       hours12: '12 Hours',
       hours24: '24 Hours',
-      loading: 'Loading...',
       testEmail: 'Send Test Email',
       backupNow: 'Backup Now',
       english: 'English',
@@ -739,15 +732,6 @@ const AdminSettingsGeneral = () => {
     { id: 'backup', label: t.backup, icon: '💾' },
     { id: 'notifications', label: t.notifications, icon: '🔔' }
   ];
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-settings">
@@ -1502,28 +1486,6 @@ const AdminSettingsGeneral = () => {
         @keyframes slideInRight {
           from { transform: translateX(100%); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         /* ===== LAYOUT - Same as AdminDashboard ===== */

@@ -8,7 +8,6 @@ import Sidebar from '../components/Sidebar';
 const AdminComplaintsResolved = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -94,7 +93,6 @@ const AdminComplaintsResolved = () => {
 
   // Fetch resolved complaints from both tables
   const fetchResolvedComplaints = useCallback(async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -144,8 +142,6 @@ const AdminComplaintsResolved = () => {
       console.error('Error fetching resolved complaints:', error);
       setBackendStatus('disconnected');
       setAllResolvedComplaints([]);
-    } finally {
-      setLoading(false);
     }
   }, [API_URL]);
 
@@ -362,7 +358,6 @@ const AdminComplaintsResolved = () => {
       good: 'राम्रो',
       average: 'सामान्य',
       poor: 'कमजोर',
-      loading: 'लोड हुँदै...',
       refresh: 'रिफ्रेस',
       complaintInfo: 'गुनासो जानकारी',
       complainantInfo: 'उजुरीकर्ताको जानकारी',
@@ -425,7 +420,6 @@ const AdminComplaintsResolved = () => {
       good: 'Good',
       average: 'Average',
       poor: 'Poor',
-      loading: 'Loading...',
       refresh: 'Refresh',
       complaintInfo: 'Complaint Information',
       complainantInfo: 'Complainant Information',
@@ -595,7 +589,6 @@ const AdminComplaintsResolved = () => {
 
   // Refresh data
   const refreshData = () => {
-    setLoading(true);
     setCurrentPage(1);
     fetchResolvedComplaints();
     showToast(language === 'np' ? 'डाटा रिफ्रेस गरियो' : 'Data refreshed', 'info');
@@ -616,15 +609,6 @@ const AdminComplaintsResolved = () => {
     }
     return stars;
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-resolved-complaints">
@@ -1047,28 +1031,6 @@ const AdminComplaintsResolved = () => {
           text-align: center;
           z-index: 100;
           font-size: 0.85rem;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         /* ===== LAYOUT - Same as AdminDashboard ===== */

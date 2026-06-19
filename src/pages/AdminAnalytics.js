@@ -7,7 +7,6 @@ import Sidebar from '../components/Sidebar';
 const AdminAnalytics = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [timePeriod, setTimePeriod] = useState('month');
 
   // Analytics data
@@ -79,8 +78,6 @@ const AdminAnalytics = () => {
     const user = localStorage.getItem('adminUser');
     if (!token || !user) {
       navigate('/admin-login');
-    } else {
-      setTimeout(() => setLoading(false), 500);
     }
   }, [navigate]);
 
@@ -111,8 +108,7 @@ const AdminAnalytics = () => {
       refresh: 'रिफ्रेस',
       vsLastMonth: 'गत महिना भन्दा',
       hours: 'घण्टा',
-      days: 'दिन',
-      loading: 'लोड हुँदैछ...'
+      days: 'दिन'
     },
     en: {
       analytics: 'Analytics',
@@ -140,8 +136,7 @@ const AdminAnalytics = () => {
       refresh: 'Refresh',
       vsLastMonth: 'vs last month',
       hours: 'hours',
-      days: 'days',
-      loading: 'Loading...'
+      days: 'days'
     }
   };
 
@@ -173,8 +168,8 @@ const AdminAnalytics = () => {
   };
 
   const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 800);
+    // Just refresh the data without loading state
+    alert(language === 'np' ? 'डाटा रिफ्रेस गरियो' : 'Data refreshed');
   };
 
   // Calculate max values for charts
@@ -182,15 +177,6 @@ const AdminAnalytics = () => {
   const maxDayCount = Math.max(...analyticsData.dayWiseDistribution.map(d => d.count));
   const maxTrendValue = Math.max(...analyticsData.trends.complaints);
   const totalCategories = analyticsData.categories.data.reduce((a, b) => a + b, 0);
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-analytics">
@@ -475,28 +461,6 @@ const AdminAnalytics = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         /* Dashboard Layout */

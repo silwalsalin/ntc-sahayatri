@@ -8,7 +8,6 @@ import Sidebar from '../components/Sidebar';
 const AdminUsers = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -120,7 +119,6 @@ const AdminUsers = () => {
   // Extract unique users from complaints and fetch existing users
   const fetchUsers = async () => {
     try {
-      setLoading(true);
       const token = getAuthToken();
       const headers = { Authorization: `Bearer ${token}` };
       
@@ -271,8 +269,6 @@ const AdminUsers = () => {
       setBackendStatus('disconnected');
       // Show sample data if backend is not available
       setUsers(getSampleUsersWithComplaints());
-    } finally {
-      setTimeout(() => setLoading(false), 500);
     }
   };
 
@@ -494,7 +490,6 @@ const AdminUsers = () => {
       invalidPhone: 'कृपया मान्य फोन नम्बर प्रविष्ट गर्नुहोस्',
       confirmDelete: 'के तपाईं यो प्रयोगकर्ता हटाउन निश्चित हुनुहुन्छ?',
       userDeleted: 'प्रयोगकर्ता सफलतापूर्वक हटाइयो',
-      loading: 'लोड हुँदै...',
       refresh: 'रिफ्रेस',
       backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।',
       viewUserComplaints: 'गुनासोहरू हेर्नुहोस्',
@@ -556,7 +551,6 @@ const AdminUsers = () => {
       invalidPhone: 'Please enter a valid phone number',
       confirmDelete: 'Are you sure you want to delete this user?',
       userDeleted: 'User deleted successfully',
-      loading: 'Loading...',
       refresh: 'Refresh',
       backendNotConnected: 'Backend server not connected. Showing sample data.',
       viewUserComplaints: 'View Complaints',
@@ -895,19 +889,9 @@ const AdminUsers = () => {
   };
 
   const refreshData = () => {
-    setLoading(true);
     setCurrentPage(1);
     fetchUsers();
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-users">
@@ -1441,28 +1425,6 @@ const AdminUsers = () => {
           text-align: center;
           z-index: 100;
           font-size: 0.8rem;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #3b82f6;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         .dashboard-layout {
