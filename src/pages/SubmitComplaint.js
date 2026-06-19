@@ -634,7 +634,7 @@ const SubmitComplaint = () => {
             </button>
           </div>
           <div className="login-btn-right">
-            <button className="login-btn" onClick={() => navigate('/admin-login')}>
+            <button className="login-btn" onClick={() => navigate('/login')}>
               <span className="login-icon">🔐</span>
               <span className="login-text">{t.login}</span>
             </button>

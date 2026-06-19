@@ -321,7 +321,7 @@ const TrackComplaint = () => {
             </button>
           </div>
           <div className="login-btn-right">
-            <button className="login-btn" onClick={() => navigate('/admin')}>
+            <button className="login-btn" onClick={() => navigate('/login')}>
               <span className="login-icon">🔐</span>
               <span className="login-text">{t.login}</span>
             </button>
