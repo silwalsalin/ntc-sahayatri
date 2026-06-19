@@ -8,7 +8,6 @@ import StaffSidebar from '../components/StaffSidebar';
 const StaffDocumentation = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedArticle, setSelectedArticle] = useState(null);
@@ -67,7 +66,6 @@ const StaffDocumentation = () => {
 
   // Fetch documentation
   const fetchDocumentation = async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('staffToken');
       const response = await axios.get('http://localhost:5000/api/staff/documentation', {
@@ -97,8 +95,6 @@ const StaffDocumentation = () => {
       setVideoTutorials(getSampleVideos());
       setAnnouncements(getSampleAnnouncements());
       setBackendStatus('disconnected');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -440,7 +436,6 @@ const StaffDocumentation = () => {
       yes: 'हो',
       no: 'होइन',
       backToDocs: 'कागजातमा फर्कनुहोस्',
-      loading: 'लोड हुँदै...',
       refresh: 'रिफ्रेस',
       welcome: 'स्वागत छ',
       dashboard: 'ड्यासबोर्ड',
@@ -495,7 +490,6 @@ const StaffDocumentation = () => {
       yes: 'Yes',
       no: 'No',
       backToDocs: 'Back to Documentation',
-      loading: 'Loading...',
       refresh: 'Refresh',
       welcome: 'Welcome',
       dashboard: 'Dashboard',
@@ -547,15 +541,6 @@ const StaffDocumentation = () => {
     const category = categories.find(c => c.id === categoryId);
     return category ? category.color : '#64748b';
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="staff-documentation">
@@ -937,28 +922,6 @@ const StaffDocumentation = () => {
         @keyframes slideInRight {
           from { transform: translateX(100%); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #0288d1;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         .dashboard-layout {
@@ -1882,13 +1845,22 @@ const StaffDocumentation = () => {
         }
 
         @media (max-width: 768px) {
+          .staff-documentation {
+            height: auto;
+            overflow: auto;
+          }
+          
           .dashboard-layout {
             flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
           }
           
           .main-content {
             margin-left: 0;
             width: 100%;
+            overflow-y: visible;
           }
           
           .content-wrapper {
@@ -1927,6 +1899,29 @@ const StaffDocumentation = () => {
           
           .sort-dropdown {
             justify-content: center;
+          }
+          
+          .article-card {
+            padding: 16px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .categories-grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .content-wrapper {
+            padding: 12px;
+          }
+          
+          .modal-content {
+            max-width: 95%;
+            margin: 10px;
+          }
+          
+          .modal-header h2 {
+            font-size: 1rem;
           }
         }
       `}</style>

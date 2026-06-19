@@ -8,7 +8,6 @@ import StaffSidebar from '../components/StaffSidebar';
 const StaffAccountSettings = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [backendStatus, setBackendStatus] = useState('checking');
@@ -91,7 +90,6 @@ const StaffAccountSettings = () => {
 
   // Fetch account settings
   const fetchAccountSettings = async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('staffToken');
       const response = await axios.get('http://localhost:5000/api/staff/account-settings', {
@@ -118,8 +116,6 @@ const StaffAccountSettings = () => {
       setPrivacySettings(getSamplePrivacySettings());
       setSessionData(getSampleSessionData());
       setBackendStatus('disconnected');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -436,7 +432,6 @@ const StaffAccountSettings = () => {
       save: 'सुरक्षित गर्नुहोस्',
       saving: 'सुरक्षित हुँदै...',
       refresh: 'रिफ्रेस',
-      loading: 'लोड हुँदै...',
       back: 'पछाडि फर्कनुहोस्'
     },
     en: {
@@ -496,21 +491,11 @@ const StaffAccountSettings = () => {
       save: 'Save',
       saving: 'Saving...',
       refresh: 'Refresh',
-      loading: 'Loading...',
       back: 'Back'
     }
   };
 
   const t = content[language];
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="staff-account-settings">
@@ -978,28 +963,6 @@ const StaffAccountSettings = () => {
           position: relative;
         }
 
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #0288d1;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-
         .dashboard-layout {
           display: flex;
           height: calc(100vh - 195px);
@@ -1448,13 +1411,22 @@ const StaffAccountSettings = () => {
         }
 
         @media (max-width: 768px) {
+          .staff-account-settings {
+            height: auto;
+            overflow: auto;
+          }
+          
           .dashboard-layout {
             flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
           }
           
           .main-content {
             margin-left: 0;
             width: 100%;
+            overflow-y: visible;
           }
           
           .content-wrapper {
@@ -1495,6 +1467,34 @@ const StaffAccountSettings = () => {
             background: #0288d1;
             color: white;
             border-bottom: none;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .content-wrapper {
+            padding: 12px;
+          }
+          
+          .settings-card {
+            border-radius: 12px;
+          }
+          
+          .settings-card h3 {
+            padding: 16px;
+            font-size: 1rem;
+          }
+          
+          .form-section {
+            padding: 16px;
+          }
+          
+          .form-actions {
+            padding: 16px;
+          }
+          
+          .btn-save {
+            width: 100%;
+            justify-content: center;
           }
         }
       `}</style>

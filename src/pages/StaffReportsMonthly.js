@@ -8,7 +8,6 @@ import StaffSidebar from '../components/StaffSidebar';
 const StaffReportsMonthly = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [reportData, setReportData] = useState(null);
   const [backendStatus, setBackendStatus] = useState('checking');
@@ -91,7 +90,6 @@ const StaffReportsMonthly = () => {
 
   // Fetch monthly report
   const fetchMonthlyReport = async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('staffToken');
       const response = await axios.get(`http://localhost:5000/api/staff/reports/monthly?month=${selectedMonth}`, {
@@ -109,8 +107,6 @@ const StaffReportsMonthly = () => {
       console.error('Error fetching monthly report:', error);
       setReportData(getSampleMonthlyReport());
       setBackendStatus('disconnected');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -325,7 +321,6 @@ const StaffReportsMonthly = () => {
       export: 'रिपोर्ट निर्यात गर्नुहोस्',
       print: 'प्रिन्ट गर्नुहोस्',
       refresh: 'रिफ्रेस',
-      loading: 'लोड हुँदै...',
       hours: 'घण्टा',
       days: 'दिन',
       barChart: 'बार चार्ट',
@@ -387,7 +382,6 @@ const StaffReportsMonthly = () => {
       export: 'Export Report',
       print: 'Print',
       refresh: 'Refresh',
-      loading: 'Loading...',
       hours: 'hours',
       days: 'days',
       barChart: 'Bar Chart',
@@ -396,15 +390,6 @@ const StaffReportsMonthly = () => {
   };
 
   const t = content[language];
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   const monthOptions = getMonthOptions();
   const maxWeeklyValue = Math.max(...(reportData?.weeklyBreakdown?.map(w => w.complaints) || [0]));
@@ -897,28 +882,6 @@ const StaffReportsMonthly = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #0288d1;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         .dashboard-layout {
@@ -1588,13 +1551,22 @@ const StaffReportsMonthly = () => {
         }
 
         @media (max-width: 768px) {
+          .staff-reports-monthly {
+            height: auto;
+            overflow: auto;
+          }
+          
           .dashboard-layout {
             flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
           }
           
           .main-content {
             margin-left: 0;
             width: 100%;
+            overflow-y: visible;
           }
           
           .content-wrapper {
@@ -1624,6 +1596,24 @@ const StaffReportsMonthly = () => {
           }
           
           .bar {
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .content-wrapper {
+            padding: 12px;
+          }
+          
+          .summary-card {
+            padding: 12px;
+          }
+          
+          .summary-value {
+            font-size: 1rem;
+          }
+          
+          .month-select {
             width: 100%;
           }
         }

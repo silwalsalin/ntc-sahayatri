@@ -8,7 +8,6 @@ import StaffSidebar from '../components/StaffSidebar';
 const StaffProfile = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [backendStatus, setBackendStatus] = useState('checking');
@@ -75,7 +74,6 @@ const StaffProfile = () => {
 
   // Fetch staff profile - this fetches the profile of the logged-in staff only
   const fetchProfile = async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('staffToken');
       const response = await axios.get('http://localhost:5000/api/staff/profile', {
@@ -106,8 +104,6 @@ const StaffProfile = () => {
       setStaffData(getSampleProfile());
       setFormData(getSampleProfile());
       setBackendStatus('disconnected');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -338,7 +334,6 @@ const StaffProfile = () => {
       updateSettings: 'सेटिङ्स अपडेट गर्नुहोस्',
       cancel: 'रद्द गर्नुहोस्',
       save: 'सुरक्षित गर्नुहोस्',
-      loading: 'लोड हुँदै...',
       refresh: 'रिफ्रेस',
       welcome: 'स्वागत छ',
       dashboard: 'ड्यासबोर्ड',
@@ -388,7 +383,6 @@ const StaffProfile = () => {
       updateSettings: 'Update Settings',
       cancel: 'Cancel',
       save: 'Save',
-      loading: 'Loading...',
       refresh: 'Refresh',
       welcome: 'Welcome',
       dashboard: 'Dashboard',
@@ -398,15 +392,6 @@ const StaffProfile = () => {
   };
 
   const t = content[language];
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="staff-profile">
@@ -686,7 +671,7 @@ const StaffProfile = () => {
                       onClick={updateProfile}
                       disabled={updating}
                     >
-                      {updating ? t.loading : t.updateProfile}
+                      {updating ? 'Saving...' : t.updateProfile}
                     </button>
                   </div>
                 </div>
@@ -802,7 +787,7 @@ const StaffProfile = () => {
                       onClick={updateNotificationSettings}
                       disabled={updating}
                     >
-                      {updating ? t.loading : t.updateSettings}
+                      {updating ? 'Saving...' : t.updateSettings}
                     </button>
                   </div>
                 </div>
@@ -853,7 +838,7 @@ const StaffProfile = () => {
                       onClick={changePassword}
                       disabled={updating}
                     >
-                      {updating ? t.loading : t.updatePassword}
+                      {updating ? 'Saving...' : t.updatePassword}
                     </button>
                   </div>
                 </div>
@@ -877,28 +862,6 @@ const StaffProfile = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #0288d1;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         .dashboard-layout {
@@ -1299,13 +1262,22 @@ const StaffProfile = () => {
         }
 
         @media (max-width: 768px) {
+          .staff-profile {
+            height: auto;
+            overflow: auto;
+          }
+          
           .dashboard-layout {
             flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
           }
           
           .main-content {
             margin-left: 0;
             width: 100%;
+            overflow-y: visible;
           }
           
           .content-wrapper {
@@ -1350,6 +1322,25 @@ const StaffProfile = () => {
           
           .form-actions {
             justify-content: center;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .content-wrapper {
+            padding: 12px;
+          }
+          
+          .profile-avatar {
+            width: 80px;
+            height: 80px;
+          }
+          
+          .avatar-icon {
+            font-size: 2.2rem;
+          }
+          
+          .profile-header {
+            padding: 16px;
           }
         }
       `}</style>

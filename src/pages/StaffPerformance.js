@@ -8,7 +8,6 @@ import StaffSidebar from '../components/StaffSidebar';
 const StaffPerformance = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('monthly');
   const [performanceData, setPerformanceData] = useState(null);
   const [backendStatus, setBackendStatus] = useState('checking');
@@ -48,7 +47,6 @@ const StaffPerformance = () => {
 
   // Fetch performance data
   const fetchPerformanceData = async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('staffToken');
       const response = await axios.get(`http://localhost:5000/api/staff/performance?period=${selectedPeriod}`, {
@@ -66,8 +64,6 @@ const StaffPerformance = () => {
       console.error('Error fetching performance data:', error);
       setPerformanceData(getSamplePerformanceData());
       setBackendStatus('disconnected');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -239,7 +235,6 @@ const StaffPerformance = () => {
       export: 'रिपोर्ट निर्यात गर्नुहोस्',
       print: 'प्रिन्ट गर्नुहोस्',
       refresh: 'रिफ्रेस',
-      loading: 'लोड हुँदै...',
       back: 'पछाडि फर्कनुहोस्',
       welcome: 'स्वागत छ',
       dashboard: 'ड्यासबोर्ड',
@@ -295,7 +290,6 @@ const StaffPerformance = () => {
       export: 'Export Report',
       print: 'Print',
       refresh: 'Refresh',
-      loading: 'Loading...',
       back: 'Back',
       welcome: 'Welcome',
       dashboard: 'Dashboard',
@@ -309,15 +303,6 @@ const StaffPerformance = () => {
   };
 
   const t = content[language];
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   const currentData = selectedPeriod === 'weekly' ? performanceData?.weeklyBreakdown : performanceData?.monthlyBreakdown;
   const maxResolved = Math.max(...(currentData?.map(item => item.resolved) || [0]));
@@ -613,28 +598,6 @@ const StaffPerformance = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #0288d1;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         .dashboard-layout {
@@ -1246,13 +1209,22 @@ const StaffPerformance = () => {
         }
 
         @media (max-width: 768px) {
+          .staff-performance {
+            height: auto;
+            overflow: auto;
+          }
+          
           .dashboard-layout {
             flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
           }
           
           .main-content {
             margin-left: 0;
             width: 100%;
+            overflow-y: visible;
           }
           
           .content-wrapper {
@@ -1294,6 +1266,38 @@ const StaffPerformance = () => {
           .feedback-header {
             flex-direction: column;
             align-items: flex-start;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .content-wrapper {
+            padding: 12px;
+          }
+          
+          .summary-card {
+            padding: 12px;
+          }
+          
+          .summary-value {
+            font-size: 1rem;
+          }
+          
+          .staff-avatar {
+            width: 60px;
+            height: 60px;
+          }
+          
+          .avatar-icon {
+            font-size: 1.8rem;
+          }
+          
+          .score-circle {
+            width: 60px;
+            height: 60px;
+          }
+          
+          .score-value {
+            font-size: 1.3rem;
           }
         }
       `}</style>

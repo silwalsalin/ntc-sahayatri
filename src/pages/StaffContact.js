@@ -8,7 +8,6 @@ import StaffSidebar from '../components/StaffSidebar';
 const StaffContact = () => {
   const navigate = useNavigate();
   const [language, setLanguage] = useState('np');
-  const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [backendStatus, setBackendStatus] = useState('checking');
   const [activeTab, setActiveTab] = useState('contact');
@@ -58,7 +57,6 @@ const StaffContact = () => {
 
   // Fetch contact data
   const fetchContactData = async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('staffToken');
       const response = await axios.get('http://localhost:5000/api/staff/contact', {
@@ -82,8 +80,6 @@ const StaffContact = () => {
       setSupportTickets(getSampleTickets());
       setTeamMembers(getSampleTeamMembers());
       setBackendStatus('disconnected');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -299,7 +295,6 @@ const StaffContact = () => {
       noMessages: 'कुनै सन्देश छैन',
       noTickets: 'कुनै टिकट छैन',
       refresh: 'रिफ्रेस',
-      loading: 'लोड हुँदै...',
       back: 'पछाडि फर्कनुहोस्',
       welcome: 'स्वागत छ',
       dashboard: 'ड्यासबोर्ड',
@@ -360,7 +355,6 @@ const StaffContact = () => {
       noMessages: 'No messages',
       noTickets: 'No tickets',
       refresh: 'Refresh',
-      loading: 'Loading...',
       back: 'Back',
       welcome: 'Welcome',
       dashboard: 'Dashboard',
@@ -379,15 +373,6 @@ const StaffContact = () => {
   };
 
   const t = content[language];
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="staff-contact">
@@ -805,28 +790,6 @@ const StaffContact = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
-        }
-
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100vh;
-          gap: 16px;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #0288d1;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
         }
 
         .dashboard-layout {
@@ -1440,13 +1403,22 @@ const StaffContact = () => {
         }
 
         @media (max-width: 768px) {
+          .staff-contact {
+            height: auto;
+            overflow: auto;
+          }
+          
           .dashboard-layout {
             flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
           }
           
           .main-content {
             margin-left: 0;
             width: 100%;
+            overflow-y: visible;
           }
           
           .content-wrapper {
@@ -1484,6 +1456,31 @@ const StaffContact = () => {
             background: #0288d1;
             color: white;
             border-bottom: none;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .content-wrapper {
+            padding: 12px;
+          }
+          
+          .form-card {
+            padding: 16px;
+          }
+          
+          .tickets-table th,
+          .tickets-table td {
+            padding: 8px;
+            font-size: 0.7rem;
+          }
+          
+          .team-card {
+            flex-direction: column;
+            text-align: center;
+          }
+          
+          .team-contact {
+            justify-content: center;
           }
         }
       `}</style>
