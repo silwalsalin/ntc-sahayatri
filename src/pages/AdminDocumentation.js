@@ -9,6 +9,7 @@ const AdminDocumentation = () => {
   const [language, setLanguage] = useState('np');
   const [activeSection, setActiveSection] = useState('getting-started');
   const [searchTerm, setSearchTerm] = useState('');
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   // Check authentication
   useEffect(() => {
@@ -18,6 +19,12 @@ const AdminDocumentation = () => {
       navigate('/admin-login');
     }
   }, [navigate]);
+
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
 
   const content = {
     np: {
@@ -55,7 +62,11 @@ const AdminDocumentation = () => {
       wasThisHelpful: 'के यो सहायक थियो?',
       yes: 'हो',
       no: 'होइन',
-      feedback: 'प्रतिक्रिया'
+      feedback: 'प्रतिक्रिया',
+      downloadStarted: 'पीडीएफ डाउनलोड सुरु भयो...',
+      emailSupportMessage: 'इमेल सहायता: support@ntc.gov.np',
+      phoneSupportMessage: 'फोन सहायता: 01-4960008',
+      thankYouFeedback: 'धन्यवाद! तपाईंको प्रतिक्रिया दर्ता भयो।'
     },
     en: {
       documentation: 'Documentation',
@@ -92,7 +103,11 @@ const AdminDocumentation = () => {
       wasThisHelpful: 'Was this helpful?',
       yes: 'Yes',
       no: 'No',
-      feedback: 'Feedback'
+      feedback: 'Feedback',
+      downloadStarted: 'PDF download started...',
+      emailSupportMessage: 'Email Support: support@ntc.gov.np',
+      phoneSupportMessage: 'Phone Support: 01-4960008',
+      thankYouFeedback: 'Thank you! Your feedback has been recorded.'
     }
   };
 
@@ -423,15 +438,34 @@ const AdminDocumentation = () => {
   };
 
   const handleDownloadPDF = () => {
-    alert(t.downloadPDF);
+    showToast(t.downloadStarted, 'success');
   };
 
   const handleFeedback = (helpful) => {
-    alert(helpful ? t.yes : t.no);
+    showToast(t.thankYouFeedback, 'success');
+  };
+
+  const handleEmailSupport = () => {
+    showToast(t.emailSupportMessage, 'info');
+  };
+
+  const handlePhoneSupport = () => {
+    showToast(t.phoneSupportMessage, 'info');
   };
 
   return (
     <div className="admin-documentation">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
       <div className="dashboard-layout">
@@ -492,10 +526,10 @@ const AdminDocumentation = () => {
                     <button className="contact-option" onClick={() => navigate('/admin-contact')}>
                       <span>💬</span> {t.liveChat}
                     </button>
-                    <button className="contact-option" onClick={() => alert(t.emailSupport)}>
+                    <button className="contact-option" onClick={handleEmailSupport}>
                       <span>✉️</span> {t.emailSupport}
                     </button>
-                    <button className="contact-option" onClick={() => alert(t.phoneSupport)}>
+                    <button className="contact-option" onClick={handlePhoneSupport}>
                       <span>📞</span> {t.phoneSupport}
                     </button>
                   </div>
@@ -559,6 +593,45 @@ const AdminDocumentation = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 80px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 400px;
+          min-width: 280px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         /* Dashboard Layout */
@@ -1023,6 +1096,15 @@ const AdminDocumentation = () => {
           
           .doc-header h1 {
             font-size: 1.4rem;
+          }
+
+          .toast-notification {
+            top: auto;
+            bottom: 20px;
+            right: 20px;
+            left: 20px;
+            max-width: calc(100% - 40px);
+            min-width: auto;
           }
         }
 

@@ -10,6 +10,7 @@ const AdminContact = () => {
   const [sending, setSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState('support');
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   // Contact form state
   const [formData, setFormData] = useState({
@@ -22,6 +23,12 @@ const AdminContact = () => {
   });
 
   const [formErrors, setFormErrors] = useState({});
+
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
 
   // Check authentication
   useEffect(() => {
@@ -177,6 +184,7 @@ const AdminContact = () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     setSending(false);
     setSendSuccess(true);
+    showToast(t.messageSent, 'success');
     
     setFormData({
       name: '',
@@ -191,11 +199,34 @@ const AdminContact = () => {
   };
 
   const handleLiveChat = () => {
-    alert(t.liveChat);
+    showToast(t.liveChat, 'info');
+  };
+
+  const handleCallUs = () => {
+    showToast('📞 ' + t.callUs + ': 01-4960008', 'info');
+  };
+
+  const handleEmailUs = () => {
+    showToast('✉️ ' + t.emailUs + ': support@ntc.com.np', 'info');
+  };
+
+  const handleSocialClick = (platform) => {
+    showToast(`🌐 ${t.socialMedia}: ${platform}`, 'info');
   };
 
   return (
     <div className="admin-contact">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
       <div className="dashboard-layout">
@@ -214,7 +245,7 @@ const AdminContact = () => {
 
             {/* Contact Info Cards */}
             <div className="contact-cards">
-              <div className="contact-card" onClick={() => alert(t.callUs)}>
+              <div className="contact-card" onClick={handleCallUs}>
                 <div className="contact-card-icon">📞</div>
                 <div className="contact-card-info">
                   <h3>{t.callUs}</h3>
@@ -222,7 +253,7 @@ const AdminContact = () => {
                   <span className="contact-card-hours">{t.supportHours}</span>
                 </div>
               </div>
-              <div className="contact-card" onClick={() => alert(t.emailUs)}>
+              <div className="contact-card" onClick={handleEmailUs}>
                 <div className="contact-card-icon">✉️</div>
                 <div className="contact-card-info">
                   <h3>{t.emailUs}</h3>
@@ -405,10 +436,10 @@ const AdminContact = () => {
                 <div className="info-content">
                   <h4>{t.socialMedia}</h4>
                   <div className="social-links">
-                    <button className="social-link" onClick={() => alert('Facebook')}>📘</button>
-                    <button className="social-link" onClick={() => alert('Twitter')}>🐦</button>
-                    <button className="social-link" onClick={() => alert('LinkedIn')}>🔗</button>
-                    <button className="social-link" onClick={() => alert('Instagram')}>📷</button>
+                    <button className="social-link" onClick={() => handleSocialClick('Facebook')}>📘</button>
+                    <button className="social-link" onClick={() => handleSocialClick('Twitter')}>🐦</button>
+                    <button className="social-link" onClick={() => handleSocialClick('LinkedIn')}>🔗</button>
+                    <button className="social-link" onClick={() => handleSocialClick('Instagram')}>📷</button>
                   </div>
                 </div>
               </div>
@@ -431,6 +462,45 @@ const AdminContact = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 80px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 400px;
+          min-width: 280px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         /* Dashboard Layout */
@@ -855,6 +925,15 @@ const AdminContact = () => {
           
           .tab-btn {
             text-align: center;
+          }
+
+          .toast-notification {
+            top: auto;
+            bottom: 20px;
+            right: 20px;
+            left: 20px;
+            max-width: calc(100% - 40px);
+            min-width: auto;
           }
         }
 

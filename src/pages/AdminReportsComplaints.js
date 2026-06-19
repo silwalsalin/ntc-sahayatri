@@ -15,6 +15,7 @@ const AdminReportsComplaints = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedPriority, setSelectedPriority] = useState('all');
   const [activeTab, setActiveTab] = useState('overview');
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   // Enhanced sample report data with more user details
   const [reportData, setReportData] = useState({
@@ -272,6 +273,12 @@ const AdminReportsComplaints = () => {
     ]
   });
 
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
+
   // Check authentication
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
@@ -369,7 +376,10 @@ const AdminReportsComplaints = () => {
       resetFilters: 'फिल्टर रिसेट गर्नुहोस्',
       showing: 'देखाउँदै',
       of: 'को',
-      entries: 'प्रविष्टिहरू'
+      entries: 'प्रविष्टिहरू',
+      exportStarted: 'निर्यात सुरु भयो...',
+      pdfExport: 'पीडीएफ निर्यात भइरहेको छ...',
+      excelExport: 'एक्सेल निर्यात भइरहेको छ...'
     },
     en: {
       complaintsReports: 'Complaints Reports',
@@ -458,7 +468,10 @@ const AdminReportsComplaints = () => {
       resetFilters: 'Reset Filters',
       showing: 'Showing',
       of: 'of',
-      entries: 'entries'
+      entries: 'entries',
+      exportStarted: 'Export started...',
+      pdfExport: 'Exporting PDF...',
+      excelExport: 'Exporting Excel...'
     }
   };
 
@@ -543,15 +556,15 @@ const AdminReportsComplaints = () => {
   };
 
   const handleGenerateReport = () => {
-    alert(t.reportGenerated);
+    showToast(t.reportGenerated, 'success');
   };
 
   const handleExportPDF = () => {
-    alert(language === 'np' ? 'पीडीएफ निर्यात भइरहेको छ...' : 'Exporting PDF...');
+    showToast(t.pdfExport, 'info');
   };
 
   const handleExportExcel = () => {
-    alert(language === 'np' ? 'एक्सेल निर्यात भइरहेको छ...' : 'Exporting Excel...');
+    showToast(t.excelExport, 'info');
   };
 
   const handlePrint = () => {
@@ -564,17 +577,29 @@ const AdminReportsComplaints = () => {
     setSelectedPriority('all');
     setDateRange('month');
     setReportType('summary');
+    showToast(t.resetFilters, 'info');
   };
 
   const handleViewDetails = (complaint) => {
     const details = language === 'np' 
       ? `टिकट: ${complaint.ticketId}\nनाम: ${complaint.name}\nफोन: ${complaint.phone}\nइमेल: ${complaint.email}\nस्थान: ${complaint.location}\nप्रकार: ${getCategoryText(complaint.category)}\nविवरण: ${complaint.description}\nजिम्मेवार: ${complaint.assignedTo}`
       : `Ticket: ${complaint.ticketId}\nName: ${complaint.enName}\nPhone: ${complaint.phone}\nEmail: ${complaint.email}\nLocation: ${complaint.enLocation}\nCategory: ${getCategoryText(complaint.category)}\nDescription: ${complaint.enDescription}\nAssigned To: ${complaint.enAssignedTo}`;
-    alert(details);
+    showToast(details, 'info');
   };
 
   return (
     <div className="admin-reports">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : toast.type === 'warning' ? '⚠️' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
       <div className="dashboard-layout">
@@ -979,6 +1004,46 @@ const AdminReportsComplaints = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           min-height: 100vh;
           overflow-x: hidden;
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 80px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 400px;
+          min-width: 280px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.warning { border-left: 4px solid #f59e0b; background: #fffbeb; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         /* ===== LAYOUT - Same as AdminDashboard ===== */
@@ -1584,6 +1649,15 @@ const AdminReportsComplaints = () => {
             flex-direction: column;
             align-items: flex-start;
           }
+
+          .toast-notification {
+            top: auto;
+            bottom: 20px;
+            right: 20px;
+            left: 20px;
+            max-width: calc(100% - 40px);
+            min-width: auto;
+          }
         }
 
         @media (max-width: 480px) {
@@ -1600,7 +1674,8 @@ const AdminReportsComplaints = () => {
           .action-buttons-header,
           .filter-actions,
           .tab-navigation,
-          .view-details-btn {
+          .view-details-btn,
+          .toast-notification {
             display: none !important;
           }
           .main-container { margin-left: 0; }

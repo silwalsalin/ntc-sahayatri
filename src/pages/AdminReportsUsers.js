@@ -14,6 +14,7 @@ const AdminReportsUsers = () => {
   const [reportType, setReportType] = useState('summary');
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   const [reportData, setReportData] = useState({
     summary: {
@@ -39,6 +40,12 @@ const AdminReportsUsers = () => {
   const [backendStatus, setBackendStatus] = useState('checking');
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
 
   // Helper function to get auth token
   const getAuthToken = () => {
@@ -94,14 +101,17 @@ const AdminReportsUsers = () => {
           registrationMethod
         });
         setBackendStatus('connected');
+        showToast(t.reportGenerated, 'success');
       } else {
         setReportData(getSampleReportData());
         setBackendStatus('disconnected');
+        showToast(t.backendNotConnected, 'warning');
       }
     } catch (error) {
       console.error('Error fetching data:', error);
       setReportData(getSampleReportData());
       setBackendStatus('disconnected');
+      showToast(t.backendNotConnected, 'warning');
     }
   };
 
@@ -490,7 +500,10 @@ const AdminReportsUsers = () => {
       website: 'वेबसाइट',
       mobileApp: 'मोबाइल एप',
       backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।',
-      department: 'विभाग'
+      department: 'विभाग',
+      exportStarted: 'निर्यात सुरु भयो...',
+      pdfExport: 'पीडीएफ निर्यात भइरहेको छ...',
+      excelExport: 'एक्सेल निर्यात भइरहेको छ...'
     },
     en: {
       usersReports: 'Users Reports',
@@ -557,7 +570,10 @@ const AdminReportsUsers = () => {
       website: 'Website',
       mobileApp: 'Mobile App',
       backendNotConnected: 'Backend server not connected. Showing sample data.',
-      department: 'Department'
+      department: 'Department',
+      exportStarted: 'Export started...',
+      pdfExport: 'Exporting PDF...',
+      excelExport: 'Exporting Excel...'
     }
   };
 
@@ -605,15 +621,14 @@ const AdminReportsUsers = () => {
 
   const handleGenerateReport = async () => {
     await fetchData();
-    alert(t.reportGenerated);
   };
 
   const handleExportPDF = () => {
-    alert(language === 'np' ? 'पीडीएफ निर्यात भइरहेको छ...' : 'Exporting PDF...');
+    showToast(t.pdfExport, 'info');
   };
 
   const handleExportExcel = () => {
-    alert(language === 'np' ? 'एक्सेल निर्यात भइरहेको छ...' : 'Exporting Excel...');
+    showToast(t.excelExport, 'info');
   };
 
   const handlePrint = () => {
@@ -622,6 +637,17 @@ const AdminReportsUsers = () => {
 
   return (
     <div className="admin-reports-users">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : toast.type === 'warning' ? '⚠️' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
       <div className="dashboard-layout">
@@ -986,6 +1012,46 @@ const AdminReportsUsers = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           min-height: 100vh;
           overflow-x: hidden;
+        }
+
+        /* ===== TOAST NOTIFICATION ===== */
+        .toast-notification {
+          position: fixed;
+          top: 80px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 400px;
+          min-width: 280px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.warning { border-left: 4px solid #f59e0b; background: #fffbeb; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         /* ===== LAYOUT - Same as AdminDashboard ===== */
@@ -1570,6 +1636,14 @@ const AdminReportsUsers = () => {
           .reports-table { 
             min-width: 600px; 
           }
+          .toast-notification {
+            top: auto;
+            bottom: 20px;
+            right: 20px;
+            left: 20px;
+            max-width: calc(100% - 40px);
+            min-width: auto;
+          }
         }
 
         @media (max-width: 480px) {
@@ -1594,7 +1668,7 @@ const AdminReportsUsers = () => {
 
         /* ===== PRINT STYLES ===== */
         @media print {
-          .sidebar-container, .action-buttons-header, .generate-btn, .export-btn {
+          .sidebar-container, .action-buttons-header, .generate-btn, .export-btn, .toast-notification {
             display: none !important;
           }
           .main-container {
