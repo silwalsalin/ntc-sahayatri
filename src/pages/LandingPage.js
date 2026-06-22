@@ -1286,7 +1286,7 @@ const LandingPage = () => {
           flex-direction: column;
         }
 
-        /* Header Positioning - Fixed (Always Visible like Complaints.js) */
+        /* HEADER FIX - Proper positioning to prevent overlap */
         .header-1, .header-2, .header-3 {
           position: fixed;
           left: 0;
@@ -1297,181 +1297,158 @@ const LandingPage = () => {
         .header-1 {
           top: 0;
           z-index: 1003;
+          height: 55px;
+          min-height: 55px;
         }
         
         .header-2 {
           top: 55px;
           z-index: 1002;
+          height: 64px;
+          min-height: 64px;
         }
         
         .header-3 {
           top: 119px;
           z-index: 1001;
+          height: 58px;
+          min-height: 58px;
         }
 
-        /* Main Content Padding */
+        /* Main Content Padding - Fixed to accommodate fixed headers */
         .main-content {
           flex: 1;
-          padding-top: 195px;
-        }
-
-        /* Toast Notification */
-        .toast-notification {
-          position: fixed;
-          top: 200px;
-          right: 20px;
-          z-index: 10000;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px 20px;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-          animation: slideInRight 0.3s ease;
-          max-width: 350px;
-        }
-        
-        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
-        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
-        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
-        
-        .toast-icon { font-size: 1.2rem; }
-        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
-        .toast-close {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #999;
-          font-size: 1rem;
-          padding: 0 4px;
-        }
-        .toast-close:hover { color: #666; }
-
-        @keyframes slideInRight {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
+          padding-top: 195px; /* header-1 (55px) + header-2 (64px) + header-3 (58px) + extra breathing room */
+          min-height: calc(100vh - 195px);
         }
 
         /* HEADER 1 - Top Bar */
         .header-1 {
           background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
           color: white;
-          padding: 10px 0;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+          display: flex;
+          align-items: center;
+          overflow: hidden;
         }
 
         .container-1 {
           max-width: 1400px;
           margin: 0 auto;
-          padding: 0 40px;
+          padding: 0 20px;
           display: flex;
           justify-content: space-between;
           align-items: center;
           flex-wrap: wrap;
-          gap: 20px;
+          gap: 10px;
+          width: 100%;
         }
 
-        .header-left { display: flex; align-items: center; gap: 16px; }
+        .header-left { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
         .we-are-here {
           display: flex;
           align-items: center;
           gap: 8px;
           background: rgba(255,255,255,0.15);
-          padding: 6px 20px;
+          padding: 4px 16px;
           border-radius: 40px;
           font-weight: 500;
         }
-        .quote-text { font-size: 0.9rem; letter-spacing: 0.5px; font-weight: 600; }
+        .quote-text { font-size: 0.8rem; letter-spacing: 0.5px; font-weight: 600; white-space: nowrap; }
 
-        .header-right { display: flex; align-items: center; gap: 25px; flex-wrap: wrap; }
-        .contact-info-group { display: flex; align-items: center; gap: 15px; }
+        .header-right { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; flex-shrink: 0; }
+        .contact-info-group { display: flex; align-items: center; gap: 10px; }
         .contact-info-item {
           display: flex;
           align-items: center;
-          gap: 6px;
-          font-size: 0.75rem;
+          gap: 5px;
+          font-size: 0.7rem;
           background: rgba(255,255,255,0.1);
-          padding: 5px 12px;
+          padding: 3px 10px;
           border-radius: 30px;
           transition: all 0.3s ease;
+          white-space: nowrap;
         }
-        .contact-info-item:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px); }
-        .contact-icon { font-size: 0.85rem; }
-        .contact-text { font-size: 0.75rem; font-weight: 500; }
-        .contact-icon-image { width: 14px; height: 14px; object-fit: contain; }
+        .contact-info-item:hover { background: rgba(255,255,255,0.25); }
+        .contact-icon { font-size: 0.75rem; }
+        .contact-text { font-size: 0.7rem; font-weight: 500; }
+        .contact-icon-image { width: 14px; height: 14px; object-fit: contain; filter: brightness(0) invert(1); }
 
         /* Language Dropdown */
-        .language-dropdown { position: relative; }
+        .language-dropdown { position: relative; flex-shrink: 0; }
         .language-selector {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 5px;
           background: rgba(255,255,255,0.15);
           border: 1px solid rgba(255,255,255,0.3);
-          padding: 5px 12px;
+          padding: 4px 10px;
           border-radius: 30px;
           cursor: pointer;
           color: white;
-          font-size: 0.75rem;
+          font-size: 0.7rem;
           font-weight: 500;
           transition: all 0.3s ease;
         }
         .language-selector:hover { background: rgba(255,255,255,0.25); }
-        .lang-icon { font-size: 0.85rem; }
-        .dropdown-arrow { font-size: 0.6rem; margin-left: 5px; }
+        .lang-icon { font-size: 0.75rem; }
+        .lang-text { font-size: 0.7rem; }
+        .dropdown-arrow { font-size: 0.5rem; margin-left: 3px; }
         .dropdown-menu {
           position: absolute;
-          top: 38px;
+          top: 32px;
           right: 0;
           background: white;
-          border-radius: 12px;
+          border-radius: 10px;
           box-shadow: 0 4px 20px rgba(0,0,0,0.15);
           overflow: hidden;
           z-index: 1050;
-          min-width: 120px;
+          min-width: 110px;
         }
         .dropdown-item {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
           width: 100%;
-          padding: 8px 14px;
+          padding: 6px 12px;
           border: none;
           background: white;
           cursor: pointer;
-          font-size: 0.8rem;
+          font-size: 0.75rem;
           transition: all 0.2s ease;
           text-align: left;
         }
         .dropdown-item:hover { background: #f0f2f5; }
         .dropdown-item.active { background: #1565c0; color: white; }
-        .lang-flag { font-size: 1rem; }
+        .lang-flag { font-size: 0.9rem; }
 
         /* HEADER 2 - Department Level */
         .header-2 {
           background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%);
           color: #1a2c3e;
-          padding: 12px 0;
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
+          display: flex;
+          align-items: center;
+          overflow: hidden;
         }
         .container-2 {
           max-width: 1400px;
           margin: 0 auto;
-          padding: 0 40px;
+          padding: 0 20px;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 30px;
+          gap: 15px;
+          width: 100%;
         }
-        .logo-left { flex: 1; display: flex; justify-content: flex-start; }
-        .logo-right { flex: 1; display: flex; justify-content: flex-end; }
-        .ntc-logo, .gov-logo { height: 50px; width: auto; object-fit: contain; }
+        .logo-left { flex: 1; display: flex; justify-content: flex-start; align-items: center; }
+        .logo-right { flex: 1; display: flex; justify-content: flex-end; align-items: center; }
+        .ntc-logo, .gov-logo { height: 42px; width: auto; object-fit: contain; }
         .logo-fallback {
-          font-size: 2rem;
-          width: 50px;
-          height: 50px;
+          font-size: 1.6rem;
+          width: 42px;
+          height: 42px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1480,66 +1457,69 @@ const LandingPage = () => {
           color: white;
         }
         .dept-text-center { flex: 2; text-align: center; }
-        .dept-name { font-size: 1rem; font-weight: 700; color: #0d47a1; letter-spacing: 1px; }
-        .dept-address { font-size: 0.75rem; opacity: 0.7; color: #555; margin-top: 3px; }
+        .dept-name { font-size: 0.9rem; font-weight: 700; color: #0d47a1; letter-spacing: 0.5px; }
+        .dept-address { font-size: 0.7rem; opacity: 0.7; color: #555; margin-top: 2px; }
 
         /* HEADER 3 - Navigation Bar */
         .header-3 {
           background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
           color: white;
-          padding: 12px 0;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          display: flex;
+          align-items: center;
+          overflow: hidden;
         }
         .container-3 {
           max-width: 1400px;
           margin: 0 auto;
-          padding: 0 40px;
+          padding: 0 20px;
           display: flex;
           justify-content: space-between;
           align-items: center;
           flex-wrap: wrap;
-          gap: 20px;
+          gap: 10px;
+          width: 100%;
         }
-        .nav-menu-left { display: flex; gap: 20px; align-items: center; }
+        .nav-menu-left { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
         .nav-btn {
           background: transparent;
           border: none;
           color: white;
-          font-size: 1rem;
+          font-size: 0.85rem;
           font-weight: 600;
           cursor: pointer;
-          padding: 8px 20px;
+          padding: 6px 16px;
           border-radius: 40px;
           transition: all 0.3s ease;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
         }
-        .nav-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-1px); }
-        .nav-icon { font-size: 1.1rem; }
-        .nav-text { font-size: 0.95rem; }
-        .login-btn-right { display: flex; align-items: center; }
+        .nav-btn:hover { background: rgba(255,255,255,0.15); }
+        .nav-icon { font-size: 0.95rem; }
+        .nav-text { font-size: 0.85rem; white-space: nowrap; }
+        .login-btn-right { display: flex; align-items: center; flex-shrink: 0; }
         .login-btn {
           background: transparent;
           border: 2px solid white;
           color: white;
-          font-size: 0.95rem;
+          font-size: 0.85rem;
           font-weight: 600;
           cursor: pointer;
-          padding: 8px 28px;
+          padding: 6px 24px;
           border-radius: 40px;
           transition: all 0.3s ease;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
           white-space: nowrap;
         }
-        .login-btn:hover { background: white; color: #1565c0; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .login-btn:hover { background: white; color: #1565c0; }
 
         /* Hero Section */
         .hero {
           background: linear-gradient(135deg, #e3f2fd 0%, #f0f7ff 100%);
-          padding: 60px 40px;
+          padding: 40px 20px;
           border-bottom: 4px solid #1565c0;
         }
 
@@ -1549,25 +1529,25 @@ const LandingPage = () => {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 50px;
+          gap: 30px;
           flex-wrap: wrap;
         }
 
-        .hero-left { flex: 1; min-width: 320px; }
-        .hero-icon { font-size: 3rem; margin-bottom: 20px; }
-        .hero-left h2 { font-size: 1.8rem; color: #0d47a1; margin-bottom: 20px; line-height: 1.4; }
-        .hero-left p { font-size: 1.1rem; color: #2c4e6e; margin-bottom: 20px; line-height: 1.6; }
-        .hero-quote { font-size: 1.2rem; font-weight: 600; color: #1565c0; margin-bottom: 30px; font-style: italic; }
+        .hero-left { flex: 1; min-width: 280px; }
+        .hero-icon { font-size: 2.5rem; margin-bottom: 15px; }
+        .hero-left h2 { font-size: 1.5rem; color: #0d47a1; margin-bottom: 15px; line-height: 1.4; }
+        .hero-left p { font-size: 1rem; color: #2c4e6e; margin-bottom: 15px; line-height: 1.6; }
+        .hero-quote { font-size: 1rem; font-weight: 600; color: #1565c0; margin-bottom: 20px; font-style: italic; }
 
-        .hero-buttons { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+        .hero-buttons { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
         .btn-primary, .btn-secondary {
-          padding: 14px 32px;
+          padding: 12px 28px;
           border-radius: 40px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.3s ease;
           border: none;
-          font-size: 1rem;
+          font-size: 0.9rem;
           display: inline-flex;
           align-items: center;
           gap: 8px;
@@ -1577,33 +1557,33 @@ const LandingPage = () => {
         .btn-secondary { background: white; color: #1565c0; border: 2px solid #1565c0; }
         .btn-secondary:hover { background: #1565c0; color: white; transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.15); }
 
-        .complaint-regarding-container { margin-top: 15px; text-align: left; }
+        .complaint-regarding-container { margin-top: 10px; text-align: left; }
         .btn-complaint-regarding {
-          padding: 16px 36px;
+          padding: 14px 32px;
           border-radius: 50px;
           font-weight: 700;
           cursor: pointer;
           transition: all 0.3s ease;
           border: 2px solid #1565c0;
-          font-size: 1.1rem;
+          font-size: 1rem;
           background: white;
           color: #1565c0;
           display: inline-flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
         .btn-complaint-regarding:hover { background: #1565c0; color: white; transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.15); }
 
-        .hero-right { flex: 1; display: flex; justify-content: flex-end; align-items: center; min-width: 300px; }
-        .hero-image-wrapper { width: 100%; max-width: 650px; background: transparent; border-radius: 20px; display: flex; justify-content: center; align-items: center; }
-        .hero-illustration { width: 100%; max-width: 600px; height: auto; border-radius: 20px; object-fit: contain; display: block; }
+        .hero-right { flex: 1; display: flex; justify-content: flex-end; align-items: center; min-width: 250px; }
+        .hero-image-wrapper { width: 100%; max-width: 550px; display: flex; justify-content: center; align-items: center; }
+        .hero-illustration { width: 100%; max-width: 500px; height: auto; border-radius: 20px; object-fit: contain; display: block; }
         .hero-illustration-fallback {
           width: 100%;
-          max-width: 450px;
+          max-width: 400px;
           background: linear-gradient(135deg, #1565c0, #42a5f5);
           border-radius: 20px;
-          padding: 50px;
+          padding: 40px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -1611,45 +1591,45 @@ const LandingPage = () => {
           color: white;
           text-align: center;
         }
-        .fallback-icon { font-size: 4rem; margin-bottom: 20px; }
-        .fallback-text { font-size: 1.3rem; font-weight: 600; margin-bottom: 10px; }
-        .fallback-subtext { font-size: 0.9rem; opacity: 0.9; }
+        .fallback-icon { font-size: 3rem; margin-bottom: 15px; }
+        .fallback-text { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
+        .fallback-subtext { font-size: 0.85rem; opacity: 0.9; }
 
         /* Complaint Channels Section */
         .channels-section {
           background: white;
-          padding: 40px 24px;
+          padding: 30px 20px;
           border-bottom: 1px solid #e2e9f0;
         }
         .channels-container { max-width: 1200px; margin: 0 auto; }
         .channels-title {
-          font-size: 1.3rem;
+          font-size: 1.1rem;
           font-weight: 600;
           color: #1a2c3e;
-          margin-bottom: 24px;
-          padding-bottom: 12px;
+          margin-bottom: 20px;
+          padding-bottom: 10px;
           border-bottom: 2px solid #1565c0;
           display: inline-block;
         }
         .channels-list {
           display: flex;
           flex-wrap: wrap;
-          gap: 24px;
-          margin-top: 20px;
+          gap: 20px;
+          margin-top: 15px;
           justify-content: center;
         }
         .channel-item {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
-          padding: 20px;
+          gap: 6px;
+          padding: 16px;
           background: #f8fafc;
-          border-radius: 16px;
+          border-radius: 14px;
           border: 1px solid #e2e8f0;
           transition: all 0.3s ease;
           cursor: default;
-          min-width: 110px;
+          min-width: 90px;
         }
         .channel-item:hover {
           transform: translateY(-4px);
@@ -1657,26 +1637,26 @@ const LandingPage = () => {
           border-color: #1565c0;
           background: linear-gradient(135deg, #ffffff, #e3f2fd);
         }
-        .channel-icon-wrapper { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
-        .channel-icon-image { width: 35px; height: 35px; object-fit: contain; }
-        .channel-emoji { font-size: 2rem; }
-        .channel-name { font-size: 0.85rem; font-weight: 600; color: #1a2c3e; text-align: center; }
-        .channel-contact { font-size: 0.65rem; color: #1565c0; font-weight: 500; margin-top: 4px; }
+        .channel-icon-wrapper { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
+        .channel-icon-image { width: 28px; height: 28px; object-fit: contain; }
+        .channel-emoji { font-size: 1.6rem; }
+        .channel-name { font-size: 0.75rem; font-weight: 600; color: #1a2c3e; text-align: center; }
+        .channel-contact { font-size: 0.6rem; color: #1565c0; font-weight: 500; margin-top: 3px; }
 
         /* Public Complaints and Latest Status Container */
         .stats-public-container {
           max-width: 1200px;
           margin: 0 auto;
-          padding: 48px 24px;
+          padding: 40px 20px;
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 32px;
+          gap: 24px;
         }
 
         .public-complaints-card, .latest-status-card {
           background: white;
-          border-radius: 20px;
-          padding: 28px;
+          border-radius: 18px;
+          padding: 24px;
           box-shadow: 0 2px 12px rgba(0,0,0,0.08);
           border: 1px solid #e8e8e8;
         }
@@ -1685,25 +1665,25 @@ const LandingPage = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 16px;
           flex-wrap: wrap;
-          gap: 12px;
+          gap: 10px;
         }
 
         .tab-buttons {
           display: flex;
-          gap: 10px;
+          gap: 8px;
           flex-wrap: wrap;
         }
 
         .tab-btn {
-          padding: 6px 16px;
+          padding: 5px 14px;
           border-radius: 20px;
           border: 1px solid #e0e0e0;
           background: white;
           cursor: pointer;
           transition: all 0.3s ease;
-          font-size: 0.8rem;
+          font-size: 0.7rem;
         }
 
         .tab-btn.active {
@@ -1713,51 +1693,51 @@ const LandingPage = () => {
         }
 
         .public-complaints-card h3, .latest-status-card h3 {
-          font-size: 1.3rem;
+          font-size: 1.1rem;
           color: #0d47a1;
           margin: 0;
           border-left: 4px solid #1565c0;
-          padding-left: 16px;
+          padding-left: 14px;
         }
 
         .refresh-btn {
           background: #1565c0;
           color: white;
           border: none;
-          padding: 6px 14px;
+          padding: 5px 12px;
           border-radius: 20px;
           cursor: pointer;
-          font-size: 0.75rem;
+          font-size: 0.7rem;
           transition: all 0.3s ease;
           display: inline-flex;
           align-items: center;
-          gap: 6px;
+          gap: 5px;
         }
-        .refresh-btn:hover { background: #0d47a1; transform: translateY(-1px); }
+        .refresh-btn:hover { background: #0d47a1; }
 
         .table-wrapper { overflow-x: auto; }
-        .complaints-table { width: 100%; border-collapse: collapse; }
-        .complaints-table th, .complaints-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
-        .complaints-table th { background: #f5f7fa; font-weight: 600; color: #0d47a1; }
+        .complaints-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+        .complaints-table th, .complaints-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        .complaints-table th { background: #f5f7fa; font-weight: 600; color: #0d47a1; font-size: 0.75rem; }
         .complaint-row:hover { background: #f8fafc; }
 
-        .complainant-info { display: flex; flex-direction: column; gap: 4px; }
-        .complainant-name { font-weight: 500; }
-        .complainant-phone { font-size: 0.7rem; color: #6c8196; }
+        .complainant-info { display: flex; flex-direction: column; gap: 3px; }
+        .complainant-name { font-weight: 500; font-size: 0.85rem; }
+        .complainant-phone { font-size: 0.65rem; color: #6c8196; }
 
-        .complaint-preview { font-size: 0.85rem; color: #333; line-height: 1.4; }
-        .complaint-subject { font-size: 0.7rem; color: #1565c0; margin-top: 4px; }
+        .complaint-preview { font-size: 0.8rem; color: #333; line-height: 1.4; }
+        .complaint-subject { font-size: 0.65rem; color: #1565c0; margin-top: 3px; }
 
         .category-badge {
           display: inline-block;
-          padding: 4px 8px;
+          padding: 3px 8px;
           border-radius: 12px;
-          font-size: 0.7rem;
+          font-size: 0.65rem;
           background: #e3f2fd;
           color: #1565c0;
         }
 
-        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 600; }
         .status-progress { background: #fff3cd; color: #856404; }
         .status-resolved { background: #d4edda; color: #155724; }
         .status-pending { background: #f8d7da; color: #721c24; }
@@ -1767,38 +1747,38 @@ const LandingPage = () => {
 
         .status-item {
           background: #f5f7fa;
-          padding: 16px;
-          border-radius: 12px;
-          margin-bottom: 16px;
+          padding: 14px;
+          border-radius: 10px;
+          margin-bottom: 14px;
           transition: all 0.3s ease;
         }
         .status-item:hover { transform: translateX(4px); background: #e8edf5; }
-        .status-title { font-weight: 500; margin-bottom: 8px; color: #1a2c3e; }
-        .status-number { font-size: 1.5rem; font-weight: 700; color: #1565c0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .status-range { font-size: 0.75rem; font-weight: normal; color: #6c8196; margin-top: 4px; }
+        .status-title { font-weight: 500; font-size: 0.8rem; color: #1a2c3e; margin-bottom: 6px; }
+        .status-number { font-size: 1.3rem; font-weight: 700; color: #1565c0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .status-range { font-size: 0.65rem; font-weight: normal; color: #6c8196; margin-top: 3px; }
 
         .view-details-btn {
           background: linear-gradient(135deg, #1565c0, #0d47a1);
           color: white;
           border: none;
-          padding: 6px 12px;
+          padding: 5px 10px;
           border-radius: 20px;
           cursor: pointer;
-          font-size: 0.7rem;
+          font-size: 0.65rem;
           transition: all 0.3s ease;
           white-space: nowrap;
         }
         .view-details-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(21,101,192,0.3); }
 
         .loading-spinner {
-          width: 20px;
-          height: 20px;
+          width: 18px;
+          height: 18px;
           border: 2px solid #e0e0e0;
           border-top-color: #1565c0;
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
           display: inline-block;
-          margin-right: 8px;
+          margin-right: 6px;
           vertical-align: middle;
         }
 
@@ -1807,38 +1787,40 @@ const LandingPage = () => {
         /* Statistics */
         .statistics {
           background: white;
-          padding: 48px 24px;
+          padding: 40px 20px;
         }
         .container { max-width: 1000px; margin: 0 auto; }
-        .statistics h3 { text-align: center; margin-bottom: 32px; color: #0d47a1; font-size: 1.3rem; }
-        .stats-grid { display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; }
-        .stat-card { background: #f5f7fa; border-radius: 12px; overflow: hidden; }
-        .stat-bar-wrapper { height: 8px; background: #e0e0e0; }
-        .stat-bar { height: 8px; transition: width 0.5s ease; }
+        .statistics h3 { text-align: center; margin-bottom: 28px; color: #0d47a1; font-size: 1.2rem; }
+        .stats-grid { display: flex; flex-direction: column; gap: 14px; margin-bottom: 28px; }
+        .stat-card { background: #f5f7fa; border-radius: 10px; overflow: hidden; }
+        .stat-bar-wrapper { height: 6px; background: #e0e0e0; }
+        .stat-bar { height: 6px; transition: width 0.5s ease; }
         .stat-info {
-          padding: 12px 16px;
+          padding: 10px 14px;
           display: flex;
           justify-content: space-between;
           align-items: center;
           font-weight: 500;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 6px;
+          font-size: 0.8rem;
         }
-        .stat-right { display: flex; align-items: center; gap: 12px; }
+        .stat-right { display: flex; align-items: center; gap: 10px; }
         .stat-percentage { font-weight: 700; color: #0d47a1; }
-        .stat-change { font-size: 0.7rem; font-weight: 500; }
+        .stat-change { font-size: 0.65rem; font-weight: 500; }
         .stat-change.positive { color: #10b981; }
         .stat-change.negative { color: #ef4444; }
-        .quick-links { text-align: center; padding-top: 20px; border-top: 1px solid #e0e0e0; }
-        .quick-links span { font-weight: 600; margin-right: 16px; color: #1565c0; }
+        .quick-links { text-align: center; padding-top: 18px; border-top: 1px solid #e0e0e0; }
+        .quick-links span { font-weight: 600; margin-right: 12px; color: #1565c0; }
         .quick-links button {
           background: none;
           border: none;
           color: #1565c0;
-          margin: 0 8px;
+          margin: 0 6px;
           cursor: pointer;
           font-weight: 500;
           transition: color 0.3s;
+          font-size: 0.8rem;
         }
         .quick-links button:hover { color: #0d47a1; text-decoration: underline; }
 
@@ -1846,59 +1828,60 @@ const LandingPage = () => {
         .signal-section {
           max-width: 1200px;
           margin: 0 auto;
-          padding: 0 24px 48px;
+          padding: 0 20px 40px;
         }
-        .signal-container { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+        .signal-container { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
         .signal-card, .contact-card {
           background: white;
-          border-radius: 20px;
-          padding: 28px;
+          border-radius: 18px;
+          padding: 24px;
           box-shadow: 0 2px 12px rgba(0,0,0,0.08);
           border: 1px solid #e8e8e8;
           transition: all 0.3s ease;
         }
         .signal-card:hover, .contact-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
         .signal-card h3, .contact-card h3 {
-          font-size: 1.3rem;
+          font-size: 1.1rem;
           color: #0d47a1;
-          margin-bottom: 20px;
+          margin-bottom: 16px;
           border-left: 4px solid #1565c0;
-          padding-left: 16px;
+          padding-left: 14px;
         }
-        .complaint-list { margin-top: 20px; }
+        .signal-card p { font-size: 0.85rem; color: #6c8196; }
+        .complaint-list { margin-top: 16px; }
         .complaint-item {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 12px 0;
+          padding: 10px 0;
           border-bottom: 1px solid #e0e0e0;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 6px;
         }
         .complaint-item:last-child { border-bottom: none; }
-        .complaint-category { font-weight: 500; color: #1a2c3e; }
-        .complaint-meta { display: flex; gap: 16px; align-items: center; }
-        .complaint-count { font-size: 0.75rem; color: #1565c0; font-weight: 500; }
-        .complaint-date { color: #6c8196; font-size: 0.75rem; }
+        .complaint-category { font-weight: 500; font-size: 0.85rem; color: #1a2c3e; }
+        .complaint-meta { display: flex; gap: 12px; align-items: center; }
+        .complaint-count { font-size: 0.7rem; color: #1565c0; font-weight: 500; }
+        .complaint-date { color: #6c8196; font-size: 0.7rem; }
 
-        .contact-details { line-height: 2; }
-        .contact-details p { margin: 12px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .contact-details { line-height: 1.8; }
+        .contact-details p { margin: 10px 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.85rem; }
         .contact-card-email-icon { width: 14px; height: 14px; object-fit: contain; }
 
         .support-hours {
-          margin-top: 20px;
-          padding-top: 16px;
+          margin-top: 16px;
+          padding-top: 14px;
           border-top: 1px solid #e0e0e0;
           text-align: center;
-          font-size: 0.85rem;
+          font-size: 0.8rem;
           font-weight: 500;
           color: #1565c0;
         }
 
         .contact-now-btn {
           width: 100%;
-          margin-top: 16px;
-          padding: 12px;
+          margin-top: 14px;
+          padding: 10px;
           background: #1565c0;
           color: white;
           border: none;
@@ -1909,7 +1892,8 @@ const LandingPage = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
+          gap: 6px;
+          font-size: 0.9rem;
         }
         .contact-now-btn:hover { background: #0d47a1; transform: translateY(-2px); }
 
@@ -1930,8 +1914,8 @@ const LandingPage = () => {
 
         .modal-content {
           background: white;
-          border-radius: 24px;
-          max-width: 650px;
+          border-radius: 20px;
+          max-width: 600px;
           width: 90%;
           max-height: 85vh;
           overflow-y: auto;
@@ -1942,22 +1926,22 @@ const LandingPage = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 20px 24px;
+          padding: 16px 20px;
           border-bottom: 1px solid #e0e0e0;
           background: linear-gradient(135deg, #1565c0, #0d47a1);
           color: white;
-          border-radius: 24px 24px 0 0;
+          border-radius: 20px 20px 0 0;
           position: sticky;
           top: 0;
           z-index: 10;
         }
 
-        .modal-header h3 { margin: 0; font-size: 1.2rem; }
+        .modal-header h3 { margin: 0; font-size: 1.1rem; }
         .modal-close {
           background: none;
           border: none;
           color: white;
-          font-size: 1.2rem;
+          font-size: 1.1rem;
           cursor: pointer;
           padding: 4px 8px;
           border-radius: 50%;
@@ -1965,42 +1949,43 @@ const LandingPage = () => {
         }
         .modal-close:hover { background: rgba(255,255,255,0.2); }
 
-        .modal-body { padding: 24px; }
-        .detail-section { margin-bottom: 24px; }
+        .modal-body { padding: 20px; }
+        .detail-section { margin-bottom: 20px; }
         .detail-section:last-child { margin-bottom: 0; }
         .section-subtitle {
-          font-size: 1rem;
+          font-size: 0.9rem;
           font-weight: 600;
           color: #0d47a1;
-          margin-bottom: 12px;
-          padding-bottom: 6px;
+          margin-bottom: 10px;
+          padding-bottom: 5px;
           border-bottom: 2px solid #e0e0e0;
         }
 
-        .detail-row { display: flex; margin-bottom: 8px; flex-wrap: wrap; }
-        .detail-label { width: 35%; font-weight: 600; color: #0d47a1; }
-        .detail-value { width: 65%; color: #333; word-break: break-word; }
+        .detail-row { display: flex; margin-bottom: 6px; flex-wrap: wrap; }
+        .detail-label { width: 35%; font-weight: 600; color: #0d47a1; font-size: 0.8rem; }
+        .detail-value { width: 65%; color: #333; word-break: break-word; font-size: 0.85rem; }
         .detail-row.full-width .detail-value { width: 100%; }
-        .complaint-text { line-height: 1.5; white-space: pre-wrap; background: #f8fafc; padding: 12px; border-radius: 8px; }
+        .complaint-text { line-height: 1.5; white-space: pre-wrap; background: #f8fafc; padding: 10px; border-radius: 6px; font-size: 0.85rem; }
 
         .modal-footer {
-          padding: 16px 24px;
+          padding: 14px 20px;
           border-top: 1px solid #e0e0e0;
           display: flex;
           justify-content: flex-end;
           position: sticky;
           bottom: 0;
           background: white;
-          border-radius: 0 0 24px 24px;
+          border-radius: 0 0 20px 20px;
         }
         .modal-btn-close {
           background: #f0f0f0;
           color: #666;
           border: none;
-          padding: 10px 24px;
+          padding: 8px 20px;
           border-radius: 40px;
           cursor: pointer;
           transition: all 0.3s ease;
+          font-size: 0.85rem;
         }
         .modal-btn-close:hover { background: #e0e0e0; }
 
@@ -2011,63 +1996,92 @@ const LandingPage = () => {
         .footer {
           background: #0d2b5e;
           color: white;
-          padding: 20px 24px;
-          margin-top: 40px;
+          padding: 16px 20px;
+          margin-top: 30px;
           text-align: center;
         }
         .footer-content { max-width: 1200px; margin: 0 auto; }
-        .footer-copyright { text-align: center; font-size: 0.7rem; opacity: 0.7; }
-        .copyright-text { margin-top: 5px; font-size: 0.65rem; }
+        .footer-copyright { text-align: center; font-size: 0.65rem; opacity: 0.7; }
+        .copyright-text { margin-top: 4px; font-size: 0.6rem; }
 
         /* Responsive */
         @media (max-width: 1024px) {
-          .stats-public-container { grid-template-columns: 1fr; gap: 24px; }
-          .signal-container { grid-template-columns: 1fr; gap: 24px; }
+          .stats-public-container { grid-template-columns: 1fr; gap: 20px; }
+          .signal-container { grid-template-columns: 1fr; gap: 20px; }
           .hero-container { flex-direction: column; text-align: center; }
           .hero-left { text-align: center; }
           .hero-buttons { justify-content: center; }
           .complaint-regarding-container { text-align: center; }
-          .hero-right { justify-content: center; margin-top: 30px; }
-          .channels-list { gap: 16px; }
+          .hero-right { justify-content: center; margin-top: 20px; }
+          .channels-list { gap: 14px; }
         }
 
         @media (max-width: 768px) {
-          .main-content { padding-top: 280px; }
-          .hero { padding: 40px 20px; }
-          .hero-left h2 { font-size: 1.3rem; }
-          .hero-left p { font-size: 0.95rem; }
-          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; padding: 0 20px; }
+          .header-1 { height: auto; min-height: 45px; padding: 6px 0; }
+          .header-2 { height: auto; min-height: 50px; padding: 6px 0; }
+          .header-3 { height: auto; min-height: 48px; padding: 6px 0; }
+          .main-content { padding-top: 165px; }
+          
+          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; padding: 0 12px; gap: 6px; }
           .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
-          .contact-info-group { flex-direction: column; gap: 8px; }
+          .contact-info-group { flex-direction: column; gap: 4px; }
           .logo-left, .logo-right { display: none; }
           .dept-text-center { flex: 1; }
-          .channel-item { min-width: 80px; padding: 15px; }
-          .channel-icon-wrapper { width: 50px; height: 50px; }
-          .channel-icon-image { width: 28px; height: 28px; }
-          .channel-emoji { font-size: 1.6rem; }
-          .channel-name { font-size: 0.7rem; }
-          .stats-public-container, .signal-section { padding: 32px 20px; }
-          .public-complaints-card, .latest-status-card, .signal-card, .contact-card { padding: 20px; }
+          .channel-item { min-width: 70px; padding: 12px; }
+          .channel-icon-wrapper { width: 40px; height: 40px; }
+          .channel-icon-image { width: 22px; height: 22px; }
+          .channel-emoji { font-size: 1.3rem; }
+          .channel-name { font-size: 0.65rem; }
+          .stats-public-container, .signal-section { padding: 24px 12px; }
+          .public-complaints-card, .latest-status-card, .signal-card, .contact-card { padding: 16px; }
+          
+          .hero { padding: 30px 12px; }
+          .hero-left h2 { font-size: 1.2rem; }
+          .hero-left p { font-size: 0.85rem; }
+          .hero-quote { font-size: 0.9rem; }
+          .btn-primary, .btn-secondary { padding: 10px 20px; font-size: 0.8rem; }
+          .btn-complaint-regarding { padding: 12px 24px; font-size: 0.85rem; }
+          
           .detail-row { flex-direction: column; }
-          .detail-label { width: 100%; margin-bottom: 5px; }
+          .detail-label { width: 100%; margin-bottom: 4px; }
           .detail-value { width: 100%; }
           .complaint-item { flex-direction: column; align-items: flex-start; }
           .complaint-meta { width: 100%; justify-content: space-between; }
           .modal-content { max-width: 95%; margin: 10px; }
           .toast-notification { top: auto; bottom: 20px; right: 20px; left: 20px; max-width: calc(100% - 40px); }
           .tab-buttons { width: 100%; justify-content: center; }
+          .card-header { flex-direction: column; align-items: flex-start; }
+          
+          .complaints-table { min-width: 500px; }
+          .complaints-table th, .complaints-table td { padding: 6px 8px; font-size: 0.65rem; }
+          .view-details-btn { font-size: 0.55rem; padding: 3px 8px; }
+          .status-number { font-size: 1.1rem; }
         }
 
         @media (max-width: 480px) {
-          .main-content { padding-top: 320px; }
+          .header-1 { min-height: 40px; }
+          .header-2 { min-height: 44px; }
+          .header-3 { min-height: 42px; }
+          .main-content { padding-top: 150px; }
+          
           .hero-buttons { flex-direction: column; align-items: center; width: 100%; }
           .btn-primary, .btn-secondary, .btn-complaint-regarding { width: 100%; justify-content: center; }
-          .channels-list { gap: 12px; }
-          .channel-item { min-width: 70px; padding: 10px; }
-          .view-details-btn { font-size: 0.6rem; padding: 4px 8px; }
-          .status-number { font-size: 1.2rem; }
-          .card-header { flex-direction: column; align-items: flex-start; }
-          .tab-buttons { justify-content: flex-start; }
+          .channels-list { gap: 10px; }
+          .channel-item { min-width: 60px; padding: 8px; }
+          .complaints-table { min-width: 400px; }
+          .complaints-table th, .complaints-table td { padding: 4px 6px; font-size: 0.6rem; }
+          .view-details-btn { font-size: 0.5rem; padding: 2px 6px; }
+          .status-number { font-size: 1rem; }
+          .contact-info-item { font-size: 0.55rem; padding: 2px 6px; }
+          .contact-text { font-size: 0.55rem; }
+          .language-selector { font-size: 0.6rem; padding: 3px 8px; }
+          .lang-text { font-size: 0.6rem; }
+          .nav-btn { font-size: 0.7rem; padding: 4px 10px; }
+          .nav-text { font-size: 0.7rem; }
+          .login-btn { font-size: 0.7rem; padding: 4px 14px; }
+          .we-are-here .quote-text { font-size: 0.65rem; }
+          .dept-name { font-size: 0.75rem; }
+          .dept-address { font-size: 0.6rem; }
         }
       `}</style>
     </div>
