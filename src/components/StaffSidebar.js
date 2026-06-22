@@ -91,16 +91,7 @@ const StaffSidebar = ({ language, staffName = "Staff User", staffRole = "Support
         { id: 'assigned-to-me', icon: '👤', label: t.assignedToMe, path: '/staff/complaints/assigned' },
       ]
     },
-    {
-      id: 'tasks',
-      icon: '✅',
-      label: t.tasks,
-      children: [
-        { id: 'my-tasks', icon: '📋', label: t.myTasks, path: '/staff/tasks' },
-        { id: 'pending-tasks', icon: '⏳', label: t.pendingTasks, path: '/staff/tasks/pending' },
-        { id: 'completed-tasks', icon: '✔️', label: t.completedTasks, path: '/staff/tasks/completed' }
-      ]
-    },
+
     {
       id: 'reports',
       icon: '📈',

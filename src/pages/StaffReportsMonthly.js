@@ -7,7 +7,9 @@ import StaffSidebar from '../components/StaffSidebar';
 
 const StaffReportsMonthly = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [reportData, setReportData] = useState(null);
   const [backendStatus, setBackendStatus] = useState('checking');
@@ -21,6 +23,45 @@ const StaffReportsMonthly = () => {
     phone: '',
     department: ''
   });
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
+  // Format decimal with Nepali digits (preserves decimal point)
+  const formatDecimal = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const parts = num.toString().split('.');
+      const integerPart = parts[0].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      if (parts.length === 1) return integerPart;
+      const decimalPart = parts[1].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${integerPart}.${decimalPart}`;
+    }
+    return num.toString();
+  };
+
+  // Format percentage with Nepali digits
+  const formatPercentage = (num) => {
+    if (num === undefined || num === null) return '०%';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]) + '%';
+    }
+    return num + '%';
+  };
 
   // Load staff data from localStorage
   useEffect(() => {
@@ -71,7 +112,11 @@ const StaffReportsMonthly = () => {
       const year = d.getFullYear() - 57;
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${yearNp}-${monthNp}-${dayNp}`;
     } catch (error) {
       return '-';
     }
@@ -92,7 +137,12 @@ const StaffReportsMonthly = () => {
   const fetchMonthlyReport = async () => {
     try {
       const token = localStorage.getItem('staffToken');
-      const response = await axios.get(`http://localhost:5000/api/staff/reports/monthly?month=${selectedMonth}`, {
+      if (!token) {
+        navigate('/');
+        return;
+      }
+      
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/reports/monthly?month=${selectedMonth}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -232,18 +282,26 @@ const StaffReportsMonthly = () => {
     }
   }, [navigate]);
 
-  // Refresh when month changes or language changes
+  // Refresh when month changes
   useEffect(() => {
     if (selectedMonth) {
       fetchMonthlyReport();
     }
-  }, [selectedMonth, language]);
+  }, [selectedMonth]);
+
+  // Refresh when language changes
+  useEffect(() => {
+    if (reportData) {
+      fetchMonthlyReport();
+    }
+  }, [language]);
 
   const handleMonthChange = (e) => {
     setSelectedMonth(e.target.value);
   };
 
   const handleExportReport = () => {
+    if (!reportData) return;
     const dataStr = JSON.stringify(reportData, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     const exportFileDefaultName = `monthly_report_${selectedMonth}.json`;
@@ -462,42 +520,42 @@ const StaffReportsMonthly = () => {
                 <div className="summary-card">
                   <div className="summary-icon">📊</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.totalComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.totalComplaints || 0)}</div>
                     <div className="summary-label">{t.totalComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">✅</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.resolvedComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.resolvedComplaints || 0)}</div>
                     <div className="summary-label">{t.resolvedComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">⏳</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.pendingComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.pendingComplaints || 0)}</div>
                     <div className="summary-label">{t.pendingComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">🔄</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.inProgressComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.inProgressComplaints || 0)}</div>
                     <div className="summary-label">{t.inProgressComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">📝</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.underReviewComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.underReviewComplaints || 0)}</div>
                     <div className="summary-label">{t.underReviewComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">📈</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.resolutionRate || 0}%</div>
+                    <div className="summary-value">{formatPercentage(reportData?.summary?.resolutionRate || 0)}</div>
                     <div className="summary-label">{t.resolutionRate}</div>
                   </div>
                 </div>
@@ -527,31 +585,31 @@ const StaffReportsMonthly = () => {
                     <div className="bar-chart">
                       {reportData?.weeklyBreakdown?.map((week, index) => (
                         <div key={index} className="bar-item">
-                          <div className="bar-label">{t.week} {week.week}</div>
+                          <div className="bar-label">{t.week} {formatNumber(week.week)}</div>
                           <div className="bars-container">
                             <div 
                               className="bar complaints-bar" 
                               style={{ height: `${(week.complaints / maxWeeklyValue) * 150}px` }}
-                              title={`Complaints: ${week.complaints}`}
+                              title={`${t.complaintsCount}: ${week.complaints}`}
                             >
-                              <span className="bar-value">{week.complaints}</span>
+                              <span className="bar-value">{formatNumber(week.complaints)}</span>
                             </div>
                             <div 
                               className="bar resolved-bar" 
                               style={{ height: `${(week.resolved / maxWeeklyValue) * 150}px` }}
-                              title={`Resolved: ${week.resolved}`}
+                              title={`${t.resolved}: ${week.resolved}`}
                             >
-                              <span className="bar-value">{week.resolved}</span>
+                              <span className="bar-value">{formatNumber(week.resolved)}</span>
                             </div>
                             <div 
                               className="bar tasks-bar" 
                               style={{ height: `${(week.tasks / maxWeeklyValue) * 150}px` }}
-                              title={`Tasks: ${week.tasks}`}
+                              title={`${t.tasks}: ${week.tasks}`}
                             >
-                              <span className="bar-value">{week.tasks}</span>
+                              <span className="bar-value">{formatNumber(week.tasks)}</span>
                             </div>
                           </div>
-                          <div className="satisfaction-rating">⭐ {week.satisfaction}</div>
+                          <div className="satisfaction-rating">⭐ {formatDecimal(week.satisfaction)}</div>
                         </div>
                       ))}
                     </div>
@@ -578,13 +636,13 @@ const StaffReportsMonthly = () => {
                         {/* Y-axis labels */}
                         {[0, 15, 30, 45, 60, 75].map((val, i) => (
                           <text key={i} x="35" y={260 - (val / 75) * 240} textAnchor="end" fontSize="10" fill="#64748b">
-                            {val}
+                            {formatNumber(val)}
                           </text>
                         ))}
                         {/* X-axis labels */}
                         {reportData?.weeklyBreakdown?.map((week, i) => (
                           <text key={i} x={120 + i * 160} y="275" textAnchor="middle" fontSize="10" fill="#64748b">
-                            {t.week} {week.week}
+                            {t.week} {formatNumber(week.week)}
                           </text>
                         ))}
                         {/* Complaints Line */}
@@ -624,35 +682,35 @@ const StaffReportsMonthly = () => {
                 <div className="report-section">
                   <h3>{t.complaintsByPriority}</h3>
                   <div className="priority-stats">
-                    {(reportData?.complaintsByPriority.urgent > 0) && (
+                    {reportData?.complaintsByPriority?.urgent > 0 && (
                       <div className="priority-item urgent">
                         <span className="priority-label">{t.urgent}</span>
                         <div className="priority-bar">
-                          <div className="priority-fill urgent-fill" style={{ width: `${((reportData?.complaintsByPriority.urgent || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                          <div className="priority-fill urgent-fill" style={{ width: `${((reportData.complaintsByPriority.urgent || 0) / (reportData.summary.totalComplaints || 1)) * 100}%` }}></div>
                         </div>
-                        <span className="priority-count">{reportData?.complaintsByPriority.urgent || 0}</span>
+                        <span className="priority-count">{formatNumber(reportData.complaintsByPriority.urgent || 0)}</span>
                       </div>
                     )}
                     <div className="priority-item high">
                       <span className="priority-label">{t.high}</span>
                       <div className="priority-bar">
-                        <div className="priority-fill high-fill" style={{ width: `${((reportData?.complaintsByPriority.high || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="priority-fill high-fill" style={{ width: `${((reportData?.complaintsByPriority?.high || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="priority-count">{reportData?.complaintsByPriority.high || 0}</span>
+                      <span className="priority-count">{formatNumber(reportData?.complaintsByPriority?.high || 0)}</span>
                     </div>
                     <div className="priority-item medium">
                       <span className="priority-label">{t.medium}</span>
                       <div className="priority-bar">
-                        <div className="priority-fill medium-fill" style={{ width: `${((reportData?.complaintsByPriority.medium || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="priority-fill medium-fill" style={{ width: `${((reportData?.complaintsByPriority?.medium || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="priority-count">{reportData?.complaintsByPriority.medium || 0}</span>
+                      <span className="priority-count">{formatNumber(reportData?.complaintsByPriority?.medium || 0)}</span>
                     </div>
                     <div className="priority-item low">
                       <span className="priority-label">{t.low}</span>
                       <div className="priority-bar">
-                        <div className="priority-fill low-fill" style={{ width: `${((reportData?.complaintsByPriority.low || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="priority-fill low-fill" style={{ width: `${((reportData?.complaintsByPriority?.low || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="priority-count">{reportData?.complaintsByPriority.low || 0}</span>
+                      <span className="priority-count">{formatNumber(reportData?.complaintsByPriority?.low || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -664,44 +722,44 @@ const StaffReportsMonthly = () => {
                     <div className="category-item">
                       <span className="category-label">{t.internet}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.internet || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.internet || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.internet || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.internet || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.recharge}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.recharge || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.recharge || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.recharge || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.recharge || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.activation}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.activation || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.activation || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.activation || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.activation || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.billing}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.billing || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.billing || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.billing || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.billing || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.network}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.network || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.network || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.network || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.network || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.general}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.general || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.general || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.general || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.general || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -714,28 +772,28 @@ const StaffReportsMonthly = () => {
                   <div className="task-stat">
                     <div className="task-icon">✅</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksSummary.completed || 0}</div>
+                      <div className="task-value">{formatNumber(reportData?.tasksSummary?.completed || 0)}</div>
                       <div className="task-label">{t.completed}</div>
                     </div>
                   </div>
                   <div className="task-stat">
                     <div className="task-icon">⏳</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksSummary.pending || 0}</div>
+                      <div className="task-value">{formatNumber(reportData?.tasksSummary?.pending || 0)}</div>
                       <div className="task-label">{t.pending}</div>
                     </div>
                   </div>
                   <div className="task-stat">
                     <div className="task-icon">🔄</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksSummary.inProgress || 0}</div>
+                      <div className="task-value">{formatNumber(reportData?.tasksSummary?.inProgress || 0)}</div>
                       <div className="task-label">{t.inProgress}</div>
                     </div>
                   </div>
                   <div className="task-stat">
                     <div className="task-icon">📊</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksSummary.completionRate || 0}%</div>
+                      <div className="task-value">{formatPercentage(reportData?.tasksSummary?.completionRate || 0)}</div>
                       <div className="task-label">{t.completionRate}</div>
                     </div>
                   </div>
@@ -747,27 +805,27 @@ const StaffReportsMonthly = () => {
                 <h3>{t.performanceMetrics}</h3>
                 <div className="metrics-cards">
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.performanceMetrics.avgResolutionTime || 0} {t.days}</div>
+                    <div className="metric-value">{formatDecimal(reportData?.performanceMetrics?.avgResolutionTime || 0)} {t.days}</div>
                     <div className="metric-label">{t.avgResolutionTime}</div>
                   </div>
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.performanceMetrics.avgResponseTime || 0} {t.hours}</div>
+                    <div className="metric-value">{formatDecimal(reportData?.performanceMetrics?.avgResponseTime || 0)} {t.hours}</div>
                     <div className="metric-label">{t.avgResponseTime}</div>
                   </div>
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.performanceMetrics.customerSatisfaction || 0}/5</div>
+                    <div className="metric-value">{formatDecimal(reportData?.performanceMetrics?.customerSatisfaction || 0)}/5</div>
                     <div className="metric-label">{t.customerSatisfaction}</div>
                   </div>
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.performanceMetrics.teamProductivity || 0}%</div>
+                    <div className="metric-value">{formatPercentage(reportData?.performanceMetrics?.teamProductivity || 0)}</div>
                     <div className="metric-label">{t.teamProductivity}</div>
                   </div>
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.performanceMetrics.slaViolations || 0}</div>
+                    <div className="metric-value">{formatNumber(reportData?.performanceMetrics?.slaViolations || 0)}</div>
                     <div className="metric-label">{t.slaViolations}</div>
                   </div>
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.performanceMetrics.slaCompliance || 0}%</div>
+                    <div className="metric-value">{formatPercentage(reportData?.performanceMetrics?.slaCompliance || 0)}</div>
                     <div className="metric-label">{t.slaCompliance}</div>
                   </div>
                 </div>
@@ -792,16 +850,16 @@ const StaffReportsMonthly = () => {
                         <tr key={staff.id || index}>
                           <td className="staff-name">{getStaffDisplayName(staff)}</td>
                           <td className="staff-role">{getRoleDisplay(staff)}</td>
-                          <td className="staff-resolved">{staff.resolved}</td>
+                          <td className="staff-resolved">{formatNumber(staff.resolved)}</td>
                           <td>
                             <div className="satisfaction-container">
                               <div className="satisfaction-bar">
                                 <div className="satisfaction-fill" style={{ width: `${(staff.satisfaction / 5) * 100}%` }}></div>
                               </div>
-                              <span className="satisfaction-value">{staff.satisfaction}/5</span>
+                              <span className="satisfaction-value">{formatDecimal(staff.satisfaction)}/5</span>
                             </div>
                           </td>
-                          <td>{staff.avgTime} {t.days}</td>
+                          <td>{formatDecimal(staff.avgTime)} {t.days}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -821,7 +879,7 @@ const StaffReportsMonthly = () => {
                           className="hour-bar" 
                           style={{ width: `${(count / maxHourlyValue) * 100}%` }}
                         >
-                          <span className="hour-value">{count}</span>
+                          <span className="hour-value">{formatNumber(count)}</span>
                         </div>
                       </div>
                     </div>
@@ -833,31 +891,31 @@ const StaffReportsMonthly = () => {
               <div className="report-section">
                 <h3>{t.monthOverMonthGrowth}</h3>
                 <div className="growth-stats">
-                  <div className={`growth-card ${reportData?.monthOverMonthGrowth.complaints >= 0 ? 'negative' : 'positive'}`}>
-                    <div className="growth-icon">{reportData?.monthOverMonthGrowth.complaints >= 0 ? '📉' : '📈'}</div>
+                  <div className={`growth-card ${(reportData?.monthOverMonthGrowth?.complaints || 0) >= 0 ? 'negative' : 'positive'}`}>
+                    <div className="growth-icon">{(reportData?.monthOverMonthGrowth?.complaints || 0) >= 0 ? '📉' : '📈'}</div>
                     <div className="growth-info">
-                      <div className="growth-value">{reportData?.monthOverMonthGrowth.complaints >= 0 ? '+' : ''}{reportData?.monthOverMonthGrowth.complaints || 0}%</div>
+                      <div className="growth-value">{(reportData?.monthOverMonthGrowth?.complaints || 0) >= 0 ? '+' : ''}{formatDecimal(reportData?.monthOverMonthGrowth?.complaints || 0)}%</div>
                       <div className="growth-label">{t.complaints}</div>
                     </div>
                   </div>
                   <div className="growth-card positive">
                     <div className="growth-icon">🎯</div>
                     <div className="growth-info">
-                      <div className="growth-value">+{reportData?.monthOverMonthGrowth.resolution || 0}%</div>
+                      <div className="growth-value">+{formatDecimal(reportData?.monthOverMonthGrowth?.resolution || 0)}%</div>
                       <div className="growth-label">{t.resolution}</div>
                     </div>
                   </div>
                   <div className="growth-card positive">
                     <div className="growth-icon">⭐</div>
                     <div className="growth-info">
-                      <div className="growth-value">+{reportData?.monthOverMonthGrowth.satisfaction || 0}%</div>
+                      <div className="growth-value">+{formatDecimal(reportData?.monthOverMonthGrowth?.satisfaction || 0)}%</div>
                       <div className="growth-label">{t.satisfaction}</div>
                     </div>
                   </div>
                   <div className="growth-card positive">
                     <div className="growth-icon">⚡</div>
                     <div className="growth-info">
-                      <div className="growth-value">+{reportData?.monthOverMonthGrowth.productivity || 0}%</div>
+                      <div className="growth-value">+{formatDecimal(reportData?.monthOverMonthGrowth?.productivity || 0)}%</div>
                       <div className="growth-label">{t.productivity}</div>
                     </div>
                   </div>

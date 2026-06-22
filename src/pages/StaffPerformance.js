@@ -7,7 +7,9 @@ import StaffSidebar from '../components/StaffSidebar';
 
 const StaffPerformance = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [selectedPeriod, setSelectedPeriod] = useState('monthly');
   const [performanceData, setPerformanceData] = useState(null);
   const [backendStatus, setBackendStatus] = useState('checking');
@@ -22,6 +24,45 @@ const StaffPerformance = () => {
     joinDate: '',
     employeeId: ''
   });
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
+  // Format decimal with Nepali digits (preserves decimal point)
+  const formatDecimal = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const parts = num.toString().split('.');
+      const integerPart = parts[0].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      if (parts.length === 1) return integerPart;
+      const decimalPart = parts[1].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${integerPart}.${decimalPart}`;
+    }
+    return num.toString();
+  };
+
+  // Format percentage with Nepali digits
+  const formatPercentage = (num) => {
+    if (num === undefined || num === null) return '०%';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]) + '%';
+    }
+    return num + '%';
+  };
 
   // Load staff data from localStorage
   useEffect(() => {
@@ -49,7 +90,12 @@ const StaffPerformance = () => {
   const fetchPerformanceData = async () => {
     try {
       const token = localStorage.getItem('staffToken');
-      const response = await axios.get(`http://localhost:5000/api/staff/performance?period=${selectedPeriod}`, {
+      if (!token) {
+        navigate('/');
+        return;
+      }
+      
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/performance?period=${selectedPeriod}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -144,13 +190,21 @@ const StaffPerformance = () => {
     if (selectedPeriod) {
       fetchPerformanceData();
     }
-  }, [selectedPeriod, language]);
+  }, [selectedPeriod]);
+
+  // Refresh when language changes
+  useEffect(() => {
+    if (performanceData) {
+      fetchPerformanceData();
+    }
+  }, [language]);
 
   const handlePeriodChange = (period) => {
     setSelectedPeriod(period);
   };
 
   const handleExportReport = () => {
+    if (!performanceData) return;
     const dataStr = JSON.stringify(performanceData, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     const exportFileDefaultName = `performance_report_${selectedPeriod}.json`;
@@ -380,16 +434,16 @@ const StaffPerformance = () => {
                   <span className="avatar-icon">👨‍💻</span>
                 </div>
                 <div className="staff-details">
-                  <h2>{performanceData?.staffInfo.name}</h2>
-                  <p>{performanceData?.staffInfo.role} | {performanceData?.staffInfo.department}</p>
+                  <h2>{performanceData?.staffInfo?.name}</h2>
+                  <p>{performanceData?.staffInfo?.role} | {performanceData?.staffInfo?.department}</p>
                   <div className="staff-meta">
-                    <span>🆔 {performanceData?.staffInfo.employeeId}</span>
-                    <span>📅 {t.joinDate}: {performanceData?.staffInfo.joinDate}</span>
+                    <span>🆔 {performanceData?.staffInfo?.employeeId}</span>
+                    <span>📅 {t.joinDate}: {performanceData?.staffInfo?.joinDate}</span>
                   </div>
                 </div>
                 <div className="overall-score">
                   <div className="score-circle">
-                    <span className="score-value">{performanceData?.summary.overallScore}</span>
+                    <span className="score-value">{formatDecimal(performanceData?.summary?.overallScore || 0)}</span>
                     <span className="score-label">/5</span>
                   </div>
                   <p>{t.overallScore}</p>
@@ -401,42 +455,42 @@ const StaffPerformance = () => {
                 <div className="summary-card">
                   <div className="summary-icon green">✅</div>
                   <div className="summary-info">
-                    <div className="summary-value">{performanceData?.summary.totalComplaintsResolved || 0}</div>
+                    <div className="summary-value">{formatNumber(performanceData?.summary?.totalComplaintsResolved || 0)}</div>
                     <div className="summary-label">{t.totalResolved}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon blue">⏱️</div>
                   <div className="summary-info">
-                    <div className="summary-value">{performanceData?.summary.avgResolutionTime || 0} {t.days}</div>
+                    <div className="summary-value">{formatDecimal(performanceData?.summary?.avgResolutionTime || 0)} {t.days}</div>
                     <div className="summary-label">{t.avgResolutionTime}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon yellow">⭐</div>
                   <div className="summary-info">
-                    <div className="summary-value">{performanceData?.summary.customerSatisfaction || 0}/5</div>
+                    <div className="summary-value">{formatDecimal(performanceData?.summary?.customerSatisfaction || 0)}/5</div>
                     <div className="summary-label">{t.customerSatisfaction}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon purple">📋</div>
                   <div className="summary-info">
-                    <div className="summary-value">{performanceData?.summary.tasksCompleted || 0}</div>
+                    <div className="summary-value">{formatNumber(performanceData?.summary?.tasksCompleted || 0)}</div>
                     <div className="summary-label">{t.tasksCompleted}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon orange">📅</div>
                   <div className="summary-info">
-                    <div className="summary-value">{performanceData?.summary.attendance || 0}%</div>
+                    <div className="summary-value">{formatDecimal(performanceData?.summary?.attendance || 0)}%</div>
                     <div className="summary-label">{t.attendance}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon teal">⏰</div>
                   <div className="summary-info">
-                    <div className="summary-value">{performanceData?.summary.punctuality || 0}%</div>
+                    <div className="summary-value">{formatDecimal(performanceData?.summary?.punctuality || 0)}%</div>
                     <div className="summary-label">{t.punctuality}</div>
                   </div>
                 </div>
@@ -451,26 +505,26 @@ const StaffPerformance = () => {
                       <div key={index} className="bar-item">
                         <div className="bar-label">
                           {selectedPeriod === 'weekly' 
-                            ? `${t.week} ${item.week.split(' ')[1]}` 
+                            ? `${t.week} ${formatNumber(item.week.split(' ')[1])}` 
                             : getMonthTranslation(item.month)}
                         </div>
                         <div className="bars-container">
                           <div 
                             className="bar resolved-bar" 
                             style={{ height: `${(item.resolved / maxResolved) * 120}px` }}
-                            title={`Resolved: ${item.resolved}`}
+                            title={`${t.resolved}: ${item.resolved}`}
                           >
-                            <span className="bar-value">{item.resolved}</span>
+                            <span className="bar-value">{formatNumber(item.resolved)}</span>
                           </div>
                           <div 
                             className="bar tasks-bar" 
                             style={{ height: `${(item.tasks / maxResolved) * 120}px` }}
-                            title={`Tasks: ${item.tasks}`}
+                            title={`${t.tasks}: ${item.tasks}`}
                           >
-                            <span className="bar-value">{item.tasks}</span>
+                            <span className="bar-value">{formatNumber(item.tasks)}</span>
                           </div>
                         </div>
-                        <div className="score-rating">⭐ {item.score}</div>
+                        <div className="score-rating">⭐ {formatDecimal(item.score)}</div>
                       </div>
                     ))}
                   </div>
@@ -500,16 +554,16 @@ const StaffPerformance = () => {
                         {Object.entries(performanceData?.categoryPerformance || {}).map(([category, data]) => (
                           <tr key={category}>
                             <td className="category-name">{t[category] || category}</td>
-                            <td className="category-resolved">{data.resolved}</td>
+                            <td className="category-resolved">{formatNumber(data.resolved)}</td>
                             <td>
                               <div className="satisfaction-container">
                                 <div className="satisfaction-bar">
                                   <div className="satisfaction-fill" style={{ width: `${(data.satisfaction / 5) * 100}%` }}></div>
                                 </div>
-                                <span className="satisfaction-value">{data.satisfaction}/5</span>
+                                <span className="satisfaction-value">{formatDecimal(data.satisfaction)}/5</span>
                               </div>
                             </td>
-                            <td className="category-time">{data.avgTime} {t.days}</td>
+                            <td className="category-time">{formatDecimal(data.avgTime)} {t.days}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -570,7 +624,7 @@ const StaffPerformance = () => {
                         <strong>{item.from}</strong>
                         <div className="feedback-rating">
                           {'⭐'.repeat(Math.floor(item.rating))}
-                          <span>({item.rating}/5)</span>
+                          <span>({formatDecimal(item.rating)}/5)</span>
                         </div>
                       </div>
                       <p className="feedback-message">"{item.message}"</p>

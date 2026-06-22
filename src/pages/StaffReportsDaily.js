@@ -7,11 +7,53 @@ import StaffSidebar from '../components/StaffSidebar';
 
 const StaffReportsDaily = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportData, setReportData] = useState(null);
   const [backendStatus, setBackendStatus] = useState('checking');
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
+  // Format decimal with Nepali digits (preserves decimal point)
+  const formatDecimal = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      // Handle decimal numbers properly
+      const parts = num.toString().split('.');
+      const integerPart = parts[0].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      if (parts.length === 1) return integerPart;
+      const decimalPart = parts[1].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${integerPart}.${decimalPart}`;
+    }
+    return num.toString();
+  };
+
+  // Format percentage with Nepali digits
+  const formatPercentage = (num) => {
+    if (num === undefined || num === null) return '०%';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]) + '%';
+    }
+    return num + '%';
+  };
 
   const [staffData, setStaffData] = useState({
     id: null,
@@ -42,7 +84,7 @@ const StaffReportsDaily = () => {
     }
   }, []);
 
-  // Format Nepali date
+  // Format Nepali date with Nepali digits
   const formatNepaliDate = (date) => {
     if (!date) return '-';
     try {
@@ -51,7 +93,11 @@ const StaffReportsDaily = () => {
       const year = d.getFullYear() - 57;
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${yearNp}-${monthNp}-${dayNp}`;
     } catch (error) {
       return '-';
     }
@@ -70,11 +116,12 @@ const StaffReportsDaily = () => {
 
   // Get sample daily report with multi-language staff names
   const getSampleDailyReport = useCallback(() => {
+    const totalComplaints = 12;
     return {
       date: selectedDate,
       formattedDate: language === 'np' ? formatNepaliDate(selectedDate) : formatEnglishDate(selectedDate),
       summary: {
-        totalComplaints: 12,
+        totalComplaints: totalComplaints,
         newComplaints: 5,
         resolvedComplaints: 3,
         pendingComplaints: 4,
@@ -129,7 +176,7 @@ const StaffReportsDaily = () => {
         return;
       }
       
-      const response = await axios.get(`http://localhost:5000/api/staff/reports/daily?date=${selectedDate}`, {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/reports/daily?date=${selectedDate}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -171,7 +218,6 @@ const StaffReportsDaily = () => {
   // Refresh when language changes (only after initialization)
   useEffect(() => {
     if (isInitialized && reportData) {
-      // Just update the sample data language without full reload
       const updatedReport = getSampleDailyReport();
       setReportData(updatedReport);
     }
@@ -330,6 +376,26 @@ const StaffReportsDaily = () => {
     return language === 'np' ? staff.role : staff.enRole;
   };
 
+  // Helper function to get activity type text
+  const getActivityTypeText = (type) => {
+    const types = {
+      resolution: t.resolution,
+      assignment: t.assignment,
+      followup: t.followup,
+      update: t.update,
+      report: t.report
+    };
+    return types[type] || type;
+  };
+
+  // Get formatted date for display
+  const getFormattedDate = () => {
+    if (reportData?.formattedDate) {
+      return reportData.formattedDate;
+    }
+    return language === 'np' ? formatNepaliDate(selectedDate) : formatEnglishDate(selectedDate);
+  };
+
   return (
     <div className="staff-reports-daily">
       <StaffHeader 
@@ -389,7 +455,7 @@ const StaffReportsDaily = () => {
               {/* Report Header */}
               <div className="report-header">
                 <h2>{t.dailyReport}</h2>
-                <p>{t.reportFor}: {reportData?.formattedDate || selectedDate}</p>
+                <p>{t.reportFor}: {getFormattedDate()}</p>
               </div>
 
               {/* Summary Cards */}
@@ -397,42 +463,42 @@ const StaffReportsDaily = () => {
                 <div className="summary-card">
                   <div className="summary-icon">📊</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.totalComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.totalComplaints || 0)}</div>
                     <div className="summary-label">{t.totalComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">🆕</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.newComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.newComplaints || 0)}</div>
                     <div className="summary-label">{t.newComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">✅</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.resolvedComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.resolvedComplaints || 0)}</div>
                     <div className="summary-label">{t.resolvedComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">⏳</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.pendingComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.pendingComplaints || 0)}</div>
                     <div className="summary-label">{t.pendingComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">🔄</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.inProgressComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.inProgressComplaints || 0)}</div>
                     <div className="summary-label">{t.inProgressComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">📝</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.underReviewComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.underReviewComplaints || 0)}</div>
                     <div className="summary-label">{t.underReviewComplaints}</div>
                   </div>
                 </div>
@@ -444,35 +510,35 @@ const StaffReportsDaily = () => {
                 <div className="report-section">
                   <h3>{t.complaintsByPriority}</h3>
                   <div className="priority-stats">
-                    {(reportData?.complaintsByPriority?.urgent > 0) && (
+                    {reportData?.complaintsByPriority?.urgent > 0 && (
                       <div className="priority-item urgent">
                         <span className="priority-label">{t.urgent}</span>
                         <div className="priority-bar">
-                          <div className="priority-fill urgent-fill" style={{ width: `${((reportData?.complaintsByPriority.urgent || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                          <div className="priority-fill urgent-fill" style={{ width: `${((reportData.complaintsByPriority.urgent || 0) / (reportData.summary.totalComplaints || 1)) * 100}%` }}></div>
                         </div>
-                        <span className="priority-count">{reportData?.complaintsByPriority.urgent || 0}</span>
+                        <span className="priority-count">{formatNumber(reportData.complaintsByPriority.urgent || 0)}</span>
                       </div>
                     )}
                     <div className="priority-item high">
                       <span className="priority-label">{t.high}</span>
                       <div className="priority-bar">
-                        <div className="priority-fill high-fill" style={{ width: `${((reportData?.complaintsByPriority.high || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="priority-fill high-fill" style={{ width: `${((reportData?.complaintsByPriority?.high || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="priority-count">{reportData?.complaintsByPriority.high || 0}</span>
+                      <span className="priority-count">{formatNumber(reportData?.complaintsByPriority?.high || 0)}</span>
                     </div>
                     <div className="priority-item medium">
                       <span className="priority-label">{t.medium}</span>
                       <div className="priority-bar">
-                        <div className="priority-fill medium-fill" style={{ width: `${((reportData?.complaintsByPriority.medium || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="priority-fill medium-fill" style={{ width: `${((reportData?.complaintsByPriority?.medium || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="priority-count">{reportData?.complaintsByPriority.medium || 0}</span>
+                      <span className="priority-count">{formatNumber(reportData?.complaintsByPriority?.medium || 0)}</span>
                     </div>
                     <div className="priority-item low">
                       <span className="priority-label">{t.low}</span>
                       <div className="priority-bar">
-                        <div className="priority-fill low-fill" style={{ width: `${((reportData?.complaintsByPriority.low || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="priority-fill low-fill" style={{ width: `${((reportData?.complaintsByPriority?.low || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="priority-count">{reportData?.complaintsByPriority.low || 0}</span>
+                      <span className="priority-count">{formatNumber(reportData?.complaintsByPriority?.low || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -484,44 +550,44 @@ const StaffReportsDaily = () => {
                     <div className="category-item">
                       <span className="category-label">{t.internet}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.internet || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.internet || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.internet || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.internet || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.recharge}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.recharge || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.recharge || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.recharge || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.recharge || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.activation}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.activation || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.activation || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.activation || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.activation || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.billing}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.billing || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.billing || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.billing || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.billing || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.network}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.network || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.network || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.network || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.network || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.general}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.general || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.general || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.general || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.general || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -534,21 +600,21 @@ const StaffReportsDaily = () => {
                   <div className="task-stat">
                     <div className="task-icon">✅</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksOverview?.completed || reportData?.tasksCompleted || 0}</div>
+                      <div className="task-value">{formatNumber(reportData?.tasksOverview?.completed || 0)}</div>
                       <div className="task-label">{t.tasksCompleted}</div>
                     </div>
                   </div>
                   <div className="task-stat">
                     <div className="task-icon">⏳</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksOverview?.pending || reportData?.tasksPending || 0}</div>
+                      <div className="task-value">{formatNumber(reportData?.tasksOverview?.pending || 0)}</div>
                       <div className="task-label">{t.tasksPending}</div>
                     </div>
                   </div>
                   <div className="task-stat">
                     <div className="task-icon">🔄</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksOverview?.inProgress || reportData?.tasksInProgress || 0}</div>
+                      <div className="task-value">{formatNumber(reportData?.tasksOverview?.inProgress || 0)}</div>
                       <div className="task-label">{t.tasksInProgress}</div>
                     </div>
                   </div>
@@ -560,15 +626,17 @@ const StaffReportsDaily = () => {
                 <h3>{t.performanceMetrics}</h3>
                 <div className="metrics-cards">
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.performanceMetrics?.averageResponseTime || reportData?.averageResponseTime || 0} {t.hours}</div>
+                    <div className="metric-value">
+                      {formatDecimal(reportData?.performanceMetrics?.averageResponseTime || 0)} {t.hours}
+                    </div>
                     <div className="metric-label">{t.averageResponseTime}</div>
                   </div>
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.performanceMetrics?.customerSatisfaction || reportData?.customerSatisfaction || 0}/5</div>
+                    <div className="metric-value">{formatDecimal(reportData?.performanceMetrics?.customerSatisfaction || 0)}/5</div>
                     <div className="metric-label">{t.customerSatisfaction}</div>
                   </div>
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.performanceMetrics?.resolutionRate || 0}{t.percent}</div>
+                    <div className="metric-value">{formatPercentage(reportData?.performanceMetrics?.resolutionRate || 0)}</div>
                     <div className="metric-label">{t.resolutionRate}</div>
                   </div>
                 </div>
@@ -592,13 +660,13 @@ const StaffReportsDaily = () => {
                         <tr key={staff.id || index}>
                           <td className="staff-name">{getStaffDisplayName(staff)}</td>
                           <td className="staff-role">{getRoleDisplay(staff)}</td>
-                          <td className="staff-resolved">{staff.resolved}</td>
+                          <td className="staff-resolved">{formatNumber(staff.resolved)}</td>
                           <td>
                             <div className="satisfaction-container">
                               <div className="satisfaction-bar">
                                 <div className="satisfaction-fill" style={{ width: `${(staff.satisfaction / 5) * 100}%` }}></div>
                               </div>
-                              <span className="satisfaction-value">{staff.satisfaction}/5</span>
+                              <span className="satisfaction-value">{formatDecimal(staff.satisfaction)}/5</span>
                             </div>
                           </td>
                         </tr>
@@ -616,7 +684,7 @@ const StaffReportsDaily = () => {
                     <div key={index} className={`activity-item ${activity.type}`}>
                       <div className="activity-time">{activity.time}</div>
                       <div className="activity-action">{activity.action}</div>
-                      <div className="activity-type-badge">{t[activity.type] || activity.type}</div>
+                      <div className="activity-type-badge">{getActivityTypeText(activity.type)}</div>
                     </div>
                   ))}
                 </div>

@@ -7,7 +7,9 @@ import StaffSidebar from '../components/StaffSidebar';
 
 const StaffComplaintsAssigned = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -15,6 +17,104 @@ const StaffComplaintsAssigned = () => {
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+
+  // Update current date/time every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
+  // Get current date in Nepali format
+  const getCurrentNepaliDate = () => {
+    const now = new Date();
+    const year = now.getFullYear() - 57;
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+    const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    return `${yearNp}-${monthNp}-${dayNp}`;
+  };
+
+  // Get current date in English format
+  const getCurrentEnglishDate = () => {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+  };
+
+  // Get Nepali month names
+  const getNepaliMonths = () => {
+    return ['बैशाख', 'जेठ', 'असार', 'श्रावण', 'भदौ', 'असोज', 'कार्तिक', 'मंसिर', 'पौष', 'माघ', 'फाल्गुन', 'चैत्र'];
+  };
+
+  // Get Nepali day names
+  const getNepaliDays = () => {
+    return ['आइतवार', 'सोमवार', 'मंगलवार', 'बुधवार', 'बिहिवार', 'शुक्रवार', 'शनिवार'];
+  };
+
+  // Get full current date display
+  const getFullDateDisplay = () => {
+    const now = new Date();
+    if (language === 'np') {
+      const nepaliMonths = getNepaliMonths();
+      const nepaliDays = getNepaliDays();
+      const year = now.getFullYear() - 57;
+      const month = now.getMonth();
+      const day = now.getDate();
+      const dayOfWeek = now.getDay();
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${nepaliDays[dayOfWeek]}, ${nepaliMonths[month]} ${dayNp}, ${yearNp}`;
+    } else {
+      return now.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+  };
+
+  // Get current time display
+  const getTimeDisplay = () => {
+    const now = new Date();
+    if (language === 'np') {
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'बजे' : 'बजे';
+      hours = hours % 12 || 12;
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const hoursNp = hours.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const minutesNp = minutes.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${hoursNp}:${minutesNp} ${ampm}`;
+    } else {
+      return now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+  };
 
   const [staffData, setStaffData] = useState(() => {
     const storedUser = localStorage.getItem('staffUser');
@@ -70,6 +170,37 @@ const StaffComplaintsAssigned = () => {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   };
 
+  // Format date to Nepali format with Nepali digits
+  const formatNepaliDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      const year = d.getFullYear() - 57;
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${yearNp}-${monthNp}-${dayNp}`;
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Format date to English format
+  const formatEnglishDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      return d.toISOString().split('T')[0];
+    } catch (error) {
+      return '-';
+    }
+  };
+
   // Fetch assigned complaints
   const fetchAssignedComplaints = async () => {
     try {
@@ -82,9 +213,7 @@ const StaffComplaintsAssigned = () => {
       
       const headers = { Authorization: `Bearer ${token}` };
       
-      // Fetch regular complaints assigned to this staff
       const regularResponse = await axios.get(`${API_URL}/complaints/assigned-to-me`, { headers });
-      // Fetch complaint regarding assigned to this staff
       const regardingResponse = await axios.get(`${API_URL}/complaint-regarding/assigned-to-me`, { headers });
       
       let regularData = [];
@@ -117,7 +246,7 @@ const StaffComplaintsAssigned = () => {
       setComplaints(getSampleAssignedComplaints());
       setBackendStatus('disconnected');
       if (error.response?.status === 401) {
-        showToast('Session expired. Please login again.', 'error');
+        showToast(language === 'np' ? 'सेसन समाप्त भयो। कृपया पुन: लगइन गर्नुहोस्।' : 'Session expired. Please login again.', 'error');
         setTimeout(() => navigate('/login'), 1500);
       }
     }
@@ -211,33 +340,16 @@ const StaffComplaintsAssigned = () => {
     return priorityMap[priority] || 'medium';
   };
 
-  const formatNepaliDate = (date) => {
-    if (!date) return '-';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '-';
-      const year = d.getFullYear() - 57;
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    } catch (error) {
-      return '-';
-    }
-  };
-
-  const formatEnglishDate = (date) => {
-    if (!date) return '-';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '-';
-      return d.toISOString().split('T')[0];
-    } catch (error) {
-      return '-';
-    }
-  };
-
-  // Get sample assigned complaints
+  // Get sample assigned complaints with Nepali dates
   const getSampleAssignedComplaints = () => {
+    const now = new Date();
+    const date1 = formatNepaliDate(new Date(now.getTime() - 5 * 86400000));
+    const date2 = formatNepaliDate(new Date(now.getTime() - 3 * 86400000));
+    const date3 = formatNepaliDate(new Date(now.getTime() - 1 * 86400000));
+    const enDate1 = formatEnglishDate(new Date(now.getTime() - 5 * 86400000));
+    const enDate2 = formatEnglishDate(new Date(now.getTime() - 3 * 86400000));
+    const enDate3 = formatEnglishDate(new Date(now.getTime() - 1 * 86400000));
+
     return [
       { 
         id: 1, 
@@ -253,8 +365,8 @@ const StaffComplaintsAssigned = () => {
         description: 'फाइबर जडान २ दिनदेखि बन्द छ। इन्टरनेट सेवा नभएकोले धेरै समस्या भएको छ।',
         enDescription: 'Fiber connection has been down for 2 days.',
         status: 'in-progress',
-        date: '२०८०-०१-१५',
-        enDate: '2024-01-15',
+        date: date1,
+        enDate: enDate1,
         channel: 'वेबसाइट पोर्टल',
         enChannel: 'Website Portal',
         priority: 'high',
@@ -262,7 +374,7 @@ const StaffComplaintsAssigned = () => {
         enAssignedTo: staffData.role,
         assignedBy: 'Admin',
         resolvedDate: null,
-        submittedDate: '2024-01-15',
+        submittedDate: new Date(now.getTime() - 5 * 86400000).toISOString(),
         address: 'Kapan, Kathmandu',
         landmark: 'Near Ganesh Temple',
         type: 'regular'
@@ -281,8 +393,8 @@ const StaffComplaintsAssigned = () => {
         description: 'गत महिनाको बिलमा रु. ५०० गलत चार्ज देखाइएको छ।',
         enDescription: 'Wrong charge of Rs. 500 shown in last month\'s bill.',
         status: 'pending',
-        date: '२०८०-०२-१०',
-        enDate: '2024-02-10',
+        date: date2,
+        enDate: enDate2,
         channel: 'इमेल',
         enChannel: 'Email',
         priority: 'medium',
@@ -290,7 +402,7 @@ const StaffComplaintsAssigned = () => {
         enAssignedTo: staffData.role,
         assignedBy: 'Admin',
         resolvedDate: null,
-        submittedDate: '2024-02-10',
+        submittedDate: new Date(now.getTime() - 3 * 86400000).toISOString(),
         address: 'Baneshwor, Kathmandu',
         referenceNumber: 'REF-20240210-001',
         type: 'regarding'
@@ -309,8 +421,8 @@ const StaffComplaintsAssigned = () => {
         description: 'नयाँ सिम खरिद गरेको २४ घण्टा भयो तर सक्रिय भएको छैन।',
         enDescription: 'Purchased new SIM 24 hours ago but not activated yet.',
         status: 'review',
-        date: '२०८०-०२-१५',
-        enDate: '2024-02-15',
+        date: date3,
+        enDate: enDate3,
         channel: 'फोन',
         enChannel: 'Phone',
         priority: 'high',
@@ -318,7 +430,7 @@ const StaffComplaintsAssigned = () => {
         enAssignedTo: staffData.role,
         assignedBy: 'Admin',
         resolvedDate: null,
-        submittedDate: '2024-02-15',
+        submittedDate: new Date(now.getTime() - 1 * 86400000).toISOString(),
         type: 'regular'
       }
     ];
@@ -416,7 +528,9 @@ const StaffComplaintsAssigned = () => {
       complainantInfo: 'उजुरीकर्ताको जानकारी',
       statusInfo: 'स्थिति जानकारी',
       addressInfo: 'ठेगाना जानकारी',
-      dateInfo: 'मिति जानकारी'
+      dateInfo: 'मिति जानकारी',
+      currentDate: 'आजको मिति',
+      currentTime: 'हालको समय'
     },
     en: {
       pageTitle: 'Complaints Assigned to Me',
@@ -476,7 +590,9 @@ const StaffComplaintsAssigned = () => {
       complainantInfo: 'Complainant Information',
       statusInfo: 'Status Information',
       addressInfo: 'Address Information',
-      dateInfo: 'Date Information'
+      dateInfo: 'Date Information',
+      currentDate: 'Today\'s Date',
+      currentTime: 'Current Time'
     }
   };
 
@@ -556,6 +672,14 @@ const StaffComplaintsAssigned = () => {
 
   const getAssignedTo = (complaint) => {
     return language === 'np' ? complaint.assignedTo : complaint.enAssignedTo;
+  };
+
+  const getComplainantName = (complaint) => {
+    return language === 'np' ? complaint.name : complaint.enName;
+  };
+
+  const getDescription = (complaint) => {
+    return language === 'np' ? complaint.description : complaint.enDescription;
   };
 
   // Filter complaints
@@ -641,44 +765,48 @@ const StaffComplaintsAssigned = () => {
               </div>
             )}
 
-            {/* Welcome Section */}
+            {/* Welcome Section with Date and Time */}
             <div className="welcome-section">
               <div>
                 <h1 className="welcome-title">{t.assignedToMe}</h1>
                 <p className="welcome-subtitle">{t.assignedComplaints}</p>
+                <div className="date-time-display">
+                  <span className="date-display">📅 {t.currentDate}: {getFullDateDisplay()}</span>
+                  <span className="time-display">🕐 {t.currentTime}: {getTimeDisplay()}</span>
+                </div>
               </div>
               <button className="refresh-btn" onClick={refreshData}>
                 🔄 {t.refresh}
               </button>
             </div>
 
-            {/* Statistics Cards */}
+            {/* Statistics Cards - Updated with formatNumber */}
             <div className="stats-row">
               <div className="stat-box">
                 <div className="stat-box-icon blue">📋</div>
                 <div className="stat-box-info">
-                  <div className="stat-box-value">{stats.total}</div>
+                  <div className="stat-box-value">{formatNumber(stats.total)}</div>
                   <div className="stat-box-label">{t.totalAssigned}</div>
                 </div>
               </div>
               <div className="stat-box">
                 <div className="stat-box-icon orange">⏳</div>
                 <div className="stat-box-info">
-                  <div className="stat-box-value">{stats.pending}</div>
+                  <div className="stat-box-value">{formatNumber(stats.pending)}</div>
                   <div className="stat-box-label">{t.pendingCount}</div>
                 </div>
               </div>
               <div className="stat-box">
                 <div className="stat-box-icon yellow">🔄</div>
                 <div className="stat-box-info">
-                  <div className="stat-box-value">{stats.inProgress}</div>
+                  <div className="stat-box-value">{formatNumber(stats.inProgress)}</div>
                   <div className="stat-box-label">{t.inProgressCount}</div>
                 </div>
               </div>
               <div className="stat-box">
                 <div className="stat-box-icon green">✅</div>
                 <div className="stat-box-info">
-                  <div className="stat-box-value">{stats.resolved}</div>
+                  <div className="stat-box-value">{formatNumber(stats.resolved)}</div>
                   <div className="stat-box-label">{t.resolvedCount}</div>
                 </div>
               </div>
@@ -744,7 +872,7 @@ const StaffComplaintsAssigned = () => {
                     paginatedComplaints.map((complaint) => (
                       <tr key={complaint.id}>
                         <td className="ticket-id">{complaint.ticketId}</td>
-                        <td>{language === 'np' ? complaint.name : complaint.enName}</td>
+                        <td>{getComplainantName(complaint)}</td>
                         <td>{getCategoryText(complaint)}</td>
                         <td>{complaint.subject || '-'}</td>
                         <td>{getDate(complaint)}</td>
@@ -793,7 +921,7 @@ const StaffComplaintsAssigned = () => {
               </table>
             </div>
 
-            {/* Pagination */}
+            {/* Pagination - Updated with formatNumber */}
             {totalPages > 1 && (
               <div className="pagination">
                 <button
@@ -804,7 +932,7 @@ const StaffComplaintsAssigned = () => {
                   ← {t.previous}
                 </button>
                 <span className="pagination-info">
-                  {t.page} {currentPage} {t.of} {totalPages}
+                  {t.page} {formatNumber(currentPage)} {t.of} {formatNumber(totalPages)}
                 </span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
@@ -856,7 +984,7 @@ const StaffComplaintsAssigned = () => {
                 <h4>👤 {t.complainantInfo}</h4>
                 <div className="detail-row">
                   <label>{t.complainant}:</label>
-                  <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
+                  <span>{getComplainantName(selectedComplaint)}</span>
                 </div>
                 <div className="detail-row">
                   <label>{t.email}:</label>
@@ -883,7 +1011,7 @@ const StaffComplaintsAssigned = () => {
               <div className="detail-section">
                 <h4>📝 {t.description}</h4>
                 <div className="detail-row full-width">
-                  <p>{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
+                  <p>{getDescription(selectedComplaint)}</p>
                 </div>
               </div>
 
@@ -955,7 +1083,7 @@ const StaffComplaintsAssigned = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * {
           margin: 0;
           padding: 0;
@@ -1064,6 +1192,8 @@ const StaffComplaintsAssigned = () => {
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
+          flex-wrap: wrap;
+          gap: 16px;
         }
 
         .welcome-title {
@@ -1076,6 +1206,22 @@ const StaffComplaintsAssigned = () => {
         .welcome-subtitle {
           color: #64748b;
           font-size: 0.85rem;
+        }
+
+        .date-time-display {
+          display: flex;
+          gap: 20px;
+          margin-top: 8px;
+          flex-wrap: wrap;
+        }
+
+        .date-display, .time-display {
+          font-size: 0.8rem;
+          color: #475569;
+          background: #f8fafc;
+          padding: 4px 12px;
+          border-radius: 6px;
+          border: 1px solid #e2e8f0;
         }
 
         .refresh-btn {
@@ -1572,6 +1718,11 @@ const StaffComplaintsAssigned = () => {
             left: 20px;
             max-width: calc(100% - 40px);
           }
+          
+          .date-time-display {
+            flex-direction: column;
+            gap: 4px;
+          }
         }
 
         @media (max-width: 480px) {
@@ -1593,6 +1744,14 @@ const StaffComplaintsAssigned = () => {
           .complaints-table td {
             padding: 8px;
             font-size: 0.7rem;
+          }
+          
+          .welcome-section {
+            padding: 16px;
+          }
+          
+          .welcome-title {
+            font-size: 1.2rem;
           }
         }
       `}</style>

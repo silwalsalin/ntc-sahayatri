@@ -7,7 +7,9 @@ import StaffSidebar from '../components/StaffSidebar';
 
 const StaffNotifications = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [notifications, setNotifications] = useState([]);
   const [filter, setFilter] = useState('all');
   const [selectedNotification, setSelectedNotification] = useState(null);
@@ -24,6 +26,35 @@ const StaffNotifications = () => {
     phone: '',
     department: ''
   });
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
+  // Format decimal with Nepali digits
+  const formatDecimal = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const parts = num.toString().split('.');
+      const integerPart = parts[0].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      if (parts.length === 1) return integerPart;
+      const decimalPart = parts[1].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${integerPart}.${decimalPart}`;
+    }
+    return num.toString();
+  };
 
   // Load staff data from localStorage
   useEffect(() => {
@@ -49,7 +80,12 @@ const StaffNotifications = () => {
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem('staffToken');
-      const response = await axios.get('http://localhost:5000/api/staff/notifications', {
+      if (!token) {
+        navigate('/');
+        return;
+      }
+      
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -94,7 +130,11 @@ const StaffNotifications = () => {
       const year = d.getFullYear() - 57;
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${yearNp}-${monthNp}-${dayNp}`;
     } catch (error) {
       return '-';
     }
@@ -234,7 +274,7 @@ const StaffNotifications = () => {
     try {
       const token = localStorage.getItem('staffToken');
       const response = await axios.put(
-        `http://localhost:5000/api/staff/notifications/${notificationId}/read`,
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/notifications/${notificationId}/read`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -265,7 +305,7 @@ const StaffNotifications = () => {
     try {
       const token = localStorage.getItem('staffToken');
       const response = await axios.put(
-        'http://localhost:5000/api/staff/notifications/read-all',
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/notifications/read-all`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -288,7 +328,7 @@ const StaffNotifications = () => {
     try {
       const token = localStorage.getItem('staffToken');
       const response = await axios.delete(
-        `http://localhost:5000/api/staff/notifications/${notificationId}`,
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/notifications/${notificationId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -319,7 +359,7 @@ const StaffNotifications = () => {
       try {
         const token = localStorage.getItem('staffToken');
         const response = await axios.delete(
-          'http://localhost:5000/api/staff/notifications/delete-all',
+          `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/notifications/delete-all`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         
@@ -344,6 +384,13 @@ const StaffNotifications = () => {
       fetchNotifications();
     }
   }, [navigate]);
+
+  // Refresh when language changes
+  useEffect(() => {
+    if (notifications.length > 0) {
+      fetchNotifications();
+    }
+  }, [language]);
 
   const handleActionClick = (actionUrl) => {
     if (actionUrl) {
@@ -564,7 +611,7 @@ const StaffNotifications = () => {
               <div>
                 <h1 className="page-title">{t.notifications}</h1>
                 <p className="page-subtitle">
-                  {getUnreadCount()} {language === 'np' ? 'नपढेका सूचनाहरू' : 'unread notifications'}
+                  {formatNumber(getUnreadCount())} {language === 'np' ? 'नपढेका सूचनाहरू' : 'unread notifications'}
                 </p>
               </div>
               <div className="header-actions">
@@ -586,19 +633,19 @@ const StaffNotifications = () => {
                 className={`filter-tab ${filter === 'all' ? 'active' : ''}`}
                 onClick={() => setFilter('all')}
               >
-                📬 {t.filterAll} ({notifications.length})
+                📬 {t.filterAll} ({formatNumber(notifications.length)})
               </button>
               <button 
                 className={`filter-tab ${filter === 'unread' ? 'active' : ''}`}
                 onClick={() => setFilter('unread')}
               >
-                🔵 {t.filterUnread} ({getUnreadCount()})
+                🔵 {t.filterUnread} ({formatNumber(getUnreadCount())})
               </button>
               <button 
                 className={`filter-tab ${filter === 'read' ? 'active' : ''}`}
                 onClick={() => setFilter('read')}
               >
-                ✅ {t.filterRead} ({notifications.length - getUnreadCount()})
+                ✅ {t.filterRead} ({formatNumber(notifications.length - getUnreadCount())})
               </button>
             </div>
 
@@ -654,7 +701,7 @@ const StaffNotifications = () => {
                   ← {t.previous}
                 </button>
                 <span className="pagination-info">
-                  {t.page} {currentPage} {t.of} {totalPages}
+                  {t.page} {formatNumber(currentPage)} {t.of} {formatNumber(totalPages)}
                 </span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}

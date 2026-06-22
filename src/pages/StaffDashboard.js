@@ -7,8 +7,24 @@ import StaffSidebar from '../components/StaffSidebar';
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
   // Get staff data from localStorage (from login)
   const [staffData, setStaffData] = useState(() => {
     const storedUser = localStorage.getItem('staffUser');
@@ -72,6 +88,37 @@ const StaffDashboard = () => {
     return localStorage.getItem('staffToken') || localStorage.getItem('token');
   };
 
+  // Format relative time with language support
+  const formatRelativeTime = (date) => {
+    if (!date) return language === 'np' ? 'अहिले' : 'Just now';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return language === 'np' ? 'अहिले' : 'Just now';
+      const now = new Date();
+      const diffMs = now - d;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 1) return language === 'np' ? 'अहिले' : 'Just now';
+      if (diffMins < 60) {
+        return language === 'np' 
+          ? `${formatNumber(diffMins)} मिनेट अघि`
+          : `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+      }
+      if (diffHours < 24) {
+        return language === 'np'
+          ? `${formatNumber(diffHours)} घण्टा अघि`
+          : `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      }
+      return language === 'np'
+        ? `${formatNumber(diffDays)} दिन अघि`
+        : `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    } catch (error) {
+      return language === 'np' ? 'अहिले' : 'Just now';
+    }
+  };
+
   // Fetch staff dashboard data from backend
   const fetchDashboardData = async () => {
     try {
@@ -99,18 +146,23 @@ const StaffDashboard = () => {
           id: complaint.id,
           ticketId: complaint.complaint_number || `NTC-${complaint.id}`,
           name: complaint.name || 'N/A',
+          enName: complaint.name || 'N/A',
           status: complaint.status || 'pending',
           priority: complaint.priority || 'medium',
           date: formatDate(complaint.created_at),
-          description: complaint.description || ''
+          enDate: formatDateEnglish(complaint.created_at),
+          description: complaint.description || '',
+          enDescription: complaint.description || ''
         }));
         setRecentComplaints(transformedComplaints);
         
         // Create activities from complaints
         const activities = transformedComplaints.slice(0, 5).map(complaint => ({
           id: complaint.id,
-          action: `Complaint #${complaint.ticketId} is ${complaint.status}`,
-          time: complaint.date,
+          action: language === 'np' 
+            ? `गुनासो #${complaint.ticketId} ${getStatusText(complaint.status)} मा छ`
+            : `Complaint #${complaint.ticketId} is ${complaint.status}`,
+          time: formatRelativeTime(complaint.date),
           status: complaint.status
         }));
         setRecentActivities(activities);
@@ -120,12 +172,18 @@ const StaffDashboard = () => {
       const notificationsResponse = await axios.get(`${API_URL}/notifications?limit=5`, { headers });
       
       if (notificationsResponse.data.success && Array.isArray(notificationsResponse.data.data)) {
-        setNotifications(notificationsResponse.data.data);
+        const transformedNotifications = notificationsResponse.data.data.map(n => ({
+          id: n.id,
+          message: language === 'np' ? n.message_np || n.message : n.message_en || n.message,
+          time: formatRelativeTime(n.created_at || n.createdAt),
+          read: n.read || false
+        }));
+        setNotifications(transformedNotifications);
       } else {
         // Sample notifications
         setNotifications([
-          { id: 1, message: 'Welcome to your dashboard', time: 'Just now', read: false },
-          { id: 2, message: 'Check your assigned complaints', time: '1 hour ago', read: false }
+          { id: 1, message: language === 'np' ? 'तपाईंको ड्यासबोर्डमा स्वागत छ' : 'Welcome to your dashboard', time: language === 'np' ? 'अहिले' : 'Just now', read: false },
+          { id: 2, message: language === 'np' ? 'तपाईंलाई तोकिएका गुनासोहरू जाँच गर्नुहोस्' : 'Check your assigned complaints', time: language === 'np' ? '१ घण्टा अघि' : '1 hour ago', read: false }
         ]);
       }
       
@@ -149,20 +207,20 @@ const StaffDashboard = () => {
     });
     
     setRecentComplaints([
-      { id: 1, ticketId: 'NTC-2024-001', name: 'राम बहादुर', status: 'in-progress', priority: 'high', date: '2024-02-20', description: 'Internet connection issue' },
-      { id: 2, ticketId: 'NTC-2024-002', name: 'सीता शर्मा', status: 'pending', priority: 'medium', date: '2024-02-19', description: 'Billing problem' },
-      { id: 3, ticketId: 'NTC-2024-003', name: 'हरि प्रसाद', status: 'resolved', priority: 'low', date: '2024-02-18', description: 'Recharge issue' }
+      { id: 1, ticketId: 'NTC-2024-001', name: 'राम बहादुर', enName: 'Ram Bahadur', status: 'in-progress', priority: 'high', date: '२०८०-११-०७', enDate: '2024-02-20', description: 'इन्टरनेट जडान समस्या', enDescription: 'Internet connection issue' },
+      { id: 2, ticketId: 'NTC-2024-002', name: 'सीता शर्मा', enName: 'Sita Sharma', status: 'pending', priority: 'medium', date: '२०८०-११-०६', enDate: '2024-02-19', description: 'बिलिङ समस्या', enDescription: 'Billing problem' },
+      { id: 3, ticketId: 'NTC-2024-003', name: 'हरि प्रसाद', enName: 'Hari Prasad', status: 'resolved', priority: 'low', date: '२०८०-११-०५', enDate: '2024-02-18', description: 'रिचार्ज समस्या', enDescription: 'Recharge issue' }
     ]);
     
     setRecentActivities([
-      { id: 1, action: 'Complaint #NTC-2024-001 assigned to you', time: '2 hours ago', status: 'pending' },
-      { id: 2, action: 'Updated complaint #NTC-2024-002 status', time: '5 hours ago', status: 'completed' },
-      { id: 3, action: 'Resolved complaint #NTC-2024-003', time: '1 day ago', status: 'completed' }
+      { id: 1, action: language === 'np' ? 'गुनासो #NTC-2024-001 तपाईंलाई तोकियो' : 'Complaint #NTC-2024-001 assigned to you', time: language === 'np' ? '२ घण्टा अघि' : '2 hours ago', status: 'pending' },
+      { id: 2, action: language === 'np' ? 'गुनासो #NTC-2024-002 को स्थिति अपडेट गरियो' : 'Updated complaint #NTC-2024-002 status', time: language === 'np' ? '५ घण्टा अघि' : '5 hours ago', status: 'completed' },
+      { id: 3, action: language === 'np' ? 'गुनासो #NTC-2024-003 समाधान गरियो' : 'Resolved complaint #NTC-2024-003', time: language === 'np' ? '१ दिन अघि' : '1 day ago', status: 'completed' }
     ]);
     
     setNotifications([
-      { id: 1, message: 'New complaint assigned to you', time: '5 min ago', read: false },
-      { id: 2, message: 'Your performance review is pending', time: '2 hours ago', read: true }
+      { id: 1, message: language === 'np' ? 'तपाईंलाई नयाँ गुनासो तोकियो' : 'New complaint assigned to you', time: language === 'np' ? '५ मिनेट अघि' : '5 min ago', read: false },
+      { id: 2, message: language === 'np' ? 'तपाईंको कार्यसम्पादन समीक्षा बाँकी छ' : 'Your performance review is pending', time: language === 'np' ? '२ घण्टा अघि' : '2 hours ago', read: true }
     ]);
   };
 
@@ -172,30 +230,39 @@ const StaffDashboard = () => {
     try {
       const d = new Date(date);
       if (isNaN(d.getTime())) return '-';
-      return d.toLocaleDateString(language === 'np' ? 'ne-NP' : 'en-US');
+      if (language === 'np') {
+        const year = d.getFullYear() - 57;
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+        const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        return `${yearNp}-${monthNp}-${dayNp}`;
+      }
+      return d.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
     } catch (error) {
       return '-';
     }
   };
 
-  // Format relative time
-  const formatRelativeTime = (date) => {
-    if (!date) return 'Just now';
+  // Format date in English
+  const formatDateEnglish = (date) => {
+    if (!date) return '-';
     try {
       const d = new Date(date);
-      if (isNaN(d.getTime())) return 'Just now';
-      const now = new Date();
-      const diffMs = now - d;
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffMs / 86400000);
-      
-      if (diffMins < 1) return 'Just now';
-      if (diffMins < 60) return `${diffMins} min ago`;
-      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
     } catch (error) {
-      return 'Just now';
+      return '-';
     }
   };
 
@@ -260,7 +327,9 @@ const StaffDashboard = () => {
       complainant: 'उजुरीकर्ता',
       status: 'स्थिति',
       date: 'मिति',
-      viewDetails: 'विवरण हेर्नुहोस्'
+      viewDetails: 'विवरण हेर्नुहोस्',
+      assigned: 'तोकिएको',
+      justNow: 'अहिले'
     },
     en: {
       welcome: 'Welcome',
@@ -294,7 +363,9 @@ const StaffDashboard = () => {
       complainant: 'Complainant',
       status: 'Status',
       date: 'Date',
-      viewDetails: 'View Details'
+      viewDetails: 'View Details',
+      assigned: 'Assigned',
+      justNow: 'Just now'
     }
   };
 
@@ -350,6 +421,19 @@ const StaffDashboard = () => {
     return priority.charAt(0).toUpperCase() + priority.slice(1);
   };
 
+  const getComplaintName = (complaint) => {
+    return language === 'np' ? complaint.name : complaint.enName;
+  };
+
+  const getComplaintDescription = (complaint) => {
+    const desc = language === 'np' ? complaint.description : complaint.enDescription;
+    return desc ? desc.substring(0, 60) + '...' : '';
+  };
+
+  const getComplaintDate = (complaint) => {
+    return language === 'np' ? complaint.date : complaint.enDate;
+  };
+
   const markNotificationAsRead = async (notificationId) => {
     try {
       const token = getAuthToken();
@@ -397,12 +481,12 @@ const StaffDashboard = () => {
               </button>
             </div>
 
-            {/* Statistics Cards */}
+            {/* Statistics Cards - Updated with formatNumber */}
             <div className="stats-grid">
               <div className="stat-card">
                 <div className="stat-icon blue">📋</div>
                 <div className="stat-details">
-                  <h3>{stats.totalAssigned}</h3>
+                  <h3>{formatNumber(stats.totalAssigned)}</h3>
                   <p>{t.totalAssigned}</p>
                 </div>
               </div>
@@ -410,7 +494,7 @@ const StaffDashboard = () => {
               <div className="stat-card">
                 <div className="stat-icon orange">⏳</div>
                 <div className="stat-details">
-                  <h3>{stats.pending}</h3>
+                  <h3>{formatNumber(stats.pending)}</h3>
                   <p>{t.pending}</p>
                 </div>
               </div>
@@ -418,7 +502,7 @@ const StaffDashboard = () => {
               <div className="stat-card">
                 <div className="stat-icon yellow">🔄</div>
                 <div className="stat-details">
-                  <h3>{stats.inProgress}</h3>
+                  <h3>{formatNumber(stats.inProgress)}</h3>
                   <p>{t.inProgress}</p>
                 </div>
               </div>
@@ -426,25 +510,25 @@ const StaffDashboard = () => {
               <div className="stat-card">
                 <div className="stat-icon green">✅</div>
                 <div className="stat-details">
-                  <h3>{stats.resolved}</h3>
+                  <h3>{formatNumber(stats.resolved)}</h3>
                   <p>{t.resolved}</p>
                 </div>
               </div>
             </div>
 
-            {/* Priority Statistics */}
+            {/* Priority Statistics - Updated with formatNumber */}
             <div className="priority-stats">
               <div className="priority-stat priority-high-bg">
                 <span className="priority-label">🔴 {t.highPriority}</span>
-                <span className="priority-count">{stats.highPriority || 0}</span>
+                <span className="priority-count">{formatNumber(stats.highPriority || 0)}</span>
               </div>
               <div className="priority-stat priority-medium-bg">
                 <span className="priority-label">🟡 {t.mediumPriority}</span>
-                <span className="priority-count">{stats.mediumPriority || 0}</span>
+                <span className="priority-count">{formatNumber(stats.mediumPriority || 0)}</span>
               </div>
               <div className="priority-stat priority-low-bg">
                 <span className="priority-label">🟢 {t.lowPriority}</span>
-                <span className="priority-count">{stats.lowPriority || 0}</span>
+                <span className="priority-count">{formatNumber(stats.lowPriority || 0)}</span>
               </div>
             </div>
 
@@ -469,13 +553,13 @@ const StaffDashboard = () => {
                           </span>
                         </div>
                         <div className="complaint-body">
-                          <p className="complaint-name">{complaint.name}</p>
-                          <p className="complaint-desc">{complaint.description?.substring(0, 60)}...</p>
+                          <p className="complaint-name">{getComplaintName(complaint)}</p>
+                          <p className="complaint-desc">{getComplaintDescription(complaint)}</p>
                           <div className="complaint-footer">
                             <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
                               {getPriorityText(complaint.priority)}
                             </span>
-                            <span className="complaint-date">📅 {complaint.date}</span>
+                            <span className="complaint-date">📅 {getComplaintDate(complaint)}</span>
                             <button 
                               className="view-btn"
                               onClick={() => navigate(`/staff/complaints/${complaint.id}`)}

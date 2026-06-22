@@ -7,7 +7,9 @@ import StaffSidebar from '../components/StaffSidebar';
 
 const StaffDocumentation = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedArticle, setSelectedArticle] = useState(null);
@@ -37,6 +39,35 @@ const StaffDocumentation = () => {
   const [faqs, setFaqs] = useState([]);
   const [videoTutorials, setVideoTutorials] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
+  // Format decimal with Nepali digits
+  const formatDecimal = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const parts = num.toString().split('.');
+      const integerPart = parts[0].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      if (parts.length === 1) return integerPart;
+      const decimalPart = parts[1].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${integerPart}.${decimalPart}`;
+    }
+    return num.toString();
+  };
 
   // Show toast notification
   const showToast = (message, type = 'success') => {
@@ -68,7 +99,12 @@ const StaffDocumentation = () => {
   const fetchDocumentation = async () => {
     try {
       const token = localStorage.getItem('staffToken');
-      const response = await axios.get('http://localhost:5000/api/staff/documentation', {
+      if (!token) {
+        navigate('/');
+        return;
+      }
+      
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/documentation`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -278,6 +314,13 @@ const StaffDocumentation = () => {
       loadBookmarks();
     }
   }, [navigate]);
+
+  // Refresh when language changes
+  useEffect(() => {
+    if (documentation.length > 0) {
+      fetchDocumentation();
+    }
+  }, [language]);
 
   const loadRecentlyViewed = () => {
     const stored = localStorage.getItem('recentlyViewedDocs');
@@ -631,7 +674,7 @@ const StaffDocumentation = () => {
                 >
                   <span className="category-icon">📚</span>
                   <span className="category-name">{t.allCategories}</span>
-                  <span className="category-count">{documentation.length}</span>
+                  <span className="category-count">{formatNumber(documentation.length)}</span>
                 </button>
                 {categories.map((category) => (
                   <button
@@ -642,7 +685,7 @@ const StaffDocumentation = () => {
                   >
                     <span className="category-icon">{category.icon}</span>
                     <span className="category-name">{getCategoryName(category.id)}</span>
-                    <span className="category-count">{category.count}</span>
+                    <span className="category-count">{formatNumber(category.count)}</span>
                   </button>
                 ))}
               </div>
@@ -661,7 +704,7 @@ const StaffDocumentation = () => {
                   className={`filter-btn ${showBookmarksOnly ? 'active' : ''}`}
                   onClick={() => setShowBookmarksOnly(true)}
                 >
-                  🔖 {t.showBookmarks} ({bookmarkedArticles.length})
+                  🔖 {t.showBookmarks} ({formatNumber(bookmarkedArticles.length)})
                 </button>
               </div>
               <div className="sort-dropdown">
@@ -702,14 +745,14 @@ const StaffDocumentation = () => {
                       <span className="article-category-badge" style={{ backgroundColor: getCategoryColor(article.category) }}>
                         {getCategoryIcon(article.category)} {getCategoryName(article.category)}
                       </span>
-                      <span className="article-read-time">📖 {article.readTime} {t.minutes}</span>
+                      <span className="article-read-time">📖 {formatNumber(article.readTime)} {t.minutes}</span>
                     </div>
                     <h3>{language === 'np' ? (article.title_np || article.title) : article.title}</h3>
                     <p>{language === 'np' ? (article.content_np || article.content).substring(0, 100) : article.content.substring(0, 100)}...</p>
                     <div className="article-footer">
                       <div className="article-stats">
-                        <span>👁️ {article.views}</span>
-                        <span>❤️ {article.likes}</span>
+                        <span>👁️ {formatNumber(article.views)}</span>
+                        <span>❤️ {formatNumber(article.likes)}</span>
                       </div>
                       <div className="article-actions">
                         <button 
@@ -751,7 +794,7 @@ const StaffDocumentation = () => {
                     </div>
                     <h4>{language === 'np' ? (video.title_np || video.title) : video.title}</h4>
                     <div className="video-stats">
-                      <span>👁️ {video.views || 0} {t.videoViews}</span>
+                      <span>👁️ {formatNumber(video.views || 0)} {t.videoViews}</span>
                     </div>
                     <button className="watch-btn">▶ {t.watchVideo}</button>
                   </div>
@@ -775,8 +818,8 @@ const StaffDocumentation = () => {
                     </div>
                     <div className="faq-helpful">
                       <span>{t.helpful}?</span>
-                      <button className="helpful-btn yes" onClick={(e) => { e.stopPropagation(); showToast(t.yes, 'success'); }}>👍 {faq.helpful}</button>
-                      <button className="helpful-btn no" onClick={(e) => { e.stopPropagation(); showToast(t.no, 'info'); }}>👎 {faq.notHelpful}</button>
+                      <button className="helpful-btn yes" onClick={(e) => { e.stopPropagation(); showToast(t.yes, 'success'); }}>👍 {formatNumber(faq.helpful)}</button>
+                      <button className="helpful-btn no" onClick={(e) => { e.stopPropagation(); showToast(t.no, 'info'); }}>👎 {formatNumber(faq.notHelpful)}</button>
                     </div>
                   </details>
                 ))}
@@ -816,7 +859,7 @@ const StaffDocumentation = () => {
               <div className="article-meta">
                 <span>👤 {t.author}: {selectedArticle.author}</span>
                 <span>📅 {t.published}: {selectedArticle.date}</span>
-                <span>⏱️ {selectedArticle.readTime} {t.minutes}</span>
+                <span>⏱️ {formatNumber(selectedArticle.readTime)} {t.minutes}</span>
                 <span className={`difficulty-badge ${selectedArticle.difficulty}`}>
                   {selectedArticle.difficulty === 'beginner' ? t.beginner :
                    selectedArticle.difficulty === 'intermediate' ? t.intermediate : t.advanced}

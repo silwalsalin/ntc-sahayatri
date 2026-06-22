@@ -7,7 +7,9 @@ import StaffSidebar from '../components/StaffSidebar';
 
 const StaffReportsWeekly = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [selectedWeek, setSelectedWeek] = useState(getCurrentWeek());
   const [reportData, setReportData] = useState(null);
   const [backendStatus, setBackendStatus] = useState('checking');
@@ -21,6 +23,45 @@ const StaffReportsWeekly = () => {
     phone: '',
     department: ''
   });
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
+  // Format decimal with Nepali digits (preserves decimal point)
+  const formatDecimal = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const parts = num.toString().split('.');
+      const integerPart = parts[0].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      if (parts.length === 1) return integerPart;
+      const decimalPart = parts[1].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${integerPart}.${decimalPart}`;
+    }
+    return num.toString();
+  };
+
+  // Format percentage with Nepali digits
+  const formatPercentage = (num) => {
+    if (num === undefined || num === null) return '०%';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]) + '%';
+    }
+    return num + '%';
+  };
 
   // Load staff data from localStorage
   useEffect(() => {
@@ -69,7 +110,11 @@ const StaffReportsWeekly = () => {
       const year = d.getFullYear() - 57;
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${yearNp}-${monthNp}-${dayNp}`;
     } catch (error) {
       return '-';
     }
@@ -90,7 +135,12 @@ const StaffReportsWeekly = () => {
   const fetchWeeklyReport = async () => {
     try {
       const token = localStorage.getItem('staffToken');
-      const response = await axios.get(`http://localhost:5000/api/staff/reports/weekly?week=${selectedWeek}`, {
+      if (!token) {
+        navigate('/');
+        return;
+      }
+      
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/reports/weekly?week=${selectedWeek}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -214,13 +264,22 @@ const StaffReportsWeekly = () => {
     if (selectedWeek) {
       fetchWeeklyReport();
     }
-  }, [selectedWeek, language]);
+  }, [selectedWeek]);
+
+  // Refresh when language changes
+  useEffect(() => {
+    if (reportData) {
+      // Re-fetch or update the report data when language changes
+      fetchWeeklyReport();
+    }
+  }, [language]);
 
   const handleWeekChange = (e) => {
     setSelectedWeek(e.target.value);
   };
 
   const handleExportReport = () => {
+    if (!reportData) return;
     const dataStr = JSON.stringify(reportData, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     const exportFileDefaultName = `weekly_report_${selectedWeek}.json`;
@@ -440,35 +499,35 @@ const StaffReportsWeekly = () => {
                 <div className="summary-card">
                   <div className="summary-icon">📊</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.totalComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.totalComplaints || 0)}</div>
                     <div className="summary-label">{t.totalComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">✅</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.resolvedComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.resolvedComplaints || 0)}</div>
                     <div className="summary-label">{t.resolvedComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">⏳</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.pendingComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.pendingComplaints || 0)}</div>
                     <div className="summary-label">{t.pendingComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">🔄</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.inProgressComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.inProgressComplaints || 0)}</div>
                     <div className="summary-label">{t.inProgressComplaints}</div>
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon">📝</div>
                   <div className="summary-info">
-                    <div className="summary-value">{reportData?.summary.underReviewComplaints || 0}</div>
+                    <div className="summary-value">{formatNumber(reportData?.summary?.underReviewComplaints || 0)}</div>
                     <div className="summary-label">{t.underReviewComplaints}</div>
                   </div>
                 </div>
@@ -503,23 +562,23 @@ const StaffReportsWeekly = () => {
                             <div 
                               className="bar complaints-bar" 
                               style={{ height: `${(day.complaints / maxDailyValue) * 150}px` }}
-                              title={`Complaints: ${day.complaints}`}
+                              title={`${t.complaintsCount}: ${day.complaints}`}
                             >
-                              <span className="bar-value">{day.complaints}</span>
+                              <span className="bar-value">{formatNumber(day.complaints)}</span>
                             </div>
                             <div 
                               className="bar resolved-bar" 
                               style={{ height: `${(day.resolved / maxDailyValue) * 150}px` }}
-                              title={`Resolved: ${day.resolved}`}
+                              title={`${t.resolved}: ${day.resolved}`}
                             >
-                              <span className="bar-value">{day.resolved}</span>
+                              <span className="bar-value">{formatNumber(day.resolved)}</span>
                             </div>
                             <div 
                               className="bar tasks-bar" 
                               style={{ height: `${(day.tasks / maxDailyValue) * 150}px` }}
-                              title={`Tasks: ${day.tasks}`}
+                              title={`${t.tasks}: ${day.tasks}`}
                             >
-                              <span className="bar-value">{day.tasks}</span>
+                              <span className="bar-value">{formatNumber(day.tasks)}</span>
                             </div>
                           </div>
                         </div>
@@ -548,7 +607,7 @@ const StaffReportsWeekly = () => {
                         {/* Y-axis labels */}
                         {[0, 4, 8, 12, 16, 20].map((val, i) => (
                           <text key={i} x="35" y={260 - (val / 20) * 240} textAnchor="end" fontSize="10" fill="#64748b">
-                            {val}
+                            {formatNumber(val)}
                           </text>
                         ))}
                         {/* X-axis labels */}
@@ -594,35 +653,35 @@ const StaffReportsWeekly = () => {
                 <div className="report-section">
                   <h3>{t.complaintsByPriority}</h3>
                   <div className="priority-stats">
-                    {(reportData?.complaintsByPriority.urgent > 0) && (
+                    {reportData?.complaintsByPriority?.urgent > 0 && (
                       <div className="priority-item urgent">
                         <span className="priority-label">{t.urgent}</span>
                         <div className="priority-bar">
-                          <div className="priority-fill urgent-fill" style={{ width: `${((reportData?.complaintsByPriority.urgent || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                          <div className="priority-fill urgent-fill" style={{ width: `${((reportData.complaintsByPriority.urgent || 0) / (reportData.summary.totalComplaints || 1)) * 100}%` }}></div>
                         </div>
-                        <span className="priority-count">{reportData?.complaintsByPriority.urgent || 0}</span>
+                        <span className="priority-count">{formatNumber(reportData.complaintsByPriority.urgent || 0)}</span>
                       </div>
                     )}
                     <div className="priority-item high">
                       <span className="priority-label">{t.high}</span>
                       <div className="priority-bar">
-                        <div className="priority-fill high-fill" style={{ width: `${((reportData?.complaintsByPriority.high || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="priority-fill high-fill" style={{ width: `${((reportData?.complaintsByPriority?.high || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="priority-count">{reportData?.complaintsByPriority.high || 0}</span>
+                      <span className="priority-count">{formatNumber(reportData?.complaintsByPriority?.high || 0)}</span>
                     </div>
                     <div className="priority-item medium">
                       <span className="priority-label">{t.medium}</span>
                       <div className="priority-bar">
-                        <div className="priority-fill medium-fill" style={{ width: `${((reportData?.complaintsByPriority.medium || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="priority-fill medium-fill" style={{ width: `${((reportData?.complaintsByPriority?.medium || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="priority-count">{reportData?.complaintsByPriority.medium || 0}</span>
+                      <span className="priority-count">{formatNumber(reportData?.complaintsByPriority?.medium || 0)}</span>
                     </div>
                     <div className="priority-item low">
                       <span className="priority-label">{t.low}</span>
                       <div className="priority-bar">
-                        <div className="priority-fill low-fill" style={{ width: `${((reportData?.complaintsByPriority.low || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="priority-fill low-fill" style={{ width: `${((reportData?.complaintsByPriority?.low || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="priority-count">{reportData?.complaintsByPriority.low || 0}</span>
+                      <span className="priority-count">{formatNumber(reportData?.complaintsByPriority?.low || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -634,44 +693,44 @@ const StaffReportsWeekly = () => {
                     <div className="category-item">
                       <span className="category-label">{t.internet}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.internet || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.internet || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.internet || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.internet || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.recharge}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.recharge || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.recharge || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.recharge || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.recharge || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.activation}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.activation || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.activation || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.activation || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.activation || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.billing}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.billing || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.billing || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.billing || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.billing || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.network}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.network || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.network || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.network || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.network || 0)}</span>
                     </div>
                     <div className="category-item">
                       <span className="category-label">{t.general}</span>
                       <div className="category-bar">
-                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory.general || 0) / (reportData?.summary.totalComplaints || 1)) * 100}%` }}></div>
+                        <div className="category-fill" style={{ width: `${((reportData?.complaintsByCategory?.general || 0) / (reportData?.summary?.totalComplaints || 1)) * 100}%` }}></div>
                       </div>
-                      <span className="category-count">{reportData?.complaintsByCategory.general || 0}</span>
+                      <span className="category-count">{formatNumber(reportData?.complaintsByCategory?.general || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -684,28 +743,28 @@ const StaffReportsWeekly = () => {
                   <div className="task-stat">
                     <div className="task-icon">✅</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksSummary.completed || 0}</div>
+                      <div className="task-value">{formatNumber(reportData?.tasksSummary?.completed || 0)}</div>
                       <div className="task-label">{t.completed}</div>
                     </div>
                   </div>
                   <div className="task-stat">
                     <div className="task-icon">⏳</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksSummary.pending || 0}</div>
+                      <div className="task-value">{formatNumber(reportData?.tasksSummary?.pending || 0)}</div>
                       <div className="task-label">{t.pending}</div>
                     </div>
                   </div>
                   <div className="task-stat">
                     <div className="task-icon">🔄</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksSummary.inProgress || 0}</div>
+                      <div className="task-value">{formatNumber(reportData?.tasksSummary?.inProgress || 0)}</div>
                       <div className="task-label">{t.inProgress}</div>
                     </div>
                   </div>
                   <div className="task-stat">
                     <div className="task-icon">📊</div>
                     <div className="task-info">
-                      <div className="task-value">{reportData?.tasksSummary.completionRate || 0}%</div>
+                      <div className="task-value">{formatPercentage(reportData?.tasksSummary?.completionRate || 0)}</div>
                       <div className="task-label">{t.completionRate}</div>
                     </div>
                   </div>
@@ -717,19 +776,19 @@ const StaffReportsWeekly = () => {
                 <h3>{t.performanceMetrics}</h3>
                 <div className="metrics-cards">
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.performanceMetrics.avgResolutionTime || 0} {t.days}</div>
+                    <div className="metric-value">{formatDecimal(reportData?.performanceMetrics?.avgResolutionTime || 0)} {t.days}</div>
                     <div className="metric-label">{t.avgResolutionTime}</div>
                   </div>
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.performanceMetrics.avgResponseTime || 0} {t.hours}</div>
+                    <div className="metric-value">{formatDecimal(reportData?.performanceMetrics?.avgResponseTime || 0)} {t.hours}</div>
                     <div className="metric-label">{t.avgResponseTime}</div>
                   </div>
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.performanceMetrics.customerSatisfaction || 0}/5</div>
+                    <div className="metric-value">{formatDecimal(reportData?.performanceMetrics?.customerSatisfaction || 0)}/5</div>
                     <div className="metric-label">{t.customerSatisfaction}</div>
                   </div>
                   <div className="metric-card">
-                    <div className="metric-value">{reportData?.performanceMetrics.teamProductivity || 0}%</div>
+                    <div className="metric-value">{formatPercentage(reportData?.performanceMetrics?.teamProductivity || 0)}</div>
                     <div className="metric-label">{t.teamProductivity}</div>
                   </div>
                 </div>
@@ -743,7 +802,7 @@ const StaffReportsWeekly = () => {
                     <div key={index} className="complaint-type-item">
                       <div className="complaint-type-info">
                         <span className="complaint-type-name">{t[item.category] || item.category}</span>
-                        <span className="complaint-type-count">{item.count} ({item.percentage}%)</span>
+                        <span className="complaint-type-count">{formatNumber(item.count)} ({formatDecimal(item.percentage)}%)</span>
                       </div>
                       <div className="complaint-type-bar">
                         <div className="complaint-type-fill" style={{ width: `${item.percentage}%` }}></div>
@@ -760,21 +819,21 @@ const StaffReportsWeekly = () => {
                   <div className="growth-card positive">
                     <div className="growth-icon">📈</div>
                     <div className="growth-info">
-                      <div className="growth-value">+{reportData?.weekOverWeekGrowth.complaints || 0}%</div>
+                      <div className="growth-value">{formatDecimal(reportData?.weekOverWeekGrowth?.complaints || 0)}%</div>
                       <div className="growth-label">{t.complaints}</div>
                     </div>
                   </div>
                   <div className="growth-card positive">
                     <div className="growth-icon">🎯</div>
                     <div className="growth-info">
-                      <div className="growth-value">+{reportData?.weekOverWeekGrowth.resolution || 0}%</div>
+                      <div className="growth-value">{formatDecimal(reportData?.weekOverWeekGrowth?.resolution || 0)}%</div>
                       <div className="growth-label">{t.resolution}</div>
                     </div>
                   </div>
                   <div className="growth-card positive">
                     <div className="growth-icon">⭐</div>
                     <div className="growth-info">
-                      <div className="growth-value">+{reportData?.weekOverWeekGrowth.satisfaction || 0}%</div>
+                      <div className="growth-value">{formatDecimal(reportData?.weekOverWeekGrowth?.satisfaction || 0)}%</div>
                       <div className="growth-label">{t.satisfaction}</div>
                     </div>
                   </div>

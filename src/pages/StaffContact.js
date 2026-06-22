@@ -7,7 +7,9 @@ import StaffSidebar from '../components/StaffSidebar';
 
 const StaffContact = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [sending, setSending] = useState(false);
   const [backendStatus, setBackendStatus] = useState('checking');
   const [activeTab, setActiveTab] = useState('contact');
@@ -35,6 +37,35 @@ const StaffContact = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
+  // Format decimal with Nepali digits
+  const formatDecimal = (num) => {
+    if (num === undefined || num === null) return '०';
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const parts = num.toString().split('.');
+      const integerPart = parts[0].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      if (parts.length === 1) return integerPart;
+      const decimalPart = parts[1].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${integerPart}.${decimalPart}`;
+    }
+    return num.toString();
+  };
+
   // Load staff data from localStorage
   useEffect(() => {
     const userStr = localStorage.getItem('staffUser');
@@ -59,7 +90,12 @@ const StaffContact = () => {
   const fetchContactData = async () => {
     try {
       const token = localStorage.getItem('staffToken');
-      const response = await axios.get('http://localhost:5000/api/staff/contact', {
+      if (!token) {
+        navigate('/');
+        return;
+      }
+      
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/contact`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -126,7 +162,7 @@ const StaffContact = () => {
     try {
       const token = localStorage.getItem('staffToken');
       const response = await axios.post(
-        'http://localhost:5000/api/staff/contact/send',
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/contact/send`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -164,7 +200,7 @@ const StaffContact = () => {
     try {
       const token = localStorage.getItem('staffToken');
       const response = await axios.post(
-        'http://localhost:5000/api/staff/contact/ticket',
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/contact/ticket`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -192,7 +228,7 @@ const StaffContact = () => {
     try {
       const token = localStorage.getItem('staffToken');
       await axios.put(
-        `http://localhost:5000/api/staff/contact/messages/${messageId}/read`,
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/contact/messages/${messageId}/read`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -218,6 +254,13 @@ const StaffContact = () => {
       fetchContactData();
     }
   }, [navigate]);
+
+  // Refresh when language changes
+  useEffect(() => {
+    if (messages.length > 0 || supportTickets.length > 0 || teamMembers.length > 0) {
+      fetchContactData();
+    }
+  }, [language]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -442,7 +485,7 @@ const StaffContact = () => {
                 className={`tab-btn ${activeTab === 'messages' ? 'active' : ''}`}
                 onClick={() => setActiveTab('messages')}
               >
-                💬 {t.messages} {getUnreadCount() > 0 && `(${getUnreadCount()})`}
+                💬 {t.messages} {getUnreadCount() > 0 && `(${formatNumber(getUnreadCount())})`}
               </button>
               <button 
                 className={`tab-btn ${activeTab === 'team' ? 'active' : ''}`}
@@ -650,7 +693,7 @@ const StaffContact = () => {
                               </span>
                             </td>
                             <td>
-                              <button className="view-btn" onClick={() => alert('View ticket details')}>{t.view}</button>
+                              <button className="view-btn" onClick={() => alert(`${t.view} ticket details`)}>{t.view}</button>
                             </td>
                           </tr>
                         ))}
@@ -1400,6 +1443,27 @@ const StaffContact = () => {
           font-size: 3rem;
           display: block;
           margin-bottom: 12px;
+        }
+
+        @media print {
+          .staff-contact {
+            height: auto;
+            overflow: visible;
+          }
+          
+          .dashboard-layout {
+            margin-top: 0;
+            height: auto;
+          }
+          
+          .main-content {
+            margin-left: 0;
+            width: 100%;
+          }
+          
+          .staff-header, .staff-sidebar, .refresh-btn, .backend-warning, .tab-navigation, .form-actions {
+            display: none;
+          }
         }
 
         @media (max-width: 768px) {
