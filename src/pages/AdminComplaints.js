@@ -7,7 +7,9 @@ import Sidebar from '../components/Sidebar';
 
 const AdminComplaints = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -38,6 +40,15 @@ const AdminComplaints = () => {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   }, []);
 
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
   // ===== DATE FORMATTING FUNCTIONS =====
   
   const formatNepaliDate = (date) => {
@@ -48,7 +59,11 @@ const AdminComplaints = () => {
       const year = d.getFullYear() - 57;
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${yearNp}-${monthNp}-${dayNp}`;
     } catch (error) {
       return '-';
     }
@@ -80,7 +95,13 @@ const AdminComplaints = () => {
         const day = String(d.getDate()).padStart(2, '0');
         const hours = String(d.getHours()).padStart(2, '0');
         const minutes = String(d.getMinutes()).padStart(2, '0');
-        return `${year}-${month}-${day} ${hours}:${minutes}`;
+        const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+        const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const hoursNp = hours.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const minutesNp = minutes.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        return `${yearNp}-${monthNp}-${dayNp} ${hoursNp}:${minutesNp}`;
       } else {
         return d.toLocaleString('en-US', {
           year: 'numeric',
@@ -112,7 +133,7 @@ const AdminComplaints = () => {
     try {
       const token = localStorage.getItem('adminToken');
       if (!token) {
-        showToast('Authentication token not found', 'error');
+        showToast(language === 'np' ? 'प्रमाणीकरण टोकन फेला परेन' : 'Authentication token not found', 'error');
         return;
       }
       
@@ -146,7 +167,7 @@ const AdminComplaints = () => {
     try {
       const token = localStorage.getItem('adminToken');
       if (!token) {
-        showToast('Authentication token not found', 'error');
+        showToast(language === 'np' ? 'प्रमाणीकरण टोकन फेला परेन' : 'Authentication token not found', 'error');
         navigate('/admin-login');
         return;
       }
@@ -409,7 +430,7 @@ const AdminComplaints = () => {
 
   const updateComplaintStatus = async (complaintId, newStatusValue, complaintType) => {
     if (!complaintId || !newStatusValue) {
-      showToast('Invalid complaint ID or status', 'error');
+      showToast(language === 'np' ? 'अमान्य गुनासो आईडी वा स्थिति' : 'Invalid complaint ID or status', 'error');
       return;
     }
     
@@ -417,7 +438,7 @@ const AdminComplaints = () => {
     try {
       const token = localStorage.getItem('adminToken');
       if (!token) {
-        showToast('Authentication token not found', 'error');
+        showToast(language === 'np' ? 'प्रमाणीकरण टोकन फेला परेन' : 'Authentication token not found', 'error');
         return;
       }
       
@@ -492,6 +513,11 @@ const AdminComplaints = () => {
     setShowAssignModal(true);
     fetchStaffList();
   };
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
 
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
@@ -578,7 +604,12 @@ const AdminComplaints = () => {
       assigning: 'तोक्दै...',
       staffName: 'स्टाफको नाम',
       staffEmail: 'स्टाफको इमेल',
-      staffRole: 'भूमिका'
+      staffRole: 'भूमिका',
+      noStaffFound: 'कुनै स्टाफ उपलब्ध छैन',
+      loadingStaff: 'स्टाफ लोड हुँदै...',
+      total: 'जम्मा',
+      allComplaintsLabel: 'सबै गुनासोहरू',
+      complaintTypeLabel: 'प्रकार'
     },
     en: {
       complaintsManagement: 'Complaints Management',
@@ -650,7 +681,12 @@ const AdminComplaints = () => {
       assigning: 'Assigning...',
       staffName: 'Staff Name',
       staffEmail: 'Staff Email',
-      staffRole: 'Role'
+      staffRole: 'Role',
+      noStaffFound: 'No staff available',
+      loadingStaff: 'Loading staff...',
+      total: 'Total',
+      allComplaintsLabel: 'All Complaints',
+      complaintTypeLabel: 'Type'
     }
   };
 
@@ -801,7 +837,7 @@ const AdminComplaints = () => {
     if (selectedComplaint && newStatus && newStatus !== selectedComplaint.status) {
       const complaintId = selectedComplaint.id || selectedComplaint.complaintId;
       if (!complaintId) {
-        showToast('Invalid complaint ID', 'error');
+        showToast(language === 'np' ? 'अमान्य गुनासो आईडी' : 'Invalid complaint ID', 'error');
         return;
       }
       updateComplaintStatus(complaintId, newStatus, selectedComplaint.type);
@@ -869,28 +905,28 @@ const AdminComplaints = () => {
               <div className="stat-box">
                 <div className="stat-box-icon blue">📋</div>
                 <div className="stat-box-info">
-                  <div className="stat-box-value">{stats.total}</div>
+                  <div className="stat-box-value">{formatNumber(stats.total)}</div>
                   <div className="stat-box-label">{t.totalComplaints}</div>
                 </div>
               </div>
               <div className="stat-box">
                 <div className="stat-box-icon orange">⏳</div>
                 <div className="stat-box-info">
-                  <div className="stat-box-value">{stats.pending}</div>
+                  <div className="stat-box-value">{formatNumber(stats.pending)}</div>
                   <div className="stat-box-label">{t.pendingCount}</div>
                 </div>
               </div>
               <div className="stat-box">
                 <div className="stat-box-icon yellow">🔄</div>
                 <div className="stat-box-info">
-                  <div className="stat-box-value">{stats.inProgress}</div>
+                  <div className="stat-box-value">{formatNumber(stats.inProgress)}</div>
                   <div className="stat-box-label">{t.inProgressCount}</div>
                 </div>
               </div>
               <div className="stat-box">
                 <div className="stat-box-icon green">✅</div>
                 <div className="stat-box-info">
-                  <div className="stat-box-value">{stats.resolved}</div>
+                  <div className="stat-box-value">{formatNumber(stats.resolved)}</div>
                   <div className="stat-box-label">{t.resolvedCount}</div>
                 </div>
               </div>
@@ -957,7 +993,7 @@ const AdminComplaints = () => {
                     <th>{t.date}</th>
                     <th>{t.status}</th>
                     <th>{t.priority}</th>
-                    <th>{t.complaintType}</th>
+                    <th>{t.complaintTypeLabel}</th>
                     <th>{t.assignedTo}</th>
                     <th>{t.actions}</th>
                   </tr>
@@ -1045,7 +1081,7 @@ const AdminComplaints = () => {
                   ← {t.previous}
                 </button>
                 <span className="pagination-info">
-                  {t.page} {currentPage} {t.of} {totalPages}
+                  {t.page} {formatNumber(currentPage)} {t.of} {formatNumber(totalPages)}
                 </span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
@@ -1250,14 +1286,14 @@ const AdminComplaints = () => {
               </div>
               <div className="detail-row">
                 <label>{t.complainant}:</label>
-                <span>{selectedComplaintForAssign.name}</span>
+                <span>{language === 'np' ? selectedComplaintForAssign.name : selectedComplaintForAssign.enName}</span>
               </div>
               <div className="form-group">
                 <label>{t.selectStaff} <span className="required">*</span></label>
                 {loadingStaff ? (
                   <div className="loading-staff">
                     <div className="spinner-small"></div>
-                    <span>{language === 'np' ? 'स्टाफ लोड हुँदै...' : 'Loading staff...'}</span>
+                    <span>{t.loadingStaff}</span>
                   </div>
                 ) : (
                   <select 
@@ -1277,7 +1313,7 @@ const AdminComplaints = () => {
                       ))
                     ) : (
                       <option disabled value="">
-                        {language === 'np' ? 'कुनै स्टाफ उपलब्ध छैन' : 'No staff available'}
+                        {t.noStaffFound}
                       </option>
                     )}
                   </select>

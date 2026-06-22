@@ -6,7 +6,9 @@ import Sidebar from '../components/Sidebar';
 
 const AdminReportsComplaints = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [dateRange, setDateRange] = useState('month');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -16,6 +18,20 @@ const AdminReportsComplaints = () => {
   const [selectedPriority, setSelectedPriority] = useState('all');
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
 
   // Enhanced sample report data with more user details
   const [reportData, setReportData] = useState({
@@ -379,7 +395,9 @@ const AdminReportsComplaints = () => {
       entries: 'प्रविष्टिहरू',
       exportStarted: 'निर्यात सुरु भयो...',
       pdfExport: 'पीडीएफ निर्यात भइरहेको छ...',
-      excelExport: 'एक्सेल निर्यात भइरहेको छ...'
+      excelExport: 'एक्सेल निर्यात भइरहेको छ...',
+      days: 'दिन',
+      day: 'दिन'
     },
     en: {
       complaintsReports: 'Complaints Reports',
@@ -471,7 +489,9 @@ const AdminReportsComplaints = () => {
       entries: 'entries',
       exportStarted: 'Export started...',
       pdfExport: 'Exporting PDF...',
-      excelExport: 'Exporting Excel...'
+      excelExport: 'Exporting Excel...',
+      days: 'days',
+      day: 'day'
     }
   };
 
@@ -751,42 +771,46 @@ const AdminReportsComplaints = () => {
                   <div className="summary-card">
                     <div className="card-icon blue">📋</div>
                     <div className="card-info">
-                      <div className="card-value">{currentData.summary.totalComplaints.toLocaleString()}</div>
+                      <div className="card-value">{formatNumber(currentData.summary.totalComplaints)}</div>
                       <div className="card-label">{t.totalComplaints}</div>
                     </div>
                   </div>
                   <div className="summary-card">
                     <div className="card-icon orange">⏳</div>
                     <div className="card-info">
-                      <div className="card-value">{currentData.summary.pendingComplaints.toLocaleString()}</div>
+                      <div className="card-value">{formatNumber(currentData.summary.pendingComplaints)}</div>
                       <div className="card-label">{t.pendingComplaints}</div>
                     </div>
                   </div>
                   <div className="summary-card">
                     <div className="card-icon yellow">🔄</div>
                     <div className="card-info">
-                      <div className="card-value">{currentData.summary.inProgressComplaints.toLocaleString()}</div>
+                      <div className="card-value">{formatNumber(currentData.summary.inProgressComplaints)}</div>
                       <div className="card-label">{t.inProgressComplaints}</div>
                     </div>
                   </div>
                   <div className="summary-card">
                     <div className="card-icon green">✅</div>
                     <div className="card-info">
-                      <div className="card-value">{currentData.summary.resolvedComplaints.toLocaleString()}</div>
+                      <div className="card-value">{formatNumber(currentData.summary.resolvedComplaints)}</div>
                       <div className="card-label">{t.resolvedComplaints}</div>
                     </div>
                   </div>
                   <div className="summary-card">
                     <div className="card-icon purple">⏱️</div>
                     <div className="card-info">
-                      <div className="card-value">{currentData.summary.avgResolutionDays} {language === 'np' ? 'दिन' : 'days'}</div>
+                      <div className="card-value">
+                        {language === 'np' 
+                          ? `${formatNumber(currentData.summary.avgResolutionDays)} ${t.days}`
+                          : `${currentData.summary.avgResolutionDays} ${t.days}`}
+                      </div>
                       <div className="card-label">{t.avgResolutionDays}</div>
                     </div>
                   </div>
                   <div className="summary-card">
                     <div className="card-icon pink">⭐</div>
                     <div className="card-info">
-                      <div className="card-value">{currentData.summary.satisfactionRate}%</div>
+                      <div className="card-value">{formatNumber(currentData.summary.satisfactionRate)}%</div>
                       <div className="card-label">{t.satisfactionRate}</div>
                     </div>
                   </div>
@@ -796,15 +820,15 @@ const AdminReportsComplaints = () => {
                 <div className="growth-card">
                   <div className="growth-info">
                     <span className="growth-label">{t.thisMonth}:</span>
-                    <span className="growth-value">{currentData.summary.thisMonth}</span>
+                    <span className="growth-value">{formatNumber(currentData.summary.thisMonth)}</span>
                   </div>
                   <div className="growth-info">
                     <span className="growth-label">{t.lastMonth}:</span>
-                    <span className="growth-value">{currentData.summary.lastMonth}</span>
+                    <span className="growth-value">{formatNumber(currentData.summary.lastMonth)}</span>
                   </div>
                   <div className="growth-info">
                     <span className="growth-label">{t.growth}:</span>
-                    <span className="growth-value positive">+{currentData.summary.growth}%</span>
+                    <span className="growth-value positive">+{formatNumber(currentData.summary.growth)}%</span>
                   </div>
                 </div>
 
@@ -818,7 +842,7 @@ const AdminReportsComplaints = () => {
                         <div key={idx} className="chart-bar-item">
                           <div className="chart-label">
                             <span>{language === 'np' ? item.name : item.enName}</span>
-                            <span>{item.count} ({item.percentage}%)</span>
+                            <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                           </div>
                           <div className="chart-bar-bg">
                             <div 
@@ -840,7 +864,7 @@ const AdminReportsComplaints = () => {
                           <div className="pie-color" style={{ backgroundColor: `hsl(${120 + idx * 90}, 70%, 55%)` }} />
                           <div className="pie-label">
                             <span>{language === 'np' ? item.name : item.enName}</span>
-                            <span>{item.count} ({item.percentage}%)</span>
+                            <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                           </div>
                         </div>
                       ))}
@@ -856,7 +880,7 @@ const AdminReportsComplaints = () => {
                           <div className="pie-color" style={{ backgroundColor: `hsl(${0 + idx * 45}, 70%, 55%)` }} />
                           <div className="pie-label">
                             <span>{language === 'np' ? item.name : item.enName}</span>
-                            <span>{item.count} ({item.percentage}%)</span>
+                            <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                           </div>
                         </div>
                       ))}
@@ -871,7 +895,7 @@ const AdminReportsComplaints = () => {
                         <div key={idx} className="chart-bar-item">
                           <div className="chart-label">
                             <span>{language === 'np' ? item.name : item.enName}</span>
-                            <span>{item.count} ({item.percentage}%)</span>
+                            <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                           </div>
                           <div className="chart-bar-bg">
                             <div 
@@ -900,7 +924,7 @@ const AdminReportsComplaints = () => {
                               backgroundColor: `hsl(${210 + idx * 5}, 70%, 55%)`
                             }}
                           >
-                            <span className="trend-value">{item.count}</span>
+                            <span className="trend-value">{formatNumber(item.count)}</span>
                           </div>
                         </div>
                       </div>
@@ -916,7 +940,7 @@ const AdminReportsComplaints = () => {
                 <div className="table-header">
                   <h3>👥 {t.userComplaintsDetails}</h3>
                   <div className="table-stats">
-                    {t.showing} {filteredComplaints.length} {t.of} {currentData.allComplaints.length} {t.entries}
+                    {t.showing} {formatNumber(filteredComplaints.length)} {t.of} {formatNumber(currentData.allComplaints.length)} {t.entries}
                   </div>
                 </div>
                 <div className="table-wrapper">

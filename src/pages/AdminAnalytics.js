@@ -6,8 +6,33 @@ import Sidebar from '../components/Sidebar';
 
 const AdminAnalytics = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [timePeriod, setTimePeriod] = useState('month');
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
+  // Format decimal with Nepali digits
+  const formatDecimal = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
 
   // Analytics data
   const [analyticsData] = useState({
@@ -108,7 +133,8 @@ const AdminAnalytics = () => {
       refresh: 'रिफ्रेस',
       vsLastMonth: 'गत महिना भन्दा',
       hours: 'घण्टा',
-      days: 'दिन'
+      days: 'दिन',
+      day: 'दिन'
     },
     en: {
       analytics: 'Analytics',
@@ -136,7 +162,8 @@ const AdminAnalytics = () => {
       refresh: 'Refresh',
       vsLastMonth: 'vs last month',
       hours: 'hours',
-      days: 'days'
+      days: 'days',
+      day: 'day'
     }
   };
 
@@ -168,7 +195,6 @@ const AdminAnalytics = () => {
   };
 
   const handleRefresh = () => {
-    // Just refresh the data without loading state
     alert(language === 'np' ? 'डाटा रिफ्रेस गरियो' : 'Data refreshed');
   };
 
@@ -211,12 +237,12 @@ const AdminAnalytics = () => {
               </div>
             </div>
 
-            {/* Overview Cards */}
+            {/* Overview Cards - Updated with formatNumber */}
             <div className="overview-cards">
               <div className="overview-card">
                 <div className="card-icon blue">📋</div>
                 <div className="card-info">
-                  <div className="card-value">{analyticsData.overview.totalComplaints}</div>
+                  <div className="card-value">{formatNumber(analyticsData.overview.totalComplaints)}</div>
                   <div className="card-label">{t.complaints}</div>
                   <div className="card-trend positive">↑ 12% {t.vsLastMonth}</div>
                 </div>
@@ -224,7 +250,7 @@ const AdminAnalytics = () => {
               <div className="overview-card">
                 <div className="card-icon green">✅</div>
                 <div className="card-info">
-                  <div className="card-value">{analyticsData.overview.resolvedComplaints}</div>
+                  <div className="card-value">{formatNumber(analyticsData.overview.resolvedComplaints)}</div>
                   <div className="card-label">{t.resolved}</div>
                   <div className="card-trend positive">↑ 8% {t.vsLastMonth}</div>
                 </div>
@@ -232,7 +258,7 @@ const AdminAnalytics = () => {
               <div className="overview-card">
                 <div className="card-icon orange">⏳</div>
                 <div className="card-info">
-                  <div className="card-value">{analyticsData.overview.pendingComplaints}</div>
+                  <div className="card-value">{formatNumber(analyticsData.overview.pendingComplaints)}</div>
                   <div className="card-label">{t.pending}</div>
                   <div className="card-trend negative">↑ 5% {t.vsLastMonth}</div>
                 </div>
@@ -240,7 +266,7 @@ const AdminAnalytics = () => {
               <div className="overview-card">
                 <div className="card-icon yellow">🔄</div>
                 <div className="card-info">
-                  <div className="card-value">{analyticsData.overview.inProgressComplaints}</div>
+                  <div className="card-value">{formatNumber(analyticsData.overview.inProgressComplaints)}</div>
                   <div className="card-label">{t.inProgress}</div>
                   <div className="card-trend positive">↓ 3% {t.vsLastMonth}</div>
                 </div>
@@ -248,7 +274,7 @@ const AdminAnalytics = () => {
               <div className="overview-card">
                 <div className="card-icon pink">⭐</div>
                 <div className="card-info">
-                  <div className="card-value">{analyticsData.overview.satisfactionRate}%</div>
+                  <div className="card-value">{formatNumber(analyticsData.overview.satisfactionRate)}%</div>
                   <div className="card-label">{t.satisfactionRate}</div>
                   <div className="card-trend positive">↑ 4% {t.vsLastMonth}</div>
                 </div>
@@ -256,14 +282,18 @@ const AdminAnalytics = () => {
               <div className="overview-card">
                 <div className="card-icon purple">⏱️</div>
                 <div className="card-info">
-                  <div className="card-value">{language === 'np' ? analyticsData.overview.avgResponseTime : analyticsData.overview.enAvgResponseTime} {t.hours}</div>
+                  <div className="card-value">
+                    {language === 'np' 
+                      ? `${formatNumber(analyticsData.overview.avgResponseTime)} ${t.hours}`
+                      : `${analyticsData.overview.enAvgResponseTime} ${t.hours}`}
+                  </div>
                   <div className="card-label">{t.avgResponseTime}</div>
                   <div className="card-trend positive">↓ 0.5% {t.vsLastMonth}</div>
                 </div>
               </div>
             </div>
 
-            {/* Stats Row */}
+            {/* Stats Row - Updated with formatNumber */}
             <div className="stats-row">
               <div className="stat-box">
                 <span className="stat-box-icon">⏰</span>
@@ -282,13 +312,17 @@ const AdminAnalytics = () => {
               <div className="stat-box">
                 <span className="stat-box-icon">⚡</span>
                 <div className="stat-box-info">
-                  <div className="stat-box-value">{language === 'np' ? analyticsData.overview.avgResolutionTime : analyticsData.overview.enAvgResolutionTime} {t.days}</div>
+                  <div className="stat-box-value">
+                    {language === 'np' 
+                      ? `${formatNumber(analyticsData.overview.avgResolutionTime)} ${t.days}`
+                      : `${analyticsData.overview.enAvgResolutionTime} ${t.days}`}
+                  </div>
                   <div className="stat-box-label">{t.avgResolutionTime}</div>
                 </div>
               </div>
             </div>
 
-            {/* Category Distribution */}
+            {/* Category Distribution - Updated with formatNumber */}
             <div className="chart-card">
               <h3>{t.categoryDistribution}</h3>
               <div className="category-grid">
@@ -299,19 +333,19 @@ const AdminAnalytics = () => {
                       <div className="category-header">
                         <span className="category-dot" style={{ backgroundColor: analyticsData.categories.colors[idx] }}></span>
                         <span className="category-name">{getCategoryLabels()[idx]}</span>
-                        <span className="category-value">{value}</span>
+                        <span className="category-value">{formatNumber(value)}</span>
                       </div>
                       <div className="category-bar">
                         <div className="category-bar-fill" style={{ width: `${percentage}%`, backgroundColor: analyticsData.categories.colors[idx] }}></div>
                       </div>
-                      <div className="category-percentage">{percentage}%</div>
+                      <div className="category-percentage">{formatNumber(percentage)}%</div>
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Monthly Trend */}
+            {/* Monthly Trend - Updated with formatNumber */}
             <div className="chart-card">
               <h3>{t.monthlyTrend}</h3>
               <div className="trend-container">
@@ -329,13 +363,13 @@ const AdminAnalytics = () => {
                           className="trend-bar complaints-bar" 
                           style={{ height: `${(value / maxTrendValue) * 100}%` }}
                         >
-                          <span className="trend-value">{value}</span>
+                          <span className="trend-value">{formatNumber(value)}</span>
                         </div>
                         <div 
                           className="trend-bar resolved-bar" 
                           style={{ height: `${(analyticsData.trends.resolved[idx] / maxTrendValue) * 100}%` }}
                         >
-                          <span className="trend-value">{analyticsData.trends.resolved[idx]}</span>
+                          <span className="trend-value">{formatNumber(analyticsData.trends.resolved[idx])}</span>
                         </div>
                       </div>
                       <div className="trend-label">{getMonthLabels()[idx]}</div>
@@ -345,7 +379,7 @@ const AdminAnalytics = () => {
               </div>
             </div>
 
-            {/* Response vs Resolution */}
+            {/* Response vs Resolution - Updated with formatNumber */}
             <div className="chart-card">
               <h3>{t.responseVsResolution}</h3>
               <div className="dual-legend">
@@ -359,10 +393,10 @@ const AdminAnalytics = () => {
                   <div key={idx} className="dual-column">
                     <div className="dual-bars">
                       <div className="dual-bar response-bar" style={{ height: `${(value / 5) * 100}%` }}>
-                        <span className="dual-value">{value}</span>
+                        <span className="dual-value">{formatDecimal(value)}</span>
                       </div>
                       <div className="dual-bar resolution-bar" style={{ height: `${(analyticsData.performance.resolutionTime[idx] / 5) * 100}%` }}>
-                        <span className="dual-value">{analyticsData.performance.resolutionTime[idx]}</span>
+                        <span className="dual-value">{formatDecimal(analyticsData.performance.resolutionTime[idx])}</span>
                       </div>
                     </div>
                     <div className="dual-label">{getPerfLabels()[idx]}</div>
@@ -371,7 +405,7 @@ const AdminAnalytics = () => {
               </div>
             </div>
 
-            {/* Top Performers */}
+            {/* Top Performers - Updated with formatNumber */}
             <div className="chart-card">
               <h3>{t.topPerformers}</h3>
               <div className="table-wrapper">
@@ -388,13 +422,13 @@ const AdminAnalytics = () => {
                     {analyticsData.topPerformers.map((performer) => (
                       <tr key={performer.id}>
                         <td className="performer-name">{language === 'np' ? performer.name : performer.enName}</td>
-                        <td>{performer.resolved}</td>
+                        <td>{formatNumber(performer.resolved)}</td>
                         <td>{performer.avgTime} {t.days}</td>
                         <td>
                           <div className="star-rating">
                             {'★'.repeat(Math.floor(performer.satisfaction))}
                             {'☆'.repeat(5 - Math.floor(performer.satisfaction))}
-                            <span className="rating-value">({performer.satisfaction})</span>
+                            <span className="rating-value">({formatDecimal(performer.satisfaction)})</span>
                           </div>
                         </td>
                       </tr>
@@ -404,7 +438,7 @@ const AdminAnalytics = () => {
               </div>
             </div>
 
-            {/* Hourly Distribution */}
+            {/* Hourly Distribution - Updated with formatNumber */}
             <div className="chart-card">
               <h3>{t.hourlyDistribution}</h3>
               <div className="hourly-container">
@@ -416,7 +450,7 @@ const AdminAnalytics = () => {
                         className="hourly-bar" 
                         style={{ height: `${(item.count / maxCount) * 100}%` }}
                       >
-                        <span className="hourly-count">{item.count}</span>
+                        <span className="hourly-count">{formatNumber(item.count)}</span>
                       </div>
                     </div>
                   </div>
@@ -424,7 +458,7 @@ const AdminAnalytics = () => {
               </div>
             </div>
 
-            {/* Day-wise Distribution */}
+            {/* Day-wise Distribution - Updated with formatNumber */}
             <div className="chart-card">
               <h3>{t.dayWiseDistribution}</h3>
               <div className="daywise-container">
@@ -436,7 +470,7 @@ const AdminAnalytics = () => {
                         className="daywise-bar" 
                         style={{ height: `${(item.count / maxDayCount) * 100}%` }}
                       >
-                        <span className="daywise-count">{item.count}</span>
+                        <span className="daywise-count">{formatNumber(item.count)}</span>
                       </div>
                     </div>
                   </div>

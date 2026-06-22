@@ -7,7 +7,9 @@ import Sidebar from '../components/Sidebar';
 
 const AdminComplaintsResolved = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -27,6 +29,20 @@ const AdminComplaintsResolved = () => {
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
   // Show toast notification
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -43,7 +59,11 @@ const AdminComplaintsResolved = () => {
         const year = d.getFullYear() - 57;
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+        const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        return `${yearNp}-${monthNp}-${dayNp}`;
       }
       return d.toISOString().split('T')[0];
     } catch (error) {
@@ -367,7 +387,9 @@ const AdminComplaintsResolved = () => {
       landmark: 'नजिकैको चिन्ह',
       address: 'ठेगाना',
       preferredContact: 'सम्पर्कको माध्यम',
-      resolution: 'समाधान विवरण'
+      resolution: 'समाधान विवरण',
+      days: 'दिन',
+      day: 'दिन'
     },
     en: {
       resolvedComplaints: 'Resolved Complaints',
@@ -429,7 +451,9 @@ const AdminComplaintsResolved = () => {
       landmark: 'Landmark',
       address: 'Address',
       preferredContact: 'Preferred Contact',
-      resolution: 'Resolution Details'
+      resolution: 'Resolution Details',
+      days: 'days',
+      day: 'day'
     }
   };
 
@@ -464,7 +488,10 @@ const AdminComplaintsResolved = () => {
 
   const getResolutionTime = (complaint) => {
     const days = complaint.resolutionDays || 1;
-    return language === 'np' ? `${days} दिन` : `${days} day${days !== 1 ? 's' : ''}`;
+    if (language === 'np') {
+      return `${formatNumber(days)} ${days === 1 ? t.day : t.days}`;
+    }
+    return `${days} ${days === 1 ? t.day : t.days}`;
   };
 
   const getChannel = (complaint) => {
@@ -659,21 +686,23 @@ const AdminComplaintsResolved = () => {
               <div className="stat-card">
                 <div className="stat-icon green">✅</div>
                 <div className="stat-info">
-                  <div className="stat-value">{stats.total}</div>
+                  <div className="stat-value">{formatNumber(stats.total)}</div>
                   <div className="stat-label">{t.totalResolved}</div>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon blue">⏱️</div>
                 <div className="stat-info">
-                  <div className="stat-value">{stats.avgResolution} {language === 'np' ? 'दिन' : 'days'}</div>
+                  <div className="stat-value">
+                    {language === 'np' ? `${formatNumber(stats.avgResolution)} ${t.days}` : `${stats.avgResolution} ${t.days}`}
+                  </div>
                   <div className="stat-label">{t.avgResolutionTime}</div>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon orange">⭐</div>
                 <div className="stat-info">
-                  <div className="stat-value">{stats.avgSatisfaction}/5</div>
+                  <div className="stat-value">{formatNumber(parseFloat(stats.avgSatisfaction))}/5</div>
                   <div className="stat-label">{t.avgSatisfaction}</div>
                 </div>
               </div>
@@ -819,7 +848,7 @@ const AdminComplaintsResolved = () => {
                   ← {t.previous}
                 </button>
                 <span className="pagination-info">
-                  {t.page} {currentPage} {t.of} {totalPages}
+                  {t.page} {formatNumber(currentPage)} {t.of} {formatNumber(totalPages)}
                 </span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
@@ -938,7 +967,7 @@ const AdminComplaintsResolved = () => {
                   <div className="satisfaction-display">
                     <div className="stars-large">{renderStars(selectedComplaint.satisfactionRating)}</div>
                     <span className={`satisfaction-text ${getSatisfactionClass(selectedComplaint.satisfactionRating)}`}>
-                      {getSatisfactionText(selectedComplaint.satisfactionRating)} ({selectedComplaint.satisfactionRating}/5)
+                      {getSatisfactionText(selectedComplaint.satisfactionRating)} ({formatNumber(selectedComplaint.satisfactionRating)}/5)
                     </span>
                   </div>
                 </div>

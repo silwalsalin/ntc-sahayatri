@@ -7,7 +7,9 @@ import Sidebar from '../components/Sidebar';
 
 const AdminComplaintsInProgress = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -30,13 +32,27 @@ const AdminComplaintsInProgress = () => {
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
   // Show toast notification
   const showToast = useCallback((message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   }, []);
 
-  // Format date to Nepali format
+  // Format date to Nepali format with Nepali digits
   const formatNepaliDate = (date) => {
     if (!date) return '-';
     try {
@@ -45,7 +61,11 @@ const AdminComplaintsInProgress = () => {
       const year = d.getFullYear() - 57;
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${yearNp}-${monthNp}-${dayNp}`;
     } catch (error) {
       return '-';
     }
@@ -432,7 +452,10 @@ const AdminComplaintsInProgress = () => {
       assignmentInfo: 'तोकिएको जानकारी',
       enterProgress: 'प्रगति प्रतिशत प्रविष्ट गर्नुहोस्',
       resolution: 'समाधान विवरण',
-      optional: 'वैकल्पिक'
+      optional: 'वैकल्पिक',
+      assigned: 'तोकिएको',
+      unassigned: 'नतोकिएको',
+      percent: '%'
     },
     en: {
       inProgressComplaints: 'In Progress Complaints',
@@ -503,7 +526,10 @@ const AdminComplaintsInProgress = () => {
       assignmentInfo: 'Assignment Information',
       enterProgress: 'Enter progress percentage',
       resolution: 'Resolution Details',
-      optional: 'Optional'
+      optional: 'Optional',
+      assigned: 'Assigned',
+      unassigned: 'Unassigned',
+      percent: '%'
     }
   };
 
@@ -737,16 +763,16 @@ const AdminComplaintsInProgress = () => {
               </div>
               <div className="stats-group">
                 <div className="stat-card-small">
-                  <span className="stat-value">{stats.total}</span>
+                  <span className="stat-value">{formatNumber(stats.total)}</span>
                   <span className="stat-label">{t.totalInProgress}</span>
                 </div>
                 <div className="stat-card-small">
-                  <span className="stat-value">{stats.averageProgress}%</span>
+                  <span className="stat-value">{formatNumber(stats.averageProgress)}%</span>
                   <span className="stat-label">{t.averageProgress}</span>
                 </div>
                 <div className="stat-card-small">
-                  <span className="stat-value">{stats.assigned}</span>
-                  <span className="stat-label">तोकिएको</span>
+                  <span className="stat-value">{formatNumber(stats.assigned)}</span>
+                  <span className="stat-label">{t.assigned}</span>
                 </div>
                 <button className="refresh-btn-small" onClick={refreshData} title={t.refresh}>
                   🔄
@@ -759,29 +785,29 @@ const AdminComplaintsInProgress = () => {
               <div className="stat-card">
                 <div className="stat-card-icon high">🔴</div>
                 <div className="stat-card-info">
-                  <div className="stat-card-value">{stats.high}</div>
+                  <div className="stat-card-value">{formatNumber(stats.high)}</div>
                   <div className="stat-card-label">{t.high}</div>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-card-icon medium">🟡</div>
                 <div className="stat-card-info">
-                  <div className="stat-card-value">{stats.medium}</div>
+                  <div className="stat-card-value">{formatNumber(stats.medium)}</div>
                   <div className="stat-card-label">{t.medium}</div>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-card-icon low">🟢</div>
                 <div className="stat-card-info">
-                  <div className="stat-card-value">{stats.low}</div>
+                  <div className="stat-card-value">{formatNumber(stats.low)}</div>
                   <div className="stat-card-label">{t.low}</div>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-card-icon assigned">👤</div>
                 <div className="stat-card-info">
-                  <div className="stat-card-value">{stats.assigned}</div>
-                  <div className="stat-card-label">तोकिएको</div>
+                  <div className="stat-card-value">{formatNumber(stats.assigned)}</div>
+                  <div className="stat-card-label">{t.assigned}</div>
                 </div>
               </div>
             </div>
@@ -846,7 +872,7 @@ const AdminComplaintsInProgress = () => {
                     <th>{t.progress}</th>
                     <th>{t.priority}</th>
                     <th>{t.actions}</th>
-                </tr>
+                  </tr>
                 </thead>
                 <tbody>
                   {paginatedComplaints.length > 0 ? (
@@ -882,7 +908,7 @@ const AdminComplaintsInProgress = () => {
                                 style={{ width: `${complaint.progressPercent || 0}%` }}
                               />
                             </div>
-                            <span className="progress-text">{complaint.progressPercent || 0}%</span>
+                            <span className="progress-text">{formatNumber(complaint.progressPercent || 0)}%</span>
                           </div>
                         </td>
                         <td>
@@ -928,7 +954,7 @@ const AdminComplaintsInProgress = () => {
                   ← {t.previous}
                 </button>
                 <span className="pagination-info">
-                  {t.page} {currentPage} {t.of} {totalPages}
+                  {t.page} {formatNumber(currentPage)} {t.of} {formatNumber(totalPages)}
                 </span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
@@ -1076,7 +1102,7 @@ const AdminComplaintsInProgress = () => {
                       onChange={(e) => setProgressValue(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
                       className="progress-input"
                     />
-                    <span>%</span>
+                    <span>{t.percent}</span>
                   </div>
                 </div>
               </div>

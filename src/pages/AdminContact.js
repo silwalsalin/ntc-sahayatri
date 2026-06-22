@@ -6,7 +6,9 @@ import Sidebar from '../components/Sidebar';
 
 const AdminContact = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [sending, setSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState('support');
@@ -23,6 +25,20 @@ const AdminContact = () => {
   });
 
   const [formErrors, setFormErrors] = useState({});
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
 
   // Show toast notification
   const showToast = (message, type = 'success') => {
@@ -83,7 +99,9 @@ const AdminContact = () => {
       faq4A: 'माथिल्लो दायाँ कुनामा रहेको आफ्नो नाममा क्लिक गरी "प्रोफाइल" विकल्प चयन गर्नुहोस्।',
       connectWithUs: 'हामीसँग जोडिनुहोस्',
       socialMedia: 'सामाजिक सञ्जाल',
-      findUsOn: 'हामीलाई यहाँ पाउनुहोस्'
+      findUsOn: 'हामीलाई यहाँ पाउनुहोस्',
+      available: 'उपलब्ध',
+      tollFree: 'टोल फ्री'
     },
     en: {
       contactSupport: 'Contact Support',
@@ -128,7 +146,9 @@ const AdminContact = () => {
       faq4A: 'Click on your name at the top right corner and select the "Profile" option.',
       connectWithUs: 'Connect With Us',
       socialMedia: 'Social Media',
-      findUsOn: 'Find us on'
+      findUsOn: 'Find us on',
+      available: 'Available',
+      tollFree: 'Toll Free'
     }
   };
 
@@ -266,14 +286,14 @@ const AdminContact = () => {
                 <div className="contact-card-info">
                   <h3>{t.liveChat}</h3>
                   <p>{t.liveChat}</p>
-                  <span className="contact-card-hours">24/7 Available</span>
+                  <span className="contact-card-hours">24/7 {t.available}</span>
                 </div>
               </div>
               <div className="contact-card emergency">
                 <div className="contact-card-icon">🚨</div>
                 <div className="contact-card-info">
                   <h3>{t.emergencySupport}</h3>
-                  <p>198 (Toll Free)</p>
+                  <p>198 ({t.tollFree})</p>
                   <span className="contact-card-hours">{t.emergencyNumber}</span>
                 </div>
               </div>
@@ -401,7 +421,7 @@ const AdminContact = () => {
                     {faqs.map((faq, index) => (
                       <div key={faq.id} className="faq-item">
                         <div className="faq-question">
-                          <span className="faq-number">{index + 1}.</span>
+                          <span className="faq-number">{formatNumber(index + 1)}.</span>
                           <span>{faq.question}</span>
                         </div>
                         <div className="faq-answer">

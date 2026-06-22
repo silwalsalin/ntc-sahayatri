@@ -6,10 +6,17 @@ import Sidebar from '../components/Sidebar';
 
 const AdminDocumentation = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [activeSection, setActiveSection] = useState('getting-started');
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
 
   // Check authentication
   useEffect(() => {
@@ -24,6 +31,41 @@ const AdminDocumentation = () => {
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
+  // Format date with language support
+  const formatDate = (date) => {
+    if (!date) return language === 'np' ? 'कहिल्यै' : 'Never';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return language === 'np' ? 'कहिल्यै' : 'Never';
+      if (language === 'np') {
+        const year = d.getFullYear() - 57;
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+        const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        return `${yearNp}-${monthNp}-${dayNp}`;
+      }
+      return d.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return language === 'np' ? 'कहिल्यै' : 'Never';
+    }
   };
 
   const content = {
@@ -66,7 +108,8 @@ const AdminDocumentation = () => {
       downloadStarted: 'पीडीएफ डाउनलोड सुरु भयो...',
       emailSupportMessage: 'इमेल सहायता: support@ntc.gov.np',
       phoneSupportMessage: 'फोन सहायता: 01-4960008',
-      thankYouFeedback: 'धन्यवाद! तपाईंको प्रतिक्रिया दर्ता भयो।'
+      thankYouFeedback: 'धन्यवाद! तपाईंको प्रतिक्रिया दर्ता भयो।',
+      version: 'संस्करण'
     },
     en: {
       documentation: 'Documentation',
@@ -107,7 +150,8 @@ const AdminDocumentation = () => {
       downloadStarted: 'PDF download started...',
       emailSupportMessage: 'Email Support: support@ntc.gov.np',
       phoneSupportMessage: 'Phone Support: 01-4960008',
-      thankYouFeedback: 'Thank you! Your feedback has been recorded.'
+      thankYouFeedback: 'Thank you! Your feedback has been recorded.',
+      version: 'Version'
     }
   };
 
@@ -541,7 +585,7 @@ const AdminDocumentation = () => {
                 <div className="doc-header">
                   <h1>{currentTitle}</h1>
                   <div className="doc-meta">
-                    <span>📅 {t.lastUpdated}: {new Date().toLocaleDateString()}</span>
+                    <span>📅 {t.lastUpdated}: {formatDate(new Date().toISOString())}</span>
                     <span>📌 {t.documentationVersion}: 2.0.0</span>
                   </div>
                 </div>

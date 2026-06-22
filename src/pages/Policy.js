@@ -24,6 +24,14 @@ const Policy = () => {
   });
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, []);
+
   // Save language preference
   useEffect(() => {
     localStorage.setItem('preferredLanguage', language);
@@ -293,7 +301,7 @@ const Policy = () => {
             </button>
           </div>
           <div className="login-btn-right">
-            <button className="login-btn" onClick={() => navigate('/login')}>
+            <button className="login-btn" onClick={() => navigate('/admin-login')}>
               <span className="login-icon">🔐</span>
               <span className="login-text">{t.login}</span>
             </button>
@@ -436,7 +444,6 @@ const Policy = () => {
         </div>
       </div>
 
-
       <style jsx>{`
         * {
           margin: 0;
@@ -461,9 +468,12 @@ const Policy = () => {
           width: 100%;
           background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
           color: white;
-          padding: 10px 0;
-          z-index: 1003;
+          padding: 0;
+          z-index: 1040;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+          height: 55px;
+          display: flex;
+          align-items: center;
         }
 
         .container-1 {
@@ -474,69 +484,43 @@ const Policy = () => {
           justify-content: space-between;
           align-items: center;
           flex-wrap: wrap;
-          gap: 20px;
+          gap: 10px;
+          width: 100%;
         }
 
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
+        .header-left { display: flex; align-items: center; gap: 16px; }
         .we-are-here {
           display: flex;
           align-items: center;
           gap: 8px;
           background: rgba(255,255,255,0.15);
-          padding: 6px 20px;
+          padding: 4px 16px;
           border-radius: 40px;
           font-weight: 500;
         }
+        .quote-text { font-size: 0.85rem; letter-spacing: 0.5px; font-weight: 600; }
 
-        .quote-text {
-          font-size: 0.9rem;
-          letter-spacing: 0.5px;
-          font-weight: 600;
-        }
-
-        .header-right {
-          display: flex;
-          align-items: center;
-          gap: 25px;
-          flex-wrap: wrap;
-        }
-
-        .contact-info-group {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          flex-wrap: wrap;
-        }
-
+        .header-right { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .contact-info-group { display: flex; align-items: center; gap: 10px; }
         .contact-info-item {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 0.75rem;
+          font-size: 0.7rem;
           background: rgba(255,255,255,0.1);
-          padding: 5px 12px;
+          padding: 4px 10px;
           border-radius: 30px;
           transition: all 0.3s ease;
         }
-
-        .contact-info-item:hover {
-          background: rgba(255,255,255,0.25);
-          transform: translateY(-1px);
-        }
-
-        .contact-icon { font-size: 0.85rem; }
-        .contact-text { font-size: 0.75rem; font-weight: 500; }
+        .contact-info-item:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px); }
+        .contact-icon { font-size: 0.75rem; }
+        .contact-text { font-size: 0.7rem; font-weight: 500; }
 
         .copy-btn-mini {
           background: rgba(255,255,255,0.2);
           border: none;
           cursor: pointer;
-          font-size: 0.7rem;
+          font-size: 0.6rem;
           padding: 2px 5px;
           border-radius: 20px;
           transition: all 0.3s ease;
@@ -552,17 +536,18 @@ const Policy = () => {
           gap: 6px;
           background: rgba(255,255,255,0.15);
           border: 1px solid rgba(255,255,255,0.3);
-          padding: 5px 12px;
+          padding: 4px 12px;
           border-radius: 30px;
           cursor: pointer;
           color: white;
-          font-size: 0.75rem;
+          font-size: 0.7rem;
           font-weight: 500;
           transition: all 0.3s ease;
+          height: 32px;
         }
         .language-selector:hover { background: rgba(255,255,255,0.25); }
-        .lang-icon { font-size: 0.85rem; }
-        .dropdown-arrow { font-size: 0.6rem; margin-left: 5px; }
+        .lang-icon { font-size: 0.75rem; }
+        .dropdown-arrow { font-size: 0.5rem; margin-left: 5px; }
         .dropdown-menu {
           position: absolute;
           top: 38px;
@@ -599,10 +584,13 @@ const Policy = () => {
           width: 100%;
           background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%);
           color: #1a2c3e;
-          padding: 12px 0;
-          z-index: 1002;
+          padding: 0;
+          z-index: 1030;
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
+          height: 64px;
+          display: flex;
+          align-items: center;
         }
 
         .container-2 {
@@ -613,14 +601,15 @@ const Policy = () => {
           justify-content: space-between;
           align-items: center;
           gap: 30px;
+          width: 100%;
         }
         .logo-left { flex: 1; display: flex; justify-content: flex-start; }
         .logo-right { flex: 1; display: flex; justify-content: flex-end; }
-        .ntc-logo, .gov-logo { height: 50px; width: auto; object-fit: contain; }
+        .ntc-logo, .gov-logo { height: 45px; width: auto; object-fit: contain; }
         .logo-fallback {
-          font-size: 2rem;
-          width: 50px;
-          height: 50px;
+          font-size: 1.8rem;
+          width: 45px;
+          height: 45px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -629,8 +618,8 @@ const Policy = () => {
           color: white;
         }
         .dept-text-center { flex: 2; text-align: center; }
-        .dept-name { font-size: 1rem; font-weight: 700; color: #0d47a1; letter-spacing: 1px; }
-        .dept-address { font-size: 0.75rem; opacity: 0.7; color: #555; margin-top: 3px; }
+        .dept-name { font-size: 0.95rem; font-weight: 700; color: #0d47a1; letter-spacing: 1px; }
+        .dept-address { font-size: 0.7rem; opacity: 0.7; color: #555; margin-top: 2px; }
 
         /* HEADER 3 - Navigation Bar */
         .header-3 {
@@ -640,9 +629,12 @@ const Policy = () => {
           width: 100%;
           background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
           color: white;
-          padding: 12px 0;
+          padding: 0;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          z-index: 1001;
+          z-index: 1020;
+          height: 56px;
+          display: flex;
+          align-items: center;
         }
 
         .container-3 {
@@ -653,52 +645,43 @@ const Policy = () => {
           justify-content: space-between;
           align-items: center;
           flex-wrap: wrap;
-          gap: 20px;
+          gap: 10px;
+          width: 100%;
         }
 
-        .nav-menu-left {
-          display: flex;
-          gap: 20px;
-          align-items: center;
-        }
-
+        .nav-menu-left { display: flex; gap: 10px; align-items: center; }
         .nav-btn {
           background: transparent;
           border: none;
           color: white;
-          font-size: 1rem;
+          font-size: 0.9rem;
           font-weight: 600;
           cursor: pointer;
-          padding: 8px 20px;
+          padding: 6px 16px;
           border-radius: 40px;
           transition: all 0.3s ease;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
         }
-
-        .nav-btn:hover {
-          background: rgba(255,255,255,0.15);
-          transform: translateY(-1px);
-        }
-
-        .nav-icon { font-size: 1.1rem; }
-        .nav-text { font-size: 0.95rem; }
+        .nav-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-1px); }
+        .nav-icon { font-size: 1rem; }
+        .nav-text { font-size: 0.85rem; }
 
         .login-btn-right { display: flex; align-items: center; }
         .login-btn {
           background: transparent;
           border: 2px solid white;
           color: white;
-          font-size: 0.95rem;
+          font-size: 0.85rem;
           font-weight: 600;
           cursor: pointer;
-          padding: 8px 28px;
+          padding: 6px 24px;
           border-radius: 40px;
           transition: all 0.3s ease;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
           white-space: nowrap;
         }
         .login-btn:hover { background: white; color: #1565c0; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
@@ -948,39 +931,72 @@ const Policy = () => {
           box-shadow: 0 4px 12px rgba(21, 101, 192, 0.2);
         }
 
-     
-
-        .copyright-text {
-          margin-top: 5px;
-          font-size: 0.65rem;
-        }
-
         /* Responsive */
         @media (max-width: 1024px) {
+          .container-1, .container-2, .container-3 {
+            padding: 0 20px;
+          }
           .policy-container { padding: 40px 20px; }
         }
 
         @media (max-width: 768px) {
-          .main-content { padding-top: 280px; }
+          .main-content { padding-top: 290px; }
+          
+          .header-1 { 
+            height: auto; 
+            min-height: 55px; 
+            padding: 8px 0;
+          }
+          .header-2 { 
+            height: auto; 
+            min-height: 60px; 
+            padding: 8px 0;
+          }
+          .header-3 { 
+            height: auto; 
+            min-height: 52px; 
+            padding: 8px 0;
+          }
+          
+          .container-1, .container-2, .container-3 { 
+            flex-direction: column; 
+            text-align: center; 
+            padding: 0 16px;
+            gap: 8px;
+          }
+          
+          .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { 
+            justify-content: center; 
+            width: 100%;
+          }
+          
+          .contact-info-group { 
+            flex-direction: column; 
+            gap: 6px; 
+            width: 100%;
+            align-items: center;
+          }
+          
+          .logo-left, .logo-right { display: none; }
+          .dept-text-center { flex: 1; }
+          
           .policy-card { padding: 28px 20px; }
           .policy-header h1 { font-size: 1.5rem; }
           .policy-section h2 { font-size: 1.2rem; }
           .info-grid, .uses-grid { grid-template-columns: 1fr; }
           .security-box, .cookie-box, .changes-box { flex-direction: column; text-align: center; }
           .contact-info-policy { flex-direction: column; gap: 8px; }
-          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; padding: 0 20px; }
-          .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
-          .contact-info-group { flex-direction: column; gap: 8px; }
-          .logo-left, .logo-right { display: none; }
-          .dept-text-center { flex: 1; }
         }
 
         @media (max-width: 480px) {
-          .main-content { padding-top: 320px; }
+          .main-content { padding-top: 310px; }
           .policy-card { padding: 20px 16px; }
           .rights-grid { grid-template-columns: 1fr; }
           .security-box, .cookie-box, .changes-box { padding: 16px; }
           .security-icon, .cookie-icon, .changes-icon { font-size: 1.5rem; }
+          .policy-icon { font-size: 3rem; }
+          .policy-header h1 { font-size: 1.3rem; }
+          .btn-back { padding: 10px 24px; font-size: 0.85rem; }
         }
       `}</style>
     </div>

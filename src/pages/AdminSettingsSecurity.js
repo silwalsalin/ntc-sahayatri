@@ -6,7 +6,9 @@ import Sidebar from '../components/Sidebar';
 
 const AdminSettingsSecurity = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -15,27 +17,22 @@ const AdminSettingsSecurity = () => {
   // Notification State
   const [notification, setNotification] = useState({
     show: false,
-    type: 'success', // 'success', 'error', 'warning', 'info'
+    type: 'success',
     message: '',
     title: ''
   });
 
   // Security Settings State
   const [securitySettings, setSecuritySettings] = useState({
-    // Session Settings
     sessionTimeout: 30,
     sessionTimeoutUnit: 'minutes',
     extendSessionOnActivity: true,
     maxConcurrentSessions: 1,
-    
-    // Login Security
     maxLoginAttempts: 5,
     lockoutDuration: 15,
     lockoutDurationUnit: 'minutes',
     loginAttemptWindow: 15,
     loginAttemptWindowUnit: 'minutes',
-    
-    // Password Policy
     passwordExpiryDays: 90,
     minPasswordLength: 8,
     maxPasswordLength: 32,
@@ -45,40 +42,28 @@ const AdminSettingsSecurity = () => {
     requireSpecialChars: true,
     preventPasswordReuse: 5,
     passwordHistoryDays: 180,
-    
-    // Two-Factor Authentication
     twoFactorAuth: false,
     twoFactorMethod: 'authenticator',
     backupCodesGenerated: false,
-    
-    // Account Security
     accountLockoutThreshold: 5,
     accountLockoutDuration: 30,
     forcePasswordChangeOnFirstLogin: true,
     notifyOnNewLogin: true,
     notifyOnPasswordChange: true,
-    
-    // IP Security
     enableIpWhitelist: false,
     ipWhitelist: '',
     enableIpBlacklist: false,
     ipBlacklist: '',
-    
-    // Audit Logging
     enableAuditLog: true,
     auditLogRetention: 90,
     logLoginAttempts: true,
     logFailedLogins: true,
     logPasswordChanges: true,
     logSettingsChanges: true,
-    
-    // Security Headers
     enableHSTS: true,
     enableCSP: true,
     enableXFrame: true,
     enableXSSProtection: true,
-    
-    // Current User Info
     lastPasswordChange: '2024-01-15',
     lastLogin: '2024-02-25 10:30:00',
     lastLoginIP: '192.168.1.100',
@@ -93,6 +78,20 @@ const AdminSettingsSecurity = () => {
   });
 
   const [passwordErrors, setPasswordErrors] = useState({});
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
 
   // Check authentication
   useEffect(() => {
@@ -206,7 +205,8 @@ const AdminSettingsSecurity = () => {
       error: 'त्रुटि',
       success: 'सफलता',
       warning: 'चेतावनी',
-      info: 'सूचना'
+      info: 'सूचना',
+      never: 'कहिल्यै'
     },
     en: {
       securitySettings: 'Security Settings',
@@ -291,7 +291,8 @@ const AdminSettingsSecurity = () => {
       error: 'Error',
       success: 'Success',
       warning: 'Warning',
-      info: 'Info'
+      info: 'Info',
+      never: 'Never'
     }
   };
 
@@ -304,9 +305,8 @@ const AdminSettingsSecurity = () => {
       [name]: type === 'checkbox' ? checked : value
     }));
     
-    // Show notification for individual setting changes
     if (type === 'checkbox') {
-      const status = checked ? 'enabled' : 'disabled';
+      const status = checked ? (language === 'np' ? 'सक्षम गरियो' : 'enabled') : (language === 'np' ? 'असक्षम गरियो' : 'disabled');
       showNotification('info', `${name} ${status}`, t.settingsUpdated);
     }
   };
@@ -321,10 +321,10 @@ const AdminSettingsSecurity = () => {
     const errors = {};
     
     if (!passwordData.currentPassword) {
-      errors.currentPassword = 'Required';
+      errors.currentPassword = language === 'np' ? 'आवश्यक' : 'Required';
     }
     if (!passwordData.newPassword) {
-      errors.newPassword = 'Required';
+      errors.newPassword = language === 'np' ? 'आवश्यक' : 'Required';
     } else if (passwordData.newPassword.length < securitySettings.minPasswordLength) {
       errors.newPassword = t.passwordTooShort;
       showNotification('error', t.passwordTooShort, t.error);
@@ -343,7 +343,6 @@ const AdminSettingsSecurity = () => {
     setSaveSuccess(false);
     
     try {
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       setSaving(false);
@@ -358,7 +357,6 @@ const AdminSettingsSecurity = () => {
 
   const handleUpdatePassword = () => {
     if (validatePassword()) {
-      // Simulate password update
       showNotification('success', t.passwordChanged, t.success);
       setShowPasswordModal(false);
       setPasswordData({
@@ -459,7 +457,7 @@ const AdminSettingsSecurity = () => {
                 <div className="info-icon">💻</div>
                 <div className="info-content">
                   <div className="info-label">{t.activeSessions}</div>
-                  <div className="info-value">{securitySettings.activeSessions}</div>
+                  <div className="info-value">{formatNumber(securitySettings.activeSessions)}</div>
                 </div>
               </div>
             </div>

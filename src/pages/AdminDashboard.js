@@ -7,7 +7,9 @@ import Sidebar from '../components/Sidebar';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [stats, setStats] = useState({
@@ -39,6 +41,46 @@ const AdminDashboard = () => {
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
+  // Format date in Nepali
+  const formatDateNepali = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      const year = d.getFullYear() - 57;
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${yearNp}-${monthNp}-${dayNp}`;
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Format date in English
+  const formatDateEnglish = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      return d.toISOString().split('T')[0];
+    } catch (error) {
+      return '-';
+    }
   };
 
   // Fetch data from backend
@@ -92,7 +134,7 @@ const AdminDashboard = () => {
       // Calculate monthly trend
       const trend = calculateMonthlyTrend(allComplaints);
       setChartData({
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        labels: language === 'np' ? ['जन', 'फेब', 'मार्च', 'अप्रि', 'मे', 'जुन'] : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
         datasets: trend
       });
 
@@ -100,12 +142,12 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Error fetching data:', error);
       setBackendStatus('disconnected');
-      showToast('Failed to fetch data from server', 'error');
+      showToast(language === 'np' ? 'डाटा प्राप्त गर्न असफल' : 'Failed to fetch data', 'error');
       // Set sample data as fallback
       setStats(getSampleStats());
       setRecentComplaints(getSampleComplaints());
       setChartData({
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        labels: language === 'np' ? ['जन', 'फेब', 'मार्च', 'अप्रि', 'मे', 'जुन'] : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
         datasets: [65, 78, 82, 74, 88, 92]
       });
     }
@@ -168,7 +210,8 @@ const AdminDashboard = () => {
         category: complaint.nature_of_complaint || complaint.complaint_type || 'general',
         enCategory: complaint.nature_of_complaint || complaint.complaint_type || 'General',
         status: mapStatus(complaint.status),
-        date: formatDate(createdDate),
+        date: formatDateNepali(createdDate),
+        enDate: formatDateEnglish(createdDate),
         priority: mapPriority(complaint.priority),
         phone: complaint.phone || user?.phone || 'N/A',
         email: complaint.email || user?.email || 'N/A',
@@ -178,8 +221,8 @@ const AdminDashboard = () => {
         enChannel: complaint.preferred_contact || 'Website',
         assignedTo: complaint.assigned_to || 'Not Assigned',
         assignedToName: complaint.assigned_to_name || complaint.assigned_to || 'Not Assigned',
-        resolvedDate: complaint.resolved_at ? formatDate(complaint.resolved_at) : null,
-        enResolvedDate: complaint.resolved_at ? formatDate(complaint.resolved_at) : null,
+        resolvedDate: complaint.resolved_at ? formatDateNepali(complaint.resolved_at) : null,
+        enResolvedDate: complaint.resolved_at ? formatDateEnglish(complaint.resolved_at) : null,
         referenceNumber: complaint.reference_number || null,
         landmark: complaint.landmark || null,
         address: complaint.address || null,
@@ -227,21 +270,6 @@ const AdminDashboard = () => {
     return priorityMap[priority] || 'medium';
   };
 
-  // Format date
-  const formatDate = (date) => {
-    if (!date) return '-';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '-';
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    } catch (error) {
-      return '-';
-    }
-  };
-
   // Calculate monthly trend
   const calculateMonthlyTrend = (complaints) => {
     const now = new Date();
@@ -276,8 +304,48 @@ const AdminDashboard = () => {
   });
 
   const getSampleComplaints = () => [
-    { id: 1, ticketId: 'NTC-2024-001', name: 'रमेश केसी', enName: 'Ramesh KC', category: 'इन्टरनेट', enCategory: 'Internet', status: 'pending', date: '2024-01-15', priority: 'high', phone: '9841234567', email: 'ram@example.com', description: 'इन्टरनेट सेवा नचलेको समस्या', enDescription: 'Internet service not working', channel: 'Website', enChannel: 'Website', assignedTo: 'Not Assigned', assignedToName: 'Not Assigned', type: 'regular' },
-    { id: 2, ticketId: 'NTC-2024-002', name: 'सीता शर्मा', enName: 'Sita Sharma', category: 'रिचार्ज', enCategory: 'Recharge', status: 'in-progress', date: '2024-01-14', priority: 'medium', phone: '9812345678', email: 'sita@example.com', description: 'रिचार्ज नभएको समस्या', enDescription: 'Recharge not completed', channel: 'Phone', enChannel: 'Phone', assignedTo: 'Staff', assignedToName: 'Staff', type: 'regarding' }
+    { 
+      id: 1, 
+      ticketId: 'NTC-2024-001', 
+      name: 'रमेश केसी', 
+      enName: 'Ramesh KC', 
+      category: 'internet', 
+      enCategory: 'Internet', 
+      status: 'pending', 
+      date: formatDateNepali(new Date()), 
+      enDate: formatDateEnglish(new Date()), 
+      priority: 'high', 
+      phone: '9841234567', 
+      email: 'ram@example.com', 
+      description: 'इन्टरनेट सेवा नचलेको समस्या', 
+      enDescription: 'Internet service not working', 
+      channel: 'Website', 
+      enChannel: 'Website', 
+      assignedTo: 'Not Assigned', 
+      assignedToName: 'Not Assigned', 
+      type: 'regular' 
+    },
+    { 
+      id: 2, 
+      ticketId: 'NTC-2024-002', 
+      name: 'सीता शर्मा', 
+      enName: 'Sita Sharma', 
+      category: 'recharge', 
+      enCategory: 'Recharge', 
+      status: 'in-progress', 
+      date: formatDateNepali(new Date(Date.now() - 86400000)), 
+      enDate: formatDateEnglish(new Date(Date.now() - 86400000)), 
+      priority: 'medium', 
+      phone: '9812345678', 
+      email: 'sita@example.com', 
+      description: 'रिचार्ज नभएको समस्या', 
+      enDescription: 'Recharge not completed', 
+      channel: 'Phone', 
+      enChannel: 'Phone', 
+      assignedTo: 'Staff', 
+      assignedToName: 'Staff', 
+      type: 'regarding' 
+    }
   ];
 
   // Open complaint details modal
@@ -299,11 +367,19 @@ const AdminDashboard = () => {
     const token = getAuthToken();
     const user = localStorage.getItem('adminUser');
     if (!token || !user) {
-      navigate('/login');
+      navigate('/admin-login');
     } else {
       fetchData();
     }
   }, [navigate]);
+
+  // Update chart labels when language changes
+  useEffect(() => {
+    setChartData(prev => ({
+      ...prev,
+      labels: language === 'np' ? ['जन', 'फेब', 'मार्च', 'अप्रि', 'मे', 'जुन'] : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+    }));
+  }, [language]);
 
   const content = {
     np: {
@@ -345,7 +421,12 @@ const AdminDashboard = () => {
       referenceNo: 'सन्दर्भ नम्बर',
       landmark: 'नजिकैको चिन्ह',
       address: 'ठेगाना',
-      complaintType: 'गुनासो प्रकार'
+      complaintType: 'गुनासो प्रकार',
+      regular: 'साधारण',
+      regarding: 'सम्बन्धी',
+      total: 'जम्मा',
+      new: 'नयाँ',
+      today: 'आज'
     },
     en: {
       welcomeBack: 'Welcome Back',
@@ -386,7 +467,12 @@ const AdminDashboard = () => {
       referenceNo: 'Reference Number',
       landmark: 'Landmark',
       address: 'Address',
-      complaintType: 'Complaint Type'
+      complaintType: 'Complaint Type',
+      regular: 'Regular',
+      regarding: 'Regarding',
+      total: 'Total',
+      new: 'New',
+      today: 'Today'
     }
   };
 
@@ -444,6 +530,22 @@ const AdminDashboard = () => {
     return type === 'regular' ? 'Regular' : 'Regarding';
   };
 
+  const getDate = (complaint) => {
+    return language === 'np' ? complaint.date : complaint.enDate;
+  };
+
+  const getComplainantName = (complaint) => {
+    return language === 'np' ? complaint.name : complaint.enName;
+  };
+
+  const getDescription = (complaint) => {
+    return language === 'np' ? complaint.description : complaint.enDescription;
+  };
+
+  const getChannel = (complaint) => {
+    return language === 'np' ? complaint.channel : complaint.enChannel;
+  };
+
   const handleRefresh = () => {
     fetchData();
     showToast(language === 'np' ? 'डाटा रिफ्रेस गरियो' : 'Data refreshed', 'info');
@@ -496,64 +598,64 @@ const AdminDashboard = () => {
                   <span className="stat-icon">📊</span>
                   <span className="stat-title">{t.totalComplaints}</span>
                 </div>
-                <div className="stat-value">{stats.totalComplaints.toLocaleString()}</div>
-                <div className="stat-change positive">Total complaints</div>
+                <div className="stat-value">{formatNumber(stats.totalComplaints)}</div>
+                <div className="stat-change positive">{t.total}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-header">
                   <span className="stat-icon">⏳</span>
                   <span className="stat-title">{t.pendingComplaints}</span>
                 </div>
-                <div className="stat-value">{stats.pendingComplaints.toLocaleString()}</div>
-                <div className="stat-change negative">Pending</div>
+                <div className="stat-value">{formatNumber(stats.pendingComplaints)}</div>
+                <div className="stat-change negative">{t.pendingComplaints}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-header">
                   <span className="stat-icon">🔄</span>
                   <span className="stat-title">{t.inProgressComplaints}</span>
                 </div>
-                <div className="stat-value">{stats.inProgressComplaints.toLocaleString()}</div>
-                <div className="stat-change positive">In Progress</div>
+                <div className="stat-value">{formatNumber(stats.inProgressComplaints)}</div>
+                <div className="stat-change positive">{t.inProgressComplaints}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-header">
                   <span className="stat-icon">✅</span>
                   <span className="stat-title">{t.resolvedComplaints}</span>
                 </div>
-                <div className="stat-value">{stats.resolvedComplaints.toLocaleString()}</div>
-                <div className="stat-change positive">Resolved</div>
+                <div className="stat-value">{formatNumber(stats.resolvedComplaints)}</div>
+                <div className="stat-change positive">{t.resolvedComplaints}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-header">
                   <span className="stat-icon">👥</span>
                   <span className="stat-title">{t.totalUsers}</span>
                 </div>
-                <div className="stat-value">{stats.totalUsers.toLocaleString()}</div>
-                <div className="stat-change positive">Total users</div>
+                <div className="stat-value">{formatNumber(stats.totalUsers)}</div>
+                <div className="stat-change positive">{t.total}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-header">
                   <span className="stat-icon">✨</span>
                   <span className="stat-title">{t.newUsersToday}</span>
                 </div>
-                <div className="stat-value">+{stats.newUsersToday}</div>
-                <div className="stat-change positive">New today</div>
+                <div className="stat-value">+{formatNumber(stats.newUsersToday)}</div>
+                <div className="stat-change positive">{t.new} {t.today}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-header">
                   <span className="stat-icon">🟢</span>
                   <span className="stat-title">{t.activeUsers}</span>
                 </div>
-                <div className="stat-value">{stats.activeUsers.toLocaleString()}</div>
-                <div className="stat-change positive">Active users</div>
+                <div className="stat-value">{formatNumber(stats.activeUsers)}</div>
+                <div className="stat-change positive">{t.activeUsers}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-header">
                   <span className="stat-icon">⭐</span>
                   <span className="stat-title">{t.satisfactionRate}</span>
                 </div>
-                <div className="stat-value">{stats.satisfactionRate}%</div>
-                <div className="stat-change positive">Satisfaction rate</div>
+                <div className="stat-value">{formatNumber(Math.round(stats.satisfactionRate))}%</div>
+                <div className="stat-change positive">{t.satisfactionRate}</div>
               </div>
             </div>
 
@@ -574,7 +676,7 @@ const AdminDashboard = () => {
                           background: `linear-gradient(180deg, #3b82f6, #60a5fa)`
                         }}
                       >
-                        <span className="chart-value">{value}</span>
+                        <span className="chart-value">{formatNumber(value)}</span>
                       </div>
                     </div>
                   </div>
@@ -610,14 +712,14 @@ const AdminDashboard = () => {
                           <td className="ticket-id">{complaint.ticketId}</td>
                           <td>
                             <div>
-                              <strong>{language === 'np' ? complaint.name : complaint.enName}</strong>
+                              <strong>{getComplainantName(complaint)}</strong>
                               <br />
                               <small className="complaint-phone">{complaint.phone}</small>
                             </div>
                           </td>
                           <td>{getCategoryText(complaint.category, complaint.enCategory)}</td>
                           <td><span className={`badge ${getStatusClass(complaint.status)}`}>{getStatusText(complaint.status)}</span></td>
-                          <td>{complaint.date}</td>
+                          <td>{getDate(complaint)}</td>
                           <td><span className={`badge-priority ${getPriorityClass(complaint.priority)}`}>{getPriorityText(complaint.priority)}</span></td>
                           <td>
                             <button className="view-btn" onClick={() => openModal(complaint)}>
@@ -693,7 +795,7 @@ const AdminDashboard = () => {
                 <h4>👤 {t.complainantInfo}</h4>
                 <div className="detail-row">
                   <label>{t.complainant}:</label>
-                  <span>{language === 'np' ? selectedComplaint.name : selectedComplaint.enName}</span>
+                  <span>{getComplainantName(selectedComplaint)}</span>
                 </div>
                 <div className="detail-row">
                   <label>{t.email}:</label>
@@ -708,7 +810,7 @@ const AdminDashboard = () => {
               <div className="detail-section">
                 <h4>📝 {t.description}</h4>
                 <div className="detail-row full-width">
-                  <p className="description-text">{language === 'np' ? selectedComplaint.description : selectedComplaint.enDescription}</p>
+                  <p className="description-text">{getDescription(selectedComplaint)}</p>
                 </div>
               </div>
 
@@ -728,17 +830,17 @@ const AdminDashboard = () => {
                 </div>
                 <div className="detail-row">
                   <label>{t.registeredDate}:</label>
-                  <span>{selectedComplaint.date}</span>
+                  <span>{getDate(selectedComplaint)}</span>
                 </div>
                 {selectedComplaint.resolvedDate && (
                   <div className="detail-row">
                     <label>{t.resolvedDate}:</label>
-                    <span>{selectedComplaint.resolvedDate}</span>
+                    <span>{language === 'np' ? selectedComplaint.resolvedDate : selectedComplaint.enResolvedDate}</span>
                   </div>
                 )}
                 <div className="detail-row">
                   <label>{t.channel}:</label>
-                  <span>{language === 'np' ? selectedComplaint.channel : selectedComplaint.enChannel}</span>
+                  <span>{getChannel(selectedComplaint)}</span>
                 </div>
                 <div className="detail-row">
                   <label>{t.assignedTo}:</label>
@@ -818,7 +920,7 @@ const AdminDashboard = () => {
           font-weight: 500;
         }
 
-        /* ===== LAYOUT - Same as AdminAnalytics ===== */
+        /* ===== LAYOUT ===== */
         .dashboard-layout {
           display: flex;
           height: calc(100vh - 195px);
@@ -828,7 +930,6 @@ const AdminDashboard = () => {
           overflow: hidden;
         }
 
-        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -841,7 +942,6 @@ const AdminDashboard = () => {
           overflow-y: auto;
         }
 
-        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
           margin-left: 260px;

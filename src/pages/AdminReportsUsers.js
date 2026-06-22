@@ -7,7 +7,9 @@ import Sidebar from '../components/Sidebar';
 
 const AdminReportsUsers = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [dateRange, setDateRange] = useState('month');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -15,6 +17,29 @@ const AdminReportsUsers = () => {
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
+  // Format decimal with Nepali digits
+  const formatDecimal = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
 
   const [reportData, setReportData] = useState({
     summary: {
@@ -82,7 +107,6 @@ const AdminReportsUsers = () => {
         const usersData = usersResponse.data.data;
         const complaintsData = complaintsResponse.data.data || [];
         
-        // Calculate all statistics
         const summary = calculateSummaryStats(usersData, complaintsData);
         const roleBreakdown = calculateRoleBreakdown(usersData);
         const statusBreakdown = calculateStatusBreakdown(usersData);
@@ -143,12 +167,12 @@ const AdminReportsUsers = () => {
       : 0;
     
     const totalComplaints = complaintsData.length;
-    const avgComplaintsPerUser = totalUsers > 0 ? (totalComplaints / totalUsers).toFixed(2) : 0;
+    const avgComplaintsPerUser = totalUsers > 0 ? (totalComplaints / totalUsers) : 0;
     
     const resolvedComplaints = complaintsData.filter(c => 
       c.status === 'resolved' || c.status === 'Resolved'
     ).length;
-    const satisfactionRate = totalComplaints > 0 ? ((resolvedComplaints / totalComplaints) * 100).toFixed(1) : 0;
+    const satisfactionRate = totalComplaints > 0 ? ((resolvedComplaints / totalComplaints) * 100) : 0;
 
     return {
       totalUsers,
@@ -159,8 +183,8 @@ const AdminReportsUsers = () => {
       newUsersLastMonth,
       growth: parseFloat(growth.toFixed(1)),
       totalComplaints,
-      avgComplaintsPerUser: parseFloat(avgComplaintsPerUser),
-      satisfactionRate: parseFloat(satisfactionRate)
+      avgComplaintsPerUser: parseFloat(avgComplaintsPerUser.toFixed(2)),
+      satisfactionRate: parseFloat(satisfactionRate.toFixed(1))
     };
   };
 
@@ -326,7 +350,6 @@ const AdminReportsUsers = () => {
       };
     });
     
-    // Filter by selected status
     let filtered = userStats;
     if (selectedStatus !== 'all') {
       filtered = filtered.filter(user => user.status === selectedStatus);
@@ -336,7 +359,6 @@ const AdminReportsUsers = () => {
       filtered = filtered.filter(user => user.role === selectedRole);
     }
     
-    // Sort by complaints and take top 10
     return filtered.sort((a, b) => b.complaints - a.complaints).slice(0, 10);
   };
 
@@ -503,7 +525,8 @@ const AdminReportsUsers = () => {
       department: 'विभाग',
       exportStarted: 'निर्यात सुरु भयो...',
       pdfExport: 'पीडीएफ निर्यात भइरहेको छ...',
-      excelExport: 'एक्सेल निर्यात भइरहेको छ...'
+      excelExport: 'एक्सेल निर्यात भइरहेको छ...',
+      days: 'दिन'
     },
     en: {
       usersReports: 'Users Reports',
@@ -573,7 +596,8 @@ const AdminReportsUsers = () => {
       department: 'Department',
       exportStarted: 'Export started...',
       pdfExport: 'Exporting PDF...',
-      excelExport: 'Exporting Excel...'
+      excelExport: 'Exporting Excel...',
+      days: 'days'
     }
   };
 
@@ -758,79 +782,79 @@ const AdminReportsUsers = () => {
               </button>
             </div>
 
-            {/* Summary Cards */}
+            {/* Summary Cards - Updated with formatNumber */}
             <div className="summary-cards">
               <div className="summary-card">
                 <div className="card-icon purple">👥</div>
                 <div className="card-info">
-                  <div className="card-value">{currentData.summary.totalUsers.toLocaleString()}</div>
+                  <div className="card-value">{formatNumber(currentData.summary.totalUsers)}</div>
                   <div className="card-label">{t.totalUsers}</div>
                 </div>
               </div>
               <div className="summary-card">
                 <div className="card-icon green">🟢</div>
                 <div className="card-info">
-                  <div className="card-value">{currentData.summary.activeUsers.toLocaleString()}</div>
+                  <div className="card-value">{formatNumber(currentData.summary.activeUsers)}</div>
                   <div className="card-label">{t.activeUsers}</div>
                 </div>
               </div>
               <div className="summary-card">
                 <div className="card-icon orange">⭕</div>
                 <div className="card-info">
-                  <div className="card-value">{currentData.summary.inactiveUsers.toLocaleString()}</div>
+                  <div className="card-value">{formatNumber(currentData.summary.inactiveUsers)}</div>
                   <div className="card-label">{t.inactiveUsers}</div>
                 </div>
               </div>
               <div className="summary-card">
                 <div className="card-icon red">🔴</div>
                 <div className="card-info">
-                  <div className="card-value">{currentData.summary.suspendedUsers.toLocaleString()}</div>
+                  <div className="card-value">{formatNumber(currentData.summary.suspendedUsers)}</div>
                   <div className="card-label">{t.suspendedUsers}</div>
                 </div>
               </div>
               <div className="summary-card">
                 <div className="card-icon blue">✨</div>
                 <div className="card-info">
-                  <div className="card-value">{currentData.summary.newUsersThisMonth}</div>
+                  <div className="card-value">{formatNumber(currentData.summary.newUsersThisMonth)}</div>
                   <div className="card-label">{t.newUsersThisMonth}</div>
                 </div>
               </div>
               <div className="summary-card">
                 <div className="card-icon pink">⭐</div>
                 <div className="card-info">
-                  <div className="card-value">{currentData.summary.satisfactionRate}%</div>
+                  <div className="card-value">{formatNumber(currentData.summary.satisfactionRate)}%</div>
                   <div className="card-label">{t.satisfactionRate}</div>
                 </div>
               </div>
             </div>
 
-            {/* Growth Indicator */}
+            {/* Growth Indicator - Updated with formatNumber */}
             <div className="growth-card">
               <div className="growth-info">
                 <span className="growth-label">{t.newUsersThisMonth}:</span>
-                <span className="growth-value">{currentData.summary.newUsersThisMonth}</span>
+                <span className="growth-value">{formatNumber(currentData.summary.newUsersThisMonth)}</span>
               </div>
               <div className="growth-info">
                 <span className="growth-label">{t.newUsersLastMonth}:</span>
-                <span className="growth-value">{currentData.summary.newUsersLastMonth}</span>
+                <span className="growth-value">{formatNumber(currentData.summary.newUsersLastMonth)}</span>
               </div>
               <div className="growth-info">
                 <span className="growth-label">{t.growth}:</span>
                 <span className={`growth-value ${currentData.summary.growth >= 0 ? 'positive' : 'negative'}`}>
-                  {currentData.summary.growth >= 0 ? '+' : ''}{currentData.summary.growth}%
+                  {currentData.summary.growth >= 0 ? '+' : ''}{formatNumber(currentData.summary.growth)}%
                 </span>
               </div>
               <div className="growth-info">
                 <span className="growth-label">{t.totalComplaints}:</span>
-                <span className="growth-value">{currentData.summary.totalComplaints}</span>
+                <span className="growth-value">{formatNumber(currentData.summary.totalComplaints)}</span>
               </div>
               <div className="growth-info">
                 <span className="growth-label">{t.avgComplaintsPerUser}:</span>
-                <span className="growth-value">{currentData.summary.avgComplaintsPerUser}</span>
+                <span className="growth-value">{formatNumber(currentData.summary.avgComplaintsPerUser)}</span>
               </div>
             </div>
 
-            {/* Charts Grid */}
+            {/* Charts Grid - Updated with formatNumber */}
             <div className="charts-grid">
               {/* Role Breakdown */}
               <div className="chart-card">
@@ -840,7 +864,7 @@ const AdminReportsUsers = () => {
                     <div key={idx} className="chart-bar-item">
                       <div className="chart-label">
                         <span>{language === 'np' ? item.name : item.enName}</span>
-                        <span>{item.count.toLocaleString()} ({item.percentage}%)</span>
+                        <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                       </div>
                       <div className="chart-bar-bg">
                         <div 
@@ -861,7 +885,7 @@ const AdminReportsUsers = () => {
                     <div key={idx} className="chart-bar-item">
                       <div className="chart-label">
                         <span>{language === 'np' ? item.name : item.enName}</span>
-                        <span>{item.count.toLocaleString()} ({item.percentage}%)</span>
+                        <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                       </div>
                       <div className="chart-bar-bg">
                         <div 
@@ -882,7 +906,7 @@ const AdminReportsUsers = () => {
                     <div key={idx} className="chart-bar-item">
                       <div className="chart-label">
                         <span>{language === 'np' ? item.name : item.enName}</span>
-                        <span>{item.count.toLocaleString()} ({item.percentage}%)</span>
+                        <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                       </div>
                       <div className="chart-bar-bg">
                         <div 
@@ -903,7 +927,7 @@ const AdminReportsUsers = () => {
                     <div key={idx} className="chart-bar-item">
                       <div className="chart-label">
                         <span>{language === 'np' ? item.name : item.enName}</span>
-                        <span>{item.count.toLocaleString()} ({item.percentage}%)</span>
+                        <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                       </div>
                       <div className="chart-bar-bg">
                         <div 
@@ -917,7 +941,7 @@ const AdminReportsUsers = () => {
               </div>
             </div>
 
-            {/* Monthly Trend */}
+            {/* Monthly Trend - Updated with formatNumber */}
             <div className="trend-card">
               <h3>{t.monthlyTrend}</h3>
               <div className="trend-chart">
@@ -932,7 +956,7 @@ const AdminReportsUsers = () => {
                           backgroundColor: `hsl(${210 + idx * 5}, 70%, 55%)`
                         }}
                       >
-                        <span className="trend-value">{item.count}</span>
+                        <span className="trend-value">{formatNumber(item.count)}</span>
                       </div>
                     </div>
                   </div>
@@ -940,7 +964,7 @@ const AdminReportsUsers = () => {
               </div>
             </div>
 
-            {/* Top Users Table */}
+            {/* Top Users Table - Updated with formatNumber */}
             <div className="table-card">
               <h3>{t.topUsers}</h3>
               <div className="table-wrapper">
@@ -967,11 +991,11 @@ const AdminReportsUsers = () => {
                           <td>{user.phone}</td>
                           <td>{getRoleText(user.role)}</td>
                           <td>{user.department}</td>
-                          <td className="complaint-count">{user.complaints}</td>
-                          <td className="resolved-count">{user.resolved}</td>
+                          <td className="complaint-count">{formatNumber(user.complaints)}</td>
+                          <td className="resolved-count">{formatNumber(user.resolved)}</td>
                           <td>
                             <div className="satisfaction-star">
-                              <span>⭐</span> {user.satisfaction}
+                              <span>⭐</span> {formatNumber(user.satisfaction)}
                             </div>
                           </td>
                           <td>

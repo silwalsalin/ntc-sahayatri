@@ -7,7 +7,9 @@ import Sidebar from '../components/Sidebar';
 
 const AdminSettingsGeneral = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -95,6 +97,20 @@ const AdminSettingsGeneral = () => {
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
   // Helper function to get auth token
   const getAuthToken = () => {
     return localStorage.getItem('adminToken') || localStorage.getItem('token');
@@ -104,6 +120,39 @@ const AdminSettingsGeneral = () => {
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
+
+  // Format date with language support
+  const formatDate = (dateString) => {
+    if (!dateString) return language === 'np' ? 'कहिल्यै' : 'Never';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return language === 'np' ? 'कहिल्यै' : 'Never';
+      if (language === 'np') {
+        const year = date.getFullYear() - 57;
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+        const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const hoursNp = hours.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const minutesNp = minutes.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        return `${yearNp}-${monthNp}-${dayNp} ${hoursNp}:${minutesNp}`;
+      }
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch {
+      return language === 'np' ? 'कहिल्यै' : 'Never';
+    }
   };
 
   // Fetch all settings from backend
@@ -121,7 +170,6 @@ const AdminSettingsGeneral = () => {
         'Content-Type': 'application/json'
       };
 
-      // Fetch all settings in parallel
       const [generalRes, emailRes, securityRes, backupRes, notificationRes] = await Promise.all([
         axios.get(`${API_URL}/admin/settings/general`, { headers }).catch(() => ({ data: { success: false } })),
         axios.get(`${API_URL}/admin/settings/email`, { headers }).catch(() => ({ data: { success: false } })),
@@ -132,27 +180,22 @@ const AdminSettingsGeneral = () => {
 
       if (generalRes.data.success && generalRes.data.data) {
         setGeneralSettings(prev => ({ ...prev, ...generalRes.data.data }));
-        console.log('✅ General settings loaded');
       }
 
       if (emailRes.data.success && emailRes.data.data) {
         setEmailSettings(prev => ({ ...prev, ...emailRes.data.data }));
-        console.log('✅ Email settings loaded');
       }
 
       if (securityRes.data.success && securityRes.data.data) {
         setSecuritySettings(prev => ({ ...prev, ...securityRes.data.data }));
-        console.log('✅ Security settings loaded');
       }
 
       if (backupRes.data.success && backupRes.data.data) {
         setBackupSettings(prev => ({ ...prev, ...backupRes.data.data }));
-        console.log('✅ Backup settings loaded');
       }
 
       if (notificationRes.data.success && notificationRes.data.data) {
         setNotificationSettings(prev => ({ ...prev, ...notificationRes.data.data }));
-        console.log('✅ Notification settings loaded');
       }
 
     } catch (error) {
@@ -358,7 +401,6 @@ const AdminSettingsGeneral = () => {
     setUpdating(true);
 
     try {
-      // Save ALL sections in parallel
       const results = await Promise.all([
         saveGeneralSettings(),
         saveEmailSettings(),
@@ -374,13 +416,12 @@ const AdminSettingsGeneral = () => {
           language === 'np' ? '✅ सबै सेटिङ्स सफलतापूर्वक अपडेट गरियो' : '✅ All settings updated successfully', 
           'success'
         );
-        // Refresh settings to get updated timestamps
         await fetchSettings();
       } else {
         const failedCount = results.filter(r => r === false).length;
         showToast(
           language === 'np' 
-            ? `❌ ${failedCount} सेटिङ्स अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।` 
+            ? `❌ ${formatNumber(failedCount)} सेटिङ्स अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।` 
             : `❌ Failed to update ${failedCount} settings. Please try again.`, 
           'error'
         );
@@ -421,7 +462,6 @@ const AdminSettingsGeneral = () => {
           language === 'np' ? '💾 ब्याकअप सफलतापूर्वक पूरा भयो' : '💾 Backup completed successfully', 
           'success'
         );
-        // Update last backup info
         if (response.data.data) {
           setBackupSettings(prev => ({
             ...prev,
@@ -429,7 +469,6 @@ const AdminSettingsGeneral = () => {
             lastBackupSize: response.data.data.size
           }));
         }
-        // Refresh backup settings
         await saveBackupSettings();
       } else {
         showToast(
@@ -551,17 +590,6 @@ const AdminSettingsGeneral = () => {
     }));
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return language === 'np' ? 'कहिल्यै' : 'Never';
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return language === 'np' ? 'कहिल्यै' : 'Never';
-      return date.toLocaleString(language === 'np' ? 'ne-NP' : 'en-US');
-    } catch {
-      return language === 'np' ? 'कहिल्यै' : 'Never';
-    }
-  };
-
   const content = {
     np: {
       settings: 'सेटिङ्स',
@@ -640,7 +668,8 @@ const AdminSettingsGeneral = () => {
       security: 'सुरक्षा',
       backup: 'ब्याकअप',
       notifications: 'सूचनाहरू',
-      updatedAt: 'अन्तिम अपडेट'
+      updatedAt: 'अन्तिम अपडेट',
+      never: 'कहिल्यै'
     },
     en: {
       settings: 'Settings',
@@ -719,7 +748,8 @@ const AdminSettingsGeneral = () => {
       security: 'Security',
       backup: 'Backup',
       notifications: 'Notifications',
-      updatedAt: 'Last Updated'
+      updatedAt: 'Last Updated',
+      never: 'Never'
     }
   };
 
@@ -1618,6 +1648,10 @@ const AdminSettingsGeneral = () => {
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
           display: inline-block;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
 
         /* ===== SETTINGS TABS ===== */

@@ -7,7 +7,9 @@ import Sidebar from '../components/Sidebar';
 
 const AdminUsers = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -48,12 +50,26 @@ const AdminUsers = () => {
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
   // Helper function to get auth token
   const getAuthToken = () => {
     return localStorage.getItem('token') || localStorage.getItem('adminToken');
   };
 
-  // Format date to Nepali format
+  // Format date to Nepali format with Nepali digits
   const formatNepaliDate = (date) => {
     if (!date) return '-';
     try {
@@ -62,7 +78,11 @@ const AdminUsers = () => {
       const year = d.getFullYear() - 57;
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${yearNp}-${monthNp}-${dayNp}`;
     } catch (error) {
       return '-';
     }
@@ -86,7 +106,6 @@ const AdminUsers = () => {
       const token = getAuthToken();
       const headers = { Authorization: `Bearer ${token}` };
       
-      // Fetch regular complaints
       let regularComplaints = [];
       let regardingComplaints = [];
       
@@ -99,7 +118,6 @@ const AdminUsers = () => {
         console.error('Error fetching regular complaints:', error);
       }
       
-      // Fetch complaint regarding
       try {
         const regardingResponse = await axios.get(`${API_URL}/complaint-regarding`, { headers });
         if (regardingResponse.data.success && Array.isArray(regardingResponse.data.data)) {
@@ -122,11 +140,9 @@ const AdminUsers = () => {
       const token = getAuthToken();
       const headers = { Authorization: `Bearer ${token}` };
       
-      // Fetch all complaints
       const { regularComplaints, regardingComplaints } = await fetchAllComplaints();
       const allComplaints = [...regularComplaints, ...regardingComplaints];
       
-      // Create a map of users from complaints
       const complainantMap = new Map();
       
       allComplaints.forEach(complaint => {
@@ -148,7 +164,6 @@ const AdminUsers = () => {
           const user = complainantMap.get(email);
           user.complaints.push(complaint);
           
-          // Track complaint types
           if (complaint.nature_of_complaint) {
             user.complaintTypes.add(complaint.nature_of_complaint);
           }
@@ -160,7 +175,6 @@ const AdminUsers = () => {
         }
       });
       
-      // Fetch existing users from database
       let existingUsers = [];
       try {
         const usersResponse = await axios.get(`${API_URL}/users`, { headers });
@@ -171,15 +185,12 @@ const AdminUsers = () => {
         console.log('Users API error:', usersError);
       }
       
-      // Merge users from database with complainants
       const mergedUsers = [];
       const processedEmails = new Set();
       
-      // First, add existing database users (including staff and admins)
       existingUsers.forEach(user => {
         processedEmails.add(user.email);
         
-        // Find complaints for this user
         const userComplaints = allComplaints.filter(c => c.email === user.email);
         const totalComplaints = userComplaints.length;
         const resolvedComplaints = userComplaints.filter(c => 
@@ -209,7 +220,6 @@ const AdminUsers = () => {
         });
       });
       
-      // Then, add complainants that aren't in the database (regular users only)
       complainantMap.forEach((complainant, email) => {
         if (!processedEmails.has(email)) {
           const totalComplaints = complainant.complaints.length;
@@ -241,9 +251,7 @@ const AdminUsers = () => {
         }
       });
       
-      // Sort users: Staff and Admins first, then by complaints count
       mergedUsers.sort((a, b) => {
-        // Prioritize staff and admin
         const rolePriority = (role) => {
           if (role === 'admin') return 1;
           if (role === 'staff') return 2;
@@ -257,7 +265,6 @@ const AdminUsers = () => {
           return priorityA - priorityB;
         }
         
-        // If same role, sort by complaints count (descending)
         return b.complaintsCount - a.complaintsCount;
       });
       
@@ -267,7 +274,6 @@ const AdminUsers = () => {
     } catch (error) {
       console.error('Error fetching users:', error);
       setBackendStatus('disconnected');
-      // Show sample data if backend is not available
       setUsers(getSampleUsersWithComplaints());
     }
   };
@@ -287,10 +293,10 @@ const AdminUsers = () => {
         status: 'active',
         status_np: 'सक्रिय',
         status_en: 'Active',
-        registeredDate: '२०८०-०१-०१',
-        enRegisteredDate: '2024-01-01',
-        lastLogin: '२०८०-०२-२५',
-        enLastLogin: '2024-02-25',
+        registeredDate: formatNepaliDate(new Date(Date.now() - 86400000 * 30)),
+        enRegisteredDate: formatEnglishDate(new Date(Date.now() - 86400000 * 30)),
+        lastLogin: formatNepaliDate(new Date(Date.now() - 86400000 * 5)),
+        enLastLogin: formatEnglishDate(new Date(Date.now() - 86400000 * 5)),
         complaintsCount: 0,
         resolvedCount: 0,
         complaints: [],
@@ -308,10 +314,10 @@ const AdminUsers = () => {
         status: 'active',
         status_np: 'सक्रिय',
         status_en: 'Active',
-        registeredDate: '२०८०-०१-०५',
-        enRegisteredDate: '2024-01-05',
-        lastLogin: '२०८०-०२-२४',
-        enLastLogin: '2024-02-24',
+        registeredDate: formatNepaliDate(new Date(Date.now() - 86400000 * 25)),
+        enRegisteredDate: formatEnglishDate(new Date(Date.now() - 86400000 * 25)),
+        lastLogin: formatNepaliDate(new Date(Date.now() - 86400000 * 6)),
+        enLastLogin: formatEnglishDate(new Date(Date.now() - 86400000 * 6)),
         complaintsCount: 0,
         resolvedCount: 0,
         complaints: [],
@@ -329,16 +335,16 @@ const AdminUsers = () => {
         status: 'active',
         status_np: 'सक्रिय',
         status_en: 'Active',
-        registeredDate: '२०८०-०१-१५',
-        enRegisteredDate: '2024-01-15',
-        lastLogin: '२०८०-०२-२०',
-        enLastLogin: '2024-02-20',
+        registeredDate: formatNepaliDate(new Date(Date.now() - 86400000 * 15)),
+        enRegisteredDate: formatEnglishDate(new Date(Date.now() - 86400000 * 15)),
+        lastLogin: formatNepaliDate(new Date(Date.now() - 86400000 * 10)),
+        enLastLogin: formatEnglishDate(new Date(Date.now() - 86400000 * 10)),
         complaintsCount: 3,
         resolvedCount: 2,
         complaints: [
-          { id: 101, complaint_number: 'NTC-2024-001', status: 'Resolved', nature_of_complaint: 'Internet', created_at: '2024-01-10' },
-          { id: 102, complaint_number: 'NTC-2024-015', status: 'Resolved', nature_of_complaint: 'Billing', created_at: '2024-01-20' },
-          { id: 103, complaint_number: 'NTC-2024-028', status: 'Pending', nature_of_complaint: 'Network', created_at: '2024-02-01' }
+          { id: 101, complaint_number: 'NTC-2024-001', status: 'Resolved', nature_of_complaint: 'Internet', created_at: new Date(Date.now() - 86400000 * 20) },
+          { id: 102, complaint_number: 'NTC-2024-015', status: 'Resolved', nature_of_complaint: 'Billing', created_at: new Date(Date.now() - 86400000 * 15) },
+          { id: 103, complaint_number: 'NTC-2024-028', status: 'Pending', nature_of_complaint: 'Network', created_at: new Date(Date.now() - 86400000 * 5) }
         ],
         isSystemUser: true
       },
@@ -354,18 +360,18 @@ const AdminUsers = () => {
         status: 'active',
         status_np: 'सक्रिय',
         status_en: 'Active',
-        registeredDate: '२०८०-०१-१८',
-        enRegisteredDate: '2024-01-18',
-        lastLogin: '२०८०-०२-२२',
-        enLastLogin: '2024-02-22',
+        registeredDate: formatNepaliDate(new Date(Date.now() - 86400000 * 12)),
+        enRegisteredDate: formatEnglishDate(new Date(Date.now() - 86400000 * 12)),
+        lastLogin: formatNepaliDate(new Date(Date.now() - 86400000 * 8)),
+        enLastLogin: formatEnglishDate(new Date(Date.now() - 86400000 * 8)),
         complaintsCount: 5,
         resolvedCount: 4,
         complaints: [
-          { id: 104, complaint_number: 'NTC-2024-002', status: 'Resolved', nature_of_complaint: 'Recharge', created_at: '2024-01-12' },
-          { id: 105, complaint_number: 'NTC-2024-008', status: 'Resolved', nature_of_complaint: 'Internet', created_at: '2024-01-18' },
-          { id: 106, complaint_number: 'NTC-2024-012', status: 'Resolved', nature_of_complaint: 'Billing', created_at: '2024-01-22' },
-          { id: 107, complaint_number: 'NTC-2024-018', status: 'Resolved', complaint_type: 'Network', created_at: '2024-01-28' },
-          { id: 108, complaint_number: 'NTC-2024-025', status: 'Pending', complaint_type: 'Technical', created_at: '2024-02-05' }
+          { id: 104, complaint_number: 'NTC-2024-002', status: 'Resolved', nature_of_complaint: 'Recharge', created_at: new Date(Date.now() - 86400000 * 18) },
+          { id: 105, complaint_number: 'NTC-2024-008', status: 'Resolved', nature_of_complaint: 'Internet', created_at: new Date(Date.now() - 86400000 * 14) },
+          { id: 106, complaint_number: 'NTC-2024-012', status: 'Resolved', nature_of_complaint: 'Billing', created_at: new Date(Date.now() - 86400000 * 10) },
+          { id: 107, complaint_number: 'NTC-2024-018', status: 'Resolved', complaint_type: 'Network', created_at: new Date(Date.now() - 86400000 * 7) },
+          { id: 108, complaint_number: 'NTC-2024-025', status: 'Pending', complaint_type: 'Technical', created_at: new Date(Date.now() - 86400000 * 3) }
         ],
         isSystemUser: true
       },
@@ -381,14 +387,14 @@ const AdminUsers = () => {
         status: 'inactive',
         status_np: 'निष्क्रिय',
         status_en: 'Inactive',
-        registeredDate: '२०८०-०१-२०',
-        enRegisteredDate: '2024-01-20',
-        lastLogin: '२०८०-०१-२५',
-        enLastLogin: '2024-01-25',
+        registeredDate: formatNepaliDate(new Date(Date.now() - 86400000 * 10)),
+        enRegisteredDate: formatEnglishDate(new Date(Date.now() - 86400000 * 10)),
+        lastLogin: formatNepaliDate(new Date(Date.now() - 86400000 * 25)),
+        enLastLogin: formatEnglishDate(new Date(Date.now() - 86400000 * 25)),
         complaintsCount: 1,
         resolvedCount: 1,
         complaints: [
-          { id: 109, complaint_number: 'CR-2024-003', status: 'Resolved', complaint_type: 'Activation', created_at: '2024-01-15' }
+          { id: 109, complaint_number: 'CR-2024-003', status: 'Resolved', complaint_type: 'Activation', created_at: new Date(Date.now() - 86400000 * 15) }
         ],
         isSystemUser: true
       }
@@ -498,7 +504,11 @@ const AdminUsers = () => {
       regular: 'साधारण',
       regarding: 'सम्बन्धी',
       subject: 'विषय',
-      date: 'मिति'
+      date: 'मिति',
+      total: 'जम्मा',
+      active: 'सक्रिय',
+      days: 'दिन',
+      day: 'दिन'
     },
     en: {
       userManagement: 'User Management',
@@ -559,7 +569,11 @@ const AdminUsers = () => {
       regular: 'Regular',
       regarding: 'Regarding',
       subject: 'Subject',
-      date: 'Date'
+      date: 'Date',
+      total: 'Total',
+      active: 'Active',
+      days: 'days',
+      day: 'day'
     }
   };
 
@@ -602,7 +616,6 @@ const AdminUsers = () => {
     return '-';
   };
 
-  // Get complaint type label
   const getComplaintType = (complaint) => {
     if (complaint.nature_of_complaint) {
       return language === 'np' ? getCategoryNepali(complaint.nature_of_complaint) : complaint.nature_of_complaint;
@@ -613,7 +626,6 @@ const AdminUsers = () => {
     return language === 'np' ? 'सामान्य' : 'General';
   };
 
-  // Get category Nepali translation
   const getCategoryNepali = (category) => {
     const categories = {
       'service': 'सेवा समस्या',
@@ -930,21 +942,21 @@ const AdminUsers = () => {
               <div className="stat-card">
                 <div className="stat-icon purple">👥</div>
                 <div className="stat-info">
-                  <div className="stat-value">{totalUsers}</div>
+                  <div className="stat-value">{formatNumber(totalUsers)}</div>
                   <div className="stat-label">{t.totalUsers}</div>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon green">🟢</div>
                 <div className="stat-info">
-                  <div className="stat-value">{activeUsers}</div>
+                  <div className="stat-value">{formatNumber(activeUsers)}</div>
                   <div className="stat-label">{t.activeUsers}</div>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon blue">📋</div>
                 <div className="stat-info">
-                  <div className="stat-value">{totalComplaintsCount}</div>
+                  <div className="stat-value">{formatNumber(totalComplaintsCount)}</div>
                   <div className="stat-label">{t.totalComplaintsLabel}</div>
                 </div>
               </div>
@@ -955,21 +967,21 @@ const AdminUsers = () => {
               <div className="stat-card-small">
                 <span className="stat-icon-small">👑</span>
                 <div className="stat-info-small">
-                  <div className="stat-value-small">{adminCount}</div>
+                  <div className="stat-value-small">{formatNumber(adminCount)}</div>
                   <div className="stat-label-small">{rolesObj.admin}</div>
                 </div>
               </div>
               <div className="stat-card-small">
                 <span className="stat-icon-small">👔</span>
                 <div className="stat-info-small">
-                  <div className="stat-value-small">{staffCount}</div>
+                  <div className="stat-value-small">{formatNumber(staffCount)}</div>
                   <div className="stat-label-small">{rolesObj.staff}</div>
                 </div>
               </div>
               <div className="stat-card-small">
                 <span className="stat-icon-small">👤</span>
                 <div className="stat-info-small">
-                  <div className="stat-value-small">{regularUsersCount}</div>
+                  <div className="stat-value-small">{formatNumber(regularUsersCount)}</div>
                   <div className="stat-label-small">{rolesObj.user}</div>
                 </div>
               </div>
@@ -1021,7 +1033,7 @@ const AdminUsers = () => {
                     <th>{t.registeredDate}</th>
                     <th>{t.complaints}</th>
                     <th>{t.actions}</th>
-                </tr>
+                  </tr>
                 </thead>
                 <tbody>
                   {paginatedUsers.length > 0 ? (
@@ -1047,7 +1059,7 @@ const AdminUsers = () => {
                         <td>{getDate(user, 'registeredDate')}</td>
                         <td>
                           <span className="complaint-count-badge">
-                            {user.complaintsCount}
+                            {formatNumber(user.complaintsCount)}
                           </span>
                         </td>
                         <td>
@@ -1100,7 +1112,7 @@ const AdminUsers = () => {
                   ← {t.previous}
                 </button>
                 <span className="pagination-info">
-                  {t.page} {currentPage} {t.of} {totalPages}
+                  {t.page} {formatNumber(currentPage)} {t.of} {formatNumber(totalPages)}
                 </span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
@@ -1158,17 +1170,17 @@ const AdminUsers = () => {
               </div>
               <div className="detail-row">
                 <label>{t.totalComplaints}:</label>
-                <span>{selectedUser.complaintsCount}</span>
+                <span>{formatNumber(selectedUser.complaintsCount)}</span>
               </div>
               <div className="detail-row">
                 <label>{t.resolvedComplaints}:</label>
-                <span>{selectedUser.resolvedCount}</span>
+                <span>{formatNumber(selectedUser.resolvedCount)}</span>
               </div>
               <div className="detail-row">
                 <label>{t.resolutionRate}:</label>
                 <span>
                   {selectedUser.complaintsCount > 0 
-                    ? `${Math.round((selectedUser.resolvedCount / selectedUser.complaintsCount) * 100)}%`
+                    ? `${formatNumber(Math.round((selectedUser.resolvedCount / selectedUser.complaintsCount) * 100))}%`
                     : 'N/A'}
                 </span>
               </div>

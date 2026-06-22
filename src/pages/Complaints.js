@@ -208,77 +208,149 @@ const Complaints = () => {
   const fetchComplaints = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch regular complaints from public endpoint
-      const response = await axios.get(`${API_URL}/complaints/public`, {
-        timeout: 10000
-      });
+      // Try to get token from multiple possible storage keys
+      const token = localStorage.getItem('adminToken') || 
+                    localStorage.getItem('token') || 
+                    sessionStorage.getItem('adminToken') ||
+                    sessionStorage.getItem('token');
       
-      if (response.data.success && Array.isArray(response.data.data)) {
-        const transformedComplaints = response.data.data.map(complaint => ({
-          id: complaint.id,
-          ticketId: complaint.complaint_number || `NTC-${complaint.id}`,
-          enTicketId: complaint.complaint_number || `NTC-${complaint.id}`,
-          name: complaint.name || 'N/A',
-          enName: complaint.name || 'N/A',
-          email: complaint.email || 'N/A',
-          phone: complaint.phone || 'N/A',
-          category: complaint.nature_of_complaint || 'general',
-          subCategory: null,
-          description: complaint.description || 'No description',
-          enDescription: complaint.description || 'No description',
-          status: mapStatus(complaint.status),
-          statusText: getStatusTextNp(mapStatus(complaint.status)),
-          enStatusText: getStatusTextEn(mapStatus(complaint.status)),
-          date: formatNepaliDate(complaint.created_at),
-          enDate: formatEnglishDate(complaint.created_at),
-          channel: 'वेबसाइट पोर्टल',
-          enChannel: 'Website Portal',
-          priority: mapPriority(complaint.priority),
-          priorityText: getPriorityTextNp(mapPriority(complaint.priority)),
-          enPriorityText: getPriorityTextEn(mapPriority(complaint.priority)),
-          resolvedDate: complaint.resolved_at ? formatNepaliDate(complaint.resolved_at) : null,
-          enResolvedDate: complaint.resolved_at ? formatEnglishDate(complaint.resolved_at) : null,
-          resolution: complaint.resolution || null,
-          enResolution: complaint.resolution || null,
-          assignedTo: complaint.assigned_to || null,
-          enAssignedTo: complaint.assigned_to || null,
-          location: complaint.state || complaint.district || 'N/A',
-          enLocation: complaint.state || complaint.district || 'N/A',
-          rawStatus: complaint.status,
-          rawPriority: complaint.priority,
-          submittedDate: complaint.created_at
-        }));
-        
-        setComplaintsData(transformedComplaints);
-        setBackendStatus('connected');
-        
-        if (transformedComplaints.length === 0) {
-          showToast('No complaints found', 'info', 2000);
-        }
-      } else {
-        setComplaintsData([]);
-        setBackendStatus('disconnected');
+      // Create headers with auth if token exists
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
+      
+      // First attempt: Try the main complaints endpoint
+      try {
+        const response = await axios.get(`${API_URL}/complaints`, { headers });
+        
+        if (response.data && response.data.data && Array.isArray(response.data.data)) {
+          const complaints = response.data.data;
+          const transformedComplaints = transformComplaints(complaints);
+          setComplaintsData(transformedComplaints);
+          setBackendStatus('connected');
+          if (transformedComplaints.length === 0) {
+            showToast('No complaints found in the database', 'info', 2000);
+          }
+          setLoading(false);
+          return;
+        }
+      } catch (mainError) {
+        console.log('Main endpoint failed, trying public endpoint...');
+      }
+      
+      // Second attempt: Try the public endpoint
+      try {
+        const response = await axios.get(`${API_URL}/complaints/public`);
+        
+        if (response.data && response.data.data && Array.isArray(response.data.data)) {
+          const complaints = response.data.data;
+          const transformedComplaints = transformComplaints(complaints);
+          setComplaintsData(transformedComplaints);
+          setBackendStatus('connected');
+          if (transformedComplaints.length === 0) {
+            showToast('No complaints found in the database', 'info', 2000);
+          }
+          setLoading(false);
+          return;
+        }
+      } catch (publicError) {
+        console.log('Public endpoint failed too');
+      }
+      
+      // Third attempt: Try with different endpoint patterns
+      const endpoints = [
+        `${API_URL}/complaints/all`,
+        `${API_URL}/complaints/list`,
+        `${API_URL}/complaints/get`,
+        `${API_URL}/admin/complaints`,
+        `${API_URL}/complaints?limit=100`,
+      ];
+      
+      for (const endpoint of endpoints) {
+        try {
+          const response = await axios.get(endpoint, { headers });
+          if (response.data && response.data.data && Array.isArray(response.data.data)) {
+            const complaints = response.data.data;
+            const transformedComplaints = transformComplaints(complaints);
+            setComplaintsData(transformedComplaints);
+            setBackendStatus('connected');
+            if (transformedComplaints.length === 0) {
+              showToast('No complaints found in the database', 'info', 2000);
+            }
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          // Continue to next endpoint
+        }
+      }
+      
+      // If all attempts fail
+      setComplaintsData([]);
+      setBackendStatus('disconnected');
+      showToast('Unable to fetch complaints. Please check your backend connection.', 'error', 4000);
+      setLoading(false);
+      
     } catch (error) {
-      console.error('Error fetching complaints:', error);
+      console.error('Error in fetchComplaints:', error);
       setBackendStatus('disconnected');
       setComplaintsData([]);
       
       if (error.code === 'ERR_NETWORK') {
-        showToast('Cannot connect to backend server. Please make sure the server is running.', 'error', 5000);
+        showToast('Cannot connect to backend server. Please make sure the server is running at ' + API_URL, 'error', 5000);
       } else {
-        showToast('Failed to load complaints. Please try again later.', 'error', 3000);
+        showToast(`Failed to load complaints: ${error.message || 'Unknown error'}`, 'error', 3000);
       }
-    } finally {
       setLoading(false);
     }
   }, [API_URL, showToast]);
 
+  // Transform complaints data
+  const transformComplaints = (complaints) => {
+    return complaints.map(complaint => ({
+      id: complaint.id || complaint._id || Math.random().toString(36).substr(2, 9),
+      ticketId: complaint.complaint_number || complaint.ticketId || `NTC-${complaint.id || complaint._id || Date.now()}`,
+      enTicketId: complaint.complaint_number || complaint.ticketId || `NTC-${complaint.id || complaint._id || Date.now()}`,
+      name: complaint.name || complaint.fullName || complaint.complainantName || 'N/A',
+      enName: complaint.name || complaint.fullName || complaint.complainantName || 'N/A',
+      email: complaint.email || complaint.complainantEmail || 'N/A',
+      phone: complaint.phone || complaint.phoneNumber || complaint.complainantPhone || 'N/A',
+      category: complaint.category || complaint.nature_of_complaint || complaint.complaintType || 'general',
+      subCategory: complaint.subCategory || complaint.subcategory || null,
+      description: complaint.description || complaint.message || complaint.complaintText || 'No description',
+      enDescription: complaint.description || complaint.message || complaint.complaintText || 'No description',
+      status: mapStatus(complaint.status || complaint.complaintStatus),
+      statusText: getStatusTextNp(mapStatus(complaint.status || complaint.complaintStatus)),
+      enStatusText: getStatusTextEn(mapStatus(complaint.status || complaint.complaintStatus)),
+      date: formatNepaliDate(complaint.createdAt || complaint.created_at || complaint.date),
+      enDate: formatEnglishDate(complaint.createdAt || complaint.created_at || complaint.date),
+      channel: complaint.channel || complaint.source || 'वेबसाइट पोर्टल',
+      enChannel: complaint.channel || complaint.source || 'Website Portal',
+      priority: mapPriority(complaint.priority || complaint.complaintPriority),
+      priorityText: getPriorityTextNp(mapPriority(complaint.priority || complaint.complaintPriority)),
+      enPriorityText: getPriorityTextEn(mapPriority(complaint.priority || complaint.complaintPriority)),
+      resolvedDate: complaint.resolvedAt || complaint.resolved_at ? 
+        formatNepaliDate(complaint.resolvedAt || complaint.resolved_at) : null,
+      enResolvedDate: complaint.resolvedAt || complaint.resolved_at ? 
+        formatEnglishDate(complaint.resolvedAt || complaint.resolved_at) : null,
+      resolution: complaint.resolution || complaint.resolvedDescription || null,
+      enResolution: complaint.resolution || complaint.resolvedDescription || null,
+      assignedTo: complaint.assignedTo || complaint.assigned_to || complaint.assigned || null,
+      enAssignedTo: complaint.assignedTo || complaint.assigned_to || complaint.assigned || null,
+      location: complaint.location || complaint.district || complaint.state || complaint.address || 'N/A',
+      enLocation: complaint.location || complaint.district || complaint.state || complaint.address || 'N/A',
+      rawStatus: complaint.status || complaint.complaintStatus,
+      rawPriority: complaint.priority || complaint.complaintPriority,
+      submittedDate: complaint.createdAt || complaint.created_at || complaint.date
+    }));
+  };
+
   // Initial fetch
   useEffect(() => {
     fetchComplaints();
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchComplaints, 30000);
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(fetchComplaints, 60000);
     return () => clearInterval(interval);
   }, [fetchComplaints]);
 
@@ -396,7 +468,8 @@ const Complaints = () => {
       previous: 'अघिल्लो',
       next: 'अर्को',
       loading: 'लोड हुँदै...',
-      refresh: 'रिफ्रेस गर्नुहोस्'
+      refresh: 'रिफ्रेस गर्नुहोस्',
+      retry: 'पुन: प्रयास गर्नुहोस्'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -447,7 +520,8 @@ const Complaints = () => {
       previous: 'Previous',
       next: 'Next',
       loading: 'Loading...',
-      refresh: 'Refresh'
+      refresh: 'Refresh',
+      retry: 'Retry'
     }
   };
 
@@ -459,7 +533,6 @@ const Complaints = () => {
   // Filter complaints with all filters
   const filteredComplaints = useMemo(() => {
     return complaintsData.filter(complaint => {
-      // Search filter
       const searchMatch = searchTerm === '' || 
         complaint.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         complaint.enName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -467,13 +540,8 @@ const Complaints = () => {
         complaint.enTicketId.toLowerCase().includes(searchTerm.toLowerCase()) ||
         complaint.phone.includes(searchTerm);
       
-      // Status filter
       const statusMatch = statusFilter === 'all' || complaint.status === statusFilter;
-      
-      // Category filter
       const categoryMatch = categoryFilter === 'all' || complaint.category === categoryFilter;
-      
-      // Priority filter
       const priorityMatch = priorityFilter === 'all' || complaint.priority === priorityFilter;
       
       return searchMatch && statusMatch && categoryMatch && priorityMatch;
@@ -605,6 +673,9 @@ const Complaints = () => {
       <div className="loading-container">
         <div className="loading-spinner"></div>
         <p>{t.loading}</p>
+        <button className="retry-btn" onClick={fetchComplaints}>
+          🔄 {t.retry}
+        </button>
       </div>
     );
   }
@@ -625,7 +696,10 @@ const Complaints = () => {
       {/* Backend Status Banner */}
       {backendStatus === 'disconnected' && (
         <div className="backend-warning">
-          ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। कृपया सर्भर सुरु गर्नुहोस्।' : 'Backend server not connected. Please start the server.'}
+          ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। कृपया सर्भर सुरु गर्नुहोस् र पुन: प्रयास गर्नुहोस्।' : 'Backend server not connected. Please start the server and retry.'}
+          <button className="retry-btn-small" onClick={fetchComplaints}>
+            {t.retry}
+          </button>
         </div>
       )}
 
@@ -752,6 +826,11 @@ const Complaints = () => {
           <div className="complaints-header">
             <h1>📋 {t.complaints}</h1>
             <p>{t.allComplaints}</p>
+            {backendStatus === 'connected' && (
+              <span className="db-status">
+                ✅ {complaintsData.length} {language === 'np' ? 'गुनासोहरू' : 'complaints'} {language === 'np' ? 'लोड भयो' : 'loaded'}
+              </span>
+            )}
           </div>
 
           {/* Filters Section */}
@@ -878,6 +957,11 @@ const Complaints = () => {
                         <span className="no-data-icon">📭</span>
                         <p>{t.noComplaintsFound}</p>
                         <small>{t.tryAdjustingFilters}</small>
+                        {backendStatus === 'connected' && complaintsData.length === 0 && (
+                          <button className="retry-btn-small" onClick={fetchComplaints} style={{marginTop: '12px'}}>
+                            🔄 {t.retry}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1026,8 +1110,6 @@ const Complaints = () => {
         </div>
       )}
 
-  
-
       <style jsx>{`
         * {
           margin: 0;
@@ -1042,20 +1124,44 @@ const Complaints = () => {
           min-height: 100vh;
           display: flex;
           flex-direction: column;
+          padding-top: 0;
         }
 
         .backend-warning {
           position: fixed;
-          top: 70px;
+          top: 175px;
           left: 0;
           right: 0;
           background: #f59e0b;
           color: white;
-          padding: 10px;
+          padding: 10px 20px;
           text-align: center;
           z-index: 100;
           font-size: 0.85rem;
           font-weight: 500;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .retry-btn-small {
+          background: white;
+          color: #f59e0b;
+          border: none;
+          padding: 4px 16px;
+          border-radius: 20px;
+          cursor: pointer;
+          font-weight: 600;
+          font-size: 0.8rem;
+          transition: all 0.3s ease;
+        }
+
+        .retry-btn-small:hover {
+          background: #f59e0b;
+          color: white;
+          border: 1px solid white;
         }
 
         .loading-container {
@@ -1063,8 +1169,9 @@ const Complaints = () => {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 100vh;
+          min-height: 100vh;
           gap: 16px;
+          padding-top: 195px;
         }
 
         .loading-spinner {
@@ -1078,6 +1185,24 @@ const Complaints = () => {
 
         @keyframes spin {
           to { transform: rotate(360deg); }
+        }
+
+        .retry-btn {
+          background: #1565c0;
+          color: white;
+          border: none;
+          padding: 8px 24px;
+          border-radius: 40px;
+          cursor: pointer;
+          font-weight: 600;
+          font-size: 0.9rem;
+          transition: all 0.3s ease;
+        }
+
+        .retry-btn:hover {
+          background: #0d47a1;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3);
         }
 
         /* Toast Notification */
@@ -1119,6 +1244,17 @@ const Complaints = () => {
           to { transform: translateX(0); opacity: 1; }
         }
 
+        .db-status {
+          display: inline-block;
+          margin-top: 8px;
+          font-size: 0.85rem;
+          color: #059669;
+          background: #d1fae5;
+          padding: 4px 16px;
+          border-radius: 20px;
+          font-weight: 500;
+        }
+
         /* HEADER 1 - Top Bar */
         .header-1 {
           position: fixed;
@@ -1127,9 +1263,12 @@ const Complaints = () => {
           width: 100%;
           background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
           color: white;
-          padding: 10px 0;
+          padding: 0;
           z-index: 1040;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+          height: 55px;
+          display: flex;
+          align-items: center;
         }
 
         .container-1 {
@@ -1140,7 +1279,8 @@ const Complaints = () => {
           justify-content: space-between;
           align-items: center;
           flex-wrap: wrap;
-          gap: 20px;
+          gap: 10px;
+          width: 100%;
         }
 
         .header-left { display: flex; align-items: center; gap: 16px; }
@@ -1149,33 +1289,33 @@ const Complaints = () => {
           align-items: center;
           gap: 8px;
           background: rgba(255,255,255,0.15);
-          padding: 6px 20px;
+          padding: 4px 16px;
           border-radius: 40px;
           font-weight: 500;
         }
-        .quote-text { font-size: 0.9rem; letter-spacing: 0.5px; font-weight: 600; }
+        .quote-text { font-size: 0.85rem; letter-spacing: 0.5px; font-weight: 600; }
 
-        .header-right { display: flex; align-items: center; gap: 25px; flex-wrap: wrap; }
-        .contact-info-group { display: flex; align-items: center; gap: 15px; }
+        .header-right { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .contact-info-group { display: flex; align-items: center; gap: 10px; }
         .contact-info-item {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 0.75rem;
+          font-size: 0.7rem;
           background: rgba(255,255,255,0.1);
-          padding: 5px 12px;
+          padding: 4px 10px;
           border-radius: 30px;
           transition: all 0.3s ease;
         }
         .contact-info-item:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px); }
-        .contact-icon { font-size: 0.85rem; }
-        .contact-text { font-size: 0.75rem; font-weight: 500; }
+        .contact-icon { font-size: 0.75rem; }
+        .contact-text { font-size: 0.7rem; font-weight: 500; }
 
         .copy-btn-mini {
           background: rgba(255,255,255,0.2);
           border: none;
           cursor: pointer;
-          font-size: 0.7rem;
+          font-size: 0.6rem;
           padding: 2px 5px;
           border-radius: 20px;
           transition: all 0.3s ease;
@@ -1191,17 +1331,18 @@ const Complaints = () => {
           gap: 6px;
           background: rgba(255,255,255,0.15);
           border: 1px solid rgba(255,255,255,0.3);
-          padding: 5px 12px;
+          padding: 4px 12px;
           border-radius: 30px;
           cursor: pointer;
           color: white;
-          font-size: 0.75rem;
+          font-size: 0.7rem;
           font-weight: 500;
           transition: all 0.3s ease;
+          height: 32px;
         }
         .language-selector:hover { background: rgba(255,255,255,0.25); }
-        .lang-icon { font-size: 0.85rem; }
-        .dropdown-arrow { font-size: 0.6rem; margin-left: 5px; }
+        .lang-icon { font-size: 0.75rem; }
+        .dropdown-arrow { font-size: 0.5rem; margin-left: 5px; }
         .dropdown-menu {
           position: absolute;
           top: 38px;
@@ -1238,10 +1379,13 @@ const Complaints = () => {
           width: 100%;
           background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%);
           color: #1a2c3e;
-          padding: 12px 0;
+          padding: 0;
           z-index: 1030;
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
+          height: 64px;
+          display: flex;
+          align-items: center;
         }
         .container-2 {
           max-width: 1400px;
@@ -1251,14 +1395,15 @@ const Complaints = () => {
           justify-content: space-between;
           align-items: center;
           gap: 30px;
+          width: 100%;
         }
         .logo-left { flex: 1; display: flex; justify-content: flex-start; }
         .logo-right { flex: 1; display: flex; justify-content: flex-end; }
-        .ntc-logo, .gov-logo { height: 50px; width: auto; object-fit: contain; }
+        .ntc-logo, .gov-logo { height: 45px; width: auto; object-fit: contain; }
         .logo-fallback {
-          font-size: 2rem;
-          width: 50px;
-          height: 50px;
+          font-size: 1.8rem;
+          width: 45px;
+          height: 45px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1267,8 +1412,8 @@ const Complaints = () => {
           color: white;
         }
         .dept-text-center { flex: 2; text-align: center; }
-        .dept-name { font-size: 1rem; font-weight: 700; color: #0d47a1; letter-spacing: 1px; }
-        .dept-address { font-size: 0.75rem; opacity: 0.7; color: #555; margin-top: 3px; }
+        .dept-name { font-size: 0.95rem; font-weight: 700; color: #0d47a1; letter-spacing: 1px; }
+        .dept-address { font-size: 0.7rem; opacity: 0.7; color: #555; margin-top: 2px; }
 
         /* HEADER 3 - Navigation Bar */
         .header-3 {
@@ -1278,9 +1423,12 @@ const Complaints = () => {
           width: 100%;
           background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
           color: white;
-          padding: 12px 0;
+          padding: 0;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
           z-index: 1020;
+          height: 56px;
+          display: flex;
+          align-items: center;
         }
         .container-3 {
           max-width: 1400px;
@@ -1290,40 +1438,41 @@ const Complaints = () => {
           justify-content: space-between;
           align-items: center;
           flex-wrap: wrap;
-          gap: 20px;
+          gap: 10px;
+          width: 100%;
         }
-        .nav-menu-left { display: flex; gap: 20px; align-items: center; }
+        .nav-menu-left { display: flex; gap: 10px; align-items: center; }
         .nav-btn {
           background: transparent;
           border: none;
           color: white;
-          font-size: 1rem;
+          font-size: 0.9rem;
           font-weight: 600;
           cursor: pointer;
-          padding: 8px 20px;
+          padding: 6px 16px;
           border-radius: 40px;
           transition: all 0.3s ease;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
         }
         .nav-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-1px); }
-        .nav-icon { font-size: 1.1rem; }
-        .nav-text { font-size: 0.95rem; }
+        .nav-icon { font-size: 1rem; }
+        .nav-text { font-size: 0.85rem; }
         .login-btn-right { display: flex; align-items: center; }
         .login-btn {
           background: transparent;
           border: 2px solid white;
           color: white;
-          font-size: 0.95rem;
+          font-size: 0.85rem;
           font-weight: 600;
           cursor: pointer;
-          padding: 8px 28px;
+          padding: 6px 24px;
           border-radius: 40px;
           transition: all 0.3s ease;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
           white-space: nowrap;
         }
         .login-btn:hover { background: white; color: #1565c0; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
@@ -1332,23 +1481,24 @@ const Complaints = () => {
         .main-content {
           flex: 1;
           padding-top: 195px;
+          min-height: calc(100vh - 195px);
         }
 
         .complaints-container {
           max-width: 1400px;
           margin: 0 auto;
-          padding: 40px 24px;
+          padding: 30px 24px 40px;
         }
 
         .complaints-header {
           text-align: center;
-          margin-bottom: 32px;
+          margin-bottom: 28px;
         }
 
         .complaints-header h1 {
           font-size: 2rem;
           color: #0d47a1;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
         }
 
         .complaints-header p {
@@ -1361,9 +1511,9 @@ const Complaints = () => {
           justify-content: space-between;
           align-items: center;
           flex-wrap: wrap;
-          gap: 20px;
-          margin-bottom: 20px;
-          padding: 20px;
+          gap: 16px;
+          margin-bottom: 18px;
+          padding: 18px 20px;
           background: white;
           border-radius: 16px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
@@ -1372,7 +1522,7 @@ const Complaints = () => {
         .search-box {
           flex: 1;
           position: relative;
-          min-width: 250px;
+          min-width: 200px;
         }
 
         .search-icon {
@@ -1386,7 +1536,7 @@ const Complaints = () => {
 
         .search-box input {
           width: 100%;
-          padding: 12px 40px 12px 40px;
+          padding: 10px 40px 10px 40px;
           border: 1.5px solid #e0e0e0;
           border-radius: 40px;
           font-size: 0.9rem;
@@ -1415,18 +1565,19 @@ const Complaints = () => {
 
         .filter-group {
           display: flex;
-          gap: 12px;
+          gap: 10px;
           flex-wrap: wrap;
         }
 
         .filter-select {
-          padding: 10px 16px;
+          padding: 8px 14px;
           border: 1.5px solid #e0e0e0;
           border-radius: 40px;
-          font-size: 0.85rem;
+          font-size: 0.8rem;
           background: white;
           cursor: pointer;
           transition: all 0.3s ease;
+          min-width: 120px;
         }
 
         .filter-select:focus {
@@ -1435,14 +1586,14 @@ const Complaints = () => {
         }
 
         .clear-filters-btn {
-          padding: 10px 16px;
+          padding: 8px 14px;
           border-radius: 40px;
           border: 1.5px solid #ef4444;
           background: white;
           color: #ef4444;
           cursor: pointer;
           transition: all 0.3s ease;
-          font-size: 0.85rem;
+          font-size: 0.8rem;
           display: inline-flex;
           align-items: center;
           gap: 6px;
@@ -1457,7 +1608,7 @@ const Complaints = () => {
           text-align: right;
           font-size: 0.8rem;
           color: #888;
-          margin-bottom: 16px;
+          margin-bottom: 14px;
         }
 
         /* Table */
@@ -1475,7 +1626,7 @@ const Complaints = () => {
 
         .complaints-table th,
         .complaints-table td {
-          padding: 16px;
+          padding: 14px 16px;
           text-align: left;
           border-bottom: 1px solid #e0e0e0;
         }
@@ -1484,6 +1635,7 @@ const Complaints = () => {
           background: #f5f7fa;
           font-weight: 600;
           color: #0d47a1;
+          font-size: 0.85rem;
         }
 
         .complaints-table tr:hover {
@@ -1513,7 +1665,7 @@ const Complaints = () => {
         .complainant-info {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 3px;
         }
 
         .complainant-name { font-weight: 500; }
@@ -1521,7 +1673,7 @@ const Complaints = () => {
 
         .status-badge {
           display: inline-block;
-          padding: 4px 12px;
+          padding: 3px 12px;
           border-radius: 20px;
           font-size: 0.75rem;
           font-weight: 600;
@@ -1534,7 +1686,7 @@ const Complaints = () => {
 
         .priority-badge {
           display: inline-block;
-          padding: 4px 12px;
+          padding: 3px 12px;
           border-radius: 20px;
           font-size: 0.75rem;
           font-weight: 600;
@@ -1548,7 +1700,7 @@ const Complaints = () => {
           background: linear-gradient(135deg, #1565c0, #0d47a1);
           color: white;
           border: none;
-          padding: 6px 14px;
+          padding: 5px 14px;
           border-radius: 20px;
           font-size: 0.75rem;
           cursor: pointer;
@@ -1565,7 +1717,7 @@ const Complaints = () => {
 
         .no-data {
           text-align: center;
-          padding: 60px !important;
+          padding: 50px !important;
         }
 
         .no-data-content {
@@ -1575,8 +1727,8 @@ const Complaints = () => {
           gap: 8px;
         }
 
-        .no-data-icon { font-size: 3rem; }
-        .no-data p { font-size: 1rem; color: #666; }
+        .no-data-icon { font-size: 2.5rem; }
+        .no-data p { font-size: 0.95rem; color: #666; }
         .no-data small { color: #999; }
 
         /* Pagination */
@@ -1585,17 +1737,18 @@ const Complaints = () => {
           justify-content: center;
           align-items: center;
           gap: 16px;
-          margin-top: 24px;
+          margin-top: 22px;
         }
 
         .pagination-btn {
-          padding: 8px 20px;
+          padding: 6px 18px;
           border-radius: 40px;
           border: 1.5px solid #1565c0;
           background: white;
           color: #1565c0;
           cursor: pointer;
           transition: all 0.3s ease;
+          font-size: 0.85rem;
         }
 
         .pagination-btn:hover:not(:disabled) {
@@ -1619,9 +1772,9 @@ const Complaints = () => {
           display: flex;
           justify-content: space-around;
           flex-wrap: wrap;
-          gap: 20px;
-          margin-top: 32px;
-          padding: 20px;
+          gap: 16px;
+          margin-top: 28px;
+          padding: 18px 20px;
           background: white;
           border-radius: 16px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
@@ -1633,14 +1786,14 @@ const Complaints = () => {
 
         .stat-label {
           display: block;
-          font-size: 0.8rem;
+          font-size: 0.75rem;
           color: #666;
-          margin-bottom: 4px;
+          margin-bottom: 3px;
         }
 
         .stat-value {
           display: block;
-          font-size: 1.5rem;
+          font-size: 1.4rem;
           font-weight: 700;
           color: #0d47a1;
         }
@@ -1673,13 +1826,14 @@ const Complaints = () => {
           max-height: 85vh;
           overflow-y: auto;
           box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+          margin: 20px;
         }
 
         .modal-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 20px 24px;
+          padding: 18px 24px;
           border-bottom: 1px solid #e0e0e0;
           background: linear-gradient(135deg, #1565c0, #0d47a1);
           color: white;
@@ -1690,7 +1844,7 @@ const Complaints = () => {
         }
 
         .modal-header h2 {
-          font-size: 1.3rem;
+          font-size: 1.2rem;
           color: white;
           margin: 0;
         }
@@ -1706,12 +1860,12 @@ const Complaints = () => {
         .modal-close:hover { color: #ddd; }
 
         .modal-body {
-          padding: 24px;
+          padding: 22px 24px;
         }
 
         .detail-group {
           display: flex;
-          margin-bottom: 16px;
+          margin-bottom: 14px;
           padding-bottom: 12px;
           border-bottom: 1px solid #f0f0f0;
         }
@@ -1721,12 +1875,14 @@ const Complaints = () => {
           font-weight: 600;
           color: #0d47a1;
           flex-shrink: 0;
+          font-size: 0.9rem;
         }
 
         .detail-group span,
         .detail-group p {
           flex: 1;
           color: #333;
+          font-size: 0.9rem;
         }
 
         .detail-group.full-width {
@@ -1735,14 +1891,15 @@ const Complaints = () => {
 
         .detail-group.full-width label {
           width: 100%;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
         }
 
         .description-text, .resolution-text {
           line-height: 1.6;
           background: #f8fafc;
-          padding: 12px;
+          padding: 10px 14px;
           border-radius: 8px;
+          font-size: 0.9rem;
         }
 
         .copy-detail-btn {
@@ -1757,7 +1914,7 @@ const Complaints = () => {
         .copy-detail-btn:hover { opacity: 1; }
 
         .modal-footer {
-          padding: 16px 24px;
+          padding: 14px 24px;
           border-top: 1px solid #e0e0e0;
           text-align: right;
           position: sticky;
@@ -1770,45 +1927,161 @@ const Complaints = () => {
           background: #1565c0;
           color: white;
           border: none;
-          padding: 10px 24px;
+          padding: 8px 22px;
           border-radius: 40px;
           cursor: pointer;
           transition: all 0.3s ease;
+          font-size: 0.9rem;
         }
         .btn-close:hover {
           background: #0d47a1;
           transform: translateY(-1px);
         }
 
-
         /* Responsive */
+        @media (max-width: 1024px) {
+          .container-1, .container-2, .container-3 {
+            padding: 0 20px;
+          }
+        }
+
         @media (max-width: 768px) {
-          .main-content { padding-top: 330px; }
-          .filters-section { flex-direction: column; }
-          .filter-group { width: 100%; flex-direction: column; }
-          .filter-select { width: 100%; }
-          .complaints-table th { display: none; }
-          .complaints-table tr { display: block; margin-bottom: 16px; border: 1px solid #e0e0e0; border-radius: 12px; }
-          .complaints-table td { display: block; text-align: right; position: relative; padding: 10px 12px; border-bottom: 1px solid #eee; }
-          .complaints-table td:last-child { border-bottom: none; }
-          .complaints-table td::before { content: attr(data-label); font-weight: 600; position: absolute; left: 12px; top: 10px; color: #0d47a1; }
-          .ticket-id { justify-content: flex-end; }
-          .complainant-info { align-items: flex-end; }
-          .statistics-bar { flex-wrap: wrap; }
-          .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; padding: 0 20px; }
-          .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
-          .contact-info-group { flex-direction: column; gap: 8px; }
+          .main-content { padding-top: 290px; }
+          
+          .header-1 { 
+            height: auto; 
+            min-height: 55px; 
+            padding: 8px 0;
+          }
+          .header-2 { 
+            height: auto; 
+            min-height: 60px; 
+            padding: 8px 0;
+          }
+          .header-3 { 
+            height: auto; 
+            min-height: 52px; 
+            padding: 8px 0;
+          }
+          
+          .container-1, .container-2, .container-3 { 
+            flex-direction: column; 
+            text-align: center; 
+            padding: 0 16px;
+            gap: 8px;
+          }
+          
+          .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { 
+            justify-content: center; 
+            width: 100%;
+          }
+          
+          .contact-info-group { 
+            flex-direction: column; 
+            gap: 6px; 
+            width: 100%;
+            align-items: center;
+          }
+          
           .logo-left, .logo-right { display: none; }
           .dept-text-center { flex: 1; }
+          
+          .filters-section { 
+            flex-direction: column; 
+            padding: 14px 16px;
+          }
+          
+          .filter-group { 
+            width: 100%; 
+            flex-direction: column;
+            align-items: stretch;
+          }
+          
+          .filter-select { 
+            width: 100%; 
+            min-width: unset;
+          }
+          
+          .clear-filters-btn { width: 100%; justify-content: center; }
+          
+          .complaints-table th { display: none; }
+          .complaints-table tr { 
+            display: block; 
+            margin-bottom: 14px; 
+            border: 1px solid #e0e0e0; 
+            border-radius: 12px;
+            background: white;
+          }
+          .complaints-table td { 
+            display: block; 
+            text-align: right; 
+            position: relative; 
+            padding: 8px 12px; 
+            border-bottom: 1px solid #eee;
+            font-size: 0.85rem;
+          }
+          .complaints-table td:last-child { border-bottom: none; }
+          .complaints-table td::before { 
+            content: attr(data-label); 
+            font-weight: 600; 
+            position: absolute; 
+            left: 12px; 
+            top: 8px; 
+            color: #0d47a1;
+            font-size: 0.8rem;
+          }
+          .ticket-id { justify-content: flex-end; }
+          .complainant-info { align-items: flex-end; }
+          
+          .statistics-bar { 
+            flex-wrap: wrap; 
+            padding: 14px 16px;
+            gap: 12px;
+          }
+          .stat-item { flex: 1; min-width: 60px; }
+          
           .detail-group { flex-direction: column; }
-          .detail-group label { width: 100%; margin-bottom: 6px; }
-          .toast-notification { top: auto; bottom: 20px; right: 20px; left: 20px; max-width: calc(100% - 40px); }
+          .detail-group label { width: 100%; margin-bottom: 4px; }
+          
+          .toast-notification { 
+            top: auto; 
+            bottom: 20px; 
+            right: 20px; 
+            left: 20px; 
+            max-width: calc(100% - 40px);
+          }
+          
+          .backend-warning { 
+            top: 195px;
+            font-size: 0.75rem;
+            padding: 8px;
+          }
+          
+          .results-info { text-align: center; }
+          .pagination { flex-wrap: wrap; gap: 10px; }
         }
 
         @media (max-width: 480px) {
-          .main-content { padding-top: 350px; }
+          .main-content { padding-top: 310px; }
           .complaints-header h1 { font-size: 1.5rem; }
-          .pagination { flex-wrap: wrap; }
+          .complaints-header p { font-size: 0.85rem; }
+          .nav-text { font-size: 0.75rem; }
+          .nav-btn { padding: 4px 12px; }
+          .login-btn { padding: 4px 16px; font-size: 0.75rem; }
+          .dept-name { font-size: 0.85rem; }
+          .dept-address { font-size: 0.65rem; }
+          .search-box input { font-size: 0.85rem; padding: 8px 36px 8px 36px; }
+          .filter-select { font-size: 0.75rem; padding: 6px 12px; }
+          .view-btn { font-size: 0.7rem; padding: 4px 12px; }
+          .stat-value { font-size: 1.2rem; }
+          .modal-content { margin: 10px; max-height: 90vh; }
+          .modal-header h2 { font-size: 1rem; }
+          .modal-body { padding: 16px; }
+          .detail-group { margin-bottom: 10px; padding-bottom: 8px; }
+          .detail-group label { font-size: 0.8rem; }
+          .detail-group span, .detail-group p { font-size: 0.8rem; }
+          
+          .backend-warning { top: 215px; }
         }
       `}</style>
     </div>

@@ -6,13 +6,73 @@ import Sidebar from '../components/Sidebar';
 
 const AdminProfile = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [saving, setSaving] = useState(false);
   const [adminName, setAdminName] = useState('Admin');
   const [activeTab, setActiveTab] = useState('profile');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
+  // Convert English date to Nepali (BS) date
+  const convertToNepaliDate = (adDate) => {
+    if (!adDate) return '';
+    try {
+      const date = new Date(adDate);
+      if (isNaN(date.getTime())) return '';
+      
+      // Nepali date conversion (approximate - subtract 57 years and 3 months)
+      const year = date.getFullYear() - 57;
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      
+      return `${yearNp}-${monthNp}-${dayNp}`;
+    } catch {
+      return '';
+    }
+  };
+
+  // Convert Nepali date to English date (for input value)
+  const convertToEnglishDate = (nepaliDate) => {
+    if (!nepaliDate) return '';
+    // Simple conversion - this is a placeholder. In production, use a proper date conversion library
+    try {
+      const parts = nepaliDate.split('-');
+      if (parts.length === 3) {
+        const year = parseInt(parts[0]) + 57;
+        const month = parseInt(parts[1]);
+        const day = parseInt(parts[2]);
+        const date = new Date(year, month - 1, day);
+        if (!isNaN(date.getTime())) {
+          return date.toISOString().split('T')[0];
+        }
+      }
+      return '';
+    } catch {
+      return '';
+    }
+  };
+
   const [profileData, setProfileData] = useState({
     fullName: '',
     email: '',
@@ -23,6 +83,7 @@ const AdminProfile = () => {
     position: '',
     officeLocation: '',
     joinDate: '',
+    joinDateNp: '',
     bio: '',
     profileImage: null,
     currentProfileImage: null
@@ -50,16 +111,20 @@ const AdminProfile = () => {
     
     try {
       const userData = user ? JSON.parse(user) : {};
+      const joinDate = userData.joinDate || '2020-01-01';
+      const joinDateNp = language === 'np' ? convertToNepaliDate(joinDate) : '';
+      
       setProfileData(prev => ({
         ...prev,
         fullName: userData.fullName || userData.name || 'Admin User',
         email: userData.email || 'admin@ntc.gov.np',
         phoneNumber: userData.phoneNumber || '9841234567',
         username: userData.username || 'admin',
-        department: userData.department || 'प्रशासन विभाग',
-        position: userData.position || 'प्रमुख प्रशासक',
-        officeLocation: userData.officeLocation || 'काठमाडौं',
-        joinDate: userData.joinDate || '2020-01-01',
+        department: userData.department || (language === 'np' ? 'प्रशासन विभाग' : 'Administration Department'),
+        position: userData.position || (language === 'np' ? 'प्रमुख प्रशासक' : 'Chief Administrator'),
+        officeLocation: userData.officeLocation || (language === 'np' ? 'काठमाडौं' : 'Kathmandu'),
+        joinDate: joinDate,
+        joinDateNp: joinDateNp,
         bio: userData.bio || '',
         currentProfileImage: userData.profileImage || null
       }));
@@ -68,7 +133,7 @@ const AdminProfile = () => {
       console.error('Error parsing user data:', e);
       setAdminName('Admin');
     }
-  }, [navigate]);
+  }, [navigate, language]);
 
   const content = {
     np: {
@@ -103,7 +168,12 @@ const AdminProfile = () => {
       passwordSuccess: 'पासवर्ड सफलतापूर्वक परिवर्तन गरियो',
       error: 'अद्यावधिक गर्दा त्रुटि भयो',
       admin: 'प्रशासक',
-      backToDashboard: 'ड्यासबोर्डमा फर्कनुहोस्'
+      backToDashboard: 'ड्यासबोर्डमा फर्कनुहोस्',
+      usernameCannotChange: 'प्रयोगकर्ता नाम परिवर्तन गर्न सकिँदैन',
+      tellAboutYourself: 'आफ्नो बारेमा बताउनुहोस्...',
+      uploadPhoto: 'तस्वीर अपलोड गर्नुहोस्',
+      selectDate: 'मिति चयन गर्नुहोस्',
+      showingNepaliDate: 'नेपाली मिति'
     },
     en: {
       title: 'Admin Profile',
@@ -137,7 +207,12 @@ const AdminProfile = () => {
       passwordSuccess: 'Password changed successfully',
       error: 'Error updating profile',
       admin: 'Admin',
-      backToDashboard: 'Back to Dashboard'
+      backToDashboard: 'Back to Dashboard',
+      usernameCannotChange: 'Username cannot be changed',
+      tellAboutYourself: 'Tell us about yourself...',
+      uploadPhoto: 'Upload Photo',
+      selectDate: 'Select Date',
+      showingNepaliDate: 'Nepali Date'
     }
   };
 
@@ -199,6 +274,17 @@ const AdminProfile = () => {
         ...prev,
         [name]: value
       }));
+      
+      // If join date is changed, update Nepali date
+      if (name === 'joinDate' && language === 'np') {
+        const joinDateNp = convertToNepaliDate(value);
+        setProfileData(prev => ({
+          ...prev,
+          joinDate: value,
+          joinDateNp: joinDateNp
+        }));
+      }
+      
       if (errors[name]) {
         setErrors(prev => ({
           ...prev,
@@ -234,17 +320,16 @@ const AdminProfile = () => {
     setErrorMessage('');
 
     try {
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setSuccessMessage(t.success);
       setAdminName(profileData.fullName);
       
-      // Update localStorage
       const user = JSON.parse(localStorage.getItem('adminUser') || '{}');
       user.fullName = profileData.fullName;
       user.email = profileData.email;
       user.phoneNumber = profileData.phoneNumber;
+      user.joinDate = profileData.joinDate;
       localStorage.setItem('adminUser', JSON.stringify(user));
       
       setTimeout(() => {
@@ -273,7 +358,6 @@ const AdminProfile = () => {
     setErrorMessage('');
 
     try {
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setSuccessMessage(t.passwordSuccess);
@@ -294,6 +378,14 @@ const AdminProfile = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Display join date based on language
+  const getDisplayDate = () => {
+    if (language === 'np' && profileData.joinDateNp) {
+      return `(${t.showingNepaliDate}: ${profileData.joinDateNp})`;
+    }
+    return '';
   };
 
   return (
@@ -358,13 +450,13 @@ const AdminProfile = () => {
                       {profileData.profileImage ? (
                         <img 
                           src={URL.createObjectURL(profileData.profileImage)} 
-                          alt="Profile" 
+                          alt={t.profileImage} 
                           className="profile-image"
                         />
                       ) : profileData.currentProfileImage ? (
                         <img 
                           src={profileData.currentProfileImage} 
-                          alt="Profile" 
+                          alt={t.profileImage} 
                           className="profile-image"
                         />
                       ) : (
@@ -441,7 +533,7 @@ const AdminProfile = () => {
                         disabled
                         className="disabled-field"
                       />
-                      <small className="field-hint">Username cannot be changed</small>
+                      <small className="field-hint">{t.usernameCannotChange}</small>
                     </div>
 
                     <div className="form-group">
@@ -486,12 +578,17 @@ const AdminProfile = () => {
 
                     <div className="form-group">
                       <label>{t.joinDate}</label>
-                      <input
-                        type="date"
-                        name="joinDate"
-                        value={profileData.joinDate}
-                        onChange={handleProfileChange}
-                      />
+                      <div className="date-input-wrapper">
+                        <input
+                          type="date"
+                          name="joinDate"
+                          value={profileData.joinDate}
+                          onChange={handleProfileChange}
+                        />
+                        {language === 'np' && profileData.joinDateNp && (
+                          <span className="nepali-date-hint">{getDisplayDate()}</span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="form-group full-width">
@@ -501,7 +598,7 @@ const AdminProfile = () => {
                         rows="4"
                         value={profileData.bio}
                         onChange={handleProfileChange}
-                        placeholder="Tell us about yourself..."
+                        placeholder={t.tellAboutYourself}
                       />
                     </div>
                   </div>
@@ -882,6 +979,26 @@ const AdminProfile = () => {
           color: #dc2626;
         }
 
+        /* Date Input Wrapper */
+        .date-input-wrapper {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .date-input-wrapper input {
+          width: 100%;
+        }
+
+        .nepali-date-hint {
+          font-size: 0.7rem;
+          color: #3b82f6;
+          font-weight: 500;
+          padding: 4px 8px;
+          background: #eff6ff;
+          border-radius: 4px;
+        }
+
         /* Form Actions */
         .form-actions {
           display: flex;
@@ -1012,6 +1129,10 @@ const AdminProfile = () => {
           
           .form-group {
             gap: 4px;
+          }
+          
+          .date-input-wrapper {
+            flex-direction: column;
           }
         }
       `}</style>

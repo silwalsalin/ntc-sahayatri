@@ -7,7 +7,9 @@ import Sidebar from '../components/Sidebar';
 
 const AdminComplaintsPending = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -25,6 +27,20 @@ const AdminComplaintsPending = () => {
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
 
   // Show toast notification
   const showToast = useCallback((message, type = 'success') => {
@@ -55,7 +71,11 @@ const AdminComplaintsPending = () => {
       const year = d.getFullYear() - 57;
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${yearNp}-${monthNp}-${dayNp}`;
     } catch (error) {
       return '-';
     }
@@ -316,7 +336,14 @@ const AdminComplaintsPending = () => {
       complainantInfo: 'उजुरीकर्ताको जानकारी',
       addressInfo: 'ठेगाना जानकारी',
       dateInfo: 'मिति जानकारी',
-      assignmentInfo: 'तोकिएको जानकारी'
+      assignmentInfo: 'तोकिएको जानकारी',
+      critical: 'गम्भीर',
+      urgent: 'अति आवश्यक',
+      important: 'आवश्यक',
+      normal: 'सामान्य',
+      assigned: 'तोकिएको',
+      unassigned: 'नतोकिएको',
+      days: 'दिन'
     },
     en: {
       pendingComplaints: 'Pending Complaints',
@@ -371,7 +398,14 @@ const AdminComplaintsPending = () => {
       complainantInfo: 'Complainant Information',
       addressInfo: 'Address Information',
       dateInfo: 'Date Information',
-      assignmentInfo: 'Assignment Information'
+      assignmentInfo: 'Assignment Information',
+      critical: 'Critical',
+      urgent: 'Urgent',
+      important: 'Important',
+      normal: 'Normal',
+      assigned: 'Assigned',
+      unassigned: 'Unassigned',
+      days: 'days'
     }
   };
 
@@ -452,6 +486,10 @@ const AdminComplaintsPending = () => {
       if (days >= 3) return 'Important';
       return 'Normal';
     }
+  };
+
+  const getDaysText = (days) => {
+    return language === 'np' ? `${formatNumber(days)} दिन` : `${days} days`;
   };
 
   // Check if complaint has assigned staff
@@ -577,18 +615,18 @@ const AdminComplaintsPending = () => {
               </div>
               <div className="pending-stats">
                 <div>
-                  <span className="pending-count">{stats.total}</span>
+                  <span className="pending-count">{formatNumber(stats.total)}</span>
                   <span className="pending-label">{t.totalPending}</span>
                 </div>
                 {stats.critical > 0 && (
                   <div className="critical-alert">
-                    <span>⚠️ {stats.critical}</span>
+                    <span>⚠️ {formatNumber(stats.critical)}</span>
                     <span className="critical-label">{t.urgentAttention}</span>
                   </div>
                 )}
                 <div>
-                  <span className="assigned-count">{stats.assigned}</span>
-                  <span className="assigned-label">तोकिएको</span>
+                  <span className="assigned-count">{formatNumber(stats.assigned)}</span>
+                  <span className="assigned-label">{t.assigned}</span>
                 </div>
                 <button className="refresh-btn-small" onClick={refreshData} title={t.refresh}>
                   🔄
@@ -601,29 +639,29 @@ const AdminComplaintsPending = () => {
               <div className="stat-card">
                 <div className="stat-card-icon high">🔴</div>
                 <div className="stat-card-info">
-                  <div className="stat-card-value">{stats.high}</div>
+                  <div className="stat-card-value">{formatNumber(stats.high)}</div>
                   <div className="stat-card-label">{t.high}</div>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-card-icon medium">🟡</div>
                 <div className="stat-card-info">
-                  <div className="stat-card-value">{stats.medium}</div>
+                  <div className="stat-card-value">{formatNumber(stats.medium)}</div>
                   <div className="stat-card-label">{t.medium}</div>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-card-icon low">🟢</div>
                 <div className="stat-card-info">
-                  <div className="stat-card-value">{stats.low}</div>
+                  <div className="stat-card-value">{formatNumber(stats.low)}</div>
                   <div className="stat-card-label">{t.low}</div>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-card-icon assigned">👤</div>
                 <div className="stat-card-info">
-                  <div className="stat-card-value">{stats.assigned}</div>
-                  <div className="stat-card-label">तोकिएको</div>
+                  <div className="stat-card-value">{formatNumber(stats.assigned)}</div>
+                  <div className="stat-card-label">{t.assigned}</div>
                 </div>
               </div>
             </div>
@@ -719,7 +757,7 @@ const AdminComplaintsPending = () => {
                         <td>
                           <div className="days-pending">
                             <span className={`urgency-badge ${getUrgencyClass(complaint.daysPending)}`}>
-                              {complaint.daysPending} {language === 'np' ? 'दिन' : 'days'}
+                              {getDaysText(complaint.daysPending)}
                             </span>
                             <span className="urgency-text">{getUrgencyText(complaint.daysPending)}</span>
                           </div>
@@ -764,7 +802,7 @@ const AdminComplaintsPending = () => {
                   ← {t.previous}
                 </button>
                 <span className="pagination-info">
-                  {t.page} {currentPage} {t.of} {totalPages}
+                  {t.page} {formatNumber(currentPage)} {t.of} {formatNumber(totalPages)}
                 </span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
@@ -825,7 +863,7 @@ const AdminComplaintsPending = () => {
                 <div className="detail-row">
                   <label>{t.daysPending}:</label>
                   <span className={`urgency-badge ${getUrgencyClass(selectedComplaint.daysPending)}`}>
-                    {selectedComplaint.daysPending} {language === 'np' ? 'दिन' : 'days'} - {getUrgencyText(selectedComplaint.daysPending)}
+                    {getDaysText(selectedComplaint.daysPending)} - {getUrgencyText(selectedComplaint.daysPending)}
                   </span>
                 </div>
               </div>

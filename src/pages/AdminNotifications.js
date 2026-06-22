@@ -7,12 +7,17 @@ import Sidebar from '../components/Sidebar';
 
 const AdminNotifications = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmData, setConfirmData] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [backendStatus, setBackendStatus] = useState('checking');
@@ -38,6 +43,20 @@ const AdminNotifications = () => {
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Format number with Nepali digits
+  const formatNumber = (num) => {
+    if (language === 'np') {
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+    }
+    return num.toString();
+  };
+
   // Helper function to get auth token
   const getAuthToken = () => {
     return localStorage.getItem('token') || localStorage.getItem('adminToken');
@@ -49,7 +68,7 @@ const AdminNotifications = () => {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   };
 
-  // Format date to Nepali format
+  // Format date to Nepali format with Nepali digits
   const formatNepaliDate = (date) => {
     if (!date) return '-';
     try {
@@ -58,7 +77,11 @@ const AdminNotifications = () => {
       const year = d.getFullYear() - 57;
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${yearNp}-${monthNp}-${dayNp}`;
     } catch (error) {
       return '-';
     }
@@ -81,6 +104,14 @@ const AdminNotifications = () => {
     if (!date) return '-';
     try {
       const d = new Date(date);
+      if (language === 'np') {
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+        const hoursNp = hours.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        const minutesNp = minutes.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+        return `${hoursNp}:${minutesNp}`;
+      }
       return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch (error) {
       return '-';
@@ -93,7 +124,6 @@ const AdminNotifications = () => {
       const token = getAuthToken();
       const headers = { Authorization: `Bearer ${token}` };
       
-      // Fetch regular complaints
       let regularComplaints = [];
       let regardingComplaints = [];
       
@@ -106,7 +136,6 @@ const AdminNotifications = () => {
         console.error('Error fetching regular complaints:', error);
       }
       
-      // Fetch complaint regarding
       try {
         const regardingResponse = await axios.get(`${API_URL}/complaint-regarding`, { headers });
         if (regardingResponse.data.success && Array.isArray(regardingResponse.data.data)) {
@@ -118,7 +147,6 @@ const AdminNotifications = () => {
       
       const allComplaints = [...regularComplaints, ...regardingComplaints];
       
-      // Create notifications from complaints
       const complaintNotifications = allComplaints.map(complaint => {
         const isRegular = complaint.nature_of_complaint !== undefined;
         const complaintType = isRegular ? 'complaint' : 'complaint-regarding';
@@ -129,14 +157,12 @@ const AdminNotifications = () => {
         let status = 'unread';
         let priority = 'medium';
         
-        // Set priority based on complaint priority
         if (complaint.priority === 'high' || complaint.priority === 'urgent') {
           priority = 'high';
         } else if (complaint.priority === 'low') {
           priority = 'low';
         }
         
-        // Generate notification title and message
         let title = '';
         let enTitle = '';
         let message = '';
@@ -197,10 +223,8 @@ const AdminNotifications = () => {
         };
       });
       
-      // Sort by date (newest first)
       complaintNotifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       
-      // Load read status from localStorage
       const savedReadNotifications = localStorage.getItem('readNotifications');
       if (savedReadNotifications) {
         setReadNotifications(new Set(JSON.parse(savedReadNotifications)));
@@ -212,7 +236,6 @@ const AdminNotifications = () => {
     } catch (error) {
       console.error('Error fetching complaints:', error);
       setBackendStatus('disconnected');
-      // Load sample notifications if backend is not available
       loadSampleNotifications();
     }
   };
@@ -325,6 +348,10 @@ const AdminNotifications = () => {
       markAllAsRead: 'सबै पढिएको चिन्ह लगाउनुहोस्',
       deleteNotification: 'सूचना हटाउनुहोस्',
       deleteAll: 'सबै हटाउनुहोस्',
+      deleteConfirm: 'के तपाईं यो सूचना हटाउन निश्चित हुनुहुन्छ?',
+      deleteAllConfirm: 'के तपाईं सबै सूचनाहरू हटाउन निश्चित हुनुहुन्छ?',
+      deleteSuccess: 'सूचना सफलतापूर्वक हटाइयो',
+      deleteAllSuccess: 'सबै सूचनाहरू सफलतापूर्वक हटाइयो',
       title: 'शीर्षक',
       message: 'सन्देश',
       type: 'प्रकार',
@@ -354,11 +381,13 @@ const AdminNotifications = () => {
       notificationSent: 'सूचना सफलतापूर्वक पठाइयो',
       fillRequiredFields: 'कृपया सबै आवश्यक फिल्डहरू भर्नुहोस्',
       markReadSuccess: 'सूचना पढिएको रूपमा चिन्ह लगाइयो',
-      deleteSuccess: 'सूचना सफलतापूर्वक हटाइयो',
       complaintDetails: 'गुनासो विवरण',
       ticketNumber: 'टिकेट नम्बर',
       complainant: 'उजुरीकर्ता',
-      viewComplaint: 'गुनासो हेर्नुहोस्'
+      viewComplaint: 'गुनासो हेर्नुहोस्',
+      confirm: 'पुष्टि गर्नुहोस्',
+      cancel: 'रद्द गर्नुहोस्',
+      deleteTitle: 'सूचना हटाउनुहोस्'
     },
     en: {
       notifications: 'Notifications',
@@ -370,6 +399,10 @@ const AdminNotifications = () => {
       markAllAsRead: 'Mark All as Read',
       deleteNotification: 'Delete Notification',
       deleteAll: 'Delete All',
+      deleteConfirm: 'Are you sure you want to delete this notification?',
+      deleteAllConfirm: 'Are you sure you want to delete all notifications?',
+      deleteSuccess: 'Notification deleted successfully',
+      deleteAllSuccess: 'All notifications deleted successfully',
       title: 'Title',
       message: 'Message',
       type: 'Type',
@@ -399,11 +432,13 @@ const AdminNotifications = () => {
       notificationSent: 'Notification sent successfully',
       fillRequiredFields: 'Please fill all required fields',
       markReadSuccess: 'Notification marked as read',
-      deleteSuccess: 'Notification deleted successfully',
       complaintDetails: 'Complaint Details',
       ticketNumber: 'Ticket Number',
       complainant: 'Complainant',
-      viewComplaint: 'View Complaint'
+      viewComplaint: 'View Complaint',
+      confirm: 'Confirm',
+      cancel: 'Cancel',
+      deleteTitle: 'Delete Notification'
     }
   };
 
@@ -516,7 +551,6 @@ const AdminNotifications = () => {
   const openModal = (notification) => {
     setSelectedNotification(notification);
     setShowModal(true);
-    // Mark as read when opened
     if (!isRead(notification.id)) {
       markAsRead(notification.id);
     }
@@ -557,6 +591,35 @@ const AdminNotifications = () => {
     setFormErrors({});
   };
 
+  // Show confirmation modal for delete
+  const showDeleteConfirm = (notificationId, isDeleteAll = false) => {
+    setConfirmAction(isDeleteAll ? 'deleteAll' : 'delete');
+    setConfirmData(notificationId);
+    setShowConfirmModal(true);
+  };
+
+  // Handle confirmed delete
+  const handleConfirmDelete = () => {
+    if (confirmAction === 'deleteAll') {
+      setNotifications([]);
+      showToast(t.deleteAllSuccess, 'success');
+    } else if (confirmAction === 'delete') {
+      setNotifications(prev => prev.filter(notification => notification.id !== confirmData));
+      showToast(t.deleteSuccess, 'success');
+    }
+    
+    setShowConfirmModal(false);
+    setConfirmAction(null);
+    setConfirmData(null);
+  };
+
+  // Cancel delete
+  const cancelDelete = () => {
+    setShowConfirmModal(false);
+    setConfirmAction(null);
+    setConfirmData(null);
+  };
+
   const markAsRead = (id) => {
     setReadNotifications(prev => new Set([...prev, id]));
     showToast(t.markReadSuccess, 'success');
@@ -568,20 +631,6 @@ const AdminNotifications = () => {
       .map(n => n.id);
     setReadNotifications(prev => new Set([...prev, ...allUnreadIds]));
     showToast(t.markReadSuccess, 'success');
-  };
-
-  const deleteNotification = (id) => {
-    if (window.confirm(language === 'np' ? 'के तपाईं यो सूचना हटाउन निश्चित हुनुहुन्छ?' : 'Are you sure you want to delete this notification?')) {
-      setNotifications(prev => prev.filter(notification => notification.id !== id));
-      showToast(t.deleteSuccess, 'success');
-    }
-  };
-
-  const deleteAll = () => {
-    if (window.confirm(language === 'np' ? 'के तपाईं सबै सूचनाहरू हटाउन निश्चित हुनुहुन्छ?' : 'Are you sure you want to delete all notifications?')) {
-      setNotifications([]);
-      showToast(t.deleteSuccess, 'success');
-    }
   };
 
   const handleSendInputChange = (e) => {
@@ -657,6 +706,32 @@ const AdminNotifications = () => {
         </div>
       )}
 
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="modal-overlay" onClick={cancelDelete}>
+          <div className="modal-content confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>⚠️ {t.deleteTitle}</h2>
+              <button className="modal-close" onClick={cancelDelete}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="confirm-icon">🗑️</div>
+              <p className="confirm-message">
+                {confirmAction === 'deleteAll' ? t.deleteAllConfirm : t.deleteConfirm}
+              </p>
+            </div>
+            <div className="modal-footer confirm-footer">
+              <button className="btn-cancel" onClick={cancelDelete}>
+                {t.cancel}
+              </button>
+              <button className="btn-confirm-delete" onClick={handleConfirmDelete}>
+                {t.confirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
       {backendStatus === 'disconnected' && (
@@ -687,25 +762,25 @@ const AdminNotifications = () => {
                 <button className="mark-all-btn" onClick={markAllAsRead}>
                   ✓ {t.markAllAsRead}
                 </button>
-                <button className="delete-all-btn" onClick={deleteAll}>
+                <button className="delete-all-btn" onClick={() => showDeleteConfirm(null, true)}>
                   🗑️ {t.deleteAll}
                 </button>
               </div>
             </div>
 
-            {/* Statistics Cards */}
+            {/* Statistics Cards - Updated with formatNumber */}
             <div className="stats-cards">
               <div className="stat-card">
                 <div className="stat-icon blue">🔔</div>
                 <div className="stat-info">
-                  <div className="stat-value">{totalNotifications}</div>
+                  <div className="stat-value">{formatNumber(totalNotifications)}</div>
                   <div className="stat-label">{t.totalNotifications}</div>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon orange">📭</div>
                 <div className="stat-info">
-                  <div className="stat-value">{unreadCount}</div>
+                  <div className="stat-value">{formatNumber(unreadCount)}</div>
                   <div className="stat-label">{t.unreadCount}</div>
                 </div>
               </div>
@@ -783,7 +858,7 @@ const AdminNotifications = () => {
                           className="delete-btn"
                           onClick={(e) => {
                             e.stopPropagation();
-                            deleteNotification(notification.id);
+                            showDeleteConfirm(notification.id);
                           }}
                           title={t.deleteNotification}
                         >
@@ -804,7 +879,7 @@ const AdminNotifications = () => {
               )}
             </div>
 
-            {/* Pagination */}
+            {/* Pagination - Updated with formatNumber */}
             {totalPages > 1 && (
               <div className="pagination">
                 <button
@@ -815,7 +890,7 @@ const AdminNotifications = () => {
                   ← {t.previous}
                 </button>
                 <span className="pagination-info">
-                  {t.page} {currentPage} {t.of} {totalPages}
+                  {t.page} {formatNumber(currentPage)} {t.of} {formatNumber(totalPages)}
                 </span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
@@ -1463,6 +1538,10 @@ const AdminNotifications = () => {
           box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
 
+        .confirm-modal {
+          max-width: 450px;
+        }
+
         .send-modal {
           max-width: 650px;
         }
@@ -1498,6 +1577,40 @@ const AdminNotifications = () => {
 
         .modal-body {
           padding: 24px;
+        }
+
+        .confirm-icon {
+          text-align: center;
+          font-size: 4rem;
+          margin-bottom: 16px;
+        }
+
+        .confirm-message {
+          text-align: center;
+          font-size: 1.1rem;
+          color: #1f2937;
+          line-height: 1.6;
+        }
+
+        .confirm-footer {
+          display: flex;
+          justify-content: center;
+          gap: 16px;
+        }
+
+        .btn-confirm-delete {
+          background: linear-gradient(135deg, #ef4444, #dc2626);
+          color: white;
+          border: none;
+          padding: 10px 32px;
+          border-radius: 10px;
+          cursor: pointer;
+          font-weight: 500;
+        }
+
+        .btn-confirm-delete:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(239,68,68,0.3);
         }
 
         .detail-row {

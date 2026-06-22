@@ -73,6 +73,42 @@ const LandingPage = () => {
   // API URL
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+  // Function to convert numbers to Nepali digits
+  const toNepaliNumber = useCallback((num) => {
+    if (num === undefined || num === null || num === '') return '';
+    const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+    const str = String(num);
+    return str.replace(/\d/g, (digit) => nepaliDigits[parseInt(digit)]);
+  }, []);
+
+  // Function to format numbers based on language
+  const formatNumber = useCallback((num) => {
+    if (num === undefined || num === null || num === '') return '';
+    if (language === 'np') {
+      return toNepaliNumber(num);
+    }
+    return String(num);
+  }, [language, toNepaliNumber]);
+
+  // Function to format percentage with proper number formatting
+  const formatPercentage = useCallback((num) => {
+    if (num === undefined || num === null) return '';
+    const formatted = num.toFixed(3);
+    if (language === 'np') {
+      return toNepaliNumber(formatted) + '%';
+    }
+    return formatted + '%';
+  }, [language, toNepaliNumber]);
+
+  // Function to format count with proper number formatting
+  const formatCount = useCallback((num) => {
+    if (num === undefined || num === null) return '0';
+    if (language === 'np') {
+      return toNepaliNumber(num);
+    }
+    return String(num);
+  }, [language, toNepaliNumber]);
+
   // Save language preference
   useEffect(() => {
     localStorage.setItem('preferredLanguage', language);
@@ -210,14 +246,14 @@ const LandingPage = () => {
       
     } catch (error) {
       console.error('Error fetching complaints:', error);
-      showToast('Failed to load complaints. Please try again later.', 'error');
+      showToast(language === 'np' ? 'गुनासोहरू लोड गर्न असफल। कृपया पछि पुन: प्रयास गर्नुहोस्।' : 'Failed to load complaints. Please try again later.', 'error');
       setAllComplaints([]);
       setRegularComplaints([]);
       setRegardingComplaints([]);
     } finally {
       setLoadingComplaints(false);
     }
-  }, [API_URL, showToast]);
+  }, [API_URL, showToast, language]);
 
   // Get complaints to display based on active tab
   const getComplaintsToDisplay = () => {
@@ -316,24 +352,82 @@ const LandingPage = () => {
   }, []);
 
   const complaintChannels = [
-    { id: 'website', name: 'वेबसाइट पोर्टल', enName: 'Website Portal', icon: '🌐', isImage: false, color: '#1565c0', bgColor: '#e3f2fd', action: () => navigate('/submit-complaint') },
-    { id: 'phone', name: 'फोन', enName: 'Phone', icon: phoneIcon, isImage: true, fallback: '📞', color: '#42a5f5', bgColor: '#e3f2fd', contact: '198' },
-    { id: 'sms', name: 'एसएमएस', enName: 'SMS', icon: smsIcon, isImage: true, fallback: '💬', color: '#4caf50', bgColor: '#e8f5e9', contact: '988' },
-    { id: 'whatsapp', name: 'व्हाट्सएप', enName: 'WhatsApp', icon: whatsappIcon, isImage: true, fallback: '💬', color: '#25D366', bgColor: '#d4edda', contact: '9851234567' },
-    { id: 'viber', name: 'भाइबर', enName: 'Viber', icon: viberIcon, isImage: true, fallback: '📱', color: '#7360f2', bgColor: '#e8e0f5' },
-    { id: 'email', name: 'इमेल', enName: 'Email', icon: emailIcon, isImage: true, fallback: '✉️', color: '#ea4335', bgColor: '#fce4ec', action: () => window.location.href = 'mailto:coo@ntc.net.np' },
+    { 
+      id: 'website', 
+      name: 'वेबसाइट पोर्टल', 
+      enName: 'Website Portal', 
+      icon: '🌐', 
+      isImage: false, 
+      color: '#1565c0', 
+      bgColor: '#e3f2fd', 
+      action: () => navigate('/submit-complaint') 
+    },
+    { 
+      id: 'phone', 
+      name: 'फोन', 
+      enName: 'Phone', 
+      icon: phoneIcon, 
+      isImage: true, 
+      fallback: '📞', 
+      color: '#42a5f5', 
+      bgColor: '#e3f2fd', 
+      contact: '198' 
+    },
+    { 
+      id: 'sms', 
+      name: 'एसएमएस', 
+      enName: 'SMS', 
+      icon: smsIcon, 
+      isImage: true, 
+      fallback: '💬', 
+      color: '#4caf50', 
+      bgColor: '#e8f5e9', 
+      contact: '988' 
+    },
+    { 
+      id: 'whatsapp', 
+      name: 'व्हाट्सएप', 
+      enName: 'WhatsApp', 
+      icon: whatsappIcon, 
+      isImage: true, 
+      fallback: '💬', 
+      color: '#25D366', 
+      bgColor: '#d4edda', 
+      contact: '9851234567' 
+    },
+    { 
+      id: 'viber', 
+      name: 'भाइबर', 
+      enName: 'Viber', 
+      icon: viberIcon, 
+      isImage: true, 
+      fallback: '📱', 
+      color: '#7360f2', 
+      bgColor: '#e8e0f5' 
+    },
+    { 
+      id: 'email', 
+      name: 'इमेल', 
+      enName: 'Email', 
+      icon: emailIcon, 
+      isImage: true, 
+      fallback: '✉️', 
+      color: '#ea4335', 
+      bgColor: '#fce4ec', 
+      action: () => window.location.href = 'mailto:coo@ntc.net.np' 
+    },
   ];
 
-  // Update status counts based on actual data
+  // Update status counts based on actual data with proper number formatting
   const getUpdatedStatusCounts = () => {
     const total = allComplaints.length;
     const pending = allComplaints.filter(c => c.status === 'विचाराधीन' || c.status === 'Pending').length;
     const resolved = allComplaints.filter(c => c.status === 'समाधान भयो' || c.status === 'Resolved').length;
     
     const counts = [...statusCounts[language]];
-    counts[0].count = total.toLocaleString();
-    counts[1].count = pending.toLocaleString();
-    counts[2].count = resolved.toLocaleString();
+    counts[0].count = formatCount(total);
+    counts[1].count = formatCount(pending);
+    counts[2].count = formatCount(resolved);
     
     return counts;
   };
@@ -433,7 +527,23 @@ const LandingPage = () => {
       refreshData: 'ताजा डाटा',
       contactNow: 'सम्पर्क गर्नुहोस्',
       referenceNo: 'सन्दर्भ नम्बर',
-      preferredContact: 'प्राथमिकता सम्पर्क'
+      preferredContact: 'प्राथमिकता सम्पर्क',
+      complaintType: 'गुनासो प्रकार',
+      complaintRegardingTitle: 'गुनासो सम्बन्धी',
+      regular: 'साधारण',
+      regarding: 'सम्बन्धी',
+      status: 'स्थिति',
+      actions: 'कार्यहरू',
+      totalComplaints: 'कुल गुनासोहरू',
+      pendingComplaints: 'विचाराधीन गुनासोहरू',
+      resolvedComplaints: 'समाधान भएका गुनासोहरू',
+      networkSignal: 'नेटवर्क र सिग्नल',
+      billingIssues: 'बिलिङ समस्याहरू',
+      serviceActivation: 'सेवा सक्रियता',
+      internetIssues: 'इन्टरनेट समस्याहरू',
+      support: 'सहायता',
+      availableChannels: 'उपलब्ध च्यानलहरू',
+      quickLinks: 'द्रुत लिङ्कहरू'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -500,7 +610,23 @@ const LandingPage = () => {
       refreshData: 'Refresh Data',
       contactNow: 'Contact Now',
       referenceNo: 'Reference Number',
-      preferredContact: 'Preferred Contact'
+      preferredContact: 'Preferred Contact',
+      complaintType: 'Complaint Type',
+      complaintRegardingTitle: 'Complaint Regarding',
+      regular: 'Regular',
+      regarding: 'Regarding',
+      status: 'Status',
+      actions: 'Actions',
+      totalComplaints: 'Total Complaints',
+      pendingComplaints: 'Pending Complaints',
+      resolvedComplaints: 'Resolved Complaints',
+      networkSignal: 'Network & Signal',
+      billingIssues: 'Billing Issues',
+      serviceActivation: 'Service Activation',
+      internetIssues: 'Internet Issues',
+      support: 'Support',
+      availableChannels: 'Available Channels',
+      quickLinks: 'Quick Links'
     },
   };
 
@@ -511,7 +637,9 @@ const LandingPage = () => {
   const handleLanguageChange = useCallback((lang) => {
     setLanguage(lang);
     setShowLanguageDropdown(false);
-  }, []);
+    // Refresh complaints with new language
+    fetchAllComplaints();
+  }, [fetchAllComplaints]);
 
   const scrollToSection = useCallback((sectionId) => {
     const element = document.getElementById(sectionId);
@@ -551,8 +679,8 @@ const LandingPage = () => {
   const manualRefresh = useCallback(async () => {
     setLoadingComplaints(true);
     await fetchAllComplaints();
-    showToast(t.refreshData, 'success', 2000);
-  }, [fetchAllComplaints, showToast, t.refreshData]);
+    showToast(language === 'np' ? 'डाटा ताजा गरियो' : 'Data refreshed', 'success', 2000);
+  }, [fetchAllComplaints, showToast, language]);
 
   // Function to display complaints with view details button
   const displayComplaints = () => {
@@ -579,10 +707,11 @@ const LandingPage = () => {
     
     return complaintsToShow.slice(0, 10).map((complaint, index) => {
       const displayDate = complaint.submittedDate ? formatTableDate(complaint.submittedDate) : '-';
+      const displayIndex = formatCount(index + 1);
       
       return (
         <tr key={`${complaint.type}-${complaint.id}`} className="complaint-row">
-          <td data-label={t.complaintId}>{index + 1}</td>
+          <td data-label={t.complaintId}>{displayIndex}</td>
           <td data-label={t.complainantName}>
             <div className="complainant-info">
               <span className="complainant-name">{language === 'np' ? complaint.name : complaint.nameEn}</span>
@@ -911,7 +1040,7 @@ const LandingPage = () => {
                   <div className="stat-info">
                     <span className="stat-name">{language === 'np' ? stat.name : stat.enName}</span>
                     <div className="stat-right">
-                      <span className="stat-percentage">{stat.percentage}%</span>
+                      <span className="stat-percentage">{formatPercentage(stat.percentage)}</span>
                       <span className={`stat-change ${stat.change.startsWith('+') ? 'positive' : 'negative'}`}>
                         {stat.change}
                       </span>
@@ -939,17 +1068,23 @@ const LandingPage = () => {
               <h3>📶 {t.netcomSignalComplaints}</h3>
               <p>{t.netcomSignalText}</p>
               <div className="complaint-list">
-                {latestComplaints.map((complaint, idx) => (
-                  <div key={idx} className="complaint-item">
-                    <span className="complaint-category">
-                      {getTrendIcon('up')} {language === 'np' ? complaint.category : complaint.enCategory}
-                    </span>
-                    <div className="complaint-meta">
-                      <span className="complaint-count">📊 {complaint.count}</span>
-                      <span className="complaint-date">📅 {language === 'np' ? complaint.date : complaint.enDate}</span>
+                {latestComplaints.map((complaint, idx) => {
+                  const displayCount = language === 'np' ? complaint.count : complaint.count.replace(/[०-९]/g, (d) => {
+                    const map = { '०': '0', '१': '1', '२': '2', '३': '3', '४': '4', '५': '5', '६': '6', '७': '7', '८': '8', '९': '9' };
+                    return map[d] || d;
+                  });
+                  return (
+                    <div key={idx} className="complaint-item">
+                      <span className="complaint-category">
+                        {getTrendIcon('up')} {language === 'np' ? complaint.category : complaint.enCategory}
+                      </span>
+                      <div className="complaint-meta">
+                        <span className="complaint-count">📊 {displayCount}</span>
+                        <span className="complaint-date">📅 {language === 'np' ? complaint.date : complaint.enDate}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
