@@ -73,6 +73,177 @@ const LandingPage = () => {
   // API URL
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+  const content = {
+    np: {
+      weAreHere: 'हामी तपाईंको लागि यहाँ छौं',
+      contactNumber: 'सम्पर्क नम्बर: ०१-४९६०००८',
+      emailAddress: 'coo@ntc.net.np',
+      departmentName: 'नेपाल दूरसञ्चार प्राधिकरण',
+      departmentAddress: 'भद्रकाली प्लाजा, काठमाडौं',
+      serviceName: 'एनटीसी सहयात्री',
+      serviceSub: 'गुनासो ट्र्याकिङ प्रणाली',
+      home: 'गृह पृष्ठ',
+      faqs: 'बारम्बार सोधिने प्रश्नहरू',
+      login: 'लगइन',
+      heroTitle: 'के तपाईंलाई नेपाल दूरसञ्चार सेवा, बिलिङ, इन्टरनेट जडान, वा ग्राहक सहायतासम्बन्धी समस्या छ?',
+      heroText: 'कृपया एनटीसी ग्रिव्यान्स पोर्टलमार्फत आफ्नो उजुरी दिनुहोस्। हाम्रो टोली तपाईंलाई सहयोग गर्न तयार छ।',
+      heroQuote: 'हामीलाई जानकारी दिनुहोस् - हामी यसलाई समाधान गर्न यहाँ छौं!',
+      submitComplaint: 'उजुरी दिनुहोस्',
+      trackComplaint: 'उजुरी ट्र्याक गर्नुहोस्',
+      complaintRegarding: 'गुनासो सम्बन्धी',
+      channelsTitle: 'गुनासोको लागि उपलब्ध च्यानलहरू:',
+      publicComplaintsTitle: 'सार्वजनिक रूपमा दर्ता गरिएका गुनासोहरू',
+      allComplaints: 'सबै गुनासोहरू',
+      regularComplaints: 'साधारण गुनासोहरू',
+      regardingComplaints: 'गुनासो सम्बन्धी',
+      latestStatusTitle: 'गुनासो ट्र्याकिङ प्रणालीबाट प्राप्त नवीनतम स्थिति',
+      complaintId: 'क्र.स.',
+      complainantName: 'उजुरीकर्ताको नाम',
+      complaintDetails: 'उजुरीको विवरण',
+      complaintDate: 'मिति',
+      complaintStatus: 'स्थिति',
+      viewDetails: 'विवरण हेर्नुहोस्',
+      statsTitle: 'गुनासो प्राप्तिका मुख्य माध्यमहरू',
+      links: 'लिङ्कहरू:',
+      complaints: 'गुनासोहरू',
+      policy: 'नीति',
+      contactInfo: 'सम्पर्क जानकारी',
+      helpline: 'हेल्पलाइन',
+      tollFree: 'टोल फ्री',
+      email: 'इमेल',
+      address: 'ठेगाना',
+      phone: 'फोन',
+      netcomSignalComplaints: 'नेटवर्क र सिग्नल गुनासोहरू',
+      netcomSignalText: 'नेटवर्क र सिग्नल सम्बन्धी गुनासोहरूको तथ्याङ्क',
+      footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
+      copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
+      loading: 'लोड हुँदै...',
+      complaintNumber: 'गुनासो नम्बर',
+      category: 'श्रेणी',
+      priority: 'प्राथमिकता',
+      phoneNumber: 'फोन नम्बर',
+      emailAddress: 'इमेल ठेगाना',
+      description: 'विवरण',
+      submittedDate: 'पेश मिति',
+      lastUpdated: 'अन्तिम अपडेट',
+      close: 'बन्द गर्नुहोस्',
+      resolution: 'समाधान विवरण',
+      landmark: 'नजिकैको चिन्ह',
+      assignedTo: 'जिम्मेवार व्यक्ति',
+      complainantInfo: 'उजुरीकर्ताको जानकारी',
+      complaintInfo: 'गुनासो जानकारी',
+      addressInfo: 'ठेगाना जानकारी',
+      dateInfo: 'मिति जानकारी',
+      subject: 'विषय',
+      noComplaints: 'हाल कुनै गुनासोहरू छैनन्',
+      refreshData: 'ताजा डाटा',
+      contactNow: 'सम्पर्क गर्नुहोस्',
+      referenceNo: 'सन्दर्भ नम्बर',
+      preferredContact: 'प्राथमिकता सम्पर्क',
+      complaintType: 'गुनासो प्रकार',
+      complaintRegardingTitle: 'गुनासो सम्बन्धी',
+      regular: 'साधारण',
+      regarding: 'सम्बन्धी',
+      status: 'स्थिति',
+      actions: 'कार्यहरू',
+      totalComplaints: 'कुल गुनासोहरू',
+      pendingComplaints: 'विचाराधीन गुनासोहरू',
+      resolvedComplaints: 'समाधान भएका गुनासोहरू',
+      networkSignal: 'नेटवर्क र सिग्नल',
+      billingIssues: 'बिलिङ समस्याहरू',
+      serviceActivation: 'सेवा सक्रियता',
+      internetIssues: 'इन्टरनेट समस्याहरू',
+      support: 'सहायता',
+      availableChannels: 'उपलब्ध च्यानलहरू',
+      quickLinks: 'द्रुत लिङ्कहरू'
+    },
+    en: {
+      weAreHere: 'We are here for you',
+      contactNumber: 'Contact: 01-4960008',
+      emailAddress: 'coo@ntc.net.np',
+      departmentName: 'Nepal Telecommunications Authority',
+      departmentAddress: 'Bhadrakali Plaza, Kathmandu',
+      serviceName: 'NTC Sahayatri',
+      serviceSub: 'Complaint Tracking System',
+      home: 'Home',
+      faqs: 'FAQs',
+      login: 'Login',
+      heroTitle: 'Do you have concerns regarding Nepal Telecom services, billing, internet connectivity, or customer support?',
+      heroText: 'Please submit your complaint through the NTC Grievance Portal. Our team is ready to help you.',
+      heroQuote: "Let us know — we're here to help resolve it!",
+      submitComplaint: 'Submit Complaint',
+      trackComplaint: 'Track Complaint',
+      complaintRegarding: 'Complaint Regarding',
+      channelsTitle: 'Channels available for complaint:',
+      publicComplaintsTitle: 'Publicly Registered Complaints',
+      allComplaints: 'All Complaints',
+      regularComplaints: 'Regular Complaints',
+      regardingComplaints: 'Complaint Regarding',
+      latestStatusTitle: 'Latest Status from Complaint Tracking System',
+      complaintId: 'S.No.',
+      complainantName: 'Complainant Name',
+      complaintDetails: 'Complaint Details',
+      complaintDate: 'Date',
+      complaintStatus: 'Status',
+      viewDetails: 'View Details',
+      statsTitle: 'Main Complaint Channels',
+      links: 'LINKS:',
+      complaints: 'Complaints',
+      policy: 'Policy',
+      contactInfo: 'Contact Information',
+      helpline: 'Helpline',
+      tollFree: 'Toll Free',
+      email: 'Email',
+      address: 'Address',
+      phone: 'Phone',
+      netcomSignalComplaints: 'Network & Signal Complaints',
+      netcomSignalText: 'Statistics of network and signal related complaints',
+      footerTagline: 'NTC Sahayatri - Always at Your Service',
+      copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
+      loading: 'Loading...',
+      complaintNumber: 'Complaint Number',
+      category: 'Category',
+      priority: 'Priority',
+      phoneNumber: 'Phone Number',
+      emailAddress: 'Email Address',
+      description: 'Description',
+      submittedDate: 'Submitted Date',
+      lastUpdated: 'Last Updated',
+      close: 'Close',
+      resolution: 'Resolution',
+      landmark: 'Landmark',
+      assignedTo: 'Assigned To',
+      complainantInfo: 'Complainant Information',
+      complaintInfo: 'Complaint Information',
+      addressInfo: 'Address Information',
+      dateInfo: 'Date Information',
+      subject: 'Subject',
+      noComplaints: 'No complaints found',
+      refreshData: 'Refresh Data',
+      contactNow: 'Contact Now',
+      referenceNo: 'Reference Number',
+      preferredContact: 'Preferred Contact',
+      complaintType: 'Complaint Type',
+      complaintRegardingTitle: 'Complaint Regarding',
+      regular: 'Regular',
+      regarding: 'Regarding',
+      status: 'Status',
+      actions: 'Actions',
+      totalComplaints: 'Total Complaints',
+      pendingComplaints: 'Pending Complaints',
+      resolvedComplaints: 'Resolved Complaints',
+      networkSignal: 'Network & Signal',
+      billingIssues: 'Billing Issues',
+      serviceActivation: 'Service Activation',
+      internetIssues: 'Internet Issues',
+      support: 'Support',
+      availableChannels: 'Available Channels',
+      quickLinks: 'Quick Links'
+    },
+  };
+
+  const t = content[language];
+
   // Function to convert numbers to Nepali digits
   const toNepaliNumber = useCallback((num) => {
     if (num === undefined || num === null || num === '') return '';
@@ -461,176 +632,6 @@ const LandingPage = () => {
     { name: 'निवेदन पत्र', enName: 'Application Letter', percentage: 1.312, color: '#e67e22', change: '-0.5%' },
   ];
 
-  const content = {
-    np: {
-      weAreHere: 'हामी तपाईंको लागि यहाँ छौं',
-      contactNumber: 'सम्पर्क नम्बर: ०१-४९६०००८',
-      emailAddress: 'coo@ntc.net.np',
-      departmentName: 'नेपाल दूरसञ्चार प्राधिकरण',
-      departmentAddress: 'भद्रकाली प्लाजा, काठमाडौं',
-      serviceName: 'एनटीसी सहयात्री',
-      serviceSub: 'गुनासो ट्र्याकिङ प्रणाली',
-      home: 'गृह पृष्ठ',
-      faqs: 'बारम्बार सोधिने प्रश्नहरू',
-      login: 'लगइन',
-      heroTitle: 'के तपाईंलाई नेपाल दूरसञ्चार सेवा, बिलिङ, इन्टरनेट जडान, वा ग्राहक सहायतासम्बन्धी समस्या छ?',
-      heroText: 'कृपया एनटीसी ग्रिव्यान्स पोर्टलमार्फत आफ्नो उजुरी दिनुहोस्। हाम्रो टोली तपाईंलाई सहयोग गर्न तयार छ।',
-      heroQuote: 'हामीलाई जानकारी दिनुहोस् - हामी यसलाई समाधान गर्न यहाँ छौं!',
-      submitComplaint: 'उजुरी दिनुहोस्',
-      trackComplaint: 'उजुरी ट्र्याक गर्नुहोस्',
-      complaintRegarding: 'गुनासो सम्बन्धी',
-      channelsTitle: 'गुनासोको लागि उपलब्ध च्यानलहरू:',
-      publicComplaintsTitle: 'सार्वजनिक रूपमा दर्ता गरिएका गुनासोहरू',
-      allComplaints: 'सबै गुनासोहरू',
-      regularComplaints: 'साधारण गुनासोहरू',
-      regardingComplaints: 'गुनासो सम्बन्धी',
-      latestStatusTitle: 'गुनासो ट्र्याकिङ प्रणालीबाट प्राप्त नवीनतम स्थिति',
-      complaintId: 'क्र.स.',
-      complainantName: 'उजुरीकर्ताको नाम',
-      complaintDetails: 'उजुरीको विवरण',
-      complaintDate: 'मिति',
-      complaintStatus: 'स्थिति',
-      viewDetails: 'विवरण हेर्नुहोस्',
-      statsTitle: 'गुनासो प्राप्तिका मुख्य माध्यमहरू',
-      links: 'लिङ्कहरू:',
-      complaints: 'गुनासोहरू',
-      policy: 'नीति',
-      contactInfo: 'सम्पर्क जानकारी',
-      helpline: 'हेल्पलाइन',
-      tollFree: 'टोल फ्री',
-      email: 'इमेल',
-      address: 'ठेगाना',
-      phone: 'फोन',
-      netcomSignalComplaints: 'नेटवर्क र सिग्नल गुनासोहरू',
-      netcomSignalText: 'नेटवर्क र सिग्नल सम्बन्धी गुनासोहरूको तथ्याङ्क',
-      footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
-      copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
-      loading: 'लोड हुँदै...',
-      complaintNumber: 'गुनासो नम्बर',
-      category: 'श्रेणी',
-      priority: 'प्राथमिकता',
-      phoneNumber: 'फोन नम्बर',
-      emailAddress: 'इमेल ठेगाना',
-      description: 'विवरण',
-      submittedDate: 'पेश मिति',
-      lastUpdated: 'अन्तिम अपडेट',
-      close: 'बन्द गर्नुहोस्',
-      resolution: 'समाधान विवरण',
-      landmark: 'नजिकैको चिन्ह',
-      assignedTo: 'जिम्मेवार व्यक्ति',
-      complainantInfo: 'उजुरीकर्ताको जानकारी',
-      complaintInfo: 'गुनासो जानकारी',
-      addressInfo: 'ठेगाना जानकारी',
-      dateInfo: 'मिति जानकारी',
-      subject: 'विषय',
-      noComplaints: 'हाल कुनै गुनासोहरू छैनन्',
-      refreshData: 'ताजा डाटा',
-      contactNow: 'सम्पर्क गर्नुहोस्',
-      referenceNo: 'सन्दर्भ नम्बर',
-      preferredContact: 'प्राथमिकता सम्पर्क',
-      complaintType: 'गुनासो प्रकार',
-      complaintRegardingTitle: 'गुनासो सम्बन्धी',
-      regular: 'साधारण',
-      regarding: 'सम्बन्धी',
-      status: 'स्थिति',
-      actions: 'कार्यहरू',
-      totalComplaints: 'कुल गुनासोहरू',
-      pendingComplaints: 'विचाराधीन गुनासोहरू',
-      resolvedComplaints: 'समाधान भएका गुनासोहरू',
-      networkSignal: 'नेटवर्क र सिग्नल',
-      billingIssues: 'बिलिङ समस्याहरू',
-      serviceActivation: 'सेवा सक्रियता',
-      internetIssues: 'इन्टरनेट समस्याहरू',
-      support: 'सहायता',
-      availableChannels: 'उपलब्ध च्यानलहरू',
-      quickLinks: 'द्रुत लिङ्कहरू'
-    },
-    en: {
-      weAreHere: 'We are here for you',
-      contactNumber: 'Contact: 01-4960008',
-      emailAddress: 'coo@ntc.net.np',
-      departmentName: 'Nepal Telecommunications Authority',
-      departmentAddress: 'Bhadrakali Plaza, Kathmandu',
-      serviceName: 'NTC Sahayatri',
-      serviceSub: 'Complaint Tracking System',
-      home: 'Home',
-      faqs: 'FAQs',
-      login: 'Admin Login',
-      heroTitle: 'Do you have concerns regarding Nepal Telecom services, billing, internet connectivity, or customer support?',
-      heroText: 'Please submit your complaint through the NTC Grievance Portal. Our team is ready to help you.',
-      heroQuote: "Let us know — we're here to help resolve it!",
-      submitComplaint: 'Submit Complaint',
-      trackComplaint: 'Track Complaint',
-      complaintRegarding: 'Complaint Regarding',
-      channelsTitle: 'Channels available for complaint:',
-      publicComplaintsTitle: 'Publicly Registered Complaints',
-      allComplaints: 'All Complaints',
-      regularComplaints: 'Regular Complaints',
-      regardingComplaints: 'Complaint Regarding',
-      latestStatusTitle: 'Latest Status from Complaint Tracking System',
-      complaintId: 'S.No.',
-      complainantName: 'Complainant Name',
-      complaintDetails: 'Complaint Details',
-      complaintDate: 'Date',
-      complaintStatus: 'Status',
-      viewDetails: 'View Details',
-      statsTitle: 'Main Complaint Channels',
-      links: 'LINKS:',
-      complaints: 'Complaints',
-      policy: 'Policy',
-      contactInfo: 'Contact Information',
-      helpline: 'Helpline',
-      tollFree: 'Toll Free',
-      email: 'Email',
-      address: 'Address',
-      phone: 'Phone',
-      netcomSignalComplaints: 'Network & Signal Complaints',
-      netcomSignalText: 'Statistics of network and signal related complaints',
-      footerTagline: 'NTC Sahayatri - Always at Your Service',
-      copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
-      loading: 'Loading...',
-      complaintNumber: 'Complaint Number',
-      category: 'Category',
-      priority: 'Priority',
-      phoneNumber: 'Phone Number',
-      emailAddress: 'Email Address',
-      description: 'Description',
-      submittedDate: 'Submitted Date',
-      lastUpdated: 'Last Updated',
-      close: 'Close',
-      resolution: 'Resolution',
-      landmark: 'Landmark',
-      assignedTo: 'Assigned To',
-      complainantInfo: 'Complainant Information',
-      complaintInfo: 'Complaint Information',
-      addressInfo: 'Address Information',
-      dateInfo: 'Date Information',
-      subject: 'Subject',
-      noComplaints: 'No complaints found',
-      refreshData: 'Refresh Data',
-      contactNow: 'Contact Now',
-      referenceNo: 'Reference Number',
-      preferredContact: 'Preferred Contact',
-      complaintType: 'Complaint Type',
-      complaintRegardingTitle: 'Complaint Regarding',
-      regular: 'Regular',
-      regarding: 'Regarding',
-      status: 'Status',
-      actions: 'Actions',
-      totalComplaints: 'Total Complaints',
-      pendingComplaints: 'Pending Complaints',
-      resolvedComplaints: 'Resolved Complaints',
-      networkSignal: 'Network & Signal',
-      billingIssues: 'Billing Issues',
-      serviceActivation: 'Service Activation',
-      internetIssues: 'Internet Issues',
-      support: 'Support',
-      availableChannels: 'Available Channels',
-      quickLinks: 'Quick Links'
-    },
-  };
-
-  const t = content[language];
   const currentStatusCounts = getUpdatedStatusCounts();
   const complaintsToShow = getComplaintsToDisplay();
 
@@ -644,7 +645,7 @@ const LandingPage = () => {
   const scrollToSection = useCallback((sectionId) => {
     const element = document.getElementById(sectionId);
     if (element) {
-      const headerOffset = 195;
+      const headerOffset = 175;
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
       window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
@@ -829,7 +830,19 @@ const LandingPage = () => {
               </div>
               <div className="contact-info-item">
                 <EmailIconComponent className="contact-icon-image" />
-                <span className="contact-text">{t.emailAddress}</span>
+                <a 
+                  href={`mailto:${t.emailAddress}`} 
+                  className="contact-text email-link"
+                  style={{ 
+                    color: 'white', 
+                    textDecoration: 'none',
+                    transition: 'color 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => e.target.style.color = '#90caf9'}
+                  onMouseLeave={(e) => e.target.style.color = 'white'}
+                >
+                  {t.emailAddress}
+                </a>
               </div>
             </div>
             <div className="language-dropdown">
@@ -1092,7 +1105,28 @@ const LandingPage = () => {
               <h3>📞 {t.contactInfo}</h3>
               <div className="contact-details">
                 <p><strong>📱 {t.helpline}:</strong> 198 ({t.tollFree})</p>
-                <p><strong><EmailIconComponent className="contact-card-email-icon" /> {t.email}:</strong> {t.emailAddress}</p>
+                <p>
+                  <strong><EmailIconComponent className="contact-card-email-icon" /> {t.email}:</strong> 
+                  <a 
+                    href={`mailto:${t.emailAddress}`} 
+                    style={{ 
+                      color: '#1565c0', 
+                      textDecoration: 'none',
+                      fontWeight: '500',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.textDecoration = 'underline';
+                      e.target.style.color = '#0d47a1';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.textDecoration = 'none';
+                      e.target.style.color = '#1565c0';
+                    }}
+                  >
+                    {t.emailAddress}
+                  </a>
+                </p>
                 <p><strong>📍 {t.address}:</strong> {t.departmentAddress}</p>
                 <p><strong>📞 {t.phone}:</strong> {t.contactNumber}</p>
               </div>
@@ -1286,7 +1320,7 @@ const LandingPage = () => {
           flex-direction: column;
         }
 
-        /* HEADER FIX - Proper positioning to prevent overlap */
+        /* === HEADER FIX - Proper positioning to prevent overlap === */
         .header-1, .header-2, .header-3 {
           position: fixed;
           left: 0;
@@ -1297,29 +1331,70 @@ const LandingPage = () => {
         .header-1 {
           top: 0;
           z-index: 1003;
-          height: 55px;
+          height: auto;
           min-height: 55px;
+          padding: 8px 0;
         }
         
         .header-2 {
           top: 55px;
           z-index: 1002;
-          height: 64px;
-          min-height: 64px;
+          height: auto;
+          min-height: 60px;
+          padding: 8px 0;
         }
         
         .header-3 {
-          top: 119px;
+          top: 115px;
           z-index: 1001;
-          height: 58px;
-          min-height: 58px;
+          height: auto;
+          min-height: 52px;
+          padding: 8px 0;
         }
 
-        /* Main Content Padding - Fixed to accommodate fixed headers */
+        /* Main Content Padding - Accommodates all fixed headers */
         .main-content {
           flex: 1;
-          padding-top: 195px; /* header-1 (55px) + header-2 (64px) + header-3 (58px) + extra breathing room */
-          min-height: calc(100vh - 195px);
+          padding-top: 175px;
+          min-height: calc(100vh - 175px);
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 180px;
+          right: 20px;
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 350px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         /* HEADER 1 - Top Bar */
@@ -1329,7 +1404,6 @@ const LandingPage = () => {
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
           display: flex;
           align-items: center;
-          overflow: hidden;
         }
 
         .container-1 {
@@ -1344,7 +1418,7 @@ const LandingPage = () => {
           width: 100%;
         }
 
-        .header-left { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
         .we-are-here {
           display: flex;
           align-items: center;
@@ -1356,8 +1430,8 @@ const LandingPage = () => {
         }
         .quote-text { font-size: 0.8rem; letter-spacing: 0.5px; font-weight: 600; white-space: nowrap; }
 
-        .header-right { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; flex-shrink: 0; }
-        .contact-info-group { display: flex; align-items: center; gap: 10px; }
+        .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .contact-info-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .contact-info-item {
           display: flex;
           align-items: center;
@@ -1373,9 +1447,19 @@ const LandingPage = () => {
         .contact-icon { font-size: 0.75rem; }
         .contact-text { font-size: 0.7rem; font-weight: 500; }
         .contact-icon-image { width: 14px; height: 14px; object-fit: contain; filter: brightness(0) invert(1); }
+        
+        /* Email link styles */
+        .email-link {
+          color: white;
+          text-decoration: none;
+          transition: color 0.3s ease;
+        }
+        .email-link:hover {
+          color: #90caf9 !important;
+        }
 
         /* Language Dropdown */
-        .language-dropdown { position: relative; flex-shrink: 0; }
+        .language-dropdown { position: relative; }
         .language-selector {
           display: flex;
           align-items: center;
@@ -1396,7 +1480,7 @@ const LandingPage = () => {
         .dropdown-arrow { font-size: 0.5rem; margin-left: 3px; }
         .dropdown-menu {
           position: absolute;
-          top: 32px;
+          top: 30px;
           right: 0;
           background: white;
           border-radius: 10px;
@@ -1430,7 +1514,6 @@ const LandingPage = () => {
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
           display: flex;
           align-items: center;
-          overflow: hidden;
         }
         .container-2 {
           max-width: 1400px;
@@ -1444,11 +1527,11 @@ const LandingPage = () => {
         }
         .logo-left { flex: 1; display: flex; justify-content: flex-start; align-items: center; }
         .logo-right { flex: 1; display: flex; justify-content: flex-end; align-items: center; }
-        .ntc-logo, .gov-logo { height: 42px; width: auto; object-fit: contain; }
+        .ntc-logo, .gov-logo { height: 40px; width: auto; object-fit: contain; }
         .logo-fallback {
-          font-size: 1.6rem;
-          width: 42px;
-          height: 42px;
+          font-size: 1.5rem;
+          width: 40px;
+          height: 40px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1457,8 +1540,8 @@ const LandingPage = () => {
           color: white;
         }
         .dept-text-center { flex: 2; text-align: center; }
-        .dept-name { font-size: 0.9rem; font-weight: 700; color: #0d47a1; letter-spacing: 0.5px; }
-        .dept-address { font-size: 0.7rem; opacity: 0.7; color: #555; margin-top: 2px; }
+        .dept-name { font-size: 0.85rem; font-weight: 700; color: #0d47a1; letter-spacing: 0.5px; }
+        .dept-address { font-size: 0.65rem; opacity: 0.7; color: #555; margin-top: 2px; }
 
         /* HEADER 3 - Navigation Bar */
         .header-3 {
@@ -1467,7 +1550,6 @@ const LandingPage = () => {
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
           display: flex;
           align-items: center;
-          overflow: hidden;
         }
         .container-3 {
           max-width: 1400px;
@@ -1480,38 +1562,38 @@ const LandingPage = () => {
           gap: 10px;
           width: 100%;
         }
-        .nav-menu-left { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .nav-menu-left { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .nav-btn {
           background: transparent;
           border: none;
           color: white;
-          font-size: 0.85rem;
+          font-size: 0.8rem;
           font-weight: 600;
           cursor: pointer;
-          padding: 6px 16px;
+          padding: 5px 14px;
           border-radius: 40px;
           transition: all 0.3s ease;
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 5px;
         }
         .nav-btn:hover { background: rgba(255,255,255,0.15); }
-        .nav-icon { font-size: 0.95rem; }
-        .nav-text { font-size: 0.85rem; white-space: nowrap; }
-        .login-btn-right { display: flex; align-items: center; flex-shrink: 0; }
+        .nav-icon { font-size: 0.9rem; }
+        .nav-text { font-size: 0.8rem; white-space: nowrap; }
+        .login-btn-right { display: flex; align-items: center; }
         .login-btn {
           background: transparent;
           border: 2px solid white;
           color: white;
-          font-size: 0.85rem;
+          font-size: 0.8rem;
           font-weight: 600;
           cursor: pointer;
-          padding: 6px 24px;
+          padding: 5px 20px;
           border-radius: 40px;
           transition: all 0.3s ease;
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 5px;
           white-space: nowrap;
         }
         .login-btn:hover { background: white; color: #1565c0; }
@@ -2017,10 +2099,7 @@ const LandingPage = () => {
         }
 
         @media (max-width: 768px) {
-          .header-1 { height: auto; min-height: 45px; padding: 6px 0; }
-          .header-2 { height: auto; min-height: 50px; padding: 6px 0; }
-          .header-3 { height: auto; min-height: 48px; padding: 6px 0; }
-          .main-content { padding-top: 165px; }
+          .main-content { padding-top: 195px; }
           
           .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; padding: 0 12px; gap: 6px; }
           .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
@@ -2059,10 +2138,7 @@ const LandingPage = () => {
         }
 
         @media (max-width: 480px) {
-          .header-1 { min-height: 40px; }
-          .header-2 { min-height: 44px; }
-          .header-3 { min-height: 42px; }
-          .main-content { padding-top: 150px; }
+          .main-content { padding-top: 215px; }
           
           .hero-buttons { flex-direction: column; align-items: center; width: 100%; }
           .btn-primary, .btn-secondary, .btn-complaint-regarding { width: 100%; justify-content: center; }

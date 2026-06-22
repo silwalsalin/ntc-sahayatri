@@ -15,46 +15,52 @@ try {
   govLogo = null;
 }
 
+// Move content outside component to avoid recreation
+const content = {
+  np: {
+    weAreHere: 'हामी तपाईंको लागि यहाँ छौं',
+    contactNumber: 'सम्पर्क नम्बर: ०१-४९६०००८',
+    emailAddress: 'coo@ntc.net.np',
+    departmentName: 'नेपाल दूरसञ्चार प्राधिकरण',
+    departmentAddress: 'भद्रकाली प्लाजा, काठमाडौं',
+    logout: 'लगआउट',
+    profile: 'प्रोफाइल',
+    settings: 'सेटिङ्स',
+    adminPanel: 'प्रशासक प्यानल',
+    welcome: 'स्वागत छ',
+    admin: 'प्रशासक',
+    adminUser: 'प्रशासक प्रयोगकर्ता'
+  },
+  en: {
+    weAreHere: 'We are here for you',
+    contactNumber: 'Contact: 01-4960008',
+    emailAddress: 'coo@ntc.net.np',
+    departmentName: 'Nepal Telecommunications Authority',
+    departmentAddress: 'Bhadrakali Plaza, Kathmandu',
+    logout: 'Logout',
+    profile: 'Profile',
+    settings: 'Settings',
+    adminPanel: 'Admin Panel',
+    welcome: 'Welcome',
+    admin: 'Admin',
+    adminUser: 'Admin User'
+  }
+};
+
 const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "admin" }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showAdminDropdown, setShowAdminDropdown] = useState(false);
 
-  const content = {
-    np: {
-      weAreHere: 'हामी तपाईंको लागि यहाँ छौं',
-      contactNumber: 'सम्पर्क नम्बर: ०१-४९६०००८',
-      emailAddress: 'coo@ntc.net.np',
-      departmentName: 'नेपाल दूरसञ्चार प्राधिकरण',
-      departmentAddress: 'भद्रकाली प्लाजा, काठमाडौं',
-      logout: 'लगआउट',
-      profile: 'प्रोफाइल',
-      settings: 'सेटिङ्स',
-      adminPanel: 'प्रशासक प्यानल',
-      welcome: 'स्वागत छ',
-      admin: 'प्रशासक'
-    },
-    en: {
-      weAreHere: 'We are here for you',
-      contactNumber: 'Contact: 01-4960008',
-      emailAddress: 'coo@ntc.net.np',
-      departmentName: 'Nepal Telecommunications Authority',
-      departmentAddress: 'Bhadrakali Plaza, Kathmandu',
-      logout: 'Logout',
-      profile: 'Profile',
-      settings: 'Settings',
-      adminPanel: 'Admin Panel',
-      welcome: 'Welcome',
-      admin: 'Admin'
-    }
-  };
-
-  const t = content[language];
+  // Get content based on language
+  const t = content[language] || content.en;
 
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
     setShowLanguageDropdown(false);
+    // Close admin dropdown if open
+    setShowAdminDropdown(false);
   };
 
   const handleLogout = () => {
@@ -87,13 +93,38 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
     );
   };
 
-  // Get display name for admin
+  // Get display name for admin - now depends on language
   const getDisplayName = () => {
-    if (adminName && adminName !== 'Admin User' && adminName !== 'Admin') {
-      return adminName;
+    // If adminName is the default placeholder, show translated admin label
+    if (adminName === 'Admin User' || adminName === 'Admin') {
+      return userRole === 'admin' ? t.admin : adminName;
     }
-    return userRole === 'admin' ? t.admin : adminName;
+    // Otherwise show the actual name with admin label in current language
+    return userRole === 'admin' ? `${adminName} (${t.admin})` : adminName;
   };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showLanguageDropdown) {
+        const dropdown = document.querySelector('.language-dropdown');
+        if (dropdown && !dropdown.contains(event.target)) {
+          setShowLanguageDropdown(false);
+        }
+      }
+      if (showAdminDropdown) {
+        const dropdown = document.querySelector('.admin-dropdown');
+        if (dropdown && !dropdown.contains(event.target)) {
+          setShowAdminDropdown(false);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showLanguageDropdown, showAdminDropdown]);
 
   return (
     <>
@@ -120,6 +151,7 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
               <button 
                 className="language-selector"
                 onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+                aria-label="Toggle language"
               >
                 <span className="lang-icon">🌐</span>
                 <span className="lang-text">{language === 'np' ? 'नेपाली' : 'English'}</span>
@@ -185,10 +217,13 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
               <button 
                 className="admin-btn"
                 onClick={() => setShowAdminDropdown(!showAdminDropdown)}
+                aria-label="Toggle admin menu"
               >
                 <span className="admin-icon">👨‍💼</span>
                 <span className="admin-name">{getDisplayName()}</span>
-                <span className="admin-role-badge">{userRole === 'admin' ? t.admin : ''}</span>
+                {userRole === 'admin' && (
+                  <span className="admin-role-badge">{t.admin}</span>
+                )}
                 <span className="dropdown-arrow">▼</span>
               </button>
               {showAdminDropdown && (
@@ -231,13 +266,6 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
           padding: 10px 0;
           z-index: 1003;
           box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        /* Header 1 height is approximately 55px (10px padding top + content height + 10px padding bottom) */
-        .header-1::after {
-          content: '';
-          display: table;
-          clear: both;
         }
 
         .container-1 {
@@ -385,7 +413,6 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
         }
 
         /* HEADER 2 - Department Level */
-        /* Positioned directly below header-1 - header-1 height is ~55px */
         .header-2 {
           position: fixed;
           top: 55px;
@@ -398,8 +425,6 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
         }
-
-        /* Header 2 height is approximately 64px (12px padding top + content height + 12px padding bottom) */
 
         .container-2 {
           max-width: 1400px;
@@ -461,7 +486,6 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
         }
 
         /* HEADER 3 - Navigation Bar */
-        /* Positioned directly below header-2 - header-1 (55px) + header-2 (64px) = 119px */
         .header-3 {
           position: fixed;
           top: 119px;
@@ -536,7 +560,7 @@ const Header = ({ language, setLanguage, adminName = "Admin User", userRole = "a
         .admin-name {
           font-size: 0.9rem;
           font-weight: 600;
-          max-width: 150px;
+          max-width: 200px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
