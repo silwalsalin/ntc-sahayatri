@@ -168,13 +168,13 @@ const AdminComplaints = () => {
       const token = localStorage.getItem('adminToken');
       if (!token) {
         showToast(language === 'np' ? 'प्रमाणीकरण टोकन फेला परेन' : 'Authentication token not found', 'error');
-        navigate('/admin-login');
+        navigate('/login');
         return;
       }
       
       let endpoint;
       if (complaintType === 'regular') {
-        endpoint = `${API_URL}/admin/complaints/${complaintId}/assign`;
+        endpoint = `${API_URL}/admin/submit-complaint/${complaintId}/assign`;
       } else {
         endpoint = `${API_URL}/admin/complaint-regarding/${complaintId}/assign`;
       }
@@ -213,7 +213,7 @@ const AdminComplaints = () => {
           : 'Authentication failed. Please login again.';
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminUser');
-        setTimeout(() => navigate('/admin-login'), 1500);
+        setTimeout(() => navigate('/login'), 1500);
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }

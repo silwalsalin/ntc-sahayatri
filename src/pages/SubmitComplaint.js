@@ -21,11 +21,90 @@ try {
   heroImage = null;
 }
 
+// Helper function to get current date in Nepali format
+const getNepaliDate = () => {
+  const date = new Date();
+  const nepaliMonths = [
+    'बैशाख', 'जेठ', 'असार', 'श्रावण', 'भदौ', 'असोज',
+    'कार्तिक', 'मंसिर', 'पुष', 'माघ', 'फागुन', 'चैत'
+  ];
+  const nepaliDays = ['आइतबार', 'सोमबार', 'मंगलबार', 'बुधबार', 'बिहिबार', 'शुक्रबार', 'शनिबार'];
+  
+  // Approximate conversion to BS (subtract 57 years, adjust month/day)
+  // For demo purposes - in production use a proper Nepali date library
+  let bsYear = date.getFullYear() - 57;
+  let bsMonth = date.getMonth();
+  let bsDay = date.getDate();
+  let bsWeekday = date.getDay();
+  
+  // Simple adjustment for month/day offset
+  // This is an approximation - real conversion requires a proper algorithm
+  if (date.getMonth() < 3) {
+    bsYear = date.getFullYear() - 56;
+    bsMonth = date.getMonth() + 9;
+  } else {
+    bsYear = date.getFullYear() - 57;
+    bsMonth = date.getMonth() - 3;
+  }
+  
+  // Ensure month is within 0-11
+  if (bsMonth < 0) {
+    bsMonth += 12;
+    bsYear -= 1;
+  }
+  
+  // Format the date
+  return {
+    year: bsYear,
+    month: nepaliMonths[bsMonth] || 'बैशाख',
+    day: bsDay,
+    weekday: nepaliDays[bsWeekday] || 'आइतबार',
+    fullDate: `${nepaliDays[bsWeekday] || 'आइतबार'}, ${bsDay} ${nepaliMonths[bsMonth] || 'बैशाख'} ${bsYear}`,
+    shortDate: `${bsYear}-${String(bsMonth + 1).padStart(2, '0')}-${String(bsDay).padStart(2, '0')}`,
+    yearNp: String(bsYear),
+    monthNp: nepaliMonths[bsMonth] || 'बैशाख',
+    dayNp: String(bsDay),
+    monthIndex: bsMonth,
+    dayIndex: bsDay
+  };
+};
+
+// Helper function to convert numbers to Nepali digits
+const toNepaliDigits = (num) => {
+  if (num === undefined || num === null || num === '') return '';
+  const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+  const str = String(num);
+  return str.replace(/\d/g, (digit) => nepaliDigits[parseInt(digit)]);
+};
+
+// Helper function to get current date in English format
+const getEnglishDate = () => {
+  const date = new Date();
+  return {
+    year: date.getFullYear(),
+    month: date.toLocaleString('en-US', { month: 'long' }),
+    day: date.getDate(),
+    weekday: date.toLocaleString('en-US', { weekday: 'long' }),
+    fullDate: date.toLocaleString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }),
+    shortDate: date.toISOString().split('T')[0],
+    yearEn: String(date.getFullYear()),
+    monthEn: date.toLocaleString('en-US', { month: 'long' }),
+    dayEn: String(date.getDate())
+  };
+};
+
 const SubmitComplaint = () => {
   const navigate = useNavigate();
   
   // Language state
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
   // Loading state for backend submission
@@ -68,7 +147,7 @@ const SubmitComplaint = () => {
     }, 5000);
   };
 
-  // Complete Nepal Location Data with all 77 districts
+  // Complete Nepal Location Data with all 77 districts (same as before)
   const locationData = {
     province1: { 
       np: 'कोशी प्रदेश', 
@@ -269,7 +348,12 @@ const SubmitComplaint = () => {
       enterStreetAddress: 'टोल/गाउँको नाम प्रविष्ट गर्नुहोस्',
       uploading: 'अपलोड हुँदै...',
       uploadComplete: 'अपलोड पूरा भयो',
-      connectionError: 'सर्भरमा जडान हुन सकेन। कृपया पछि प्रयास गर्नुहोस्।'
+      connectionError: 'सर्भरमा जडान हुन सकेन। कृपया पछि प्रयास गर्नुहोस्।',
+      submittedDate: 'दर्ता मिति',
+      submittedDateNp: 'नेपाली मिति',
+      submittedDateEn: 'अंग्रेजी मिति',
+      submittedDateNpDigits: 'नेपाली मिति (अंकमा)',
+      dateLabel: '📅 मिति जानकारी'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -328,7 +412,12 @@ const SubmitComplaint = () => {
       enterStreetAddress: 'Enter tole/village name',
       uploading: 'Uploading...',
       uploadComplete: 'Upload complete',
-      connectionError: 'Cannot connect to server. Please try again later.'
+      connectionError: 'Cannot connect to server. Please try again later.',
+      submittedDate: 'Submitted Date',
+      submittedDateNp: 'Nepali Date',
+      submittedDateEn: 'English Date',
+      submittedDateNpDigits: 'Nepali Date (in digits)',
+      dateLabel: '📅 Date Information'
     }
   };
 
@@ -358,7 +447,6 @@ const SubmitComplaint = () => {
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Validate file size (5MB)
       if (file.size > 5 * 1024 * 1024) {
         showToast('File size should be less than 5MB', 'error');
         return;
@@ -393,6 +481,24 @@ const SubmitComplaint = () => {
     }
   };
 
+  // Function to get formatted date for display
+  const getFormattedDate = () => {
+    const nepaliDate = getNepaliDate();
+    const englishDate = getEnglishDate();
+    
+    return {
+      np: {
+        full: nepaliDate.fullDate,
+        short: nepaliDate.shortDate,
+        withDigits: `${toNepaliDigits(nepaliDate.day)} ${nepaliDate.month} ${toNepaliDigits(nepaliDate.year)}`
+      },
+      en: {
+        full: englishDate.fullDate,
+        short: englishDate.shortDate
+      }
+    };
+  };
+
   const handleSubmitComplaint = async (e) => {
     e.preventDefault();
     
@@ -412,14 +518,12 @@ const SubmitComplaint = () => {
       return;
     }
     
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       showToast(language === 'np' ? 'कृपया मान्य इमेल ठेगाना प्रविष्ट गर्नुहोस्।' : 'Please enter a valid email address.', 'error');
       return;
     }
     
-    // Validate phone number (Nepal format)
     const phoneRegex = /^[9][7-8][0-9]{8}$/;
     if (!phoneRegex.test(formData.phone)) {
       showToast(language === 'np' ? 'कृपया मान्य मोबाइल नम्बर प्रविष्ट गर्नुहोस् (९८XXXXXXXX)' : 'Please enter a valid mobile number (98XXXXXXXX)', 'error');
@@ -435,22 +539,37 @@ const SubmitComplaint = () => {
     setUploadProgress(0);
 
     try {
-      // Create FormData for file upload
+      // Get current date information
+      const nepaliDate = getNepaliDate();
+      const englishDate = getEnglishDate();
+      
       const formDataToSend = new FormData();
       
-      // Add all form fields
       Object.keys(formData).forEach(key => {
         if (formData[key]) {
           formDataToSend.append(key, formData[key]);
         }
       });
       
-      // Add file if selected
+      // Add date information to the form data
+      formDataToSend.append('submittedDateEn', englishDate.fullDate);
+      formDataToSend.append('submittedDateNp', nepaliDate.fullDate);
+      formDataToSend.append('submittedDateShort', englishDate.shortDate);
+      formDataToSend.append('submittedDateNpShort', nepaliDate.shortDate);
+      formDataToSend.append('submittedDateNpDigits', `${toNepaliDigits(nepaliDate.day)} ${nepaliDate.month} ${toNepaliDigits(nepaliDate.year)}`);
+      formDataToSend.append('submittedYearNp', String(nepaliDate.year));
+      formDataToSend.append('submittedMonthNp', nepaliDate.month);
+      formDataToSend.append('submittedDayNp', String(nepaliDate.day));
+      formDataToSend.append('submittedWeekdayNp', nepaliDate.weekday);
+      formDataToSend.append('submittedYearEn', englishDate.yearEn);
+      formDataToSend.append('submittedMonthEn', englishDate.monthEn);
+      formDataToSend.append('submittedDayEn', englishDate.dayEn);
+      formDataToSend.append('submittedWeekdayEn', englishDate.weekday);
+      
       if (selectedFile) {
         formDataToSend.append('attachment', selectedFile);
       }
       
-      // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 90) {
@@ -465,17 +584,27 @@ const SubmitComplaint = () => {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 30000 // 30 second timeout
+        timeout: 30000
       });
       
       clearInterval(progressInterval);
       setUploadProgress(100);
       
       if (response.data.success) {
-        setSuccessData(response.data.data);
+        // Add date information to success data
+        const formattedDate = getFormattedDate();
+        const successDataWithDate = {
+          ...response.data.data,
+          dateInfo: {
+            np: formattedDate.np,
+            en: formattedDate.en,
+            nepaliDate: nepaliDate,
+            englishDate: englishDate
+          }
+        };
+        setSuccessData(successDataWithDate);
         setShowSuccess(true);
         
-        // Reset form
         setFormData({
           natureOfComplaint: '',
           name: '',
@@ -491,7 +620,6 @@ const SubmitComplaint = () => {
         setSelectedFile(null);
         setUploadProgress(0);
         
-        // Clear file input
         const fileInput = document.getElementById('fileInput');
         if (fileInput) fileInput.value = '';
         
@@ -861,7 +989,7 @@ const SubmitComplaint = () => {
         </div>
       </div>
 
-      {/* Success Modal */}
+      {/* Success Modal with Date Information */}
       {showSuccess && successData && (
         <div className="success-modal-overlay">
           <div className="success-modal">
@@ -870,6 +998,34 @@ const SubmitComplaint = () => {
             <div className="success-details">
               <p><strong>{t.ticketId}:</strong> {language === 'np' ? successData.complaintNumberNp : successData.complaintNumber}</p>
               <p><strong>{t.password}:</strong> {successData.trackingPassword}</p>
+              
+              {/* Date Information Section */}
+              <div className="date-info-section">
+                <p className="date-label">{t.dateLabel}</p>
+                <div className="date-display">
+                  {/* Nepali Date */}
+                  <div className="date-item nepali-date">
+                    <span className="date-icon">🇳🇵</span>
+                    <span className="date-label-text">{t.submittedDateNp}:</span>
+                    <span className="date-value-text">{successData.dateInfo?.np?.full || ''}</span>
+                  </div>
+                  {/* Nepali Date with Digits */}
+                  {successData.dateInfo?.np?.withDigits && (
+                    <div className="date-item nepali-digits">
+                      <span className="date-icon">🔢</span>
+                      <span className="date-label-text">{t.submittedDateNpDigits}:</span>
+                      <span className="date-value-text nepali-digit-value">{successData.dateInfo.np.withDigits}</span>
+                    </div>
+                  )}
+                  {/* English Date */}
+                  <div className="date-item english-date">
+                    <span className="date-icon">🇬🇧</span>
+                    <span className="date-label-text">{t.submittedDateEn}:</span>
+                    <span className="date-value-text">{successData.dateInfo?.en?.full || ''}</span>
+                  </div>
+                </div>
+              </div>
+              
               <p className="save-warning">⚠️ {t.saveDetails}</p>
             </div>
             <div className="modal-buttons">
@@ -1337,7 +1493,7 @@ const SubmitComplaint = () => {
           background: white;
           border-radius: 20px;
           padding: 40px;
-          max-width: 450px;
+          max-width: 500px;
           width: 90%;
           text-align: center;
           animation: slideUp 0.3s ease;
@@ -1354,8 +1510,62 @@ const SubmitComplaint = () => {
         }
         .success-details p { margin: 10px 0; font-size: 1rem; }
         .success-details strong { color: #0d47a1; }
+        
+        /* Date Information Styling */
+        .date-info-section {
+          margin-top: 15px;
+          padding-top: 15px;
+          border-top: 2px solid #e0e0e0;
+        }
+        .date-label {
+          font-weight: 600;
+          color: #0d47a1;
+          margin-bottom: 12px;
+          font-size: 0.95rem;
+        }
+        .date-display {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .date-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 10px;
+          border-radius: 6px;
+          flex-wrap: wrap;
+        }
+        .date-item.nepali-date {
+          background: #e8f5e9;
+        }
+        .date-item.nepali-digits {
+          background: #fff3e0;
+        }
+        .date-item.english-date {
+          background: #e3f2fd;
+        }
+        .date-icon {
+          font-size: 1rem;
+        }
+        .date-label-text {
+          font-weight: 500;
+          color: #555;
+          font-size: 0.8rem;
+        }
+        .date-value-text {
+          font-weight: 500;
+          color: #1a2c3e;
+          font-size: 0.85rem;
+        }
+        .nepali-digit-value {
+          font-size: 1rem;
+          color: #0d47a1;
+          font-weight: 600;
+        }
+        
         .save-warning { color: #ff9800; font-size: 0.85rem; margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; }
-        .modal-buttons { display: flex; gap: 15px; justify-content: center; }
+        .modal-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
         .btn-close, .btn-track {
           padding: 12px 24px;
           border: none;
@@ -1396,12 +1606,16 @@ const SubmitComplaint = () => {
           .modal-buttons { flex-direction: column; }
           .header-left, .header-right, .logo-left, .logo-right, .nav-menu-left { justify-content: center; }
           .container-1, .container-2, .container-3 { flex-direction: column; text-align: center; }
+          .date-item { flex-direction: column; align-items: flex-start; gap: 4px; }
         }
 
         @media (max-width: 480px) {
           .submit-card { padding: 20px 16px; }
           .section-title { font-size: 1rem; }
           .btn-submit { font-size: 0.95rem; padding: 14px; }
+          .success-modal { padding: 20px; }
+          .date-item { padding: 8px; }
+          .date-value-text { font-size: 0.75rem; }
         }
       `}</style>
     </div>

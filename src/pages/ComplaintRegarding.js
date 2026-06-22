@@ -16,6 +16,120 @@ try {
   govLogo = null;
 }
 
+// Helper function to get current date in Nepali format (BS) with time
+const getNepaliDate = () => {
+  const date = new Date();
+  
+  // Nepali months in BS
+  const nepaliMonths = [
+    'बैशाख', 'जेठ', 'असार', 'श्रावण', 'भदौ', 'असोज',
+    'कार्तिक', 'मंसिर', 'पुष', 'माघ', 'फागुन', 'चैत'
+  ];
+  const nepaliDays = ['आइतबार', 'सोमबार', 'मंगलबार', 'बुधबार', 'बिहिबार', 'शुक्रबार', 'शनिबार'];
+  
+  // Nepali date reference (starting point)
+  // 2000-01-01 AD = 2056-09-17 BS
+  const bsStartYear = 2056;
+  const bsStartMonth = 8; // Kartik (9th month, 0-indexed)
+  const bsStartDay = 17;
+  
+  // AD date to convert
+  const adYear = date.getFullYear();
+  const adMonth = date.getMonth();
+  const adDay = date.getDate();
+  
+  // Days in Nepali months (BS)
+  const bsDaysInMonths = [
+    [31, 31], // Baishakh
+    [32, 32], // Jestha
+    [31, 31], // Ashadh
+    [32, 32], // Shrawan
+    [31, 31], // Bhadra
+    [30, 30], // Ashwin
+    [30, 30], // Kartik
+    [30, 30], // Mangsir
+    [30, 30], // Poush
+    [30, 30], // Magh
+    [30, 30], // Falgun
+    [30, 30]  // Chaitra
+  ];
+  
+  // Calculate days from reference date
+  const refDate = new Date(2000, 0, 1); // 2000-01-01
+  const targetDate = new Date(adYear, adMonth, adDay);
+  const diffTime = targetDate.getTime() - refDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  // Calculate BS date
+  let bsYear = bsStartYear;
+  let bsMonth = bsStartMonth;
+  let bsDay = bsStartDay + diffDays;
+  
+  // Adjust for month lengths
+  while (true) {
+    const daysInMonth = bsDaysInMonths[bsMonth][0];
+    if (bsDay <= daysInMonth) break;
+    bsDay -= daysInMonth;
+    bsMonth++;
+    if (bsMonth >= 12) {
+      bsMonth = 0;
+      bsYear++;
+    }
+  }
+  
+  // Get weekday
+  const weekdays = ['आइतबार', 'सोमबार', 'मंगलबार', 'बुधबार', 'बिहिबार', 'शुक्रबार', 'शनिबार'];
+  const weekday = weekdays[date.getDay()];
+  
+  // Get time in Nepali format (12-hour)
+  let hours = date.getHours();
+  const minutes = date.getMinutes();
+  const ampm = hours >= 12 ? 'बजे' : 'बजे';
+  hours = hours % 12;
+  hours = hours ? hours : 12; // 12-hour format
+  
+  // Format the date
+  const monthName = nepaliMonths[bsMonth] || 'बैशाख';
+  const day = bsDay;
+  const year = bsYear;
+  
+  // Time in Nepali digits
+  const hoursNp = toNepaliDigits(String(hours));
+  const minutesNp = toNepaliDigits(String(minutes).padStart(2, '0'));
+  
+  return {
+    year: year,
+    month: monthName,
+    day: day,
+    weekday: weekday,
+    fullDate: `${weekday}, ${day} ${monthName} ${year}`,
+    shortDate: `${year}-${String(bsMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+    yearNp: String(year),
+    monthNp: monthName,
+    dayNp: String(day),
+    monthIndex: bsMonth,
+    dayIndex: day,
+    // Time information
+    hours: hours,
+    minutes: minutes,
+    ampm: ampm,
+    time12: `${hours}:${String(minutes).padStart(2, '0')} ${ampm}`,
+    time24: `${String(date.getHours()).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
+    timeNp: `${hoursNp}:${minutesNp} ${ampm}`,
+    time24Np: `${toNepaliDigits(String(date.getHours()).padStart(2, '0'))}:${minutesNp}`,
+    fullDateTime: `${weekday}, ${day} ${monthName} ${year} ${hours}:${String(minutes).padStart(2, '0')} ${ampm}`,
+    fullDateTimeNp: `${weekday}, ${day} ${monthName} ${year} ${hoursNp}:${minutesNp} ${ampm}`
+  };
+};
+
+// Helper function to convert numbers to Nepali digits
+const toNepaliDigits = (num) => {
+  if (num === undefined || num === null || num === '') return '';
+  const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+  const str = String(num);
+  return str.replace(/\d/g, (digit) => nepaliDigits[parseInt(digit)]);
+};
+
 const ComplaintRegarding = () => {
   const navigate = useNavigate();
   
@@ -296,7 +410,11 @@ const ComplaintRegarding = () => {
       requiredFieldsInfo: 'तारांकित (*) चिन्ह लगाइएका फिल्डहरू अनिवार्य छन्',
       copyReference: 'सन्दर्भ नम्बर प्रतिलिपि गर्नुहोस्',
       copied: 'प्रतिलिपि गरियो!',
-      connectionError: 'सर्भरमा जडान हुन सकेन। कृपया पछि प्रयास गर्नुहोस्।'
+      connectionError: 'सर्भरमा जडान हुन सकेन। कृपया पछि प्रयास गर्नुहोस्।',
+      submittedDateNp: 'नेपाली मिति',
+      submittedDateNpDigits: 'नेपाली मिति (अंकमा)',
+      submittedTimeNp: 'नेपाली समय',
+      dateLabel: '📅 मिति र समय जानकारी'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -380,7 +498,11 @@ const ComplaintRegarding = () => {
       requiredFieldsInfo: 'Fields marked with (*) are required',
       copyReference: 'Copy reference number',
       copied: 'Copied!',
-      connectionError: 'Cannot connect to server. Please try again later.'
+      connectionError: 'Cannot connect to server. Please try again later.',
+      submittedDateNp: 'Nepali Date',
+      submittedDateNpDigits: 'Nepali Date (in digits)',
+      submittedTimeNp: 'Nepali Time',
+      dateLabel: '📅 Date & Time Information'
     }
   };
 
@@ -581,6 +703,29 @@ const ComplaintRegarding = () => {
     showToast(t.copied, 'success', 1500);
   };
 
+  // Function to get formatted Nepali date with time for display
+  const getFormattedDate = () => {
+    const nepaliDate = getNepaliDate();
+    
+    return {
+      np: {
+        full: nepaliDate.fullDate,
+        short: nepaliDate.shortDate,
+        withDigits: `${toNepaliDigits(nepaliDate.day)} ${nepaliDate.month} ${toNepaliDigits(nepaliDate.year)}`,
+        day: toNepaliDigits(nepaliDate.day),
+        month: nepaliDate.month,
+        year: toNepaliDigits(nepaliDate.year),
+        weekday: nepaliDate.weekday,
+        time: nepaliDate.time12,
+        timeNp: nepaliDate.timeNp,
+        time24: nepaliDate.time24,
+        time24Np: nepaliDate.time24Np,
+        fullDateTime: nepaliDate.fullDateTime,
+        fullDateTimeNp: nepaliDate.fullDateTimeNp
+      }
+    };
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmissionAttempted(true);
@@ -602,6 +747,9 @@ const ComplaintRegarding = () => {
     setUploadProgress(0);
 
     try {
+      // Get current Nepali date with time
+      const nepaliDate = getNepaliDate();
+      
       // Create FormData for file uploads
       const formDataToSend = new FormData();
       
@@ -617,6 +765,21 @@ const ComplaintRegarding = () => {
       formDataToSend.append('landmark', formData.landmark || '');
       formDataToSend.append('preferredContact', formData.preferredContact);
       formDataToSend.append('referenceNumber', referenceNumber);
+      
+      // Add Nepali date and time information (ONLY NEPALI - NO ENGLISH)
+      formDataToSend.append('submittedDateNp', nepaliDate.fullDate);
+      formDataToSend.append('submittedDateNpShort', nepaliDate.shortDate);
+      formDataToSend.append('submittedDateNpDigits', `${toNepaliDigits(nepaliDate.day)} ${nepaliDate.month} ${toNepaliDigits(nepaliDate.year)}`);
+      formDataToSend.append('submittedYearNp', String(nepaliDate.year));
+      formDataToSend.append('submittedMonthNp', nepaliDate.month);
+      formDataToSend.append('submittedDayNp', String(nepaliDate.day));
+      formDataToSend.append('submittedWeekdayNp', nepaliDate.weekday);
+      // Time information
+      formDataToSend.append('submittedTimeNp', nepaliDate.timeNp);
+      formDataToSend.append('submittedTime24Np', nepaliDate.time24Np);
+      formDataToSend.append('submittedFullDateTimeNp', nepaliDate.fullDateTimeNp);
+      formDataToSend.append('submittedHoursNp', toNepaliDigits(String(nepaliDate.hours)));
+      formDataToSend.append('submittedMinutesNp', toNepaliDigits(String(nepaliDate.minutes).padStart(2, '0')));
       
       // Add files if selected
       selectedFiles.forEach(file => {
@@ -645,7 +808,15 @@ const ComplaintRegarding = () => {
       setUploadProgress(100);
       
       if (response.data.success) {
-        setSuccessData(response.data.data);
+        // Add date and time information to success data
+        const formattedDate = getFormattedDate();
+        const successDataWithDate = {
+          ...response.data.data,
+          dateInfo: {
+            np: formattedDate.np
+          }
+        };
+        setSuccessData(successDataWithDate);
         setShowSuccess(true);
         
         // Reset form
@@ -717,7 +888,18 @@ const ComplaintRegarding = () => {
 
   return (
     <div className="complaint-regarding-page">
-      {/* Success Modal - ONLY show this, no other popup */}
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
+      {/* Success Modal with ONLY Nepali Date and Time - NO English */}
       {showSuccess && successData && (
         <div className="success-modal-overlay" onClick={() => setShowSuccess(false)}>
           <div className="success-modal" onClick={(e) => e.stopPropagation()}>
@@ -734,6 +916,44 @@ const ComplaintRegarding = () => {
               <p><strong>{t.password}:</strong> 
                 <span className="highlight password">{successData.trackingPassword}</span>
               </p>
+              
+              {/* ONLY Nepali Date and Time Information Section - NO English */}
+              <div className="date-info-section">
+                <p className="date-label">📅 {t.dateLabel}</p>
+                <div className="date-display">
+                  {/* Nepali Date with Full Format */}
+                  <div className="date-item nepali-date">
+                    <span className="date-icon">🇳🇵</span>
+                    <span className="date-label-text">{t.submittedDateNp}:</span>
+                    <span className="date-value-text">{successData.dateInfo?.np?.full || ''}</span>
+                  </div>
+                  {/* Nepali Date with Digits */}
+                  {successData.dateInfo?.np?.withDigits && (
+                    <div className="date-item nepali-digits">
+                      <span className="date-icon">🔢</span>
+                      <span className="date-label-text">{t.submittedDateNpDigits}:</span>
+                      <span className="date-value-text nepali-digit-value">{successData.dateInfo.np.withDigits}</span>
+                    </div>
+                  )}
+                  {/* Nepali Time */}
+                  {successData.dateInfo?.np?.timeNp && (
+                    <div className="date-item nepali-time">
+                      <span className="date-icon">🕐</span>
+                      <span className="date-label-text">{t.submittedTimeNp}:</span>
+                      <span className="date-value-text time-value">{successData.dateInfo.np.timeNp}</span>
+                    </div>
+                  )}
+                  {/* Full Nepali Date with Time */}
+                  {successData.dateInfo?.np?.fullDateTimeNp && (
+                    <div className="date-item full-datetime">
+                      <span className="date-icon">📅</span>
+                      <span className="date-label-text">{t.dateLabel}:</span>
+                      <span className="date-value-text full-datetime-value">{successData.dateInfo.np.fullDateTimeNp}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
               <p className="save-warning">⚠️ {t.saveDetails}</p>
             </div>
             <div className="modal-buttons">
@@ -1148,8 +1368,6 @@ const ComplaintRegarding = () => {
         </div>
       </div>
 
- 
-
       <style jsx>{`
         * {
           margin: 0;
@@ -1164,6 +1382,42 @@ const ComplaintRegarding = () => {
           min-height: 100vh;
           display: flex;
           flex-direction: column;
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 180px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 350px;
+        }
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        .toast-icon { font-size: 1.2rem; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         /* HEADER 1 - Top Bar */
@@ -1666,7 +1920,7 @@ const ComplaintRegarding = () => {
           background: white;
           border-radius: 20px;
           padding: 40px;
-          max-width: 450px;
+          max-width: 500px;
           width: 90%;
           text-align: center;
           animation: slideUp 0.3s ease;
@@ -1697,6 +1951,72 @@ const ComplaintRegarding = () => {
         .copy-small:hover { opacity: 1; }
         .save-warning { color: #ff9800; font-size: 0.8rem; margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; }
 
+        /* Nepali Date and Time Information Styling - ONLY NEPALI */
+        .date-info-section {
+          margin-top: 15px;
+          padding-top: 15px;
+          border-top: 2px solid #e0e0e0;
+        }
+        .date-label {
+          font-weight: 600;
+          color: #0d47a1;
+          margin-bottom: 12px;
+          font-size: 0.95rem;
+        }
+        .date-display {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .date-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 12px;
+          border-radius: 6px;
+          flex-wrap: wrap;
+        }
+        .date-item.nepali-date {
+          background: #e8f5e9;
+          border-left: 3px solid #4caf50;
+        }
+        .date-item.nepali-digits {
+          background: #fff3e0;
+          border-left: 3px solid #ff9800;
+        }
+        .date-item.nepali-time {
+          background: #e3f2fd;
+          border-left: 3px solid #2196f3;
+        }
+        .date-item.full-datetime {
+          background: #f3e5f5;
+          border-left: 3px solid #9c27b0;
+        }
+        .date-icon { font-size: 1rem; }
+        .date-label-text {
+          font-weight: 500;
+          color: #555;
+          font-size: 0.8rem;
+        }
+        .date-value-text {
+          font-weight: 500;
+          color: #1a2c3e;
+          font-size: 0.9rem;
+        }
+        .nepali-digit-value {
+          font-size: 1.1rem;
+          color: #0d47a1;
+          font-weight: 600;
+        }
+        .time-value {
+          color: #1565c0;
+          font-weight: 600;
+        }
+        .full-datetime-value {
+          color: #6a1b9a;
+          font-weight: 600;
+        }
+
         .modal-buttons { display: flex; gap: 15px; justify-content: center; }
         .btn-close, .btn-track {
           padding: 12px 24px;
@@ -1710,8 +2030,6 @@ const ComplaintRegarding = () => {
         .btn-close:hover { background: #e0e0e0; }
         .btn-track { background: linear-gradient(135deg, #1565c0, #0d47a1); color: white; }
         .btn-track:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(21,101,192,0.3); }
-
-    
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -1728,6 +2046,8 @@ const ComplaintRegarding = () => {
           .success-modal { padding: 25px; margin: 20px; }
           .modal-buttons { flex-direction: column; }
           .form-buttons { flex-direction: column; }
+          .toast-notification { top: auto; bottom: 20px; right: 20px; left: 20px; max-width: calc(100% - 40px); }
+          .date-item { flex-direction: column; align-items: flex-start; gap: 4px; }
         }
 
         @media (max-width: 480px) {
@@ -1737,6 +2057,8 @@ const ComplaintRegarding = () => {
           .complaint-card { padding: 20px 16px; }
           .section-title { font-size: 1rem; }
           .btn-submit, .btn-clear { font-size: 0.9rem; padding: 12px; }
+          .date-item { padding: 6px 10px; }
+          .date-value-text { font-size: 0.8rem; }
         }
       `}</style>
     </div>
