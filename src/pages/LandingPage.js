@@ -574,7 +574,8 @@ const LandingPage = () => {
       isImage: true, 
       fallback: '📱', 
       color: '#7360f2', 
-      bgColor: '#e8e0f5' 
+      bgColor: '#e8e0f5',
+      contact: '9851234567' 
     },
     { 
       id: 'email', 
@@ -585,6 +586,7 @@ const LandingPage = () => {
       fallback: '✉️', 
       color: '#ea4335', 
       bgColor: '#fce4ec', 
+      contact: 'coo@ntc.net.np',
       action: () => window.location.href = 'mailto:coo@ntc.net.np' 
     },
   ];
@@ -828,20 +830,27 @@ const LandingPage = () => {
                 <span className="contact-icon">📞</span>
                 <span className="contact-text">{t.contactNumber}</span>
               </div>
-              <div className="contact-info-item">
+              <div className="contact-info-item email-item">
                 <EmailIconComponent className="contact-icon-image" />
                 <a 
-                  href={`mailto:${t.emailAddress}`} 
+                  href="mailto:coo@ntc.net.np" 
                   className="contact-text email-link"
                   style={{ 
                     color: 'white', 
                     textDecoration: 'none',
-                    transition: 'color 0.3s ease'
+                    fontWeight: '500',
+                    transition: 'all 0.3s ease'
                   }}
-                  onMouseEnter={(e) => e.target.style.color = '#90caf9'}
-                  onMouseLeave={(e) => e.target.style.color = 'white'}
+                  onMouseEnter={(e) => {
+                    e.target.style.color = '#90caf9';
+                    e.target.style.textDecoration = 'underline';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.color = 'white';
+                    e.target.style.textDecoration = 'none';
+                  }}
                 >
-                  {t.emailAddress}
+                  coo@ntc.net.np
                 </a>
               </div>
             </div>
@@ -1105,26 +1114,32 @@ const LandingPage = () => {
               <h3>📞 {t.contactInfo}</h3>
               <div className="contact-details">
                 <p><strong>📱 {t.helpline}:</strong> 198 ({t.tollFree})</p>
-                <p>
+                <p style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <strong><EmailIconComponent className="contact-card-email-icon" /> {t.email}:</strong> 
                   <a 
-                    href={`mailto:${t.emailAddress}`} 
+                    href="mailto:coo@ntc.net.np" 
                     style={{ 
                       color: '#1565c0', 
                       textDecoration: 'none',
-                      fontWeight: '500',
-                      transition: 'all 0.3s ease'
+                      fontWeight: '600',
+                      fontSize: '0.9rem',
+                      transition: 'all 0.3s ease',
+                      padding: '2px 10px',
+                      borderRadius: '4px',
+                      background: '#e3f2fd'
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.textDecoration = 'underline';
                       e.target.style.color = '#0d47a1';
+                      e.target.style.background = '#bbdefb';
                     }}
                     onMouseLeave={(e) => {
                       e.target.style.textDecoration = 'none';
                       e.target.style.color = '#1565c0';
+                      e.target.style.background = '#e3f2fd';
                     }}
                   >
-                    {t.emailAddress}
+                    coo@ntc.net.np
                   </a>
                 </p>
                 <p><strong>📍 {t.address}:</strong> {t.departmentAddress}</p>
@@ -1444,6 +1459,19 @@ const LandingPage = () => {
           white-space: nowrap;
         }
         .contact-info-item:hover { background: rgba(255,255,255,0.25); }
+        
+        /* Email item specific styling */
+        .email-item {
+          background: rgba(255,255,255,0.15);
+          padding: 3px 12px;
+          border-radius: 30px;
+          transition: all 0.3s ease;
+        }
+        .email-item:hover {
+          background: rgba(255,255,255,0.3);
+          transform: scale(1.02);
+        }
+        
         .contact-icon { font-size: 0.75rem; }
         .contact-text { font-size: 0.7rem; font-weight: 500; }
         .contact-icon-image { width: 14px; height: 14px; object-fit: contain; filter: brightness(0) invert(1); }
@@ -1452,10 +1480,12 @@ const LandingPage = () => {
         .email-link {
           color: white;
           text-decoration: none;
-          transition: color 0.3s ease;
+          transition: all 0.3s ease;
+          font-weight: 500;
         }
         .email-link:hover {
           color: #90caf9 !important;
+          text-decoration: underline !important;
         }
 
         /* Language Dropdown */
@@ -1948,7 +1978,24 @@ const LandingPage = () => {
 
         .contact-details { line-height: 1.8; }
         .contact-details p { margin: 10px 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.85rem; }
-        .contact-card-email-icon { width: 14px; height: 14px; object-fit: contain; }
+        .contact-card-email-icon { width: 16px; height: 16px; object-fit: contain; vertical-align: middle; }
+        
+        /* Contact card email link styling */
+        .contact-details a[href^="mailto:"] {
+          color: #1565c0;
+          text-decoration: none;
+          font-weight: 600;
+          font-size: 0.9rem;
+          transition: all 0.3s ease;
+          padding: 2px 10px;
+          border-radius: 4px;
+          background: #e3f2fd;
+        }
+        .contact-details a[href^="mailto:"]:hover {
+          text-decoration: underline;
+          color: #0d47a1;
+          background: #bbdefb;
+        }
 
         .support-hours {
           margin-top: 16px;

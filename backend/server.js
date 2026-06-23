@@ -279,6 +279,35 @@ app.get('/api/complaints/public', (req, res) => {
     }
 });
 
+// GET /api/complaints/public/:id - Public view of complaint (limited data)
+app.get('/api/complaints/public/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        db.get(
+            `SELECT id, complaint_number, complaint_number_np, name, email, phone, 
+                    description, status, priority, created_at, nature_of_complaint,
+                    resolution, resolved_at
+             FROM complaints 
+             WHERE id = ?`,
+            [id],
+            (err, complaint) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                if (!complaint) {
+                    return res.status(404).json({ success: false, message: 'Complaint not found' });
+                }
+                res.json({ success: true, data: complaint });
+            }
+        );
+    } catch (error) {
+        console.error('Error fetching public complaint:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // GET /api/complaints/regarding/public
 app.get('/api/complaints/regarding/public', (req, res) => {
     try {
@@ -303,6 +332,36 @@ app.get('/api/complaints/regarding/public', (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching public complaint regardings:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/complaints/regarding/public/:id - Public view of complaint regarding (limited data)
+app.get('/api/complaints/regarding/public/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        db.get(
+            `SELECT id, complaint_number, complaint_number_np, name, email, phone, 
+                    description, subject, complaint_type, status, priority, 
+                    created_at, reference_number, address, landmark, 
+                    preferred_contact, resolution, resolved_at
+             FROM complaint_regarding 
+             WHERE id = ?`,
+            [id],
+            (err, complaint) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                if (!complaint) {
+                    return res.status(404).json({ success: false, message: 'Complaint not found' });
+                }
+                res.json({ success: true, data: complaint });
+            }
+        );
+    } catch (error) {
+        console.error('Error fetching public complaint regarding:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -394,6 +453,68 @@ app.post('/api/complaints/track', (req, res) => {
             res.json({ success: true, data: row });
         });
     } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/complaints/track/:trackingNumber - Track complaint by tracking number (public)
+app.get('/api/complaints/track/:trackingNumber', (req, res) => {
+    try {
+        const { trackingNumber } = req.params;
+        
+        // Check in regular complaints
+        db.get(
+            `SELECT complaint_number, complaint_number_np, name, email, phone, description, 
+                    status, priority, created_at, nature_of_complaint, 
+                    resolution, resolved_at, assigned_to 
+             FROM complaints 
+             WHERE complaint_number = ? OR complaint_number_np = ?`,
+            [trackingNumber, trackingNumber],
+            (err, complaint) => {
+                if (err) {
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                
+                if (complaint) {
+                    return res.json({ 
+                        success: true, 
+                        data: complaint,
+                        type: 'regular'
+                    });
+                }
+                
+                // If not found in regular, check complaint_regarding
+                db.get(
+                    `SELECT complaint_number, complaint_number_np, name, email, phone, 
+                            description, subject, complaint_type, status, priority, 
+                            created_at, reference_number, address, landmark, 
+                            preferred_contact, resolution, resolved_at, assigned_to 
+                     FROM complaint_regarding 
+                     WHERE complaint_number = ? OR complaint_number_np = ?`,
+                    [trackingNumber, trackingNumber],
+                    (err, regarding) => {
+                        if (err) {
+                            return res.status(500).json({ success: false, error: err.message });
+                        }
+                        
+                        if (regarding) {
+                            return res.json({ 
+                                success: true, 
+                                data: regarding,
+                                type: 'regarding'
+                            });
+                        }
+                        
+                        res.status(404).json({ 
+                            success: false, 
+                            message: 'Complaint not found with this tracking number' 
+                        });
+                    }
+                );
+            }
+        );
+    } catch (error) {
+        console.error('Error tracking complaint:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -494,7 +615,6 @@ app.get('/api/admin/settings/general', protect, adminOnly, async (req, res) => {
     try {
         let settings = await getSettings('general');
         
-        // If no settings found, return default values
         if (!settings) {
             settings = {
                 siteName: 'NTC Sahayatri',
@@ -605,7 +725,6 @@ app.get('/api/admin/settings/email', protect, adminOnly, async (req, res) => {
             };
         }
         
-        // Don't send actual password back to client
         if (settings.smtpPassword) {
             settings.smtpPassword = '********';
         }
@@ -615,7 +734,7 @@ app.get('/api/admin/settings/email', protect, adminOnly, async (req, res) => {
             data: settings
         });
     } catch (error) {
-        console.Error('Error fetching email settings:', error);
+        console.error('Error fetching email settings:', error);
         res.status(500).json({ success: false, message: 'Server error: ' + error.message });
     }
 });
@@ -638,7 +757,6 @@ app.put('/api/admin/settings/email', protect, adminOnly, async (req, res) => {
             sendNewsletter
         } = req.body;
         
-        // Get existing settings to preserve password if not changed
         let existingPassword = '';
         if (smtpPassword === '********') {
             const existing = await getSettings('email');
@@ -665,7 +783,6 @@ app.put('/api/admin/settings/email', protect, adminOnly, async (req, res) => {
         
         await saveSettings('email', settings, req.user.id);
         
-        // Return without password
         const responseSettings = { ...settings };
         responseSettings.smtpPassword = '********';
         
@@ -689,7 +806,6 @@ app.post('/api/admin/settings/email/test', protect, adminOnly, async (req, res) 
             return res.status(400).json({ success: false, message: 'Recipient email address is required' });
         }
         
-        // Get email settings
         const emailSettings = await getSettings('email');
         
         if (!emailSettings || !emailSettings.smtpHost || !emailSettings.smtpUser || !emailSettings.smtpPassword) {
@@ -701,7 +817,6 @@ app.post('/api/admin/settings/email/test', protect, adminOnly, async (req, res) 
         
         const nodemailer = require('nodemailer');
         
-        // Create transporter
         const transporter = nodemailer.createTransport({
             host: emailSettings.smtpHost,
             port: emailSettings.smtpPort,
@@ -712,7 +827,6 @@ app.post('/api/admin/settings/email/test', protect, adminOnly, async (req, res) 
             }
         });
         
-        // Send email
         await transporter.sendMail({
             from: `${emailSettings.fromName} <${emailSettings.fromEmail}>`,
             to: to,
@@ -892,7 +1006,6 @@ app.post('/api/admin/settings/backup/now', protect, adminOnly, async (req, res) 
     try {
         const backupDir = path.join(__dirname, 'backups');
         
-        // Create backup directory if it doesn't exist
         if (!fs.existsSync(backupDir)) {
             fs.mkdirSync(backupDir, { recursive: true });
         }
@@ -900,7 +1013,6 @@ app.post('/api/admin/settings/backup/now', protect, adminOnly, async (req, res) 
         const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
         const backupFile = path.join(backupDir, `backup_${timestamp}.json`);
         
-        // Fetch all data for backup
         const users = await new Promise((resolve, reject) => {
             db.all('SELECT id, name, name_en, email, phone, role, status, department, created_at FROM users', [], (err, rows) => {
                 if (err) reject(err);
@@ -945,14 +1057,11 @@ app.post('/api/admin/settings/backup/now', protect, adminOnly, async (req, res) 
             }
         };
         
-        // Write backup file
         fs.writeFileSync(backupFile, JSON.stringify(backupData, null, 2));
         
-        // Get file size
         const stats = fs.statSync(backupFile);
         const fileSizeMB = (stats.size / (1024 * 1024)).toFixed(2);
         
-        // Update backup settings with last backup info
         const backupSettings = await getSettings('backup');
         if (backupSettings) {
             backupSettings.lastBackup = new Date().toISOString();
@@ -1251,7 +1360,6 @@ app.get('/api/staff/dashboard', protect, staffOrAdmin, (req, res) => {
             tasksCompleted: 0
         };
 
-        // Get complaint stats
         db.get(`SELECT COUNT(*) as total FROM complaints WHERE assigned_to = ?`, [req.user.email], (err, result) => {
             stats.totalAssigned = result?.total || 0;
 
@@ -1267,7 +1375,6 @@ app.get('/api/staff/dashboard', protect, staffOrAdmin, (req, res) => {
                         db.get(`SELECT COUNT(*) as review FROM complaints WHERE assigned_to = ? AND status = 'review'`, [req.user.email], (err, result) => {
                             stats.review = result?.review || 0;
 
-                            // Get task stats
                             db.get(`SELECT COUNT(*) as tasksPending FROM tasks WHERE assigned_to = ? AND status = 'pending'`, [req.user.email], (err, result) => {
                                 stats.tasksPending = result?.tasksPending || 0;
 
@@ -1334,6 +1441,31 @@ app.get('/api/complaints', protect, staffOrAdmin, (req, res) => {
     }
 });
 
+// GET /api/complaints/:id - Get a specific regular complaint by ID
+app.get('/api/complaints/:id', protect, staffOrAdmin, (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        db.get(
+            `SELECT * FROM complaints WHERE id = ?`,
+            [id],
+            (err, complaint) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                if (!complaint) {
+                    return res.status(404).json({ success: false, message: 'Complaint not found' });
+                }
+                res.json({ success: true, data: complaint });
+            }
+        );
+    } catch (error) {
+        console.error('Error fetching complaint:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // GET /api/complaint-regarding - Get all complaint regardings (staff/admin)
 app.get('/api/complaint-regarding', protect, staffOrAdmin, (req, res) => {
     try {
@@ -1371,6 +1503,56 @@ app.get('/api/complaint-regarding', protect, staffOrAdmin, (req, res) => {
             res.json({ success: true, data: rows || [] });
         });
     } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/complaint-regarding/:id - Get a specific complaint regarding by ID
+app.get('/api/complaint-regarding/:id', protect, staffOrAdmin, (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        db.get(
+            `SELECT * FROM complaint_regarding WHERE id = ?`,
+            [id],
+            (err, complaint) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                if (!complaint) {
+                    return res.status(404).json({ success: false, message: 'Complaint not found' });
+                }
+                res.json({ success: true, data: complaint });
+            }
+        );
+    } catch (error) {
+        console.error('Error fetching complaint regarding:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/complaint-regarding/:id/attachments - Get attachments for a specific complaint regarding
+app.get('/api/complaint-regarding/:id/attachments', protect, staffOrAdmin, (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        db.all(
+            `SELECT id, filename, original_name, file_path, file_size, mime_type, uploaded_at 
+             FROM complaint_regarding_attachments 
+             WHERE complaint_id = ? 
+             ORDER BY uploaded_at DESC`,
+            [id],
+            (err, attachments) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                res.json({ success: true, data: attachments || [] });
+            }
+        );
+    } catch (error) {
+        console.error('Error fetching attachments:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -1577,7 +1759,7 @@ app.patch('/api/admin/complaint-regarding/:id/status', protect, staffOrAdmin, (r
 
 // ==================== STAFF ASSIGNMENT ROUTES ====================
 
-// PATCH /api/admin/complaints/:id/assign - Assign complaint to staff
+// PATCH /api/admin/complaints/:id/assign - Assign regular complaint to staff
 app.patch('/api/admin/complaints/:id/assign', protect, adminOnly, (req, res) => {
     try {
         const { assignedTo } = req.body;
@@ -1591,6 +1773,7 @@ app.patch('/api/admin/complaints/:id/assign', protect, adminOnly, (req, res) => 
         
         db.get(`SELECT id, assigned_to FROM complaints WHERE id = ?`, [req.params.id], (err, complaint) => {
             if (err) {
+                console.error('Database error:', err);
                 return res.status(500).json({ success: false, error: err.message });
             }
             if (!complaint) {
@@ -1599,11 +1782,15 @@ app.patch('/api/admin/complaints/:id/assign', protect, adminOnly, (req, res) => 
             
             db.run(
                 `UPDATE complaints SET assigned_to = ?, assigned_by = ?, assigned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-                [assignedTo, req.user.name, req.params.id],
+                [assignedTo, req.user.id, req.params.id],
                 function(err) {
                     if (err) {
                         console.error('Database error:', err);
                         return res.status(500).json({ success: false, error: err.message });
+                    }
+                    
+                    if (this.changes === 0) {
+                        return res.status(404).json({ success: false, message: 'Complaint not found or no changes made' });
                     }
                     
                     res.json({
@@ -1633,6 +1820,7 @@ app.patch('/api/admin/complaint-regarding/:id/assign', protect, adminOnly, (req,
         
         db.get(`SELECT id, assigned_to FROM complaint_regarding WHERE id = ?`, [req.params.id], (err, complaint) => {
             if (err) {
+                console.error('Database error:', err);
                 return res.status(500).json({ success: false, error: err.message });
             }
             if (!complaint) {
@@ -1641,11 +1829,15 @@ app.patch('/api/admin/complaint-regarding/:id/assign', protect, adminOnly, (req,
             
             db.run(
                 `UPDATE complaint_regarding SET assigned_to = ?, assigned_by = ?, assigned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-                [assignedTo, req.user.name, req.params.id],
+                [assignedTo, req.user.id, req.params.id],
                 function(err) {
                     if (err) {
                         console.error('Database error:', err);
                         return res.status(500).json({ success: false, error: err.message });
+                    }
+                    
+                    if (this.changes === 0) {
+                        return res.status(404).json({ success: false, message: 'Complaint not found or no changes made' });
                     }
                     
                     res.json({
@@ -1657,6 +1849,72 @@ app.patch('/api/admin/complaint-regarding/:id/assign', protect, adminOnly, (req,
         });
     } catch (error) {
         console.error('Error assigning complaint regarding:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==================== ALIAS ENDPOINT FOR BACKWARD COMPATIBILITY ====================
+
+// Alias for /admin/submit-complaint/:id/assign to /admin/complaints/:id/assign
+app.patch('/api/admin/submit-complaint/:id/assign', protect, adminOnly, (req, res) => {
+    try {
+        const { assignedTo } = req.body;
+        const complaintId = req.params.id;
+        
+        if (!assignedTo) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please specify staff to assign'
+            });
+        }
+        
+        // Check if complaint exists in complaints table
+        db.get(`SELECT id, assigned_to FROM complaints WHERE id = ?`, [complaintId], (err, complaint) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            
+            if (!complaint) {
+                return res.status(404).json({ success: false, message: 'Complaint not found' });
+            }
+            
+            // Update the complaint with assigned staff
+            db.run(
+                `UPDATE complaints SET assigned_to = ?, assigned_by = ?, assigned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                [assignedTo, req.user.id, complaintId],
+                function(err) {
+                    if (err) {
+                        console.error('Database error:', err);
+                        return res.status(500).json({ success: false, error: err.message });
+                    }
+                    
+                    if (this.changes === 0) {
+                        return res.status(404).json({ success: false, message: 'Complaint not found or no changes made' });
+                    }
+                    
+                    // Get staff name for response
+                    db.get(`SELECT name, name_en FROM users WHERE email = ?`, [assignedTo], (err, staff) => {
+                        if (err) {
+                            console.error('Error fetching staff:', err);
+                        }
+                        
+                        res.json({
+                            success: true,
+                            message: 'Complaint assigned successfully',
+                            data: {
+                                complaintId: complaintId,
+                                assignedTo: assignedTo,
+                                assignedByName: staff ? (staff.name_en || staff.name) : assignedTo,
+                                assignedAt: new Date().toISOString()
+                            }
+                        });
+                    });
+                }
+            );
+        });
+    } catch (error) {
+        console.error('Error assigning complaint:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -1764,7 +2022,6 @@ const createAdminSettingsTable = () => {
         } else {
             console.log('✅ admin_settings table ready');
             
-            // Insert default settings if not exists
             const defaultSettings = [
                 {
                     section: 'general',
@@ -1866,7 +2123,6 @@ const createAdminSettingsTable = () => {
 
 // ==================== DATABASE SCHEMA UPDATE ====================
 
-// Add missing columns to users table
 const updateUsersTableSchema = () => {
     const columns = [
         'department TEXT',
@@ -1918,7 +2174,6 @@ app.use('*', (req, res) => {
 
 // ==================== INITIALIZE ADMIN AND STAFF USERS ====================
 
-// Function to generate unique phone number
 const generateUniquePhoneNumber = async (baseNumber) => {
     let phoneNumber = baseNumber;
     let isUnique = false;
@@ -1943,7 +2198,6 @@ const generateUniquePhoneNumber = async (baseNumber) => {
     return phoneNumber;
 };
 
-// Function to create sample staff users
 const createSampleStaffUsers = async () => {
     const staffUsers = [
         {
@@ -2050,7 +2304,6 @@ const createSampleStaffUsers = async () => {
 
     for (const staff of staffUsers) {
         try {
-            // Check if user already exists by email
             const existingUser = await new Promise((resolve) => {
                 db.get(`SELECT id FROM users WHERE email = ?`, [staff.email], (err, row) => {
                     resolve(row);
@@ -2062,9 +2315,7 @@ const createSampleStaffUsers = async () => {
                 continue;
             }
             
-            // Get unique phone number
             const phoneNumber = await generateUniquePhoneNumber(staff.basePhone);
-            
             const hashedPassword = await bcrypt.hash(staff.password, 10);
             
             await new Promise((resolve, reject) => {
@@ -2094,18 +2345,12 @@ const createSampleStaffUsers = async () => {
     }
 };
 
-// Initialize database and start server
 const startServer = async () => {
     try {
         await initDatabase();
-
-        // Update users table schema
         updateUsersTableSchema();
-
-        // Create admin_settings table
         createAdminSettingsTable();
 
-        // Add missing columns to complaints table
         const complaintColumns = [
             'resolution TEXT',
             'resolved_at DATETIME',
@@ -2119,7 +2364,6 @@ const startServer = async () => {
             });
         });
 
-        // Add missing columns to complaint_regarding table
         const regardingColumns = [
             'resolution TEXT',
             'resolved_at DATETIME',
@@ -2133,7 +2377,6 @@ const startServer = async () => {
             });
         });
 
-        // Create tasks table if not exists
         db.run(`CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
@@ -2160,7 +2403,24 @@ const startServer = async () => {
             }
         });
 
-        // Create default admin user if not exists
+        db.run(`CREATE TABLE IF NOT EXISTS complaint_regarding_attachments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            complaint_id INTEGER NOT NULL,
+            filename TEXT NOT NULL,
+            original_name TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            file_size INTEGER,
+            mime_type TEXT,
+            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (complaint_id) REFERENCES complaint_regarding(id) ON DELETE CASCADE
+        )`, (err) => {
+            if (err) {
+                console.error('Error creating complaint_regarding_attachments table:', err);
+            } else {
+                console.log('✅ complaint_regarding_attachments table ready');
+            }
+        });
+
         db.get(`SELECT id FROM users WHERE email = ?`, ['admin@example.com'], async (err, user) => {
             if (err) {
                 console.error('Error checking admin user:', err);
@@ -2186,7 +2446,6 @@ const startServer = async () => {
             }
         });
 
-        // Wait a bit for admin creation
         setTimeout(() => {
             createSampleStaffUsers();
         }, 500);
@@ -2216,27 +2475,48 @@ const startServer = async () => {
             console.log(`  10. sunita@ntc.gov.np / staff123 (Billing)`);
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             console.log(`📋 API Endpoints:`);
+            console.log(`   🔐 AUTH:`);
             console.log(`   POST /api/auth/login - Login`);
-            console.log(`   GET /api/staff/profile - Get staff profile`);
-            console.log(`   PUT /api/staff/profile - Update staff profile`);
-            console.log(`   PUT /api/staff/change-password - Change password`);
-            console.log(`   GET /api/complaints - Get complaints`);
+            console.log(`   GET /api/auth/me - Get current user`);
+            console.log(`   POST /api/auth/refresh - Refresh token`);
+            console.log(`   POST /api/auth/logout - Logout`);
+            console.log(`   📋 COMPLAINTS:`);
+            console.log(`   GET /api/complaints - List all complaints`);
+            console.log(`   GET /api/complaints/:id - Get complaint by ID`);
+            console.log(`   GET /api/complaints/public - List public complaints`);
+            console.log(`   GET /api/complaints/public/:id - Get public complaint by ID`);
+            console.log(`   POST /api/complaints - Submit new complaint`);
+            console.log(`   POST /api/complaints/track - Track by number+password`);
+            console.log(`   GET /api/complaints/track/:trackingNumber - Track by number`);
+            console.log(`   GET /api/complaints/assigned-to-me - Assigned complaints`);
             console.log(`   PATCH /api/admin/complaints/:id/status - Update status`);
             console.log(`   PATCH /api/admin/complaints/:id/assign - Assign to staff`);
-            console.log(`   GET /api/staff/dashboard - Staff dashboard`);
-            console.log(`   📌 ADMIN SETTINGS ENDPOINTS:`);
-            console.log(`   GET /api/admin/settings/general - Get general settings`);
-            console.log(`   PUT /api/admin/settings/general - Update general settings`);
-            console.log(`   GET /api/admin/settings/email - Get email settings`);
-            console.log(`   PUT /api/admin/settings/email - Update email settings`);
-            console.log(`   POST /api/admin/settings/email/test - Test email configuration`);
-            console.log(`   GET /api/admin/settings/security - Get security settings`);
-            console.log(`   PUT /api/admin/settings/security - Update security settings`);
-            console.log(`   GET /api/admin/settings/backup - Get backup settings`);
-            console.log(`   PUT /api/admin/settings/backup - Update backup settings`);
-            console.log(`   POST /api/admin/settings/backup/now - Create manual backup`);
-            console.log(`   GET /api/admin/settings/notifications - Get notification settings`);
-            console.log(`   PUT /api/admin/settings/notifications - Update notification settings`);
+            console.log(`   📋 COMPLAINT REGARDING:`);
+            console.log(`   GET /api/complaint-regarding - List all`);
+            console.log(`   GET /api/complaint-regarding/:id - Get by ID`);
+            console.log(`   GET /api/complaint-regarding/:id/attachments - Get attachments`);
+            console.log(`   GET /api/complaints/regarding/public - List public`);
+            console.log(`   GET /api/complaints/regarding/public/:id - Get public by ID`);
+            console.log(`   POST /api/complaint-regarding - Submit new`);
+            console.log(`   GET /api/complaint-regarding/assigned-to-me - Assigned`);
+            console.log(`   PATCH /api/admin/complaint-regarding/:id/status - Update status`);
+            console.log(`   PATCH /api/admin/complaint-regarding/:id/assign - Assign`);
+            console.log(`   👤 STAFF:`);
+            console.log(`   GET /api/staff/profile - Get profile`);
+            console.log(`   PUT /api/staff/profile - Update profile`);
+            console.log(`   PUT /api/staff/change-password - Change password`);
+            console.log(`   GET /api/staff/dashboard - Dashboard stats`);
+            console.log(`   GET /api/staff/members - List staff members (admin)`);
+            console.log(`   📌 ADMIN SETTINGS:`);
+            console.log(`   GET/PUT /api/admin/settings/general - General settings`);
+            console.log(`   GET/PUT /api/admin/settings/email - Email settings`);
+            console.log(`   POST /api/admin/settings/email/test - Test email`);
+            console.log(`   GET/PUT /api/admin/settings/security - Security settings`);
+            console.log(`   GET/PUT /api/admin/settings/backup - Backup settings`);
+            console.log(`   POST /api/admin/settings/backup/now - Manual backup`);
+            console.log(`   GET/PUT /api/admin/settings/notifications - Notification settings`);
+            console.log(`   👥 USER MANAGEMENT:`);
+            console.log(`   GET /api/admin/users - List users (admin)`);
             console.log(`=================================\n`);
         });
     } catch (error) {
