@@ -4,8 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import * as XLSX from 'xlsx';
-
-// Import jsPDF and its plugins properly
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -24,8 +22,6 @@ const AdminReportsComplaints = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [isExporting, setIsExporting] = useState(false);
-  const [generatedReport, setGeneratedReport] = useState(null);
-  const [isReportGenerated, setIsReportGenerated] = useState(false);
 
   // Save language preference
   useEffect(() => {
@@ -34,7 +30,6 @@ const AdminReportsComplaints = () => {
 
   // Format number with Nepali digits
   const formatNumber = (num) => {
-    if (num === undefined || num === null) return '0';
     if (language === 'np') {
       const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
       return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
@@ -111,102 +106,182 @@ const AdminReportsComplaints = () => {
       { 
         id: 2, 
         ticketId: 'NTC-2024-002', 
-        name: 'सीता अधिकारी', 
-        enName: 'Sita Adhikari',
+        name: 'सीता शर्मा', 
+        enName: 'Sita Sharma',
         phone: '9842345678',
-        email: 'sita.adhikari@example.com',
-        location: 'पोखरा',
-        enLocation: 'Pokhara',
-        category: 'billing', 
-        date: '२०८०-०१-१६', 
-        enDate: '2024-01-16', 
-        status: 'pending', 
+        email: 'sita.sharma@example.com',
+        location: 'ललितपुर',
+        enLocation: 'Lalitpur',
+        category: 'recharge', 
+        date: '२०८०-०१-१८', 
+        enDate: '2024-01-18', 
+        status: 'resolved', 
         priority: 'medium',
-        description: 'बिलमा त्रुटि',
-        enDescription: 'Billing error',
-        assignedTo: 'बिलिङ टोली',
-        enAssignedTo: 'Billing Team',
+        description: 'रिचार्ज नभएको',
+        enDescription: 'Recharge not credited',
+        assignedTo: 'ग्राहक सहायता',
+        enAssignedTo: 'Customer Support',
         channel: 'phone'
       },
       { 
         id: 3, 
         ticketId: 'NTC-2024-003', 
-        name: 'हरि शर्मा', 
-        enName: 'Hari Sharma',
+        name: 'हरि प्रसाद', 
+        enName: 'Hari Prasad',
         phone: '9843456789',
-        email: 'hari.sharma@example.com',
-        location: 'भरतपुर',
-        enLocation: 'Bharatpur',
-        category: 'network', 
-        date: '२०८०-०१-१७', 
-        enDate: '2024-01-17', 
-        status: 'resolved', 
-        priority: 'high',
-        description: 'नेटवर्क आउटेज',
-        enDescription: 'Network outage',
-        assignedTo: 'नेटवर्क टोली',
-        enAssignedTo: 'Network Team',
-        channel: 'website'
+        email: 'hari.prasad@example.com',
+        location: 'भक्तपुर',
+        enLocation: 'Bhaktapur',
+        category: 'activation', 
+        date: '२०८०-०१-२०', 
+        enDate: '2024-01-20', 
+        status: 'pending', 
+        priority: 'low',
+        description: 'सिम सक्रियता हुन सकेन',
+        enDescription: 'SIM activation failed',
+        assignedTo: 'प्रशासन',
+        enAssignedTo: 'Administration',
+        channel: 'whatsapp'
       },
       { 
         id: 4, 
         ticketId: 'NTC-2024-004', 
-        name: 'गीता गुरुङ', 
-        enName: 'Gita Gurung',
+        name: 'गीता अधिकारी', 
+        enName: 'Gita Adhikari',
         phone: '9844567890',
-        email: 'gita.gurung@example.com',
-        location: 'बुटवल',
-        enLocation: 'Butwal',
-        category: 'recharge', 
-        date: '२०८०-०१-१८', 
-        enDate: '2024-01-18', 
-        status: 'in-progress', 
-        priority: 'low',
-        description: 'रिचार्ज सफल भएन',
-        enDescription: 'Recharge failed',
-        assignedTo: 'प्राविधिक टोली',
-        enAssignedTo: 'Technical Team',
-        channel: 'whatsapp'
+        email: 'gita.adhikari@example.com',
+        location: 'पोखरा',
+        enLocation: 'Pokhara',
+        category: 'billing', 
+        date: '२०८०-०१-२२', 
+        enDate: '2024-01-22', 
+        status: 'pending', 
+        priority: 'high',
+        description: 'बिलमा त्रुटि भएको',
+        enDescription: 'Billing error',
+        assignedTo: 'बिलिङ विभाग',
+        enAssignedTo: 'Billing Department',
+        channel: 'email'
       },
       { 
         id: 5, 
         ticketId: 'NTC-2024-005', 
-        name: 'मनोज पाण्डे', 
-        enName: 'Manoj Pandey',
+        name: 'विकास न्यौपाने', 
+        enName: 'Bikas Neupane',
         phone: '9845678901',
-        email: 'manoj.pandey@example.com',
-        location: 'नेपालगञ्ज',
-        enLocation: 'Nepalgunj',
-        category: 'technical', 
-        date: '२०८०-०१-१९', 
-        enDate: '2024-01-19', 
-        status: 'pending', 
-        priority: 'high',
-        description: 'सिम कार्ड समस्या',
-        enDescription: 'SIM card issue',
-        assignedTo: 'प्राविधिक टोली',
-        enAssignedTo: 'Technical Team',
-        channel: 'email'
+        email: 'bikas.neupane@example.com',
+        location: 'बुटवल',
+        enLocation: 'Butwal',
+        category: 'network', 
+        date: '२०८०-०१-२५', 
+        enDate: '2024-01-25', 
+        status: 'in-progress', 
+        priority: 'medium',
+        description: 'नेटवर्क कभरेज नभएको',
+        enDescription: 'No network coverage',
+        assignedTo: 'नेटवर्क टोली',
+        enAssignedTo: 'Network Team',
+        channel: 'facebook'
       },
       { 
         id: 6, 
         ticketId: 'NTC-2024-006', 
-        name: 'अनिता राई', 
-        enName: 'Anita Rai',
+        name: 'मिना बस्नेत', 
+        enName: 'Mina Basnet',
         phone: '9846789012',
-        email: 'anita.rai@example.com',
+        email: 'mina.basnet@example.com',
         location: 'धरान',
-        enLocation: 'Dharam',
-        category: 'activation', 
-        date: '२०८०-०१-२०', 
-        enDate: '2024-01-20', 
+        enLocation: 'Dharan',
+        category: 'technical', 
+        date: '२०८०-०१-२८', 
+        enDate: '2024-01-28', 
         status: 'resolved', 
-        priority: 'medium',
-        description: 'सेवा सक्रियता ढिलाइ',
-        enDescription: 'Service activation delay',
-        assignedTo: 'सक्रियता टोली',
-        enAssignedTo: 'Activation Team',
+        priority: 'high',
+        description: 'प्राविधिक सहायता आवश्यक',
+        enDescription: 'Technical assistance needed',
+        assignedTo: 'प्राविधिक सहायता',
+        enAssignedTo: 'Tech Support',
         channel: 'website'
+      },
+      { 
+        id: 7, 
+        ticketId: 'NTC-2024-007', 
+        name: 'सुरज थापा', 
+        enName: 'Suraj Thapa',
+        phone: '9847890123',
+        email: 'suraj.thapa@example.com',
+        location: 'हेटौंडा',
+        enLocation: 'Hetauda',
+        category: 'internet', 
+        date: '२०८०-०१-३०', 
+        enDate: '2024-01-30', 
+        status: 'pending', 
+        priority: 'medium',
+        description: 'इन्टरनेट गति सुस्त',
+        enDescription: 'Slow internet speed',
+        assignedTo: 'आईपी कोर टोली',
+        enAssignedTo: 'IP Core Team',
+        channel: 'phone'
+      },
+      { 
+        id: 8, 
+        ticketId: 'NTC-2024-008', 
+        name: 'अन्जना कार्की', 
+        enName: 'Anjana Karki',
+        phone: '9848901234',
+        email: 'anjana.karki@example.com',
+        location: 'विराटनगर',
+        enLocation: 'Biratnagar',
+        category: 'billing', 
+        date: '२०८०-०२-०२', 
+        enDate: '2024-02-02', 
+        status: 'in-progress', 
+        priority: 'high',
+        description: 'दोहोरो बिल कटौती',
+        enDescription: 'Double billing deduction',
+        assignedTo: 'वित्त विभाग',
+        enAssignedTo: 'Finance Department',
+        channel: 'whatsapp'
+      },
+      { 
+        id: 9, 
+        ticketId: 'NTC-2024-009', 
+        name: 'राजन पौडेल', 
+        enName: 'Rajan Paudel',
+        phone: '9849012345',
+        email: 'rajan.paudel@example.com',
+        location: 'नेपालगन्ज',
+        enLocation: 'Nepalgunj',
+        category: 'network', 
+        date: '२०८०-०२-०५', 
+        enDate: '2024-02-05', 
+        status: 'resolved', 
+        priority: 'low',
+        description: 'नेटवर्क ड्रप हुने समस्या',
+        enDescription: 'Network dropping issue',
+        assignedTo: 'नेटवर्क टोली',
+        enAssignedTo: 'Network Team',
+        channel: 'email'
+      },
+      { 
+        id: 10, 
+        ticketId: 'NTC-2024-010', 
+        name: 'सम्झना लामिछाने', 
+        enName: 'Samjhana Lamichhane',
+        phone: '9850123456',
+        email: 'samjhana.l@example.com',
+        location: 'चितवन',
+        enLocation: 'Chitwan',
+        category: 'technical', 
+        date: '२०८०-०२-०८', 
+        enDate: '2024-02-08', 
+        status: 'in-progress', 
+        priority: 'high',
+        description: 'फोनमा आवाज नआउने',
+        enDescription: 'No voice on phone',
+        assignedTo: 'प्राविधिक सहायता',
+        enAssignedTo: 'Tech Support',
+        channel: 'facebook'
       }
     ],
     channelBreakdown: [
@@ -311,110 +386,11 @@ const AdminReportsComplaints = () => {
     return months[language][month] || month;
   };
 
-  // ===== GENERATE REPORT FUNCTION =====
-  const handleGenerateReport = () => {
-    const filtered = getFilteredComplaints();
-    
-    // Calculate statistics based on filtered data
-    const total = filtered.length;
-    const pending = filtered.filter(c => c.status === 'pending').length;
-    const inProgress = filtered.filter(c => c.status === 'in-progress').length;
-    const resolved = filtered.filter(c => c.status === 'resolved').length;
-    
-    // Category breakdown for filtered data
-    const categoryMap = {};
-    filtered.forEach(c => {
-      const cat = getCategoryText(c.category);
-      categoryMap[cat] = (categoryMap[cat] || 0) + 1;
-    });
-    const categoryBreakdown = Object.entries(categoryMap).map(([name, count]) => ({
-      name,
-      count,
-      percentage: total > 0 ? Math.round((count / total) * 100) : 0
-    }));
-    
-    // Status breakdown for filtered data
-    const statusMap = {};
-    filtered.forEach(c => {
-      const status = getStatusText(c.status);
-      statusMap[status] = (statusMap[status] || 0) + 1;
-    });
-    const statusBreakdown = Object.entries(statusMap).map(([name, count]) => ({
-      name,
-      count,
-      percentage: total > 0 ? Math.round((count / total) * 100) : 0
-    }));
-    
-    // Priority breakdown for filtered data
-    const priorityMap = {};
-    filtered.forEach(c => {
-      const priority = getPriorityText(c.priority);
-      priorityMap[priority] = (priorityMap[priority] || 0) + 1;
-    });
-    const priorityBreakdown = Object.entries(priorityMap).map(([name, count]) => ({
-      name,
-      count,
-      percentage: total > 0 ? Math.round((count / total) * 100) : 0
-    }));
-    
-    // Channel breakdown for filtered data
-    const channelMap = {};
-    filtered.forEach(c => {
-      const channel = c.channel;
-      channelMap[channel] = (channelMap[channel] || 0) + 1;
-    });
-    const channelBreakdown = Object.entries(channelMap).map(([name, count]) => ({
-      name: language === 'np' ? 
-        { website: 'वेबसाइट', phone: 'फोन', whatsapp: 'व्हाट्सएप', email: 'इमेल', facebook: 'फेसबुक' }[name] || name :
-        { website: 'Website', phone: 'Phone', whatsapp: 'WhatsApp', email: 'Email', facebook: 'Facebook' }[name] || name,
-      count,
-      percentage: total > 0 ? Math.round((count / total) * 100) : 0
-    }));
-    
-    // Prepare the generated report
-    const report = {
-      summary: {
-        totalComplaints: total,
-        pendingComplaints: pending,
-        inProgressComplaints: inProgress,
-        resolvedComplaints: resolved,
-        avgResolutionDays: resolved > 0 ? 5.2 : 0, // Sample calculation
-        satisfactionRate: resolved > 0 ? 78.5 : 0,
-        thisMonth: total,
-        lastMonth: Math.round(total * 0.9),
-        growth: total > 0 ? 9.8 : 0
-      },
-      categoryBreakdown: categoryBreakdown.length > 0 ? categoryBreakdown : [
-        { name: language === 'np' ? 'कुनै डाटा छैन' : 'No Data', count: 0, percentage: 0 }
-      ],
-      statusBreakdown: statusBreakdown.length > 0 ? statusBreakdown : [
-        { name: language === 'np' ? 'कुनै डाटा छैन' : 'No Data', count: 0, percentage: 0 }
-      ],
-      priorityBreakdown: priorityBreakdown.length > 0 ? priorityBreakdown : [
-        { name: language === 'np' ? 'कुनै डाटा छैन' : 'No Data', count: 0, percentage: 0 }
-      ],
-      channelBreakdown: channelBreakdown.length > 0 ? channelBreakdown : [
-        { name: language === 'np' ? 'कुनै डाटा छैन' : 'No Data', count: 0, percentage: 0 }
-      ],
-      complaints: filtered,
-      generatedAt: new Date().toLocaleString(language === 'np' ? 'ne-NP' : 'en-US')
-    };
-    
-    setGeneratedReport(report);
-    setIsReportGenerated(true);
-    showToast(
-      language === 'np' 
-        ? `✅ रिपोर्ट उत्पन्न गरियो (${total} गुनासोहरू)` 
-        : `✅ Report generated (${total} complaints)`,
-      'success'
-    );
-  };
-
   // ===== EXPORT FUNCTIONS =====
 
   // Generate CSV/Excel data
   const generateExportData = () => {
-    const complaints = generatedReport ? generatedReport.complaints : filteredComplaints;
+    const complaints = filteredComplaints;
     const isNepali = language === 'np';
     
     return complaints.map(c => ({
@@ -437,7 +413,6 @@ const AdminReportsComplaints = () => {
   const generateSummaryData = () => {
     const isNepali = language === 'np';
     const data = [];
-    const report = generatedReport || reportData;
     
     // Add summary stats
     data.push({ 
@@ -446,27 +421,27 @@ const AdminReportsComplaints = () => {
     });
     data.push({ 
       [isNepali ? 'विवरण' : 'Description']: isNepali ? 'कुल गुनासो' : 'Total Complaints',
-      [isNepali ? 'मान' : 'Value']: report.summary.totalComplaints
+      [isNepali ? 'मान' : 'Value']: reportData.summary.totalComplaints
     });
     data.push({ 
       [isNepali ? 'विवरण' : 'Description']: isNepali ? 'विचाराधीन' : 'Pending',
-      [isNepali ? 'मान' : 'Value']: report.summary.pendingComplaints
+      [isNepali ? 'मान' : 'Value']: reportData.summary.pendingComplaints
     });
     data.push({ 
       [isNepali ? 'विवरण' : 'Description']: isNepali ? 'प्रगतिमा' : 'In Progress',
-      [isNepali ? 'मान' : 'Value']: report.summary.inProgressComplaints
+      [isNepali ? 'मान' : 'Value']: reportData.summary.inProgressComplaints
     });
     data.push({ 
       [isNepali ? 'विवरण' : 'Description']: isNepali ? 'समाधान' : 'Resolved',
-      [isNepali ? 'मान' : 'Value']: report.summary.resolvedComplaints
+      [isNepali ? 'मान' : 'Value']: reportData.summary.resolvedComplaints
     });
     data.push({ 
       [isNepali ? 'विवरण' : 'Description']: isNepali ? 'औसत समाधान दिन' : 'Avg Resolution Days',
-      [isNepali ? 'मान' : 'Value']: report.summary.avgResolutionDays
+      [isNepali ? 'मान' : 'Value']: reportData.summary.avgResolutionDays
     });
     data.push({ 
       [isNepali ? 'विवरण' : 'Description']: isNepali ? 'सन्तुष्टि दर' : 'Satisfaction Rate',
-      [isNepali ? 'मान' : 'Value']: `${report.summary.satisfactionRate}%`
+      [isNepali ? 'मान' : 'Value']: `${reportData.summary.satisfactionRate}%`
     });
     
     // Add category breakdown
@@ -475,9 +450,9 @@ const AdminReportsComplaints = () => {
       [isNepali ? 'विवरण' : 'Description']: isNepali ? 'प्रकार अनुसार विभाजन' : 'Category Breakdown',
       [isNepali ? 'मान' : 'Value']: ''
     });
-    report.categoryBreakdown.forEach(item => {
+    reportData.categoryBreakdown.forEach(item => {
       data.push({ 
-        [isNepali ? 'विवरण' : 'Description']: item.name,
+        [isNepali ? 'विवरण' : 'Description']: isNepali ? item.name : item.enName,
         [isNepali ? 'मान' : 'Value']: `${item.count} (${item.percentage}%)`
       });
     });
@@ -488,9 +463,9 @@ const AdminReportsComplaints = () => {
       [isNepali ? 'विवरण' : 'Description']: isNepali ? 'स्थिति अनुसार विभाजन' : 'Status Breakdown',
       [isNepali ? 'मान' : 'Value']: ''
     });
-    report.statusBreakdown.forEach(item => {
+    reportData.statusBreakdown.forEach(item => {
       data.push({ 
-        [isNepali ? 'विवरण' : 'Description']: item.name,
+        [isNepali ? 'विवरण' : 'Description']: isNepali ? item.name : item.enName,
         [isNepali ? 'मान' : 'Value']: `${item.count} (${item.percentage}%)`
       });
     });
@@ -500,13 +475,8 @@ const AdminReportsComplaints = () => {
 
   // Export to Excel
   const handleExportExcel = () => {
-    if (!isReportGenerated) {
-      showToast(language === 'np' ? '⚠️ कृपया पहिले रिपोर्ट उत्पन्न गर्नुहोस्' : '⚠️ Please generate report first', 'warning');
-      return;
-    }
-    
     setIsExporting(true);
-    showToast(language === 'np' ? '⏳ एक्सेल निर्यात भइरहेको छ...' : '⏳ Exporting Excel...', 'info');
+    showToast(t.excelExport, 'info');
     
     try {
       let exportData;
@@ -540,44 +510,39 @@ const AdminReportsComplaints = () => {
       XLSX.writeFile(wb, filename);
       
       setTimeout(() => {
-        showToast(language === 'np' ? '✅ एक्सेल फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ Excel file downloaded successfully', 'success');
+        showToast(language === 'np' ? 'एक्सेल फाइल सफलतापूर्वक डाउनलोड भयो' : 'Excel file downloaded successfully', 'success');
         setIsExporting(false);
       }, 1000);
       
     } catch (error) {
       console.error('Excel export error:', error);
-      showToast(language === 'np' ? '❌ एक्सेल निर्यात गर्न असफल' : '❌ Failed to export Excel', 'error');
+      showToast(language === 'np' ? 'एक्सेल निर्यात गर्न असफल' : 'Failed to export Excel', 'error');
       setIsExporting(false);
     }
   };
 
-  // Export to PDF - FIXED VERSION
+  // Export to PDF with proper handling
   const handleExportPDF = () => {
-    if (!isReportGenerated) {
-      showToast(language === 'np' ? '⚠️ कृपया पहिले रिपोर्ट उत्पन्न गर्नुहोस्' : '⚠️ Please generate report first', 'warning');
-      return;
-    }
-    
     setIsExporting(true);
-    showToast(language === 'np' ? '⏳ पीडीएफ निर्यात भइरहेको छ...' : '⏳ Exporting PDF...', 'info');
+    showToast(t.pdfExport, 'info');
     
     // Use setTimeout to allow UI to update before PDF generation
     setTimeout(() => {
       try {
         const isNepali = language === 'np';
-        const report = generatedReport;
         
         // Create PDF with proper settings
         const doc = new jsPDF({
           orientation: 'landscape',
           unit: 'mm',
-          format: 'a4'
+          format: 'a4',
+          compress: true
         });
         
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         
-        // Add header
+        // Add header with gradient effect
         doc.setFillColor(13, 71, 161);
         doc.rect(0, 0, pageWidth, 25, 'F');
         
@@ -588,7 +553,7 @@ const AdminReportsComplaints = () => {
         const title = isNepali ? 'गुनासो रिपोर्ट' : 'Complaints Report';
         doc.text(title, pageWidth / 2, 16, { align: 'center' });
         
-        // Add date
+        // Add date and time
         doc.setTextColor(200, 200, 200);
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
@@ -599,7 +564,7 @@ const AdminReportsComplaints = () => {
           hour: '2-digit',
           minute: '2-digit'
         });
-        doc.text(`Date: ${dateStr}`, pageWidth - 14, 20, { align: 'right' });
+        doc.text(`${isNepali ? 'मिति' : 'Date'}: ${dateStr}`, pageWidth - 14, 20, { align: 'right' });
         
         let yPosition = 32;
         
@@ -612,24 +577,29 @@ const AdminReportsComplaints = () => {
           yPosition += 6;
           
           // Summary data table
-          const summaryData = [
-            [isNepali ? 'कुल गुनासो' : 'Total Complaints', String(report.summary.totalComplaints)],
-            [isNepali ? 'विचाराधीन' : 'Pending', String(report.summary.pendingComplaints)],
-            [isNepali ? 'प्रगतिमा' : 'In Progress', String(report.summary.inProgressComplaints)],
-            [isNepali ? 'समाधान' : 'Resolved', String(report.summary.resolvedComplaints)],
-            [isNepali ? 'औसत समाधान दिन' : 'Avg Resolution Days', String(report.summary.avgResolutionDays)],
-            [isNepali ? 'सन्तुष्टि दर' : 'Satisfaction Rate', `${report.summary.satisfactionRate}%`]
+          const summaryHeaders = [
+            isNepali ? 'विवरण' : 'Description',
+            isNepali ? 'मान' : 'Value'
+          ];
+          const summaryRows = [
+            [isNepali ? 'कुल गुनासो' : 'Total Complaints', String(reportData.summary.totalComplaints)],
+            [isNepali ? 'विचाराधीन' : 'Pending', String(reportData.summary.pendingComplaints)],
+            [isNepali ? 'प्रगतिमा' : 'In Progress', String(reportData.summary.inProgressComplaints)],
+            [isNepali ? 'समाधान' : 'Resolved', String(reportData.summary.resolvedComplaints)],
+            [isNepali ? 'औसत समाधान दिन' : 'Avg Resolution Days', String(reportData.summary.avgResolutionDays)],
+            [isNepali ? 'सन्तुष्टि दर' : 'Satisfaction Rate', `${reportData.summary.satisfactionRate}%`]
           ];
           
           doc.autoTable({
             startY: yPosition,
-            head: [[isNepali ? 'विवरण' : 'Description', isNepali ? 'मान' : 'Value']],
-            body: summaryData,
+            head: [summaryHeaders],
+            body: summaryRows,
             theme: 'striped',
             styles: { 
               fontSize: 8,
               cellPadding: 3,
-              overflow: 'linebreak'
+              overflow: 'linebreak',
+              font: 'helvetica'
             },
             headStyles: { 
               fillColor: [13, 71, 161], 
@@ -638,151 +608,184 @@ const AdminReportsComplaints = () => {
               fontStyle: 'bold'
             },
             alternateRowStyles: { fillColor: [240, 245, 255] },
-            margin: { left: 14, right: 14 }
+            margin: { left: 14, right: 14 },
+            columnStyles: {
+              0: { cellWidth: 80 },
+              1: { cellWidth: 40, halign: 'right' }
+            }
           });
           
           yPosition = doc.lastAutoTable.finalY + 8;
           
           // ===== CATEGORY BREAKDOWN =====
-          if (yPosition < pageHeight - 60 && report.categoryBreakdown.length > 0) {
-            doc.setTextColor(13, 71, 161);
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text(isNepali ? 'प्रकार अनुसार विभाजन' : 'Category Breakdown', 14, yPosition);
-            yPosition += 6;
-            
-            const categoryData = report.categoryBreakdown.map(item => [
-              item.name,
-              String(item.count),
-              `${item.percentage}%`
-            ]);
-            
-            doc.autoTable({
-              startY: yPosition,
-              head: [[isNepali ? 'प्रकार' : 'Category', isNepali ? 'संख्या' : 'Count', isNepali ? 'प्रतिशत' : 'Percentage']],
-              body: categoryData,
-              theme: 'striped',
-              styles: { 
-                fontSize: 8,
-                cellPadding: 3
-              },
-              headStyles: { 
-                fillColor: [13, 71, 161], 
-                textColor: [255, 255, 255],
-                fontSize: 9,
-                fontStyle: 'bold'
-              },
-              alternateRowStyles: { fillColor: [240, 245, 255] },
-              margin: { left: 14, right: 14 }
-            });
-            
-            yPosition = doc.lastAutoTable.finalY + 8;
-          }
+          doc.setTextColor(13, 71, 161);
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.text(isNepali ? 'प्रकार अनुसार विभाजन' : 'Category Breakdown', 14, yPosition);
+          yPosition += 6;
+          
+          const categoryHeaders = [
+            isNepali ? 'प्रकार' : 'Category',
+            isNepali ? 'संख्या' : 'Count',
+            isNepali ? 'प्रतिशत' : 'Percentage'
+          ];
+          const categoryRows = reportData.categoryBreakdown.map(item => [
+            isNepali ? item.name : item.enName,
+            String(item.count),
+            `${item.percentage}%`
+          ]);
+          
+          doc.autoTable({
+            startY: yPosition,
+            head: [categoryHeaders],
+            body: categoryRows,
+            theme: 'striped',
+            styles: { 
+              fontSize: 8,
+              cellPadding: 3,
+              font: 'helvetica'
+            },
+            headStyles: { 
+              fillColor: [13, 71, 161], 
+              textColor: [255, 255, 255],
+              fontSize: 9,
+              fontStyle: 'bold'
+            },
+            alternateRowStyles: { fillColor: [240, 245, 255] },
+            margin: { left: 14, right: 14 },
+            columnStyles: {
+              2: { halign: 'right' }
+            }
+          });
+          
+          yPosition = doc.lastAutoTable.finalY + 8;
           
           // ===== STATUS BREAKDOWN =====
-          if (yPosition < pageHeight - 60 && report.statusBreakdown.length > 0) {
-            doc.setTextColor(13, 71, 161);
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text(isNepali ? 'स्थिति अनुसार विभाजन' : 'Status Breakdown', 14, yPosition);
-            yPosition += 6;
-            
-            const statusData = report.statusBreakdown.map(item => [
-              item.name,
-              String(item.count),
-              `${item.percentage}%`
-            ]);
-            
-            doc.autoTable({
-              startY: yPosition,
-              head: [[isNepali ? 'स्थिति' : 'Status', isNepali ? 'संख्या' : 'Count', isNepali ? 'प्रतिशत' : 'Percentage']],
-              body: statusData,
-              theme: 'striped',
-              styles: { 
-                fontSize: 8,
-                cellPadding: 3
-              },
-              headStyles: { 
-                fillColor: [13, 71, 161], 
-                textColor: [255, 255, 255],
-                fontSize: 9,
-                fontStyle: 'bold'
-              },
-              alternateRowStyles: { fillColor: [240, 245, 255] },
-              margin: { left: 14, right: 14 }
-            });
-            
-            yPosition = doc.lastAutoTable.finalY + 8;
-          }
+          doc.setTextColor(13, 71, 161);
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.text(isNepali ? 'स्थिति अनुसार विभाजन' : 'Status Breakdown', 14, yPosition);
+          yPosition += 6;
+          
+          const statusHeaders = [
+            isNepali ? 'स्थिति' : 'Status',
+            isNepali ? 'संख्या' : 'Count',
+            isNepali ? 'प्रतिशत' : 'Percentage'
+          ];
+          const statusRows = reportData.statusBreakdown.map(item => [
+            isNepali ? item.name : item.enName,
+            String(item.count),
+            `${item.percentage}%`
+          ]);
+          
+          doc.autoTable({
+            startY: yPosition,
+            head: [statusHeaders],
+            body: statusRows,
+            theme: 'striped',
+            styles: { 
+              fontSize: 8,
+              cellPadding: 3,
+              font: 'helvetica'
+            },
+            headStyles: { 
+              fillColor: [13, 71, 161], 
+              textColor: [255, 255, 255],
+              fontSize: 9,
+              fontStyle: 'bold'
+            },
+            alternateRowStyles: { fillColor: [240, 245, 255] },
+            margin: { left: 14, right: 14 },
+            columnStyles: {
+              2: { halign: 'right' }
+            }
+          });
+          
+          yPosition = doc.lastAutoTable.finalY + 8;
           
           // ===== PRIORITY BREAKDOWN =====
-          if (yPosition < pageHeight - 60 && report.priorityBreakdown.length > 0) {
-            doc.setTextColor(13, 71, 161);
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text(isNepali ? 'प्राथमिकता अनुसार विभाजन' : 'Priority Breakdown', 14, yPosition);
-            yPosition += 6;
-            
-            const priorityData = report.priorityBreakdown.map(item => [
-              item.name,
-              String(item.count),
-              `${item.percentage}%`
-            ]);
-            
-            doc.autoTable({
-              startY: yPosition,
-              head: [[isNepali ? 'प्राथमिकता' : 'Priority', isNepali ? 'संख्या' : 'Count', isNepali ? 'प्रतिशत' : 'Percentage']],
-              body: priorityData,
-              theme: 'striped',
-              styles: { 
-                fontSize: 8,
-                cellPadding: 3              },
-              headStyles: { 
-                fillColor: [13, 71, 161], 
-                textColor: [255, 255, 255],
-                fontSize: 9,
-                fontStyle: 'bold'
-              },
-              alternateRowStyles: { fillColor: [240, 245, 255] },
-              margin: { left: 14, right: 14 }
-            });
-            
-            yPosition = doc.lastAutoTable.finalY + 8;
-          }
+          doc.setTextColor(13, 71, 161);
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.text(isNepali ? 'प्राथमिकता अनुसार विभाजन' : 'Priority Breakdown', 14, yPosition);
+          yPosition += 6;
+          
+          const priorityHeaders = [
+            isNepali ? 'प्राथमिकता' : 'Priority',
+            isNepali ? 'संख्या' : 'Count',
+            isNepali ? 'प्रतिशत' : 'Percentage'
+          ];
+          const priorityRows = reportData.priorityBreakdown.map(item => [
+            isNepali ? item.name : item.enName,
+            String(item.count),
+            `${item.percentage}%`
+          ]);
+          
+          doc.autoTable({
+            startY: yPosition,
+            head: [priorityHeaders],
+            body: priorityRows,
+            theme: 'striped',
+            styles: { 
+              fontSize: 8,
+              cellPadding: 3,
+              font: 'helvetica'
+            },
+            headStyles: { 
+              fillColor: [13, 71, 161], 
+              textColor: [255, 255, 255],
+              fontSize: 9,
+              fontStyle: 'bold'
+            },
+            alternateRowStyles: { fillColor: [240, 245, 255] },
+            margin: { left: 14, right: 14 },
+            columnStyles: {
+              2: { halign: 'right' }
+            }
+          });
+          
+          yPosition = doc.lastAutoTable.finalY + 8;
           
           // ===== CHANNEL BREAKDOWN =====
-          if (yPosition < pageHeight - 60 && report.channelBreakdown.length > 0) {
-            doc.setTextColor(13, 71, 161);
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text(isNepali ? 'च्यानल अनुसार विभाजन' : 'Channel Breakdown', 14, yPosition);
-            yPosition += 6;
-            
-            const channelData = report.channelBreakdown.map(item => [
-              item.name,
-              String(item.count),
-              `${item.percentage}%`
-            ]);
-            
-            doc.autoTable({
-              startY: yPosition,
-              head: [[isNepali ? 'च्यानल' : 'Channel', isNepali ? 'संख्या' : 'Count', isNepali ? 'प्रतिशत' : 'Percentage']],
-              body: channelData,
-              theme: 'striped',
-              styles: { 
-                fontSize: 8,
-                cellPadding: 3
-              },
-              headStyles: { 
-                fillColor: [13, 71, 161], 
-                textColor: [255, 255, 255],
-                fontSize: 9,
-                fontStyle: 'bold'
-              },
-              alternateRowStyles: { fillColor: [240, 245, 255] },
-              margin: { left: 14, right: 14 }
-            });
-          }
+          doc.setTextColor(13, 71, 161);
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.text(isNepali ? 'च्यानल अनुसार विभाजन' : 'Channel Breakdown', 14, yPosition);
+          yPosition += 6;
+          
+          const channelHeaders = [
+            isNepali ? 'च्यानल' : 'Channel',
+            isNepali ? 'संख्या' : 'Count',
+            isNepali ? 'प्रतिशत' : 'Percentage'
+          ];
+          const channelRows = reportData.channelBreakdown.map(item => [
+            isNepali ? item.name : item.enName,
+            String(item.count),
+            `${item.percentage}%`
+          ]);
+          
+          doc.autoTable({
+            startY: yPosition,
+            head: [channelHeaders],
+            body: channelRows,
+            theme: 'striped',
+            styles: { 
+              fontSize: 8,
+              cellPadding: 3,
+              font: 'helvetica'
+            },
+            headStyles: { 
+              fillColor: [13, 71, 161], 
+              textColor: [255, 255, 255],
+              fontSize: 9,
+              fontStyle: 'bold'
+            },
+            alternateRowStyles: { fillColor: [240, 245, 255] },
+            margin: { left: 14, right: 14 },
+            columnStyles: {
+              2: { halign: 'right' }
+            }
+          });
           
         } else {
           // ===== COMPLAINTS DETAILS =====
@@ -797,18 +800,29 @@ const AdminReportsComplaints = () => {
           doc.setFontSize(8);
           doc.setFont('helvetica', 'italic');
           let filterInfo = '';
-          if (selectedCategory !== 'all') filterInfo += `Category: ${getCategoryText(selectedCategory)} `;
-          if (selectedStatus !== 'all') filterInfo += `Status: ${getStatusText(selectedStatus)} `;
-          if (selectedPriority !== 'all') filterInfo += `Priority: ${getPriorityText(selectedPriority)} `;
+          if (selectedCategory !== 'all') filterInfo += `${isNepali ? 'प्रकार' : 'Category'}: ${getCategoryText(selectedCategory)} `;
+          if (selectedStatus !== 'all') filterInfo += `${isNepali ? 'स्थिति' : 'Status'}: ${getStatusText(selectedStatus)} `;
+          if (selectedPriority !== 'all') filterInfo += `${isNepali ? 'प्राथमिकता' : 'Priority'}: ${getPriorityText(selectedPriority)} `;
           if (filterInfo) {
-            doc.text(`Filter: ${filterInfo}`, 14, yPosition);
+            doc.text(`${isNepali ? 'फिल्टर' : 'Filter'}: ${filterInfo}`, 14, yPosition);
             yPosition += 5;
           }
-          doc.text(`Total: ${report.complaints.length} complaints`, 14, yPosition);
+          doc.text(`${isNepali ? 'कुल' : 'Total'}: ${filteredComplaints.length} ${isNepali ? 'गुनासोहरू' : 'complaints'}`, 14, yPosition);
           yPosition += 6;
           
           // Complaint details table
-          const complaintData = report.complaints.map(c => [
+          const complaintHeaders = [
+            isNepali ? 'टिकट नं.' : 'Ticket ID',
+            isNepali ? 'उजुरीकर्ता' : 'Complainant',
+            isNepali ? 'फोन' : 'Phone',
+            isNepali ? 'प्रकार' : 'Category',
+            isNepali ? 'मिति' : 'Date',
+            isNepali ? 'स्थिति' : 'Status',
+            isNepali ? 'प्राथमिकता' : 'Priority',
+            isNepali ? 'जिम्मेवार' : 'Assigned To'
+          ];
+          
+          const complaintRows = filteredComplaints.map(c => [
             c.ticketId,
             isNepali ? c.name : c.enName,
             c.phone,
@@ -819,25 +833,17 @@ const AdminReportsComplaints = () => {
             isNepali ? c.assignedTo : c.enAssignedTo
           ]);
           
-          if (complaintData.length > 0) {
+          if (complaintRows.length > 0) {
             doc.autoTable({
               startY: yPosition,
-              head: [[
-                isNepali ? 'टिकट नं.' : 'Ticket ID',
-                isNepali ? 'उजुरीकर्ता' : 'Complainant',
-                isNepali ? 'फोन' : 'Phone',
-                isNepali ? 'प्रकार' : 'Category',
-                isNepali ? 'मिति' : 'Date',
-                isNepali ? 'स्थिति' : 'Status',
-                isNepali ? 'प्राथमिकता' : 'Priority',
-                isNepali ? 'जिम्मेवार' : 'Assigned To'
-              ]],
-              body: complaintData,
+              head: [complaintHeaders],
+              body: complaintRows,
               theme: 'striped',
               styles: { 
                 fontSize: 6.5,
                 cellPadding: 2,
-                overflow: 'linebreak'
+                overflow: 'linebreak',
+                font: 'helvetica'
               },
               headStyles: { 
                 fillColor: [13, 71, 161], 
@@ -847,7 +853,17 @@ const AdminReportsComplaints = () => {
               },
               alternateRowStyles: { fillColor: [248, 250, 255] },
               margin: { left: 10, right: 10 },
-              pageBreak: 'auto'
+              pageBreak: 'auto',
+              columnStyles: {
+                0: { cellWidth: 22 },
+                1: { cellWidth: 28 },
+                2: { cellWidth: 22 },
+                3: { cellWidth: 22 },
+                4: { cellWidth: 20 },
+                5: { cellWidth: 22 },
+                6: { cellWidth: 20 },
+                7: { cellWidth: 28 }
+              }
             });
           } else {
             doc.setTextColor(150, 150, 150);
@@ -878,7 +894,7 @@ const AdminReportsComplaints = () => {
         doc.save(filename);
         
         setTimeout(() => {
-          showToast(language === 'np' ? '✅ पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ PDF file downloaded successfully', 'success');
+          showToast(language === 'np' ? 'पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : 'PDF file downloaded successfully', 'success');
           setIsExporting(false);
         }, 1000);
         
@@ -886,8 +902,8 @@ const AdminReportsComplaints = () => {
         console.error('PDF export error:', error);
         showToast(
           language === 'np' 
-            ? '❌ पीडीएफ निर्यात गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
-            : '❌ Failed to export PDF. Please try again.',
+            ? 'पीडीएफ निर्यात गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
+            : 'Failed to export PDF. Please try again.',
           'error'
         );
         setIsExporting(false);
@@ -902,9 +918,9 @@ const AdminReportsComplaints = () => {
 
   const content = {
     np: {
-      complaintsReports: '📊 गुनासो रिपोर्टहरू',
-      generateReports: '📋 रिपोर्ट उत्पन्न गर्नुहोस्',
-      dateRange: '📅 मिति दायरा',
+      complaintsReports: 'गुनासो रिपोर्टहरू',
+      generateReports: 'रिपोर्ट उत्पन्न गर्नुहोस्',
+      dateRange: 'मिति दायरा',
       today: 'आज',
       week: 'यो हप्ता',
       month: 'यो महिना',
@@ -913,34 +929,34 @@ const AdminReportsComplaints = () => {
       custom: 'अनुकूल',
       startDate: 'सुरु मिति',
       endDate: 'अन्त्य मिति',
-      reportType: '📄 रिपोर्ट प्रकार',
+      reportType: 'रिपोर्ट प्रकार',
       summary: 'सारांश',
       detailed: 'विस्तृत',
       comparative: 'तुलनात्मक',
-      filterByCategory: '📂 प्रकार अनुसार फिल्टर',
-      filterByStatus: '📊 स्थिति अनुसार फिल्टर',
-      filterByPriority: '⚡ प्राथमिकता अनुसार फिल्टर',
-      generateReport: '🔄 रिपोर्ट उत्पन्न गर्नुहोस्',
-      exportPDF: '📄 पीडीएफ निर्यात गर्नुहोस्',
-      exportExcel: '📊 एक्सेल निर्यात गर्नुहोस्',
-      print: '🖨️ प्रिन्ट गर्नुहोस्',
-      totalComplaints: '📋 कुल गुनासो',
-      pendingComplaints: '⏳ विचाराधीन',
-      inProgressComplaints: '🔄 प्रगतिमा',
-      resolvedComplaints: '✅ समाधान',
-      avgResolutionDays: '⏱️ औसत समाधान दिन',
-      satisfactionRate: '⭐ सन्तुष्टि दर',
+      filterByCategory: 'प्रकार अनुसार फिल्टर',
+      filterByStatus: 'स्थिति अनुसार फिल्टर',
+      filterByPriority: 'प्राथमिकता अनुसार फिल्टर',
+      generateReport: 'रिपोर्ट उत्पन्न गर्नुहोस्',
+      exportPDF: 'पीडीएफ निर्यात गर्नुहोस्',
+      exportExcel: 'एक्सेल निर्यात गर्नुहोस्',
+      print: 'प्रिन्ट गर्नुहोस्',
+      totalComplaints: 'कुल गुनासो',
+      pendingComplaints: 'विचाराधीन',
+      inProgressComplaints: 'प्रगतिमा',
+      resolvedComplaints: 'समाधान',
+      avgResolutionDays: 'औसत समाधान दिन',
+      satisfactionRate: 'सन्तुष्टि दर',
       thisMonth: 'यो महिना',
       lastMonth: 'गत महिना',
-      growth: '📈 वृद्धि',
-      categoryBreakdown: '📂 प्रकार अनुसार विभाजन',
-      statusBreakdown: '📊 स्थिति अनुसार विभाजन',
-      priorityBreakdown: '⚡ प्राथमिकता अनुसार विभाजन',
-      monthlyTrend: '📈 मासिक प्रवृत्ति',
-      allComplaints: '📋 सबै गुनासोहरू',
-      channelBreakdown: '📱 च्यानल अनुसार विभाजन',
-      reportGenerated: '✅ रिपोर्ट उत्पन्न गरियो',
-      noDataFound: '❌ कुनै डाटा फेला परेन',
+      growth: 'वृद्धि',
+      categoryBreakdown: 'प्रकार अनुसार विभाजन',
+      statusBreakdown: 'स्थिति अनुसार विभाजन',
+      priorityBreakdown: 'प्राथमिकता अनुसार विभाजन',
+      monthlyTrend: 'मासिक प्रवृत्ति',
+      allComplaints: 'सबै गुनासोहरू',
+      channelBreakdown: 'च्यानल अनुसार विभाजन',
+      reportGenerated: 'रिपोर्ट उत्पन्न गरियो',
+      noDataFound: 'कुनै डाटा फेला परेन',
       all: 'सबै',
       internet: 'इन्टरनेट',
       billing: 'बिलिङ',
@@ -971,23 +987,35 @@ const AdminReportsComplaints = () => {
       assignedTo: 'जिम्मेवार',
       actions: 'कार्यहरू',
       viewDetails: 'विवरण हेर्नुहोस्',
-      overallOverview: '📈 समग्र अवलोकन',
-      userComplaintsDetails: '👥 प्रयोगकर्ता गुनासो विवरण',
-      resetFilters: '🔄 फिल्टर रिसेट गर्नुहोस्',
+      overallOverview: 'समग्र अवलोकन',
+      userComplaintsDetails: 'प्रयोगकर्ता गुनासो विवरण',
+      january: 'जनवरी',
+      february: 'फेब्रुअरी',
+      march: 'मार्च',
+      april: 'अप्रिल',
+      may: 'मे',
+      june: 'जुन',
+      july: 'जुलाई',
+      august: 'अगस्ट',
+      september: 'सेप्टेम्बर',
+      october: 'अक्टोबर',
+      november: 'नोभेम्बर',
+      december: 'डिसेम्बर',
+      resetFilters: 'फिल्टर रिसेट गर्नुहोस्',
       showing: 'देखाउँदै',
       of: 'को',
       entries: 'प्रविष्टिहरू',
+      exportStarted: 'निर्यात सुरु भयो...',
+      pdfExport: 'पीडीएफ निर्यात भइरहेको छ...',
+      excelExport: 'एक्सेल निर्यात भइरहेको छ...',
       days: 'दिन',
       day: 'दिन',
-      exporting: '⏳ निर्यात हुँदै...',
-      generatedReport: '📊 उत्पन्न गरिएको रिपोर्ट',
-      filterSummary: 'फिल्टर सारांश',
-      noData: 'कुनै डाटा छैन'
+      exporting: 'निर्यात हुँदै...'
     },
     en: {
-      complaintsReports: '📊 Complaints Reports',
-      generateReports: '📋 Generate Reports',
-      dateRange: '📅 Date Range',
+      complaintsReports: 'Complaints Reports',
+      generateReports: 'Generate Reports',
+      dateRange: 'Date Range',
       today: 'Today',
       week: 'This Week',
       month: 'This Month',
@@ -996,34 +1024,34 @@ const AdminReportsComplaints = () => {
       custom: 'Custom',
       startDate: 'Start Date',
       endDate: 'End Date',
-      reportType: '📄 Report Type',
+      reportType: 'Report Type',
       summary: 'Summary',
       detailed: 'Detailed',
       comparative: 'Comparative',
-      filterByCategory: '📂 Filter by Category',
-      filterByStatus: '📊 Filter by Status',
-      filterByPriority: '⚡ Filter by Priority',
-      generateReport: '🔄 Generate Report',
-      exportPDF: '📄 Export PDF',
-      exportExcel: '📊 Export Excel',
-      print: '🖨️ Print',
-      totalComplaints: '📋 Total Complaints',
-      pendingComplaints: '⏳ Pending',
-      inProgressComplaints: '🔄 In Progress',
-      resolvedComplaints: '✅ Resolved',
-      avgResolutionDays: '⏱️ Avg Resolution Days',
-      satisfactionRate: '⭐ Satisfaction Rate',
+      filterByCategory: 'Filter by Category',
+      filterByStatus: 'Filter by Status',
+      filterByPriority: 'Filter by Priority',
+      generateReport: 'Generate Report',
+      exportPDF: 'Export PDF',
+      exportExcel: 'Export Excel',
+      print: 'Print',
+      totalComplaints: 'Total Complaints',
+      pendingComplaints: 'Pending',
+      inProgressComplaints: 'In Progress',
+      resolvedComplaints: 'Resolved',
+      avgResolutionDays: 'Avg Resolution Days',
+      satisfactionRate: 'Satisfaction Rate',
       thisMonth: 'This Month',
       lastMonth: 'Last Month',
-      growth: '📈 Growth',
-      categoryBreakdown: '📂 Category Breakdown',
-      statusBreakdown: '📊 Status Breakdown',
-      priorityBreakdown: '⚡ Priority Breakdown',
-      monthlyTrend: '📈 Monthly Trend',
-      allComplaints: '📋 All Complaints',
-      channelBreakdown: '📱 Channel Breakdown',
-      reportGenerated: '✅ Report Generated',
-      noDataFound: '❌ No data found',
+      growth: 'Growth',
+      categoryBreakdown: 'Category Breakdown',
+      statusBreakdown: 'Status Breakdown',
+      priorityBreakdown: 'Priority Breakdown',
+      monthlyTrend: 'Monthly Trend',
+      allComplaints: 'All Complaints',
+      channelBreakdown: 'Channel Breakdown',
+      reportGenerated: 'Report Generated',
+      noDataFound: 'No data found',
       all: 'All',
       internet: 'Internet',
       billing: 'Billing',
@@ -1054,22 +1082,38 @@ const AdminReportsComplaints = () => {
       assignedTo: 'Assigned To',
       actions: 'Actions',
       viewDetails: 'View Details',
-      overallOverview: '📈 Overall Overview',
-      userComplaintsDetails: '👥 User Complaints Details',
-      resetFilters: '🔄 Reset Filters',
+      overallOverview: 'Overall Overview',
+      userComplaintsDetails: 'User Complaints Details',
+      january: 'January',
+      february: 'February',
+      march: 'March',
+      april: 'April',
+      may: 'May',
+      june: 'June',
+      july: 'July',
+      august: 'August',
+      september: 'September',
+      october: 'October',
+      november: 'November',
+      december: 'December',
+      resetFilters: 'Reset Filters',
       showing: 'Showing',
       of: 'of',
       entries: 'entries',
+      exportStarted: 'Export started...',
+      pdfExport: 'Exporting PDF...',
+      excelExport: 'Exporting Excel...',
       days: 'days',
       day: 'day',
-      exporting: '⏳ Exporting...',
-      generatedReport: '📊 Generated Report',
-      filterSummary: 'Filter Summary',
-      noData: 'No Data'
+      exporting: 'Exporting...'
     }
   };
 
   const t = content[language];
+
+  const handleGenerateReport = () => {
+    showToast(t.reportGenerated, 'success');
+  };
 
   const handleResetFilters = () => {
     setSelectedCategory('all');
@@ -1077,8 +1121,6 @@ const AdminReportsComplaints = () => {
     setSelectedPriority('all');
     setDateRange('month');
     setReportType('summary');
-    setIsReportGenerated(false);
-    setGeneratedReport(null);
     showToast(t.resetFilters, 'info');
   };
 
@@ -1088,9 +1130,6 @@ const AdminReportsComplaints = () => {
       : `Ticket: ${complaint.ticketId}\nName: ${complaint.enName}\nPhone: ${complaint.phone}\nEmail: ${complaint.email}\nLocation: ${complaint.enLocation}\nCategory: ${getCategoryText(complaint.category)}\nDescription: ${complaint.enDescription}\nAssigned To: ${complaint.enAssignedTo}`;
     showToast(details, 'info');
   };
-
-  // Get the report to display (generated or default)
-  const displayReport = generatedReport || reportData;
 
   return (
     <div className="admin-reports">
@@ -1116,21 +1155,21 @@ const AdminReportsComplaints = () => {
           <div className="content-wrapper">
             <div className="page-header">
               <div>
-                <h1>{t.complaintsReports}</h1>
+                <h1>📊 {t.complaintsReports}</h1>
                 <p>{t.generateReports}</p>
               </div>
               <div className="action-buttons-header">
                 <button 
                   className="export-btn pdf" 
                   onClick={handleExportPDF} 
-                  disabled={isExporting || !isReportGenerated}
+                  disabled={isExporting}
                 >
                   📄 {isExporting ? t.exporting : t.exportPDF}
                 </button>
                 <button 
                   className="export-btn excel" 
                   onClick={handleExportExcel} 
-                  disabled={isExporting || !isReportGenerated}
+                  disabled={isExporting}
                 >
                   📊 {isExporting ? t.exporting : t.exportExcel}
                 </button>
@@ -1262,25 +1301,7 @@ const AdminReportsComplaints = () => {
               </div>
             </div>
 
-            {/* Report Generated Banner */}
-            {isReportGenerated && generatedReport && (
-              <div className="report-generated-banner">
-                <div className="banner-content">
-                  <span className="banner-icon">✅</span>
-                  <span className="banner-text">
-                    {language === 'np' 
-                      ? `रिपोर्ट उत्पन्न गरियो - ${generatedReport.complaints.length} गुनासोहरू फेला पर्यो` 
-                      : `Report generated - ${generatedReport.complaints.length} complaints found`}
-                  </span>
-                  <span className="banner-time">
-                    {language === 'np' ? 'उत्पन्न मिति: ' : 'Generated at: '}
-                    {generatedReport.generatedAt}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Overview Tab */}
+            {/* Overview Tab Content */}
             {activeTab === 'overview' && (
               <>
                 {/* Summary Cards */}
@@ -1288,89 +1309,87 @@ const AdminReportsComplaints = () => {
                   <div className="summary-card">
                     <div className="card-icon blue">📋</div>
                     <div className="card-info">
-                      <div className="card-value">{formatNumber(displayReport.summary.totalComplaints)}</div>
+                      <div className="card-value">{formatNumber(reportData.summary.totalComplaints)}</div>
                       <div className="card-label">{t.totalComplaints}</div>
                     </div>
                   </div>
                   <div className="summary-card">
                     <div className="card-icon orange">⏳</div>
                     <div className="card-info">
-                      <div className="card-value">{formatNumber(displayReport.summary.pendingComplaints)}</div>
+                      <div className="card-value">{formatNumber(reportData.summary.pendingComplaints)}</div>
                       <div className="card-label">{t.pendingComplaints}</div>
                     </div>
                   </div>
                   <div className="summary-card">
                     <div className="card-icon yellow">🔄</div>
                     <div className="card-info">
-                      <div className="card-value">{formatNumber(displayReport.summary.inProgressComplaints)}</div>
+                      <div className="card-value">{formatNumber(reportData.summary.inProgressComplaints)}</div>
                       <div className="card-label">{t.inProgressComplaints}</div>
                     </div>
                   </div>
                   <div className="summary-card">
                     <div className="card-icon green">✅</div>
                     <div className="card-info">
-                      <div className="card-value">{formatNumber(displayReport.summary.resolvedComplaints)}</div>
+                      <div className="card-value">{formatNumber(reportData.summary.resolvedComplaints)}</div>
                       <div className="card-label">{t.resolvedComplaints}</div>
                     </div>
                   </div>
                   <div className="summary-card">
                     <div className="card-icon purple">⏱️</div>
                     <div className="card-info">
-                      <div className="card-value">{formatNumber(displayReport.summary.avgResolutionDays)}</div>
+                      <div className="card-value">
+                        {language === 'np' 
+                          ? `${formatNumber(reportData.summary.avgResolutionDays)} ${t.days}`
+                          : `${reportData.summary.avgResolutionDays} ${t.days}`}
+                      </div>
                       <div className="card-label">{t.avgResolutionDays}</div>
                     </div>
                   </div>
                   <div className="summary-card">
                     <div className="card-icon pink">⭐</div>
                     <div className="card-info">
-                      <div className="card-value">{formatNumber(displayReport.summary.satisfactionRate)}%</div>
+                      <div className="card-value">{formatNumber(reportData.summary.satisfactionRate)}%</div>
                       <div className="card-label">{t.satisfactionRate}</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Growth Info */}
+                {/* Growth Indicator */}
                 <div className="growth-card">
                   <div className="growth-info">
-                    <span className="growth-label">{t.thisMonth}</span>
-                    <span className="growth-value">{formatNumber(displayReport.summary.thisMonth)}</span>
+                    <span className="growth-label">{t.thisMonth}:</span>
+                    <span className="growth-value">{formatNumber(reportData.summary.thisMonth)}</span>
                   </div>
                   <div className="growth-info">
-                    <span className="growth-label">{t.lastMonth}</span>
-                    <span className="growth-value">{formatNumber(displayReport.summary.lastMonth)}</span>
+                    <span className="growth-label">{t.lastMonth}:</span>
+                    <span className="growth-value">{formatNumber(reportData.summary.lastMonth)}</span>
                   </div>
                   <div className="growth-info">
-                    <span className="growth-label">{t.growth}</span>
-                    <span className="growth-value positive">+{formatNumber(displayReport.summary.growth)}%</span>
+                    <span className="growth-label">{t.growth}:</span>
+                    <span className="growth-value positive">+{formatNumber(reportData.summary.growth)}%</span>
                   </div>
                 </div>
 
-                {/* Charts Grid */}
+                {/* Charts Section */}
                 <div className="charts-grid">
                   {/* Category Breakdown */}
                   <div className="chart-card">
                     <h3>{t.categoryBreakdown}</h3>
                     <div className="chart-content">
-                      {displayReport.categoryBreakdown.map((item, index) => {
-                        const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444'];
-                        return (
-                          <div key={index} className="chart-bar-item">
-                            <div className="chart-label">
-                              <span>{item.name}</span>
-                              <span>{formatNumber(item.count)} ({item.percentage}%)</span>
-                            </div>
-                            <div className="chart-bar-bg">
-                              <div 
-                                className="chart-bar-fill" 
-                                style={{ 
-                                  width: `${item.percentage}%`,
-                                  background: colors[index % colors.length]
-                                }}
-                              />
-                            </div>
+                      {reportData.categoryBreakdown.map((item, idx) => (
+                        <div key={idx} className="chart-bar-item">
+                          <div className="chart-label">
+                            <span>{language === 'np' ? item.name : item.enName}</span>
+                            <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                           </div>
-                        );
-                      })}
+                          <div className="chart-bar-bg">
+                            <div 
+                              className="chart-bar-fill" 
+                              style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${200 + idx * 30}, 70%, 55%)` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -1378,18 +1397,15 @@ const AdminReportsComplaints = () => {
                   <div className="chart-card">
                     <h3>{t.statusBreakdown}</h3>
                     <div className="pie-chart-container">
-                      {displayReport.statusBreakdown.map((item, index) => {
-                        const colors = ['#f59e0b', '#3b82f6', '#10b981'];
-                        return (
-                          <div key={index} className="pie-segment-info">
-                            <div className="pie-color" style={{ background: colors[index % colors.length] }} />
-                            <div className="pie-label">
-                              <span>{item.name}</span>
-                              <span>{formatNumber(item.count)} ({item.percentage}%)</span>
-                            </div>
+                      {reportData.statusBreakdown.map((item, idx) => (
+                        <div key={idx} className="pie-segment-info">
+                          <div className="pie-color" style={{ backgroundColor: `hsl(${120 + idx * 90}, 70%, 55%)` }} />
+                          <div className="pie-label">
+                            <span>{language === 'np' ? item.name : item.enName}</span>
+                            <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -1397,105 +1413,103 @@ const AdminReportsComplaints = () => {
                   <div className="chart-card">
                     <h3>{t.priorityBreakdown}</h3>
                     <div className="pie-chart-container">
-                      {displayReport.priorityBreakdown.map((item, index) => {
-                        const colors = ['#ef4444', '#f59e0b', '#3b82f6'];
-                        return (
-                          <div key={index} className="pie-segment-info">
-                            <div className="pie-color" style={{ background: colors[index % colors.length] }} />
-                            <div className="pie-label">
-                              <span>{item.name}</span>
-                              <span>{formatNumber(item.count)} ({item.percentage}%)</span>
-                            </div>
+                      {reportData.priorityBreakdown.map((item, idx) => (
+                        <div key={idx} className="pie-segment-info">
+                          <div className="pie-color" style={{ backgroundColor: `hsl(${0 + idx * 45}, 70%, 55%)` }} />
+                          <div className="pie-label">
+                            <span>{language === 'np' ? item.name : item.enName}</span>
+                            <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                   </div>
 
                   {/* Channel Breakdown */}
                   <div className="chart-card">
                     <h3>{t.channelBreakdown}</h3>
-                    <div className="pie-chart-container">
-                      {displayReport.channelBreakdown.map((item, index) => {
-                        const colors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899'];
-                        return (
-                          <div key={index} className="pie-segment-info">
-                            <div className="pie-color" style={{ background: colors[index % colors.length] }} />
-                            <div className="pie-label">
-                              <span>{item.name}</span>
-                              <span>{formatNumber(item.count)} ({item.percentage}%)</span>
-                            </div>
+                    <div className="chart-content">
+                      {reportData.channelBreakdown.map((item, idx) => (
+                        <div key={idx} className="chart-bar-item">
+                          <div className="chart-label">
+                            <span>{language === 'np' ? item.name : item.enName}</span>
+                            <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                           </div>
-                        );
-                      })}
+                          <div className="chart-bar-bg">
+                            <div 
+                              className="chart-bar-fill" 
+                              style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${280 + idx * 20}, 70%, 55%)` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
 
-                {/* Monthly Trend - Only show if not generated report or if generated report has monthly trend */}
-                {!generatedReport && (
-                  <div className="trend-card">
-                    <h3>{t.monthlyTrend}</h3>
-                    <div className="trend-chart">
-                      {reportData.monthlyTrend.map((item, index) => {
-                        const max = Math.max(...reportData.monthlyTrend.map(d => d.count));
-                        const height = (item.count / max) * 180;
-                        return (
-                          <div key={index} className="trend-bar-item">
-                            <div className="trend-label">{language === 'np' ? item.month : item.enMonth}</div>
-                            <div className="trend-bar-bg" style={{ height: '200px' }}>
-                              <div 
-                                className="trend-bar-fill" 
-                                style={{ 
-                                  height: `${height}px`,
-                                  background: `linear-gradient(180deg, #3b82f6, #2563eb)`
-                                }}
-                              >
-                                <span className="trend-value">{formatNumber(item.count)}</span>
-                              </div>
-                            </div>
+                {/* Monthly Trend */}
+                <div className="trend-card">
+                  <h3>{t.monthlyTrend}</h3>
+                  <div className="trend-chart">
+                    {reportData.monthlyTrend.map((item, idx) => (
+                      <div key={idx} className="trend-bar-item">
+                        <div className="trend-label">{getMonthText(item.month)}</div>
+                        <div className="trend-bar-bg">
+                          <div 
+                            className="trend-bar-fill" 
+                            style={{ 
+                              height: `${(item.count / Math.max(...reportData.monthlyTrend.map(m => m.count))) * 100}%`,
+                              backgroundColor: `hsl(${210 + idx * 5}, 70%, 55%)`
+                            }}
+                          >
+                            <span className="trend-value">{formatNumber(item.count)}</span>
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
               </>
             )}
 
-            {/* Complaints Tab */}
+            {/* Complaints Details Tab - Full User Details Table */}
             {activeTab === 'complaints' && (
               <div className="table-card">
                 <div className="table-header">
-                  <h3>{t.allComplaints}</h3>
+                  <h3>👥 {t.userComplaintsDetails}</h3>
                   <div className="table-stats">
-                    {t.showing} {formatNumber(
-                      generatedReport ? generatedReport.complaints.length : filteredComplaints.length
-                    )} {t.of} {formatNumber(reportData.allComplaints.length)} {t.entries}
+                    {t.showing} {formatNumber(filteredComplaints.length)} {t.of} {formatNumber(reportData.allComplaints.length)} {t.entries}
                   </div>
                 </div>
                 <div className="table-wrapper">
-                  {(generatedReport ? generatedReport.complaints : filteredComplaints).length > 0 ? (
-                    <table className="reports-table">
-                      <thead>
-                        <tr>
-                          <th>{t.ticketId}</th>
-                          <th>{t.complainant}</th>
-                          <th>{t.phone}</th>
-                          <th>{t.category}</th>
-                          <th>{t.date}</th>
-                          <th>{t.status}</th>
-                          <th>{t.priority}</th>
-                          <th>{t.assignedTo}</th>
-                          <th>{t.actions}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(generatedReport ? generatedReport.complaints : filteredComplaints).map((complaint) => (
+                  <table className="reports-table">
+                    <thead>
+                      <tr>
+                        <th>{t.ticketId}</th>
+                        <th>{t.complainant}</th>
+                        <th>{t.phone}</th>
+                        <th>{t.email}</th>
+                        <th>{t.location}</th>
+                        <th>{t.category}</th>
+                        <th>{t.date}</th>
+                        <th>{t.status}</th>
+                        <th>{t.priority}</th>
+                        <th>{t.description}</th>
+                        <th>{t.assignedTo}</th>
+                        <th>{t.actions}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredComplaints.length > 0 ? (
+                        filteredComplaints.map((complaint) => (
                           <tr key={complaint.id}>
-                            <td><span className="ticket-id">{complaint.ticketId}</span></td>
-                            <td className="user-name">{language === 'np' ? complaint.name : complaint.enName}</td>
+                            <td className="ticket-id">{complaint.ticketId}</td>
+                            <td>
+                              <div className="user-name">{language === 'np' ? complaint.name : complaint.enName}</div>
+                            </td>
                             <td className="phone-number">{complaint.phone}</td>
+                            <td className="email-address">{complaint.email}</td>
+                            <td>{language === 'np' ? complaint.location : complaint.enLocation}</td>
                             <td>{getCategoryText(complaint.category)}</td>
                             <td>{language === 'np' ? complaint.date : complaint.enDate}</td>
                             <td>
@@ -1508,22 +1522,31 @@ const AdminReportsComplaints = () => {
                                 {getPriorityText(complaint.priority)}
                               </span>
                             </td>
+                            <td className="description-cell">
+                              <div className="description-text" title={language === 'np' ? complaint.description : complaint.enDescription}>
+                                {language === 'np' ? complaint.description : complaint.enDescription}
+                              </div>
+                            </td>
                             <td>{language === 'np' ? complaint.assignedTo : complaint.enAssignedTo}</td>
                             <td>
                               <button 
-                                className="view-details-btn" 
+                                className="view-details-btn"
                                 onClick={() => handleViewDetails(complaint)}
                               >
-                                {t.viewDetails}
+                                👁️ {t.viewDetails}
                               </button>
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className="no-data">{t.noDataFound}</div>
-                  )}
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="12" className="no-data">
+                            {t.noDataFound}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
@@ -1799,36 +1822,6 @@ const AdminReportsComplaints = () => {
 
         .reset-btn:hover {
           box-shadow: 0 4px 12px rgba(100,116,139,0.3);
-        }
-
-        /* ===== REPORT GENERATED BANNER ===== */
-        .report-generated-banner {
-          background: linear-gradient(135deg, #10b981, #059669);
-          border-radius: 12px;
-          padding: 16px 24px;
-          margin-bottom: 24px;
-          color: white;
-          animation: slideDown 0.5s ease;
-        }
-
-        @keyframes slideDown {
-          from { transform: translateY(-20px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-
-        .banner-content {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-
-        .banner-icon { font-size: 1.5rem; }
-        .banner-text { font-size: 1rem; font-weight: 500; }
-        .banner-time { 
-          font-size: 0.8rem; 
-          opacity: 0.9;
-          margin-left: auto;
         }
 
         /* ===== SUMMARY CARDS ===== */
@@ -2230,12 +2223,6 @@ const AdminReportsComplaints = () => {
             max-width: calc(100% - 40px);
             min-width: auto;
           }
-
-          .banner-content {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-          .banner-time { margin-left: 0; }
         }
 
         @media (max-width: 480px) {
@@ -2253,8 +2240,7 @@ const AdminReportsComplaints = () => {
           .filter-actions,
           .tab-navigation,
           .view-details-btn,
-          .toast-notification,
-          .report-generated-banner {
+          .toast-notification {
             display: none !important;
           }
           .main-container { margin-left: 0; }
