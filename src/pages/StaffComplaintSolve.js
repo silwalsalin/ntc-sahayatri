@@ -14,6 +14,7 @@ const StaffComplaintSolve = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
+  const [isEditMode, setIsEditMode] = useState(false);
   
   const [staffData, setStaffData] = useState({
     name: 'Ram Bahadur',
@@ -31,6 +32,15 @@ const StaffComplaintSolve = () => {
   const [followUpDate, setFollowUpDate] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [updateHistory, setUpdateHistory] = useState([]);
+  const [editFields, setEditFields] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    landmark: '',
+    description: ''
+  });
 
   // Fetch complaint details if not passed via state
   useEffect(() => {
@@ -47,6 +57,25 @@ const StaffComplaintSolve = () => {
     } else if (complaint) {
       setLoading(false);
       setStatus(complaint.status);
+      // Load existing resolution data if available
+      if (complaint.resolution) {
+        setResolution(complaint.resolution);
+      }
+      if (complaint.actionTaken) {
+        setActionTaken(complaint.actionTaken);
+      }
+      if (complaint.updateHistory) {
+        setUpdateHistory(complaint.updateHistory);
+      }
+      // Initialize edit fields
+      setEditFields({
+        name: complaint.name || '',
+        email: complaint.email || '',
+        phone: complaint.phone || '',
+        address: complaint.address || '',
+        landmark: complaint.landmark || '',
+        description: complaint.description || ''
+      });
     } else {
       navigate('/staff/complaints/assigned');
     }
@@ -64,6 +93,25 @@ const StaffComplaintSolve = () => {
         const transformedComplaint = transformComplaintData(response.data.data);
         setComplaint(transformedComplaint);
         setStatus(transformedComplaint.status);
+        // Load existing resolution data
+        if (transformedComplaint.resolution) {
+          setResolution(transformedComplaint.resolution);
+        }
+        if (transformedComplaint.actionTaken) {
+          setActionTaken(transformedComplaint.actionTaken);
+        }
+        if (transformedComplaint.updateHistory) {
+          setUpdateHistory(transformedComplaint.updateHistory);
+        }
+        // Initialize edit fields
+        setEditFields({
+          name: transformedComplaint.name || '',
+          email: transformedComplaint.email || '',
+          phone: transformedComplaint.phone || '',
+          address: transformedComplaint.address || '',
+          landmark: transformedComplaint.landmark || '',
+          description: transformedComplaint.description || ''
+        });
       } else {
         setError('Complaint not found');
         setTimeout(() => navigate('/staff/complaints/assigned'), 2000);
@@ -95,8 +143,11 @@ const StaffComplaintSolve = () => {
     channel: complaint.channel || 'वेबसाइट पोर्टल',
     enChannel: complaint.enChannel || 'Website Portal',
     priority: mapPriority(complaint.priority),
-    address: complaint.address,
-    landmark: complaint.landmark
+    address: complaint.address || '',
+    landmark: complaint.landmark || '',
+    resolution: complaint.resolution || '',
+    actionTaken: complaint.actionTaken || '',
+    updateHistory: complaint.updateHistory || []
   });
 
   const getCategoryNepali = (category) => {
@@ -166,9 +217,95 @@ const StaffComplaintSolve = () => {
     }
   };
 
+  // Handle complaint data update (edit complaint details)
+  const handleUpdateComplaintData = async () => {
+    setUpdating(true);
+    setError('');
+    setSuccess('');
+    
+    try {
+      const token = localStorage.getItem('staffToken');
+      
+      // Prepare update data
+      const updateData = {
+        name: editFields.name,
+        email: editFields.email,
+        phone: editFields.phone,
+        address: editFields.address,
+        landmark: editFields.landmark,
+        complaint: editFields.description,
+        updatedBy: staffData.name,
+        updatedAt: new Date().toISOString()
+      };
+
+      const response = await axios.put(
+        `http://localhost:5000/api/complaints/${complaint.id}`,
+        updateData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        // Update local complaint data
+        const updatedComplaint = response.data.data || response.data.complaint;
+        const transformed = transformComplaintData(updatedComplaint);
+        
+        setComplaint(prev => ({
+          ...prev,
+          ...transformed,
+          name: editFields.name,
+          email: editFields.email,
+          phone: editFields.phone,
+          address: editFields.address,
+          landmark: editFields.landmark,
+          description: editFields.description
+        }));
+
+        // Show success message
+        const successMsg = language === 'np' 
+          ? 'गुनासो विवरण सफलतापूर्वक अपडेट गरियो' 
+          : 'Complaint details updated successfully';
+        setSuccess(successMsg);
+
+        // Exit edit mode
+        setIsEditMode(false);
+
+        // Navigate after delay
+        setTimeout(() => {
+          navigate('/staff/complaints/assigned', { 
+            state: { 
+              updated: true, 
+              complaintId: complaint.id,
+              message: successMsg
+            }
+          });
+        }, 2000);
+      } else {
+        throw new Error(response.data.message || 'Update failed');
+      }
+    } catch (error) {
+      console.error('Error updating complaint data:', error);
+      setError(language === 'np' 
+        ? 'अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
+        : 'Update failed. Please try again.');
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Handle status and resolution update
   const handleUpdateStatus = async () => {
     if (!status) {
       setError(language === 'np' ? 'कृपया स्थिति चयन गर्नुहोस्' : 'Please select a status');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    
+    // Validate resolution if status is "resolved"
+    if (status === 'resolved' && !resolution.trim()) {
+      setError(language === 'np' 
+        ? 'कृपया समाधान विवरण प्रदान गर्नुहोस्' 
+        : 'Please provide resolution details');
       setTimeout(() => setError(''), 3000);
       return;
     }
@@ -186,28 +323,82 @@ const StaffComplaintSolve = () => {
         'review': 'Under Review'
       };
       
+      // Prepare update data with all fields
+      const updateData = {
+        status: statusMap[status],
+        resolution: resolution.trim(),
+        notes: updateNotes.trim(),
+        actionTaken: actionTaken.trim(),
+        followUpNeeded: followUpNeeded,
+        followUpDate: followUpDate,
+        updatedBy: staffData.name,
+        updatedAt: new Date().toISOString()
+      };
+
       const response = await axios.put(
         `http://localhost:5000/api/complaints/${complaint.id}/status`,
-        { 
-          status: statusMap[status],
-          resolution: resolution,
-          notes: updateNotes,
-          actionTaken: actionTaken,
-          followUpNeeded: followUpNeeded,
-          followUpDate: followUpDate,
-          updatedBy: staffData.name,
-          updatedAt: new Date()
-        },
+        updateData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
       if (response.data.success) {
-        setSuccess(language === 'np' 
+        // Get the updated complaint data from response
+        const updatedComplaint = response.data.data || response.data.complaint;
+        
+        // Create new history entry
+        const historyEntry = {
+          id: Date.now(),
+          date: new Date().toISOString(),
+          status: status,
+          statusDisplay: statusMap[status],
+          resolution: resolution.trim(),
+          actionTaken: actionTaken.trim(),
+          notes: updateNotes.trim(),
+          updatedBy: staffData.name,
+          timestamp: new Date().toLocaleString()
+        };
+        
+        // Update local state with complete data
+        setComplaint(prev => ({
+          ...prev,
+          status: status,
+          resolution: resolution.trim(),
+          actionTaken: actionTaken.trim(),
+          updateHistory: [...(prev.updateHistory || []), historyEntry]
+        }));
+
+        // Update the updateHistory state
+        setUpdateHistory(prev => [...prev, historyEntry]);
+        
+        // Show success message
+        const successMsg = language === 'np' 
           ? 'गुनासो सफलतापूर्वक अपडेट गरियो' 
-          : 'Complaint updated successfully');
+          : 'Complaint updated successfully';
+        setSuccess(successMsg);
+
+        // Reset form fields
+        setUpdateNotes('');
+        setFollowUpNeeded(false);
+        setFollowUpDate('');
+
+        // Switch to resolution tab to show the updated solution
+        if (status === 'resolved') {
+          setTimeout(() => {
+            setActiveTab('resolution');
+          }, 500);
+        }
+
+        // Navigate after delay
         setTimeout(() => {
-          navigate('/staff/complaints/assigned');
-        }, 2000);
+          navigate('/staff/complaints/assigned', { 
+            state: { 
+              updated: true, 
+              complaintId: complaint.id,
+              message: successMsg,
+              status: status
+            }
+          });
+        }, 3000);
       } else {
         throw new Error(response.data.message || 'Update failed');
       }
@@ -220,6 +411,14 @@ const StaffComplaintSolve = () => {
     } finally {
       setUpdating(false);
     }
+  };
+
+  // Handle edit field changes
+  const handleEditFieldChange = (field, value) => {
+    setEditFields(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const handleLogout = () => {
@@ -271,7 +470,18 @@ const StaffComplaintSolve = () => {
       success: 'सफल',
       details: 'विवरण',
       updateInfo: 'अपडेट जानकारी',
-      preview: 'पूर्वावलोकन'
+      preview: 'पूर्वावलोकन',
+      resolutionInfo: 'समाधान जानकारी',
+      updateHistory: 'अपडेट इतिहास',
+      noUpdates: 'कुनै अपडेट छैन',
+      by: 'द्वारा',
+      on: 'मिति',
+      resolutionRequired: 'समाधान विवरण आवश्यक छ',
+      actionRequired: 'कार्य विवरण आवश्यक छ',
+      editDetails: 'विवरण सम्पादन गर्नुहोस्',
+      saveChanges: 'परिवर्तन सुरक्षित गर्नुहोस्',
+      cancel: 'रद्द गर्नुहोस्',
+      editMode: 'सम्पादन मोड'
     },
     en: {
       pageTitle: 'Solve Complaint',
@@ -314,7 +524,18 @@ const StaffComplaintSolve = () => {
       success: 'Success',
       details: 'Details',
       updateInfo: 'Update Info',
-      preview: 'Preview'
+      preview: 'Preview',
+      resolutionInfo: 'Resolution Information',
+      updateHistory: 'Update History',
+      noUpdates: 'No updates yet',
+      by: 'by',
+      on: 'on',
+      resolutionRequired: 'Resolution details are required',
+      actionRequired: 'Action details are required',
+      editDetails: 'Edit Details',
+      saveChanges: 'Save Changes',
+      cancel: 'Cancel',
+      editMode: 'Edit Mode'
     }
   };
 
@@ -333,6 +554,33 @@ const StaffComplaintSolve = () => {
       review: 'status-review'
     };
     return classes[status] || 'status-pending';
+  };
+
+  const formatDisplayDate = (dateString) => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '-';
+      return date.toLocaleString(language === 'np' ? 'ne-NP' : 'en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const getStatusDisplayName = (statusValue) => {
+    const statusMap = {
+      'pending': t.pending,
+      'in-progress': t.inProgress,
+      'resolved': t.resolved,
+      'review': t.underReview
+    };
+    return statusMap[statusValue] || statusValue;
   };
 
   if (loading) {
@@ -379,9 +627,7 @@ const StaffComplaintSolve = () => {
               </button>
               <h1>{t.pageTitle}</h1>
               <span className={`status-badge-header ${getStatusClass(complaint.status)}`}>
-                {complaint.status === 'pending' ? t.pending : 
-                 complaint.status === 'in-progress' ? t.inProgress :
-                 complaint.status === 'resolved' ? t.resolved : t.underReview}
+                {getStatusDisplayName(complaint.status)}
               </span>
             </div>
 
@@ -419,71 +665,192 @@ const StaffComplaintSolve = () => {
               >
                 👁️ {t.preview}
               </button>
+              {(complaint.resolution || updateHistory.length > 0) && (
+                <button 
+                  className={`tab-btn ${activeTab === 'resolution' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('resolution')}
+                >
+                  ✅ {t.resolutionInfo}
+                  {updateHistory.length > 0 && (
+                    <span className="tab-badge">{updateHistory.length}</span>
+                  )}
+                </button>
+              )}
             </div>
 
-            {/* Details Tab */}
+            {/* Details Tab with Edit Functionality */}
             {activeTab === 'details' && (
               <div className="complaint-card">
                 <div className="card-header">
                   <h2>{t.complaintDetails}</h2>
+                  <div className="card-actions">
+                    {!isEditMode ? (
+                      <button 
+                        className="btn-edit-mode" 
+                        onClick={() => setIsEditMode(true)}
+                      >
+                        ✏️ {t.editDetails}
+                      </button>
+                    ) : (
+                      <span className="edit-mode-badge">{t.editMode}</span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="complaint-info">
-                  <div className="info-grid">
-                    <div className="info-row">
-                      <label>{t.ticketId}:</label>
-                      <span className="ticket-id">{complaint.ticketId}</span>
-                    </div>
-                    <div className="info-row">
-                      <label>{t.complainant}:</label>
-                      <span>{language === 'np' ? complaint.name : complaint.enName}</span>
-                    </div>
-                    <div className="info-row">
-                      <label>{t.email}:</label>
-                      <span>{complaint.email}</span>
-                    </div>
-                    <div className="info-row">
-                      <label>{t.phone}:</label>
-                      <span>{complaint.phone}</span>
-                    </div>
-                    <div className="info-row">
-                      <label>{t.category}:</label>
-                      <span className="category-badge">
-                        {language === 'np' ? complaint.category_np : complaint.category_en}
-                      </span>
-                    </div>
-                    <div className="info-row">
-                      <label>{t.priority}:</label>
-                      <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
-                        {complaint.priority === 'high' ? t.high :
-                         complaint.priority === 'medium' ? t.medium : t.low}
-                      </span>
-                    </div>
-                    <div className="info-row">
-                      <label>{t.registeredDate}:</label>
-                      <span>{language === 'np' ? complaint.date : complaint.enDate}</span>
-                    </div>
-                    <div className="info-row">
-                      <label>{t.channel}:</label>
-                      <span>{language === 'np' ? complaint.channel : complaint.enChannel}</span>
-                    </div>
-                    {complaint.address && (
+                  {!isEditMode ? (
+                    // View Mode
+                    <div className="info-grid">
                       <div className="info-row">
-                        <label>{t.address}:</label>
-                        <span>{complaint.address}</span>
+                        <label>{t.ticketId}:</label>
+                        <span className="ticket-id">{complaint.ticketId}</span>
                       </div>
-                    )}
-                    {complaint.landmark && (
                       <div className="info-row">
-                        <label>{t.landmark}:</label>
-                        <span>{complaint.landmark}</span>
+                        <label>{t.complainant}:</label>
+                        <span>{language === 'np' ? complaint.name : complaint.enName}</span>
                       </div>
-                    )}
-                  </div>
-                  <div className="description-section">
-                    <label>{t.description}:</label>
-                    <p className="description">{language === 'np' ? complaint.description : complaint.enDescription}</p>
-                  </div>
+                      <div className="info-row">
+                        <label>{t.email}:</label>
+                        <span>{complaint.email}</span>
+                      </div>
+                      <div className="info-row">
+                        <label>{t.phone}:</label>
+                        <span>{complaint.phone}</span>
+                      </div>
+                      <div className="info-row">
+                        <label>{t.category}:</label>
+                        <span className="category-badge">
+                          {language === 'np' ? complaint.category_np : complaint.category_en}
+                        </span>
+                      </div>
+                      <div className="info-row">
+                        <label>{t.priority}:</label>
+                        <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
+                          {complaint.priority === 'high' ? t.high :
+                           complaint.priority === 'medium' ? t.medium : t.low}
+                        </span>
+                      </div>
+                      <div className="info-row">
+                        <label>{t.registeredDate}:</label>
+                        <span>{language === 'np' ? complaint.date : complaint.enDate}</span>
+                      </div>
+                      <div className="info-row">
+                        <label>{t.channel}:</label>
+                        <span>{language === 'np' ? complaint.channel : complaint.enChannel}</span>
+                      </div>
+                      {complaint.address && (
+                        <div className="info-row">
+                          <label>{t.address}:</label>
+                          <span>{complaint.address}</span>
+                        </div>
+                      )}
+                      {complaint.landmark && (
+                        <div className="info-row">
+                          <label>{t.landmark}:</label>
+                          <span>{complaint.landmark}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // Edit Mode
+                    <div className="edit-form">
+                      <div className="edit-grid">
+                        <div className="form-group">
+                          <label>{t.complainant} <span className="required">*</span></label>
+                          <input
+                            type="text"
+                            value={editFields.name}
+                            onChange={(e) => handleEditFieldChange('name', e.target.value)}
+                            className="edit-input"
+                            disabled={updating}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>{t.email} <span className="required">*</span></label>
+                          <input
+                            type="email"
+                            value={editFields.email}
+                            onChange={(e) => handleEditFieldChange('email', e.target.value)}
+                            className="edit-input"
+                            disabled={updating}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>{t.phone} <span className="required">*</span></label>
+                          <input
+                            type="tel"
+                            value={editFields.phone}
+                            onChange={(e) => handleEditFieldChange('phone', e.target.value)}
+                            className="edit-input"
+                            disabled={updating}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>{t.address}</label>
+                          <input
+                            type="text"
+                            value={editFields.address}
+                            onChange={(e) => handleEditFieldChange('address', e.target.value)}
+                            className="edit-input"
+                            disabled={updating}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>{t.landmark}</label>
+                          <input
+                            type="text"
+                            value={editFields.landmark}
+                            onChange={(e) => handleEditFieldChange('landmark', e.target.value)}
+                            className="edit-input"
+                            disabled={updating}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label>{t.description} <span className="required">*</span></label>
+                        <textarea
+                          value={editFields.description}
+                          onChange={(e) => handleEditFieldChange('description', e.target.value)}
+                          className="edit-textarea"
+                          rows="4"
+                          disabled={updating}
+                        />
+                      </div>
+                      <div className="edit-actions">
+                        <button 
+                          className="btn-cancel" 
+                          onClick={() => {
+                            setIsEditMode(false);
+                            setEditFields({
+                              name: complaint.name || '',
+                              email: complaint.email || '',
+                              phone: complaint.phone || '',
+                              address: complaint.address || '',
+                              landmark: complaint.landmark || '',
+                              description: complaint.description || ''
+                            });
+                          }}
+                          disabled={updating}
+                        >
+                          {t.cancel}
+                        </button>
+                        <button 
+                          className="btn-save" 
+                          onClick={handleUpdateComplaintData}
+                          disabled={updating || !editFields.name || !editFields.email || !editFields.phone}
+                        >
+                          {updating ? t.updating : t.saveChanges}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!isEditMode && (
+                    <div className="description-section">
+                      <label>{t.description}:</label>
+                      <p className="description">{language === 'np' ? complaint.description : complaint.enDescription}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -513,14 +880,18 @@ const StaffComplaintSolve = () => {
                   </div>
 
                   <div className="form-group">
-                    <label>{t.resolution}</label>
+                    <label>{t.resolution} <span className="required">*</span></label>
                     <textarea
                       value={resolution}
                       onChange={(e) => setResolution(e.target.value)}
                       placeholder={t.enterResolution}
                       rows="4"
                       disabled={updating}
+                      className={status === 'resolved' && !resolution.trim() ? 'field-error' : ''}
                     />
+                    {status === 'resolved' && !resolution.trim() && (
+                      <span className="field-hint">{t.resolutionRequired}</span>
+                    )}
                   </div>
 
                   <div className="form-group">
@@ -604,6 +975,12 @@ const StaffComplaintSolve = () => {
                     <div className="preview-item">
                       <strong>Category:</strong> {language === 'np' ? complaint.category_np : complaint.category_en}
                     </div>
+                    <div className="preview-item">
+                      <strong>Current Status:</strong>
+                      <span className={`status-badge ${getStatusClass(complaint.status)}`}>
+                        {getStatusDisplayName(complaint.status)}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="preview-section">
@@ -611,10 +988,7 @@ const StaffComplaintSolve = () => {
                     <div className="preview-item">
                       <strong>New Status:</strong> 
                       <span className={`status-badge ${getStatusClass(status)}`}>
-                        {status === 'pending' ? t.pending : 
-                         status === 'in-progress' ? t.inProgress :
-                         status === 'resolved' ? t.resolved : 
-                         status === 'review' ? t.underReview : 'Not selected'}
+                        {status ? getStatusDisplayName(status) : 'Not selected'}
                       </span>
                     </div>
                     {resolution && (
@@ -654,6 +1028,91 @@ const StaffComplaintSolve = () => {
                       {updating ? t.updating : t.update}
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Resolution Tab */}
+            {activeTab === 'resolution' && (
+              <div className="resolution-card">
+                <div className="card-header">
+                  <h2>✅ {t.resolutionInfo}</h2>
+                  {updateHistory.length > 0 && (
+                    <span className="update-count">{updateHistory.length} updates</span>
+                  )}
+                </div>
+
+                <div className="resolution-content">
+                  {complaint.resolution && (
+                    <div className="current-resolution">
+                      <h3>Current Resolution</h3>
+                      <div className="resolution-details">
+                        <div className="resolution-item">
+                          <label>Status:</label>
+                          <span className={`status-badge ${getStatusClass(complaint.status)}`}>
+                            {getStatusDisplayName(complaint.status)}
+                          </span>
+                        </div>
+
+                        {complaint.resolution && (
+                          <div className="resolution-item">
+                            <label>{t.resolution}:</label>
+                            <div className="resolution-text">{complaint.resolution}</div>
+                          </div>
+                        )}
+
+                        {complaint.actionTaken && (
+                          <div className="resolution-item">
+                            <label>{t.actionTaken}:</label>
+                            <div className="resolution-text">{complaint.actionTaken}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {updateHistory && updateHistory.length > 0 && (
+                    <div className="update-history">
+                      <h3>{t.updateHistory}</h3>
+                      {updateHistory.map((update, index) => (
+                        <div key={update.id || index} className="history-item">
+                          <div className="history-header">
+                            <span className="history-status">
+                              {update.statusDisplay || getStatusDisplayName(update.status)}
+                            </span>
+                            <span className="history-meta">
+                              {t.by} {update.updatedBy || 'Staff'} {t.on} {formatDisplayDate(update.date || update.timestamp)}
+                            </span>
+                          </div>
+                          {update.resolution && (
+                            <div className="history-resolution">
+                              <strong>Resolution:</strong> {update.resolution}
+                            </div>
+                          )}
+                          {update.actionTaken && (
+                            <div className="history-action">
+                              <strong>Action:</strong> {update.actionTaken}
+                            </div>
+                          )}
+                          {update.notes && (
+                            <div className="history-notes">📝 {update.notes}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!complaint.resolution && updateHistory.length === 0 && (
+                    <div className="no-resolution">
+                      <p>No resolution has been provided yet.</p>
+                      <button 
+                        className="btn-go-update"
+                        onClick={() => setActiveTab('update')}
+                      >
+                        ✏️ Add Resolution
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -710,7 +1169,6 @@ const StaffComplaintSolve = () => {
 
         .main-content {
           flex: 1;
-          
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -805,6 +1263,7 @@ const StaffComplaintSolve = () => {
           margin-bottom: 24px;
           border-bottom: 2px solid #e2e8f0;
           padding-bottom: 0;
+          flex-wrap: wrap;
         }
 
         .tab-btn {
@@ -817,6 +1276,7 @@ const StaffComplaintSolve = () => {
           color: #64748b;
           transition: all 0.2s;
           border-radius: 8px 8px 0 0;
+          position: relative;
         }
 
         .tab-btn:hover {
@@ -830,7 +1290,16 @@ const StaffComplaintSolve = () => {
           margin-bottom: -2px;
         }
 
-        .complaint-card, .update-card, .preview-card {
+        .tab-badge {
+          background: #0288d1;
+          color: white;
+          border-radius: 50%;
+          padding: 1px 6px;
+          font-size: 0.7rem;
+          margin-left: 6px;
+        }
+
+        .complaint-card, .update-card, .preview-card, .resolution-card {
           background: white;
           border-radius: 20px;
           border: 1px solid #e2e8f0;
@@ -841,12 +1310,55 @@ const StaffComplaintSolve = () => {
           padding: 20px 24px;
           background: linear-gradient(135deg, #f8fafc, #ffffff);
           border-bottom: 1px solid #e2e8f0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
         }
 
         .card-header h2 {
           font-size: 1.2rem;
           font-weight: 600;
           color: #0f172a;
+        }
+
+        .card-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .btn-edit-mode {
+          padding: 6px 16px;
+          border-radius: 6px;
+          font-size: 0.85rem;
+          font-weight: 500;
+          cursor: pointer;
+          border: 1px solid #0288d1;
+          background: white;
+          color: #0288d1;
+          transition: all 0.2s;
+        }
+
+        .btn-edit-mode:hover {
+          background: #0288d1;
+          color: white;
+        }
+
+        .edit-mode-badge {
+          padding: 6px 16px;
+          border-radius: 6px;
+          font-size: 0.85rem;
+          font-weight: 500;
+          background: #fef3c7;
+          color: #d97706;
+        }
+
+        .update-count {
+          font-size: 0.8rem;
+          color: #64748b;
+          background: #f1f5f9;
+          padding: 4px 12px;
+          border-radius: 12px;
         }
 
         .complaint-info {
@@ -940,6 +1452,95 @@ const StaffComplaintSolve = () => {
           color: #334155;
         }
 
+        /* Edit Form Styles */
+        .edit-form {
+          padding: 0;
+        }
+
+        .edit-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+
+        .edit-input {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          transition: border-color 0.2s;
+        }
+
+        .edit-input:focus {
+          outline: none;
+          border-color: #0288d1;
+          box-shadow: 0 0 0 3px rgba(2, 136, 209, 0.1);
+        }
+
+        .edit-textarea {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          font-family: inherit;
+          resize: vertical;
+          transition: border-color 0.2s;
+        }
+
+        .edit-textarea:focus {
+          outline: none;
+          border-color: #0288d1;
+          box-shadow: 0 0 0 3px rgba(2, 136, 209, 0.1);
+        }
+
+        .edit-actions {
+          display: flex;
+          gap: 12px;
+          justify-content: flex-end;
+          margin-top: 16px;
+        }
+
+        .btn-cancel {
+          padding: 10px 24px;
+          border-radius: 8px;
+          font-weight: 500;
+          cursor: pointer;
+          border: 1px solid #e2e8f0;
+          background: white;
+          color: #475569;
+          transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+          background: #f8fafc;
+          border-color: #dc2626;
+          color: #dc2626;
+        }
+
+        .btn-save {
+          padding: 10px 24px;
+          border-radius: 8px;
+          font-weight: 500;
+          cursor: pointer;
+          border: none;
+          background: linear-gradient(135deg, #0288d1, #0277bd);
+          color: white;
+          transition: all 0.2s;
+        }
+
+        .btn-save:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(2, 136, 209, 0.3);
+        }
+
+        .btn-save:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
         .update-form {
           padding: 24px;
         }
@@ -982,6 +1583,17 @@ const StaffComplaintSolve = () => {
         .status-select:focus {
           outline: none;
           border-color: #0288d1;
+        }
+
+        .field-error {
+          border-color: #ef4444 !important;
+        }
+
+        .field-hint {
+          color: #ef4444;
+          font-size: 0.8rem;
+          margin-top: 4px;
+          display: block;
         }
 
         .form-row {
@@ -1044,7 +1656,7 @@ const StaffComplaintSolve = () => {
           cursor: not-allowed;
         }
 
-        .preview-content {
+        .preview-content, .resolution-content {
           padding: 24px;
         }
 
@@ -1115,6 +1727,133 @@ const StaffComplaintSolve = () => {
           cursor: not-allowed;
         }
 
+        /* Resolution Tab Styles */
+        .current-resolution {
+          margin-bottom: 24px;
+        }
+
+        .current-resolution h3 {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #0f172a;
+          margin-bottom: 12px;
+        }
+
+        .resolution-details {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .resolution-item {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding: 16px;
+          background: #f8fafc;
+          border-radius: 12px;
+        }
+
+        .resolution-item label {
+          font-weight: 600;
+          color: #0f172a;
+        }
+
+        .resolution-text {
+          color: #334155;
+          line-height: 1.6;
+          background: white;
+          padding: 12px;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .update-history {
+          margin-top: 24px;
+          padding-top: 24px;
+          border-top: 2px solid #e2e8f0;
+        }
+
+        .update-history h3 {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #0f172a;
+          margin-bottom: 16px;
+        }
+
+        .history-item {
+          padding: 16px;
+          background: #f8fafc;
+          border-radius: 12px;
+          margin-bottom: 12px;
+          border-left: 4px solid #0288d1;
+        }
+
+        .history-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+
+        .history-status {
+          font-weight: 600;
+          padding: 2px 10px;
+          border-radius: 12px;
+          background: #e0f2fe;
+          color: #0288d1;
+        }
+
+        .history-meta {
+          font-size: 0.85rem;
+          color: #64748b;
+        }
+
+        .history-resolution {
+          color: #334155;
+          padding: 4px 0;
+          line-height: 1.5;
+        }
+
+        .history-action {
+          color: #334155;
+          padding: 4px 0;
+          line-height: 1.5;
+        }
+
+        .history-notes {
+          color: #64748b;
+          font-style: italic;
+          padding-top: 4px;
+        }
+
+        .no-resolution {
+          text-align: center;
+          padding: 40px 20px;
+          color: #64748b;
+        }
+
+        .no-resolution p {
+          margin-bottom: 16px;
+        }
+
+        .btn-go-update {
+          padding: 10px 24px;
+          border-radius: 8px;
+          font-weight: 500;
+          cursor: pointer;
+          border: none;
+          background: linear-gradient(135deg, #0288d1, #0277bd);
+          color: white;
+        }
+
+        .btn-go-update:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(2, 136, 209, 0.3);
+        }
+
         @media (max-width: 768px) {
           .main-content {
             margin-left: 0;
@@ -1125,7 +1864,7 @@ const StaffComplaintSolve = () => {
             padding: 16px;
           }
           
-          .info-grid {
+          .info-grid, .edit-grid {
             grid-template-columns: 1fr;
           }
           
@@ -1142,11 +1881,11 @@ const StaffComplaintSolve = () => {
             margin-bottom: 4px;
           }
           
-          .action-buttons {
+          .action-buttons, .edit-actions {
             flex-direction: column;
           }
           
-          .btn-update {
+          .btn-update, .btn-save, .btn-cancel {
             width: 100%;
           }
           
@@ -1156,6 +1895,17 @@ const StaffComplaintSolve = () => {
           
           .preview-item strong {
             min-width: auto;
+          }
+
+          .history-header {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .card-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
           }
         }
       `}</style>

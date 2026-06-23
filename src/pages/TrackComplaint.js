@@ -1,6 +1,7 @@
 // src/pages/TrackComplaint.js
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 
 // Try to import local images with fallback
 let ntcLogo, govLogo, heroImage;
@@ -22,91 +23,59 @@ try {
 
 const TrackComplaint = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   
   // Language state
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
   // State for tracking
   const [trackTicket, setTrackTicket] = useState('');
-  const [trackPassword, setTrackPassword] = useState('');
   const [trackResult, setTrackResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
-  // In-memory complaints store (same as LandingPage for demo)
-  const [complaintsStore] = useState([
-    {
-      ticketId: 'NTC-२०८०-००१',
-      enTicketId: 'NTC-2080-001',
-      password: 'pass123',
-      name: 'रमेश केसी',
-      enName: 'Ramesh KC',
-      email: 'ramesh@example.com',
-      phone: '9841000001',
-      category: 'internet',
-      description: 'फाइबर जडान २ दिनदेखि बन्द छ',
-      enDescription: 'Fiber connection down since 2 days',
-      status: 'प्रगतिमा',
-      enStatus: 'In Progress',
-      date: '२०८०-०१-१५',
-      enDate: '2024-01-15',
-      channel: 'वेबसाइट पोर्टल',
-      enChannel: 'Website Portal'
-    },
-    {
-      ticketId: 'NTC-२०८०-००२',
-      enTicketId: 'NTC-2080-002',
-      password: 'pass456',
-      name: 'सीता शर्मा',
-      enName: 'Sita Sharma',
-      email: 'sita@example.com',
-      phone: '9812345678',
-      category: 'recharge',
-      description: 'रु. ५०० रिचार्ज गरे पनि ब्यालेन्स अपडेट भएन',
-      enDescription: 'Recharged Rs. 500 but balance not updated',
-      status: 'समाधान भयो',
-      enStatus: 'Resolved',
-      date: '२०८०-०१-२०',
-      enDate: '2024-01-20',
-      channel: 'व्हाट्सएप',
-      enChannel: 'WhatsApp'
-    },
-    {
-      ticketId: 'NTC-२०८०-००३',
-      enTicketId: 'NTC-2080-003',
-      password: 'pass789',
-      name: 'हरि प्रसाद',
-      enName: 'Hari Prasad',
-      email: 'hari@example.com',
-      phone: '9823456789',
-      category: 'activation',
-      description: 'सिम डिएक्टिभेसन अनुरोध प्रक्रिया भएन',
-      enDescription: 'SIM deactivation request not processed',
-      status: 'विचाराधीन',
-      enStatus: 'Pending',
-      date: '२०८०-०१-२५',
-      enDate: '2024-01-25',
-      channel: 'कल सेन्टर',
-      enChannel: 'Call Center'
-    },
-    {
-      ticketId: 'NTC-२०८०-००४',
-      enTicketId: 'NTC-2080-004',
-      password: 'pass101',
-      name: 'विकास न्यौपाने',
-      enName: 'Bikas NyauPane',
-      email: 'bikas@example.com',
-      phone: '9841567890',
-      category: 'signal',
-      description: 'नेटवर्क सिग्नल समस्या - कल ड्रप भइरहेको छ',
-      enDescription: 'Network signal issue - call drops frequently',
-      status: 'समीक्षामा',
-      enStatus: 'Under Review',
-      date: '२०८०-०१-२८',
-      enDate: '2024-01-28',
-      channel: 'वेबसाइट पोर्टल',
-      enChannel: 'Website Portal'
+  // API URL
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+  // Check for ticket ID from URL params or session storage
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ticketId = params.get('ticket');
+    
+    if (ticketId) {
+      setTrackTicket(ticketId);
+      // Auto-search if ticket ID is provided
+      setTimeout(() => {
+        handleTrackComplaint(new Event('submit'));
+      }, 500);
     }
-  ]);
+    
+    // Check session storage for tracking ID from previous submission
+    const sessionTicket = sessionStorage.getItem('trackingId');
+    if (sessionTicket && !ticketId) {
+      setTrackTicket(sessionTicket);
+      setTimeout(() => {
+        handleTrackComplaint(new Event('submit'));
+      }, 500);
+    }
+  }, [location]);
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Show toast notification
+  const showToast = (message, type = 'success', duration = 3000) => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: '' });
+    }, duration);
+  };
 
   const content = {
     np: {
@@ -124,8 +93,6 @@ const TrackComplaint = () => {
       fillDetails: 'स्थिति जाँच गर्न तलको विवरण भर्नुहोस्',
       ticketNumber: 'टिकेट नम्बर',
       enterTicket: 'आफ्नो टिकेट नम्बर प्रविष्ट गर्नुहोस्',
-      password: 'पासवर्ड',
-      enterPassword: 'आफ्नो पासवर्ड प्रविष्ट गर्नुहोस्',
       proceed: 'उजुरी खोज्नुहोस्',
       complaintStatusLabel: 'उजुरीको स्थिति',
       ticketId: 'टिकेट आईडी',
@@ -137,10 +104,29 @@ const TrackComplaint = () => {
       registeredDate: 'दर्ता मिति',
       channel: 'च्यानल',
       description: 'विवरण',
-      demoNote: 'डेमोको लागि टिकेट: NTC-२०८०-००१, पासवर्ड: pass123',
+      resolution: 'समाधान',
+      actionTaken: 'गरिएको कार्य',
+      notFound: '❌ उल्लेखित टिकेट नम्बरसँग मेल खाने कुनै उजुरी फेला परेन।',
+      loading: 'खोजी गर्दै...',
+      error: 'त्रुटि भयो। कृपया पछि प्रयास गर्नुहोस्।',
       footerTagline: 'एनटीसी सहयात्री - तपाईंको सेवामा सधैं',
       copyright: '© २०८२ एनटीसी गुनासो ट्र्याकिङ प्रणाली। सबै अधिकार सुरक्षित।',
-      backToHome: 'गृह पृष्ठमा फर्कनुहोस्'
+      backToHome: 'गृह पृष्ठमा फर्कनुहोस्',
+      enterTicketNumber: 'कृपया टिकेट नम्बर प्रविष्ट गर्नुहोस्',
+      demoNote: 'डेमो टिकेट नम्बर: NTC-2024-001 वा NTC-२०८०-००१',
+      submittedDate: 'दर्ता मिति',
+      submittedDateNp: 'नेपाली मिति',
+      submittedDateEn: 'अंग्रेजी मिति',
+      priority: 'प्राथमिकता',
+      high: 'उच्च',
+      medium: 'मध्यम',
+      low: 'न्यून',
+      assignedTo: 'तोकिएको टोली',
+      updateHistory: 'अपडेट इतिहास',
+      noUpdates: 'कुनै अपडेट छैन',
+      by: 'द्वारा',
+      on: 'मिति',
+      loadingStatus: 'लोड हुँदै...'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -157,8 +143,6 @@ const TrackComplaint = () => {
       fillDetails: 'Fill out the details below to check the status',
       ticketNumber: 'Ticket Number',
       enterTicket: 'Enter your ticket number',
-      password: 'Password',
-      enterPassword: 'Enter your password',
       proceed: 'Search Complaint',
       complaintStatusLabel: 'Complaint Status',
       ticketId: 'Ticket ID',
@@ -170,10 +154,29 @@ const TrackComplaint = () => {
       registeredDate: 'Registered Date',
       channel: 'Channel',
       description: 'Description',
-      demoNote: 'Demo: Ticket: NTC-2080-001, Password: pass123',
+      resolution: 'Resolution',
+      actionTaken: 'Action Taken',
+      notFound: '❌ No complaint found with the provided ticket number.',
+      loading: 'Searching...',
+      error: 'An error occurred. Please try again later.',
       footerTagline: 'NTC Sahayatri - Always at Your Service',
       copyright: '© 2026 NTC Complaint Tracking System. All rights reserved.',
-      backToHome: 'Back to Home'
+      backToHome: 'Back to Home',
+      enterTicketNumber: 'Please enter ticket number',
+      demoNote: 'Demo Ticket Number: NTC-2024-001 or NTC-२०८०-००१',
+      submittedDate: 'Submitted Date',
+      submittedDateNp: 'Nepali Date',
+      submittedDateEn: 'English Date',
+      priority: 'Priority',
+      high: 'High',
+      medium: 'Medium',
+      low: 'Low',
+      assignedTo: 'Assigned To',
+      updateHistory: 'Update History',
+      noUpdates: 'No updates yet',
+      by: 'by',
+      on: 'on',
+      loadingStatus: 'Loading...'
     }
   };
 
@@ -182,33 +185,231 @@ const TrackComplaint = () => {
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
     setShowLanguageDropdown(false);
+    localStorage.setItem('preferredLanguage', lang);
   };
 
-  const handleTrackComplaint = (e) => {
+  const handleTrackComplaint = async (e) => {
     e.preventDefault();
     
-    if (!trackTicket || !trackPassword) {
-      alert(language === 'np' ? 'कृपया टिकेट नम्बर र पासवर्ड दुवै भर्नुहोस्।' : 'Please enter both Ticket Number and Password.');
+    if (!trackTicket.trim()) {
+      showToast(t.enterTicketNumber, 'warning');
       return;
     }
 
-    const found = complaintsStore.find(c => 
-      (c.ticketId === trackTicket || c.enTicketId === trackTicket) && c.password === trackPassword
-    );
-    
-    if (found) {
-      setTrackResult(found);
-    } else {
+    setLoading(true);
+    setError('');
+    setTrackResult(null);
+
+    try {
+      // Search for complaint by ticket number
+      const response = await axios.get(`${API_URL}/public/complaints/track`, {
+        params: { ticketNumber: trackTicket.trim() }
+      });
+
+      if (response.data.success && response.data.data) {
+        setTrackResult(response.data.data);
+        showToast(language === 'np' ? 'उजुरी फेला पर्यो' : 'Complaint found', 'success', 2000);
+      } else {
+        setTrackResult(null);
+        setError(t.notFound);
+        showToast(t.notFound, 'error', 3000);
+      }
+    } catch (error) {
+      console.error('Error tracking complaint:', error);
+      setError(t.error);
       setTrackResult(null);
-      alert(language === 'np' ? '❌ उल्लेखित विवरणसँग मेल खाने कुनै उजुरी फेला परेन।' : '❌ No complaint found with the provided credentials.');
+      
+      // If backend is not available, use sample data for demo
+      if (error.code === 'ERR_NETWORK' || error.response?.status === 404) {
+        // Try to find in local sample data
+        const sampleResult = findSampleComplaint(trackTicket.trim());
+        if (sampleResult) {
+          setTrackResult(sampleResult);
+          showToast(language === 'np' ? 'उजुरी फेला पर्यो (नमूना डाटा)' : 'Complaint found (sample data)', 'success', 2000);
+        } else {
+          setError(t.notFound);
+          showToast(t.notFound, 'error', 3000);
+        }
+      } else {
+        showToast(t.error, 'error', 3000);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Sample data for demo when backend is not available
+  const findSampleComplaint = (ticketNumber) => {
+    const sampleComplaints = [
+      {
+        id: 1,
+        complaintNumber: 'NTC-2024-001',
+        complaintNumberNp: 'NTC-२०८०-००१',
+        name: 'रमेश केसी',
+        nameEn: 'Ramesh KC',
+        email: 'ramesh@example.com',
+        phone: '9841000001',
+        category: 'internet',
+        category_np: 'इन्टरनेट',
+        category_en: 'Internet',
+        status: 'in-progress',
+        status_np: 'प्रगतिमा',
+        status_en: 'In Progress',
+        complaint: 'फाइबर जडान २ दिनदेखि बन्द छ',
+        complaintEn: 'Fiber connection down since 2 days',
+        date: '२०८०-०१-१५',
+        enDate: '2024-01-15',
+        channel: 'वेबसाइट पोर्टल',
+        enChannel: 'Website Portal',
+        priority: 'high',
+        resolution: 'प्राविधिक टोलीले जाँच गरिरहेको छ',
+        resolutionEn: 'Technical team is investigating',
+        actionTaken: 'प्राविधिक टोलीलाई जानकारी दिइयो',
+        actionTakenEn: 'Technical team notified',
+        assignedTo: 'प्राविधिक टोली',
+        assignedToEn: 'Technical Team',
+        submittedDateNp: '२०८०-०१-१५',
+        submittedDateEn: '2024-01-15',
+        history: [
+          { status: 'pending', status_np: 'विचाराधीन', status_en: 'Pending', notes: 'गुनासो दर्ता भयो', notesEn: 'Complaint registered', updatedBy: 'System', updatedAt: '२०८०-०१-१५' },
+          { status: 'in-progress', status_np: 'प्रगतिमा', status_en: 'In Progress', notes: 'प्राविधिक टोलीलाई तोकियो', notesEn: 'Assigned to technical team', updatedBy: 'Admin', updatedAt: '२०८०-०१-१६' }
+        ]
+      },
+      {
+        id: 2,
+        complaintNumber: 'NTC-2024-002',
+        complaintNumberNp: 'NTC-२०८०-००२',
+        name: 'सीता शर्मा',
+        nameEn: 'Sita Sharma',
+        email: 'sita@example.com',
+        phone: '9812345678',
+        category: 'recharge',
+        category_np: 'रिचार्ज',
+        category_en: 'Recharge',
+        status: 'resolved',
+        status_np: 'समाधान',
+        status_en: 'Resolved',
+        complaint: 'रु. ५०० रिचार्ज गरे पनि ब्यालेन्स अपडेट भएन',
+        complaintEn: 'Recharged Rs. 500 but balance not updated',
+        date: '२०८०-०१-२०',
+        enDate: '2024-01-20',
+        channel: 'व्हाट्सएप',
+        enChannel: 'WhatsApp',
+        priority: 'medium',
+        resolution: 'रिचार्ज सफल भयो र ब्यालेन्स अपडेट गरियो',
+        resolutionEn: 'Recharge successful and balance updated',
+        actionTaken: 'ग्राहकको खातामा रिचार्ज जम्मा गरियो',
+        actionTakenEn: 'Recharge credited to customer account',
+        assignedTo: 'ग्राहक सेवा',
+        assignedToEn: 'Customer Service',
+        submittedDateNp: '२०८०-०१-२०',
+        submittedDateEn: '2024-01-20',
+        history: [
+          { status: 'pending', status_np: 'विचाराधीन', status_en: 'Pending', notes: 'गुनासो दर्ता भयो', notesEn: 'Complaint registered', updatedBy: 'System', updatedAt: '२०८०-०१-२०' },
+          { status: 'in-progress', status_np: 'प्रगतिमा', status_en: 'In Progress', notes: 'ग्राहक सेवालाई तोकियो', notesEn: 'Assigned to customer service', updatedBy: 'Admin', updatedAt: '२०८०-०१-२१' },
+          { status: 'resolved', status_np: 'समाधान', status_en: 'Resolved', notes: 'रिचार्ज सफल भयो', notesEn: 'Recharge successful', updatedBy: 'Customer Service', updatedAt: '२०८०-०१-२२' }
+        ]
+      },
+      {
+        id: 3,
+        complaintNumber: 'NTC-2024-003',
+        complaintNumberNp: 'NTC-२०८०-००३',
+        name: 'हरि प्रसाद',
+        nameEn: 'Hari Prasad',
+        email: 'hari@example.com',
+        phone: '9823456789',
+        category: 'activation',
+        category_np: 'सक्रियता',
+        category_en: 'Activation',
+        status: 'pending',
+        status_np: 'विचाराधीन',
+        status_en: 'Pending',
+        complaint: 'सिम डिएक्टिभेसन अनुरोध प्रक्रिया भएन',
+        complaintEn: 'SIM deactivation request not processed',
+        date: '२०८०-०१-२५',
+        enDate: '2024-01-25',
+        channel: 'कल सेन्टर',
+        enChannel: 'Call Center',
+        priority: 'low',
+        resolution: null,
+        actionTaken: null,
+        assignedTo: 'प्रशासन',
+        assignedToEn: 'Administration',
+        submittedDateNp: '२०८०-०१-२५',
+        submittedDateEn: '2024-01-25',
+        history: [
+          { status: 'pending', status_np: 'विचाराधीन', status_en: 'Pending', notes: 'गुनासो दर्ता भयो', notesEn: 'Complaint registered', updatedBy: 'System', updatedAt: '२०८०-०१-२५' }
+        ]
+      }
+    ];
+
+    // Search by ticket number (both Nepali and English formats)
+    const found = sampleComplaints.find(c => 
+      c.complaintNumber === ticketNumber || 
+      c.complaintNumberNp === ticketNumber
+    );
+
+    return found || null;
+  };
+
   const getStatusClass = (status) => {
-    if (status === 'प्रगतिमा' || status === 'In Progress') return 'status-progress';
-    if (status === 'समाधान भयो' || status === 'Resolved') return 'status-resolved';
-    if (status === 'समीक्षामा' || status === 'Under Review') return 'status-review';
-    return 'status-pending';
+    const classes = {
+      'pending': 'status-pending',
+      'in-progress': 'status-progress',
+      'resolved': 'status-resolved',
+      'review': 'status-review',
+      'rejected': 'status-rejected'
+    };
+    return classes[status] || 'status-pending';
+  };
+
+  const getStatusText = (status) => {
+    if (language === 'np') {
+      const statusMap = {
+        'pending': 'विचाराधीन',
+        'in-progress': 'प्रगतिमा',
+        'resolved': 'समाधान',
+        'review': 'समीक्षामा',
+        'rejected': 'अस्वीकृत'
+      };
+      return statusMap[status] || status;
+    } else {
+      const statusMap = {
+        'pending': 'Pending',
+        'in-progress': 'In Progress',
+        'resolved': 'Resolved',
+        'review': 'Under Review',
+        'rejected': 'Rejected'
+      };
+      return statusMap[status] || status;
+    }
+  };
+
+  const getPriorityText = (priority) => {
+    if (language === 'np') {
+      const priorityMap = {
+        'high': 'उच्च',
+        'medium': 'मध्यम',
+        'low': 'न्यून'
+      };
+      return priorityMap[priority] || priority;
+    } else {
+      const priorityMap = {
+        'high': 'High',
+        'medium': 'Medium',
+        'low': 'Low'
+      };
+      return priorityMap[priority] || priority;
+    }
+  };
+
+  const getPriorityClass = (priority) => {
+    const classes = {
+      'high': 'priority-high',
+      'medium': 'priority-medium',
+      'low': 'priority-low'
+    };
+    return classes[priority] || 'priority-medium';
   };
 
   const LogoImage = ({ src, alt, fallback, className }) => {
@@ -230,6 +431,17 @@ const TrackComplaint = () => {
 
   return (
     <div className="track-complaint-page">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : toast.type === 'warning' ? '⚠️' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
       {/* HEADER 1 - Top Bar */}
       <div className="header-1">
         <div className="container-1">
@@ -350,43 +562,52 @@ const TrackComplaint = () => {
                     onChange={(e) => setTrackTicket(e.target.value)} 
                     placeholder={t.enterTicket} 
                     required 
+                    disabled={loading}
                   />
                 </div>
+                <p className="demo-note">💡 {t.demoNote}</p>
               </div>
               
-              <div className="form-group">
-                <label>{t.password}</label>
-                <div className="input-wrapper">
-                  <span className="input-icon">🔒</span>
-                  <input 
-                    type="password" 
-                    value={trackPassword} 
-                    onChange={(e) => setTrackPassword(e.target.value)} 
-                    placeholder={t.enterPassword} 
-                    required 
-                  />
-                </div>
-              </div>
-              
-              <button type="submit" className="btn-track">
-                <span>🔍</span> {t.proceed}
+              <button type="submit" className="btn-track" disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="spinner"></span>
+                    {t.loading}
+                  </>
+                ) : (
+                  <>
+                    <span>🔍</span> {t.proceed}
+                  </>
+                )}
               </button>
             </form>
+
+            {error && (
+              <div className="error-message">
+                <span className="error-icon">❌</span>
+                <span>{error}</span>
+              </div>
+            )}
 
             {trackResult && (
               <div className="track-result">
                 <div className="result-header">
                   <span className="result-icon">✅</span>
                   <h3>{t.complaintStatusLabel}</h3>
+                  <span className={`status-badge ${getStatusClass(trackResult.status)}`}>
+                    {getStatusText(trackResult.status)}
+                  </span>
                 </div>
                 <div className="result-details">
                   <div className="detail-row">
                     <div className="detail-label">{t.ticketId}:</div>
-                    <div className="detail-value">{language === 'np' ? trackResult.ticketId : trackResult.enTicketId}</div>
+                    <div className="detail-value">
+                      {language === 'np' ? trackResult.complaintNumberNp : trackResult.complaintNumber}
+                    </div>
                   </div>
                   <div className="detail-row">
                     <div className="detail-label">{t.name}:</div>
-                    <div className="detail-value">{trackResult.name}</div>
+                    <div className="detail-value">{language === 'np' ? trackResult.name : trackResult.nameEn}</div>
                   </div>
                   <div className="detail-row">
                     <div className="detail-label">{t.email}:</div>
@@ -398,47 +619,75 @@ const TrackComplaint = () => {
                   </div>
                   <div className="detail-row">
                     <div className="detail-label">{t.category}:</div>
-                    <div className="detail-value">
-                      {language === 'np' ? 
-                        (trackResult.category === 'internet' ? 'इन्टरनेट सेवा' :
-                         trackResult.category === 'recharge' ? 'रिचार्ज र ब्यालेन्स' :
-                         trackResult.category === 'activation' ? 'सेवा सक्रियता' :
-                         trackResult.category === 'billing' ? 'बिलिङ' :
-                         trackResult.category === 'signal' ? 'सिग्नल' : 'अन्य') :
-                        (trackResult.category === 'internet' ? 'Internet Service' :
-                         trackResult.category === 'recharge' ? 'Recharge & Balance' :
-                         trackResult.category === 'activation' ? 'Activation' :
-                         trackResult.category === 'billing' ? 'Billing' :
-                         trackResult.category === 'signal' ? 'Signal' : 'Other')
-                      }
-                    </div>
+                    <div className="detail-value">{language === 'np' ? trackResult.category_np : trackResult.category_en}</div>
                   </div>
                   <div className="detail-row">
-                    <div className="detail-label">{t.status}:</div>
+                    <div className="detail-label">{t.priority}:</div>
                     <div className="detail-value">
-                      <span className={`status-badge ${getStatusClass(trackResult.status)}`}>
-                        {language === 'np' ? trackResult.status : trackResult.enStatus}
+                      <span className={`priority-badge ${getPriorityClass(trackResult.priority)}`}>
+                        {getPriorityText(trackResult.priority)}
                       </span>
                     </div>
                   </div>
                   <div className="detail-row">
                     <div className="detail-label">{t.registeredDate}:</div>
-                    <div className="detail-value">{language === 'np' ? trackResult.date : trackResult.enDate}</div>
+                    <div className="detail-value">{language === 'np' ? trackResult.submittedDateNp : trackResult.submittedDateEn}</div>
                   </div>
                   <div className="detail-row">
                     <div className="detail-label">{t.channel}:</div>
                     <div className="detail-value">{language === 'np' ? trackResult.channel : trackResult.enChannel}</div>
                   </div>
-                  <div className="detail-row">
+                  {trackResult.assignedTo && (
+                    <div className="detail-row">
+                      <div className="detail-label">{t.assignedTo}:</div>
+                      <div className="detail-value">{language === 'np' ? trackResult.assignedTo : trackResult.assignedToEn}</div>
+                    </div>
+                  )}
+                  <div className="detail-row full-width">
                     <div className="detail-label">{t.description}:</div>
-                    <div className="detail-value">{language === 'np' ? trackResult.description : trackResult.enDescription}</div>
+                    <div className="detail-value">{language === 'np' ? trackResult.complaint : trackResult.complaintEn}</div>
                   </div>
+                  {trackResult.resolution && (
+                    <div className="detail-row full-width resolution">
+                      <div className="detail-label">✅ {t.resolution}:</div>
+                      <div className="detail-value">{language === 'np' ? trackResult.resolution : trackResult.resolutionEn}</div>
+                    </div>
+                  )}
+                  {trackResult.actionTaken && (
+                    <div className="detail-row full-width">
+                      <div className="detail-label">📋 {t.actionTaken}:</div>
+                      <div className="detail-value">{language === 'np' ? trackResult.actionTaken : trackResult.actionTakenEn}</div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Update History */}
+                {trackResult.history && trackResult.history.length > 0 && (
+                  <div className="history-section">
+                    <h4>{t.updateHistory}</h4>
+                    <div className="history-timeline">
+                      {trackResult.history.map((item, index) => (
+                        <div key={index} className="history-item">
+                          <div className="history-marker"></div>
+                          <div className="history-content">
+                            <div className="history-header">
+                              <span className={`history-status ${getStatusClass(item.status)}`}>
+                                {language === 'np' ? item.status_np : item.status_en}
+                              </span>
+                              <span className="history-date">
+                                {t.by} {item.updatedBy} {t.on} {item.updatedAt}
+                              </span>
+                            </div>
+                            <p className="history-notes">{language === 'np' ? item.notes : item.notesEn}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-          
-            
             <div className="back-to-home">
               <button onClick={() => navigate('/')} className="btn-back">
                 ← {t.backToHome}
@@ -447,8 +696,6 @@ const TrackComplaint = () => {
           </div>
         </div>
       </div>
-
-    
 
       <style jsx>{`
         * {
@@ -462,6 +709,43 @@ const TrackComplaint = () => {
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
           color: #1a2c3e;
           min-height: 100vh;
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 180px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 350px;
+        }
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.warning { border-left: 4px solid #f59e0b; background: #fffbeb; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        .toast-icon { font-size: 1.2rem; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         /* HEADER 1 - Top Bar */
@@ -488,12 +772,7 @@ const TrackComplaint = () => {
           gap: 20px;
         }
 
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
+        .header-left { display: flex; align-items: center; gap: 16px; }
         .we-are-here {
           display: flex;
           align-items: center;
@@ -503,26 +782,10 @@ const TrackComplaint = () => {
           border-radius: 40px;
           font-weight: 500;
         }
+        .quote-text { font-size: 0.9rem; letter-spacing: 0.5px; font-weight: 600; }
 
-        .quote-text {
-          font-size: 0.9rem;
-          letter-spacing: 0.5px;
-          font-weight: 600;
-        }
-
-        .header-right {
-          display: flex;
-          align-items: center;
-          gap: 25px;
-          flex-wrap: wrap;
-        }
-
-        .contact-info-group {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-        }
-
+        .header-right { display: flex; align-items: center; gap: 25px; flex-wrap: wrap; }
+        .contact-info-group { display: flex; align-items: center; gap: 15px; }
         .contact-info-item {
           display: flex;
           align-items: center;
@@ -533,26 +796,12 @@ const TrackComplaint = () => {
           border-radius: 30px;
           transition: all 0.3s ease;
         }
-
-        .contact-info-item:hover {
-          background: rgba(255,255,255,0.25);
-          transform: translateY(-1px);
-        }
-
-        .contact-icon {
-          font-size: 0.85rem;
-        }
-
-        .contact-text {
-          font-size: 0.75rem;
-          font-weight: 500;
-        }
+        .contact-info-item:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px); }
+        .contact-icon { font-size: 0.85rem; }
+        .contact-text { font-size: 0.75rem; font-weight: 500; }
 
         /* Language Dropdown */
-        .language-dropdown {
-          position: relative;
-        }
-
+        .language-dropdown { position: relative; }
         .language-selector {
           display: flex;
           align-items: center;
@@ -567,20 +816,9 @@ const TrackComplaint = () => {
           font-weight: 500;
           transition: all 0.3s ease;
         }
-
-        .language-selector:hover {
-          background: rgba(255,255,255,0.25);
-        }
-
-        .lang-icon {
-          font-size: 0.85rem;
-        }
-
-        .dropdown-arrow {
-          font-size: 0.6rem;
-          margin-left: 5px;
-        }
-
+        .language-selector:hover { background: rgba(255,255,255,0.25); }
+        .lang-icon { font-size: 0.85rem; }
+        .dropdown-arrow { font-size: 0.6rem; margin-left: 5px; }
         .dropdown-menu {
           position: absolute;
           top: 38px;
@@ -592,7 +830,6 @@ const TrackComplaint = () => {
           z-index: 1050;
           min-width: 120px;
         }
-
         .dropdown-item {
           display: flex;
           align-items: center;
@@ -606,19 +843,9 @@ const TrackComplaint = () => {
           transition: all 0.2s ease;
           text-align: left;
         }
-
-        .dropdown-item:hover {
-          background: #f0f2f5;
-        }
-
-        .dropdown-item.active {
-          background: #1565c0;
-          color: white;
-        }
-
-        .lang-flag {
-          font-size: 1rem;
-        }
+        .dropdown-item:hover { background: #f0f2f5; }
+        .dropdown-item.active { background: #1565c0; color: white; }
+        .lang-flag { font-size: 1rem; }
 
         /* HEADER 2 - Department Level */
         .header-2 {
@@ -633,7 +860,6 @@ const TrackComplaint = () => {
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           border-bottom: 1px solid rgba(21, 101, 192, 0.15);
         }
-
         .container-2 {
           max-width: 1400px;
           margin: 0 auto;
@@ -643,26 +869,9 @@ const TrackComplaint = () => {
           align-items: center;
           gap: 30px;
         }
-
-        .logo-left {
-          flex: 1;
-          display: flex;
-          justify-content: flex-start;
-        }
-
-        .logo-right {
-          flex: 1;
-          display: flex;
-          justify-content: flex-end;
-        }
-
-        .ntc-logo,
-        .gov-logo {
-          height: 50px;
-          width: auto;
-          object-fit: contain;
-        }
-
+        .logo-left { flex: 1; display: flex; justify-content: flex-start; }
+        .logo-right { flex: 1; display: flex; justify-content: flex-end; }
+        .ntc-logo, .gov-logo { height: 50px; width: auto; object-fit: contain; }
         .logo-fallback {
           font-size: 2rem;
           width: 50px;
@@ -674,25 +883,9 @@ const TrackComplaint = () => {
           border-radius: 50%;
           color: white;
         }
-
-        .dept-text-center {
-          flex: 2;
-          text-align: center;
-        }
-
-        .dept-name {
-          font-size: 1rem;
-          font-weight: 700;
-          color: #0d47a1;
-          letter-spacing: 1px;
-        }
-
-        .dept-address {
-          font-size: 0.75rem;
-          opacity: 0.7;
-          color: #555;
-          margin-top: 3px;
-        }
+        .dept-text-center { flex: 2; text-align: center; }
+        .dept-name { font-size: 1rem; font-weight: 700; color: #0d47a1; letter-spacing: 1px; }
+        .dept-address { font-size: 0.75rem; opacity: 0.7; color: #555; margin-top: 3px; }
 
         /* HEADER 3 - Navigation Bar */
         .header-3 {
@@ -706,7 +899,6 @@ const TrackComplaint = () => {
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
           z-index: 1020;
         }
-
         .container-3 {
           max-width: 1400px;
           margin: 0 auto;
@@ -717,13 +909,7 @@ const TrackComplaint = () => {
           flex-wrap: wrap;
           gap: 20px;
         }
-
-        .nav-menu-left {
-          display: flex;
-          gap: 20px;
-          align-items: center;
-        }
-
+        .nav-menu-left { display: flex; gap: 20px; align-items: center; }
         .nav-btn {
           background: transparent;
           border: none;
@@ -738,25 +924,10 @@ const TrackComplaint = () => {
           align-items: center;
           gap: 8px;
         }
-
-        .nav-btn:hover {
-          background: rgba(255,255,255,0.15);
-          transform: translateY(-1px);
-        }
-
-        .nav-icon {
-          font-size: 1.1rem;
-        }
-
-        .nav-text {
-          font-size: 0.95rem;
-        }
-
-        .login-btn-right {
-          display: flex;
-          align-items: center;
-        }
-
+        .nav-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-1px); }
+        .nav-icon { font-size: 1.1rem; }
+        .nav-text { font-size: 0.95rem; }
+        .login-btn-right { display: flex; align-items: center; }
         .login-btn {
           background: transparent;
           border: 2px solid white;
@@ -772,13 +943,7 @@ const TrackComplaint = () => {
           gap: 8px;
           white-space: nowrap;
         }
-
-        .login-btn:hover {
-          background: white;
-          color: #1565c0;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
+        .login-btn:hover { background: white; color: #1565c0; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 
         /* Main Content */
         .main-content {
@@ -830,7 +995,7 @@ const TrackComplaint = () => {
         }
 
         .form-group {
-          margin-bottom: 28px;
+          margin-bottom: 24px;
           text-align: left;
         }
 
@@ -877,9 +1042,21 @@ const TrackComplaint = () => {
           box-shadow: 0 0 0 4px rgba(21, 101, 192, 0.1);
         }
 
+        .form-group input:disabled {
+          background: #f0f0f0;
+          cursor: not-allowed;
+        }
+
         .form-group input::placeholder {
           color: #aaa;
           font-size: 0.9rem;
+          text-align: left;
+        }
+
+        .demo-note {
+          font-size: 0.75rem;
+          color: #6c8196;
+          margin-top: 8px;
           text-align: left;
         }
 
@@ -898,17 +1075,48 @@ const TrackComplaint = () => {
           align-items: center;
           justify-content: center;
           gap: 10px;
-          margin-top: 10px;
         }
 
-        .btn-track:hover {
+        .btn-track:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 10px 25px rgba(21, 101, 192, 0.3);
-          background: linear-gradient(135deg, #0d47a1, #083a7a);
         }
 
+        .btn-track:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        .spinner {
+          width: 20px;
+          height: 20px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-top-color: white;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+          margin-top: 20px;
+          padding: 16px 20px;
+          background: #fef2f2;
+          border-left: 4px solid #ef4444;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          color: #dc2626;
+        }
+
+        .error-icon { font-size: 1.2rem; }
+
+        /* Track Result */
         .track-result {
-          margin-top: 40px;
+          margin-top: 32px;
           padding: 28px;
           background: linear-gradient(135deg, #e3f2fd, #e8eaf6);
           border-radius: 24px;
@@ -920,9 +1128,10 @@ const TrackComplaint = () => {
           display: flex;
           align-items: center;
           gap: 12px;
-          margin-bottom: 24px;
+          margin-bottom: 20px;
           padding-bottom: 16px;
           border-bottom: 2px solid rgba(21, 101, 192, 0.2);
+          flex-wrap: wrap;
         }
 
         .result-icon {
@@ -933,18 +1142,45 @@ const TrackComplaint = () => {
           color: #0d47a1;
           font-size: 1.4rem;
           margin: 0;
+          flex: 1;
         }
+
+        .status-badge {
+          display: inline-block;
+          padding: 4px 14px;
+          border-radius: 20px;
+          font-size: 0.75rem;
+          font-weight: 600;
+        }
+
+        .status-pending { background: #fef3c7; color: #d97706; }
+        .status-progress { background: #dbeafe; color: #2563eb; }
+        .status-resolved { background: #d1fae5; color: #059669; }
+        .status-review { background: #e0e7ff; color: #4f46e5; }
+        .status-rejected { background: #fee2e2; color: #dc2626; }
+
+        .priority-badge {
+          display: inline-block;
+          padding: 2px 10px;
+          border-radius: 12px;
+          font-size: 0.7rem;
+          font-weight: 500;
+        }
+
+        .priority-high { background: #fee2e2; color: #dc2626; }
+        .priority-medium { background: #fef3c7; color: #d97706; }
+        .priority-low { background: #d1fae5; color: #059669; }
 
         .result-details {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
         }
 
         .detail-row {
           display: flex;
           flex-wrap: wrap;
-          padding: 10px 0;
+          padding: 8px 0;
           border-bottom: 1px solid rgba(21, 101, 192, 0.1);
           text-align: left;
         }
@@ -953,51 +1189,126 @@ const TrackComplaint = () => {
           border-bottom: none;
         }
 
+        .detail-row.full-width {
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .detail-row.resolution {
+          background: #e8f5e9;
+          border-radius: 8px;
+          padding: 12px 16px;
+          border-left: 3px solid #4caf50;
+        }
+
         .detail-label {
           font-weight: 700;
           width: 140px;
           color: #0d47a1;
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           text-align: left;
+          flex-shrink: 0;
         }
 
         .detail-value {
           flex: 1;
           color: #1a2c3e;
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           word-break: break-word;
           text-align: left;
         }
 
-        .status-badge {
-          display: inline-block;
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 0.75rem;
+        /* History Section */
+        .history-section {
+          margin-top: 24px;
+          padding-top: 20px;
+          border-top: 2px solid rgba(21, 101, 192, 0.15);
+        }
+
+        .history-section h4 {
+          font-size: 1rem;
           font-weight: 600;
+          color: #0d47a1;
+          margin-bottom: 16px;
         }
 
-        .status-progress {
-          background: #fff3cd;
-          color: #856404;
+        .history-timeline {
+          position: relative;
+          padding-left: 20px;
         }
 
-        .status-resolved {
-          background: #d4edda;
-          color: #155724;
+        .history-timeline::before {
+          content: '';
+          position: absolute;
+          left: 4px;
+          top: 0;
+          bottom: 0;
+          width: 2px;
+          background: #d1d5db;
         }
 
-        .status-pending {
-          background: #f8d7da;
-          color: #721c24;
+        .history-item {
+          position: relative;
+          margin-bottom: 16px;
+          padding-left: 16px;
         }
 
-        .status-review {
-          background: #fff3cd;
-          color: #856404;
+        .history-item:last-child {
+          margin-bottom: 0;
         }
 
+        .history-marker {
+          position: absolute;
+          left: -4px;
+          top: 4px;
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: #1565c0;
+          border: 2px solid white;
+          box-shadow: 0 0 0 2px #1565c0;
+        }
 
+        .history-content {
+          background: white;
+          padding: 12px 16px;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .history-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 6px;
+        }
+
+        .history-status {
+          display: inline-block;
+          padding: 2px 10px;
+          border-radius: 12px;
+          font-size: 0.7rem;
+          font-weight: 500;
+        }
+
+        .history-status.status-pending { background: #fef3c7; color: #d97706; }
+        .history-status.status-progress { background: #dbeafe; color: #2563eb; }
+        .history-status.status-resolved { background: #d1fae5; color: #059669; }
+        .history-status.status-review { background: #e0e7ff; color: #4f46e5; }
+        .history-status.status-rejected { background: #fee2e2; color: #dc2626; }
+
+        .history-date {
+          font-size: 0.7rem;
+          color: #6b7280;
+        }
+
+        .history-notes {
+          font-size: 0.85rem;
+          color: #374151;
+          margin: 0;
+        }
 
         .back-to-home {
           margin-top: 28px;
@@ -1022,6 +1333,7 @@ const TrackComplaint = () => {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(21, 101, 192, 0.2);
         }
+
         /* Responsive */
         @media (max-width: 768px) {
           .main-content {
@@ -1042,11 +1354,21 @@ const TrackComplaint = () => {
           
           .detail-row {
             flex-direction: column;
-            gap: 6px;
+            gap: 4px;
           }
           
           .detail-label {
             width: 100%;
+          }
+
+          .result-header {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .history-header {
+            flex-direction: column;
+            align-items: flex-start;
           }
           
           .container-1,
@@ -1070,6 +1392,14 @@ const TrackComplaint = () => {
           
           .track-form {
             max-width: 100%;
+          }
+
+          .toast-notification {
+            top: auto;
+            bottom: 20px;
+            right: 20px;
+            left: 20px;
+            max-width: calc(100% - 40px);
           }
         }
 

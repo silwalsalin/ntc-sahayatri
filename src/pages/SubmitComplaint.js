@@ -120,6 +120,8 @@ const SubmitComplaint = () => {
   // State for complaint form
   const [formData, setFormData] = useState({
     natureOfComplaint: '',
+    subject: '',
+    subjectEn: '',
     name: '',
     state: '',
     district: '',
@@ -173,7 +175,7 @@ const SubmitComplaint = () => {
       np: 'मधेश प्रदेश', 
       en: 'Madhesh Province', 
       districts: {
-        'saptari': { np: 'सप्तरी', en: 'Saptari', municipalities: ['राजविराज नगरपालिका', 'कञ्चनरूप नगरपालिका', 'शम्भुनाथ नगरपालिका', 'सप्तकोशी नगरपालिका', 'सुरुङ्गा नगरपालिका', 'बोदेबरसाइन नगरपालिका', 'खडक नगरपालिका', 'तिरहुत गाउँपालिका', 'महादेवा गाउँपालिका', 'रुपनी गाउँपालिका', 'वलान-विहुल गाउँपालिका', 'राजगढ गाउँपालिका', 'विष्णुपुर गाउँपालिका', 'छिन्नमस्ता गाउँपालिका', 'आग्नीपुर गाउँपालिका'] },
+        'saptari': { np: 'सप्तरी', en: 'Saptari', municipalities: ['राजविराज नगरपालिका', 'कञ्चनरूप नगरपालिका', 'शम्भुनाथ नगरपालिका', 'सप्तकोशी नगरपालिका', 'सुरुङ्गा नगरपालिका', 'बोदेबरसाइन नगरपालिका', 'खडक नगरपालिका', 'तिरहुत गाउँपालिका', 'महादेवा गाउँपालिका', 'रुपनी गाउँपालिका', 'बलान-बिहुल गाउँपालिका', 'राजगढ गाउँपालिका', 'विष्णुपुर गाउँपालिका', 'छिन्नमस्ता गाउँपालिका', 'आग्नीपुर गाउँपालिका'] },
         'siraha': { np: 'सिराहा', en: 'Siraha', municipalities: ['सिराहा नगरपालिका', 'लहान नगरपालिका', 'धनगढीमाई नगरपालिका', 'गोलबजार नगरपालिका', 'मिर्चैया नगरपालिका', 'कर्जन्हा नगरपालिका', 'सुखीपुर नगरपालिका', 'भगवानपुर गाउँपालिका', 'अर्नमा गाउँपालिका', 'औरही गाउँपालिका', 'बरियारपट्टी गाउँपालिका', 'लक्ष्मीपुर पटारी गाउँपालिका', 'नरहा गाउँपालिका', 'सखुवा नान्करकट्टी गाउँपालिका', 'विष्णुपुर गाउँपालिका', 'नवराजपुर गाउँपालिका'] },
         'dhanusa': { np: 'धनुषा', en: 'Dhanusa', municipalities: ['जनकपुरधाम उपमहानगरपालिका', 'धनुषाधाम नगरपालिका', 'क्षिरेश्वरनाथ नगरपालिका', 'गणेशमान चारनाथ नगरपालिका', 'मिथिला नगरपालिका', 'सबैला नगरपालिका', 'विदेह नगरपालिका', 'कमला नगरपालिका', 'मिथिला बिहारी नगरपालिका', 'हंसपुर नगरपालिका', 'लक्ष्मीनिया गाउँपालिका', 'औरही गाउँपालिका', 'बटेश्वर गाउँपालिका', 'मुखियापट्टी मुसहरनिया गाउँपालिका', 'जनकनन्दनी गाउँपालिका'] },
         'mahottari': { np: 'महोत्तरी', en: 'Mahottari', municipalities: ['बर्दिबास नगरपालिका', 'जलेश्वर नगरपालिका', 'गौशाला नगरपालिका', 'बलवा नगरपालिका', 'मनरा शिसवा नगरपालिका', 'मटिहानी नगरपालिका', 'भङ्गाहा नगरपालिका', 'रामगोपालपुर नगरपालिका', 'लोहरपट्टी नगरपालिका', 'एकडारा गाउँपालिका', 'सोनमा गाउँपालिका', 'साम्सी गाउँपालिका', 'पिपरा गाउँपालिका'] },
@@ -198,7 +200,7 @@ const SubmitComplaint = () => {
         'sindhuli': { np: 'सिन्धुली', en: 'Sindhuli', municipalities: ['कमलामाई नगरपालिका', 'दुधौली नगरपालिका', 'मरिण गाउँपालिका', 'फिक्कल गाउँपालिका', 'घ्याङलेख गाउँपालिका', 'सुनकोशी गाउँपालिका', 'हरिहरपुरगढी गाउँपालिका', 'तिनपाटन गाउँपालिका', 'गोलन्जोर गाउँपालिका'] },
         'makwanpur': { np: 'मकवानपुर', en: 'Makwanpur', municipalities: ['हेटौंडा उपमहानगरपालिका', 'थाहा नगरपालिका', 'भीमफेदी गाउँपालिका', 'बकैया गाउँपालिका', 'बागमती गाउँपालिका', 'मकवानपुरगढी गाउँपालिका', 'मनहरी गाउँपालिका', 'राक्सिराङ गाउँपालिका', 'इन्द्रसरोवर गाउँपालिका', 'कैलाश गाउँपालिका'] },
         'ramechhap': { np: 'रामेछाप', en: 'Ramechhap', municipalities: ['मन्थली नगरपालिका', 'रामेछाप नगरपालिका', 'गोकुलगंगा गाउँपालिका', 'उमाकुण्ड गाउँपालिका', 'लिखु गाउँपालिका', 'दोरम्बा गाउँपालिका', 'खाँडादेवी गाउँपालिका', 'सुनापती गाउँपालिका', 'भञ्जीखोला गाउँपालिका'] },
-        'dolakha': { np: 'दोलखा', en: 'Dolakha', municipalities: ['भीमेश्वर नगरपालिका', 'जिरी नगरपालिका', 'कालिञ्चोक गाउँपालिका', 'गौरीशंकर गाउँपालिका', 'तामाकोशी गाउँपालिका', 'बैतेश्वर गाउँपालिका', 'मेलुङ गाउँपालिका', 'शैलुङ गाउँपालिका', 'विगु गाउँपालिका'] },
+        'dolakha': { np: 'दोलखा', en: 'Dolakha', municipalities: ['भीमेश्वर नगरपालिका', 'जिरी नगरपालिका', 'कालिञ्चोक गाउँपालिका', 'गौरीशंकर गाउँपालिका', 'तामाकोशी गाउँपालिका', 'बैतेश्वर गाउँपालिका', 'मेलुङ गाउँपालिका', 'शैलुङ गाउँपालिका', 'बिगु गाउँपालिका'] },
         'chitwan': { np: 'चितवन', en: 'Chitwan', municipalities: ['भरतपुर महानगरपालिका', 'रत्ननगर नगरपालिका', 'कालिका नगरपालिका', 'खैरहनी नगरपालिका', 'माडी नगरपालिका', 'इच्छाकामना गाउँपालिका'] }
       }
     },
@@ -314,6 +316,9 @@ const SubmitComplaint = () => {
       rechargeIssue: 'रिचार्ज समस्या',
       activationIssue: 'सक्रियता समस्या',
       otherComplaint: 'अन्य',
+      subjectLabel: 'विषय',
+      subjectPlaceholder: 'गुनासोको संक्षिप्त विषय प्रविष्ट गर्नुहोस्',
+      subjectEnPlaceholder: 'Enter a brief subject for your complaint',
       problemCreatorName: 'उजुरीकर्ताको नाम',
       problemCreatorAddress: 'उजुरीकर्ताको ठेगाना',
       state: 'प्रदेश',
@@ -378,6 +383,9 @@ const SubmitComplaint = () => {
       rechargeIssue: 'Recharge Issue',
       activationIssue: 'Activation Issue',
       otherComplaint: 'Other',
+      subjectLabel: 'Subject',
+      subjectPlaceholder: 'Enter a brief subject for your complaint',
+      subjectEnPlaceholder: 'Enter a brief subject for your complaint',
       problemCreatorName: "Problem Creator's Name",
       problemCreatorAddress: "Problem Creator's Address",
       state: 'State/Province',
@@ -499,12 +507,18 @@ const SubmitComplaint = () => {
     };
   };
 
+  // Update handleSubmitComplaint to include subject
   const handleSubmitComplaint = async (e) => {
     e.preventDefault();
     
     // Validation checks
     if (!formData.natureOfComplaint) {
       showToast(language === 'np' ? 'कृपया उजुरीको प्रकृति चयन गर्नुहोस्।' : 'Please select nature of complaint.', 'error');
+      return;
+    }
+    
+    if (!formData.subject) {
+      showToast(language === 'np' ? 'कृपया गुनासोको विषय प्रविष्ट गर्नुहोस्।' : 'Please enter a subject for your complaint.', 'error');
       return;
     }
     
@@ -551,6 +565,11 @@ const SubmitComplaint = () => {
         }
       });
       
+      // Add subject in English if not provided
+      if (formData.subject && !formData.subjectEn) {
+        formDataToSend.append('subjectEn', formData.subject);
+      }
+      
       // Add date information to the form data
       formDataToSend.append('submittedDateEn', englishDate.fullDate);
       formDataToSend.append('submittedDateNp', nepaliDate.fullDate);
@@ -580,7 +599,7 @@ const SubmitComplaint = () => {
         });
       }, 200);
       
-      const response = await axios.post(`${API_URL}/complaints`, formDataToSend, {
+      const response = await axios.post(`${API_URL}/submit-complaint`, formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -605,8 +624,11 @@ const SubmitComplaint = () => {
         setSuccessData(successDataWithDate);
         setShowSuccess(true);
         
+        // Reset form
         setFormData({
           natureOfComplaint: '',
+          subject: '',
+          subjectEn: '',
           name: '',
           state: '',
           district: '',
@@ -803,6 +825,21 @@ const SubmitComplaint = () => {
                     <option value="activation">{t.activationIssue}</option>
                     <option value="other">{t.otherComplaint}</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Subject Field - NEW */}
+              <div className="form-section">
+                <h3 className="section-title">{t.subjectLabel} <span className="required-star">*</span></h3>
+                <div className="form-group">
+                  <input 
+                    type="text" 
+                    name="subject" 
+                    value={formData.subject} 
+                    onChange={handleInputChange} 
+                    placeholder={language === 'np' ? t.subjectPlaceholder : t.subjectEnPlaceholder}
+                    required 
+                  />
                 </div>
               </div>
 

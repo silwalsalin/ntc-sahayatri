@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const AdminReportsUsers = () => {
   const navigate = useNavigate();
@@ -17,6 +20,7 @@ const AdminReportsUsers = () => {
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const [isExporting, setIsExporting] = useState(false);
 
   // Save language preference
   useEffect(() => {
@@ -25,6 +29,7 @@ const AdminReportsUsers = () => {
 
   // Format number with Nepali digits
   const formatNumber = (num) => {
+    if (num === undefined || num === null) return '0';
     if (language === 'np') {
       const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
       return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
@@ -34,6 +39,7 @@ const AdminReportsUsers = () => {
 
   // Format decimal with Nepali digits
   const formatDecimal = (num) => {
+    if (num === undefined || num === null) return '0';
     if (language === 'np') {
       const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
       return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
@@ -456,6 +462,548 @@ const AdminReportsUsers = () => {
     }
   }, [navigate, selectedStatus, selectedRole]);
 
+  // ===== EXPORT FUNCTIONS =====
+
+  // Generate Excel export data
+  const generateExcelData = () => {
+    const isNepali = language === 'np';
+    const data = [];
+    
+    // Summary section
+    data.push({ 
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'प्रयोगकर्ता रिपोर्ट' : 'Users Report',
+      [isNepali ? 'मान' : 'Value']: ''
+    });
+    data.push({ 
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'कुल प्रयोगकर्ता' : 'Total Users',
+      [isNepali ? 'मान' : 'Value']: reportData.summary.totalUsers
+    });
+    data.push({ 
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'सक्रिय प्रयोगकर्ता' : 'Active Users',
+      [isNepali ? 'मान' : 'Value']: reportData.summary.activeUsers
+    });
+    data.push({ 
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'निष्क्रिय प्रयोगकर्ता' : 'Inactive Users',
+      [isNepali ? 'मान' : 'Value']: reportData.summary.inactiveUsers
+    });
+    data.push({ 
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'निलम्बित प्रयोगकर्ता' : 'Suspended Users',
+      [isNepali ? 'मान' : 'Value']: reportData.summary.suspendedUsers
+    });
+    data.push({ 
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'यो महिना नयाँ' : 'New This Month',
+      [isNepali ? 'मान' : 'Value']: reportData.summary.newUsersThisMonth
+    });
+    data.push({ 
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'गत महिना नयाँ' : 'New Last Month',
+      [isNepali ? 'मान' : 'Value']: reportData.summary.newUsersLastMonth
+    });
+    data.push({ 
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'वृद्धि' : 'Growth',
+      [isNepali ? 'मान' : 'Value']: `${reportData.summary.growth}%`
+    });
+    data.push({ 
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'कुल गुनासो' : 'Total Complaints',
+      [isNepali ? 'मान' : 'Value']: reportData.summary.totalComplaints
+    });
+    data.push({ 
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'प्रति प्रयोगकर्ता औसत गुनासो' : 'Avg Complaints/User',
+      [isNepali ? 'मान' : 'Value']: reportData.summary.avgComplaintsPerUser
+    });
+    data.push({ 
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'सन्तुष्टि दर' : 'Satisfaction Rate',
+      [isNepali ? 'मान' : 'Value']: `${reportData.summary.satisfactionRate}%`
+    });
+    
+    // Add blank row
+    data.push({ [isNepali ? 'विवरण' : 'Description']: '', [isNepali ? 'मान' : 'Value']: '' });
+    
+    // Role breakdown
+    data.push({ 
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'भूमिका अनुसार विभाजन' : 'Role Breakdown',
+      [isNepali ? 'मान' : 'Value']: ''
+    });
+    reportData.roleBreakdown.forEach(item => {
+      data.push({ 
+        [isNepali ? 'विवरण' : 'Description']: isNepali ? item.name : item.enName,
+        [isNepali ? 'मान' : 'Value']: `${item.count} (${item.percentage}%)`
+      });
+    });
+    
+    // Status breakdown
+    data.push({ [isNepali ? 'विवरण' : 'Description']: '', [isNepali ? 'मान' : 'Value']: '' });
+    data.push({ 
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'स्थिति अनुसार विभाजन' : 'Status Breakdown',
+      [isNepali ? 'मान' : 'Value']: ''
+    });
+    reportData.statusBreakdown.forEach(item => {
+      data.push({ 
+        [isNepali ? 'विवरण' : 'Description']: isNepali ? item.name : item.enName,
+        [isNepali ? 'मान' : 'Value']: `${item.count} (${item.percentage}%)`
+      });
+    });
+    
+    return data;
+  };
+
+  // Generate top users data for export
+  const generateTopUsersData = () => {
+    const isNepali = language === 'np';
+    const headers = {
+      name: isNepali ? 'नाम' : 'Name',
+      email: isNepali ? 'इमेल' : 'Email',
+      phone: isNepali ? 'फोन' : 'Phone',
+      role: isNepali ? 'भूमिका' : 'Role',
+      department: isNepali ? 'विभाग' : 'Department',
+      complaints: isNepali ? 'गुनासो' : 'Complaints',
+      resolved: isNepali ? 'समाधान' : 'Resolved',
+      satisfaction: isNepali ? 'सन्तुष्टि' : 'Satisfaction',
+      status: isNepali ? 'स्थिति' : 'Status'
+    };
+    
+    return [
+      headers,
+      ...reportData.topUsers.map(user => ({
+        [headers.name]: isNepali ? user.name : user.enName,
+        [headers.email]: user.email,
+        [headers.phone]: user.phone,
+        [headers.role]: getRoleText(user.role),
+        [headers.department]: user.department,
+        [headers.complaints]: user.complaints,
+        [headers.resolved]: user.resolved,
+        [headers.satisfaction]: user.satisfaction,
+        [headers.status]: getStatusText(user.status)
+      }))
+    ];
+  };
+
+  // Export to Excel
+  const handleExportExcel = () => {
+    setIsExporting(true);
+    showToast(t.excelExport, 'info');
+    
+    try {
+      const wb = XLSX.utils.book_new();
+      const isNepali = language === 'np';
+      
+      // Sheet 1: Summary
+      const summaryData = generateExcelData();
+      const ws1 = XLSX.utils.json_to_sheet(summaryData);
+      const colWidths = Object.keys(summaryData[0] || {}).map(key => ({
+        wch: Math.max(key.length, 30)
+      }));
+      ws1['!cols'] = colWidths;
+      XLSX.utils.book_append_sheet(wb, ws1, isNepali ? 'सारांश' : 'Summary');
+      
+      // Sheet 2: Top Users
+      const topUsersData = generateTopUsersData();
+      const ws2 = XLSX.utils.json_to_sheet(topUsersData);
+      const colWidths2 = Object.keys(topUsersData[0] || {}).map(key => ({
+        wch: Math.max(key.length, 20)
+      }));
+      ws2['!cols'] = colWidths2;
+      XLSX.utils.book_append_sheet(wb, ws2, isNepali ? 'शीर्ष प्रयोगकर्ता' : 'Top Users');
+      
+      // Create filename
+      const date = new Date();
+      const dateStr = date.toISOString().split('T')[0];
+      const filename = `users_report_${dateStr}.xlsx`;
+      
+      // Save file
+      XLSX.writeFile(wb, filename);
+      
+      setTimeout(() => {
+        showToast(language === 'np' ? 'एक्सेल फाइल सफलतापूर्वक डाउनलोड भयो' : 'Excel file downloaded successfully', 'success');
+        setIsExporting(false);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Excel export error:', error);
+      showToast(language === 'np' ? 'एक्सेल निर्यात गर्न असफल' : 'Failed to export Excel', 'error');
+      setIsExporting(false);
+    }
+  };
+
+  // Export to PDF
+  const handleExportPDF = () => {
+    setIsExporting(true);
+    showToast(t.pdfExport, 'info');
+    
+    setTimeout(() => {
+      try {
+        const isNepali = language === 'np';
+        
+        // Create PDF with proper settings
+        const doc = new jsPDF({
+          orientation: 'landscape',
+          unit: 'mm',
+          format: 'a4',
+          compress: true
+        });
+        
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        
+        // Add header
+        doc.setFillColor(13, 71, 161);
+        doc.rect(0, 0, pageWidth, 25, 'F');
+        
+        // Add title
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        const title = isNepali ? 'प्रयोगकर्ता रिपोर्ट' : 'Users Report';
+        doc.text(title, pageWidth / 2, 16, { align: 'center' });
+        
+        // Add date
+        doc.setTextColor(200, 200, 200);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        const dateStr = new Date().toLocaleString(isNepali ? 'ne-NP' : 'en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        doc.text(`${isNepali ? 'मिति' : 'Date'}: ${dateStr}`, pageWidth - 14, 20, { align: 'right' });
+        
+        let yPosition = 32;
+        
+        // ===== SUMMARY SECTION =====
+        doc.setTextColor(13, 71, 161);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(isNepali ? 'सारांश' : 'Summary', 14, yPosition);
+        yPosition += 6;
+        
+        const summaryHeaders = [
+          isNepali ? 'विवरण' : 'Description',
+          isNepali ? 'मान' : 'Value'
+        ];
+        const summaryRows = [
+          [isNepali ? 'कुल प्रयोगकर्ता' : 'Total Users', String(reportData.summary.totalUsers)],
+          [isNepali ? 'सक्रिय प्रयोगकर्ता' : 'Active Users', String(reportData.summary.activeUsers)],
+          [isNepali ? 'निष्क्रिय प्रयोगकर्ता' : 'Inactive Users', String(reportData.summary.inactiveUsers)],
+          [isNepali ? 'निलम्बित प्रयोगकर्ता' : 'Suspended Users', String(reportData.summary.suspendedUsers)],
+          [isNepali ? 'यो महिना नयाँ' : 'New This Month', String(reportData.summary.newUsersThisMonth)],
+          [isNepali ? 'गत महिना नयाँ' : 'New Last Month', String(reportData.summary.newUsersLastMonth)],
+          [isNepali ? 'वृद्धि' : 'Growth', `${reportData.summary.growth}%`],
+          [isNepali ? 'कुल गुनासो' : 'Total Complaints', String(reportData.summary.totalComplaints)],
+          [isNepali ? 'प्रति प्रयोगकर्ता औसत गुनासो' : 'Avg Complaints/User', String(reportData.summary.avgComplaintsPerUser)],
+          [isNepali ? 'सन्तुष्टि दर' : 'Satisfaction Rate', `${reportData.summary.satisfactionRate}%`]
+        ];
+        
+        doc.autoTable({
+          startY: yPosition,
+          head: [summaryHeaders],
+          body: summaryRows,
+          theme: 'striped',
+          styles: { 
+            fontSize: 8,
+            cellPadding: 3,
+            overflow: 'linebreak',
+            font: 'helvetica'
+          },
+          headStyles: { 
+            fillColor: [13, 71, 161], 
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [240, 245, 255] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            0: { cellWidth: 80 },
+            1: { cellWidth: 40, halign: 'right' }
+          }
+        });
+        
+        yPosition = doc.lastAutoTable.finalY + 8;
+        
+        // ===== ROLE BREAKDOWN =====
+        doc.setTextColor(13, 71, 161);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(isNepali ? 'भूमिका अनुसार विभाजन' : 'Role Breakdown', 14, yPosition);
+        yPosition += 6;
+        
+        const roleHeaders = [
+          isNepali ? 'भूमिका' : 'Role',
+          isNepali ? 'संख्या' : 'Count',
+          isNepali ? 'प्रतिशत' : 'Percentage'
+        ];
+        const roleRows = reportData.roleBreakdown.map(item => [
+          isNepali ? item.name : item.enName,
+          String(item.count),
+          `${item.percentage}%`
+        ]);
+        
+        doc.autoTable({
+          startY: yPosition,
+          head: [roleHeaders],
+          body: roleRows,
+          theme: 'striped',
+          styles: { 
+            fontSize: 8,
+            cellPadding: 3,
+            font: 'helvetica'
+          },
+          headStyles: { 
+            fillColor: [13, 71, 161], 
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [240, 245, 255] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            2: { halign: 'right' }
+          }
+        });
+        
+        yPosition = doc.lastAutoTable.finalY + 8;
+        
+        // ===== STATUS BREAKDOWN =====
+        doc.setTextColor(13, 71, 161);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(isNepali ? 'स्थिति अनुसार विभाजन' : 'Status Breakdown', 14, yPosition);
+        yPosition += 6;
+        
+        const statusHeaders = [
+          isNepali ? 'स्थिति' : 'Status',
+          isNepali ? 'संख्या' : 'Count',
+          isNepali ? 'प्रतिशत' : 'Percentage'
+        ];
+        const statusRows = reportData.statusBreakdown.map(item => [
+          isNepali ? item.name : item.enName,
+          String(item.count),
+          `${item.percentage}%`
+        ]);
+        
+        doc.autoTable({
+          startY: yPosition,
+          head: [statusHeaders],
+          body: statusRows,
+          theme: 'striped',
+          styles: { 
+            fontSize: 8,
+            cellPadding: 3,
+            font: 'helvetica'
+          },
+          headStyles: { 
+            fillColor: [13, 71, 161], 
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [240, 245, 255] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            2: { halign: 'right' }
+          }
+        });
+        
+        yPosition = doc.lastAutoTable.finalY + 8;
+        
+        // ===== ACTIVITY BREAKDOWN =====
+        doc.setTextColor(13, 71, 161);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(isNepali ? 'गतिविधि अनुसार विभाजन' : 'Activity Breakdown', 14, yPosition);
+        yPosition += 6;
+        
+        const activityHeaders = [
+          isNepali ? 'गतिविधि' : 'Activity',
+          isNepali ? 'संख्या' : 'Count',
+          isNepali ? 'प्रतिशत' : 'Percentage'
+        ];
+        const activityRows = reportData.activityBreakdown.map(item => [
+          isNepali ? item.name : item.enName,
+          String(item.count),
+          `${item.percentage}%`
+        ]);
+        
+        doc.autoTable({
+          startY: yPosition,
+          head: [activityHeaders],
+          body: activityRows,
+          theme: 'striped',
+          styles: { 
+            fontSize: 8,
+            cellPadding: 3,
+            font: 'helvetica'
+          },
+          headStyles: { 
+            fillColor: [13, 71, 161], 
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [240, 245, 255] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            2: { halign: 'right' }
+          }
+        });
+        
+        yPosition = doc.lastAutoTable.finalY + 8;
+        
+        // ===== REGISTRATION METHOD =====
+        doc.setTextColor(13, 71, 161);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(isNepali ? 'दर्ता विधि' : 'Registration Method', 14, yPosition);
+        yPosition += 6;
+        
+        const regHeaders = [
+          isNepali ? 'विधि' : 'Method',
+          isNepali ? 'संख्या' : 'Count',
+          isNepali ? 'प्रतिशत' : 'Percentage'
+        ];
+        const regRows = reportData.registrationMethod.map(item => [
+          isNepali ? item.name : item.enName,
+          String(item.count),
+          `${item.percentage}%`
+        ]);
+        
+        doc.autoTable({
+          startY: yPosition,
+          head: [regHeaders],
+          body: regRows,
+          theme: 'striped',
+          styles: { 
+            fontSize: 8,
+            cellPadding: 3,
+            font: 'helvetica'
+          },
+          headStyles: { 
+            fillColor: [13, 71, 161], 
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [240, 245, 255] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            2: { halign: 'right' }
+          }
+        });
+        
+        yPosition = doc.lastAutoTable.finalY + 8;
+        
+        // ===== TOP USERS =====
+        doc.setTextColor(13, 71, 161);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(isNepali ? 'शीर्ष प्रयोगकर्ताहरू' : 'Top Users', 14, yPosition);
+        yPosition += 6;
+        
+        const topHeaders = [
+          isNepali ? 'नाम' : 'Name',
+          isNepali ? 'इमेल' : 'Email',
+          isNepali ? 'फोन' : 'Phone',
+          isNepali ? 'भूमिका' : 'Role',
+          isNepali ? 'विभाग' : 'Department',
+          isNepali ? 'गुनासो' : 'Complaints',
+          isNepali ? 'समाधान' : 'Resolved',
+          isNepali ? 'सन्तुष्टि' : 'Satisfaction',
+          isNepali ? 'स्थिति' : 'Status'
+        ];
+        
+        const topRows = reportData.topUsers.map(user => [
+          isNepali ? user.name : user.enName,
+          user.email,
+          user.phone,
+          getRoleText(user.role),
+          user.department,
+          String(user.complaints),
+          String(user.resolved),
+          String(user.satisfaction),
+          getStatusText(user.status)
+        ]);
+        
+        if (topRows.length > 0) {
+          doc.autoTable({
+            startY: yPosition,
+            head: [topHeaders],
+            body: topRows,
+            theme: 'striped',
+            styles: { 
+              fontSize: 7,
+              cellPadding: 2,
+              font: 'helvetica'
+            },
+            headStyles: { 
+              fillColor: [13, 71, 161], 
+              textColor: [255, 255, 255],
+              fontSize: 8,
+              fontStyle: 'bold'
+            },
+            alternateRowStyles: { fillColor: [248, 250, 255] },
+            margin: { left: 10, right: 10 },
+            columnStyles: {
+              0: { cellWidth: 30 },
+              1: { cellWidth: 35 },
+              2: { cellWidth: 25 },
+              3: { cellWidth: 22 },
+              4: { cellWidth: 28 },
+              5: { cellWidth: 18, halign: 'center' },
+              6: { cellWidth: 18, halign: 'center' },
+              7: { cellWidth: 18, halign: 'center' },
+              8: { cellWidth: 22 }
+            }
+          });
+        } else {
+          doc.setTextColor(150, 150, 150);
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'italic');
+          doc.text(isNepali ? 'कुनै प्रयोगकर्ता फेला परेन' : 'No users found', pageWidth / 2, yPosition + 20, { align: 'center' });
+        }
+        
+        // ===== ADD FOOTER =====
+        const totalPages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+          doc.setPage(i);
+          doc.setTextColor(180, 180, 180);
+          doc.setFontSize(6.5);
+          doc.setFont('helvetica', 'italic');
+          const footerText = `NTC Complaint Tracking System - ${new Date().toISOString().split('T')[0]} - Page ${i} of ${totalPages}`;
+          doc.text(footerText, pageWidth / 2, pageHeight - 8, { align: 'center' });
+          
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.3);
+          doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12);
+        }
+        
+        // Save PDF
+        const filename = `users_report_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(filename);
+        
+        setTimeout(() => {
+          showToast(language === 'np' ? 'पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : 'PDF file downloaded successfully', 'success');
+          setIsExporting(false);
+        }, 1000);
+        
+      } catch (error) {
+        console.error('PDF export error:', error);
+        showToast(
+          language === 'np' 
+            ? 'पीडीएफ निर्यात गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
+            : 'Failed to export PDF. Please try again.',
+          'error'
+        );
+        setIsExporting(false);
+      }
+    }, 100);
+  };
+
+  // Print function
+  const handlePrint = () => {
+    window.print();
+  };
+
   const content = {
     np: {
       usersReports: 'प्रयोगकर्ता रिपोर्टहरू',
@@ -526,6 +1074,7 @@ const AdminReportsUsers = () => {
       exportStarted: 'निर्यात सुरु भयो...',
       pdfExport: 'पीडीएफ निर्यात भइरहेको छ...',
       excelExport: 'एक्सेल निर्यात भइरहेको छ...',
+      exporting: 'निर्यात हुँदै...',
       days: 'दिन'
     },
     en: {
@@ -597,6 +1146,7 @@ const AdminReportsUsers = () => {
       exportStarted: 'Export started...',
       pdfExport: 'Exporting PDF...',
       excelExport: 'Exporting Excel...',
+      exporting: 'Exporting...',
       days: 'days'
     }
   };
@@ -647,18 +1197,6 @@ const AdminReportsUsers = () => {
     await fetchData();
   };
 
-  const handleExportPDF = () => {
-    showToast(t.pdfExport, 'info');
-  };
-
-  const handleExportExcel = () => {
-    showToast(t.excelExport, 'info');
-  };
-
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="admin-reports-users">
       {/* Toast Notification */}
@@ -694,9 +1232,23 @@ const AdminReportsUsers = () => {
                 <p>{t.generateReports}</p>
               </div>
               <div className="action-buttons-header">
-                <button className="export-btn pdf" onClick={handleExportPDF}>📄 {t.exportPDF}</button>
-                <button className="export-btn excel" onClick={handleExportExcel}>📊 {t.exportExcel}</button>
-                <button className="export-btn print" onClick={handlePrint}>🖨️ {t.print}</button>
+                <button 
+                  className="export-btn pdf" 
+                  onClick={handleExportPDF} 
+                  disabled={isExporting}
+                >
+                  📄 {isExporting ? t.exporting : t.exportPDF}
+                </button>
+                <button 
+                  className="export-btn excel" 
+                  onClick={handleExportExcel} 
+                  disabled={isExporting}
+                >
+                  📊 {isExporting ? t.exporting : t.exportExcel}
+                </button>
+                <button className="export-btn print" onClick={handlePrint}>
+                  🖨️ {t.print}
+                </button>
               </div>
             </div>
 
@@ -782,7 +1334,7 @@ const AdminReportsUsers = () => {
               </button>
             </div>
 
-            {/* Summary Cards - Updated with formatNumber */}
+            {/* Summary Cards */}
             <div className="summary-cards">
               <div className="summary-card">
                 <div className="card-icon purple">👥</div>
@@ -828,7 +1380,7 @@ const AdminReportsUsers = () => {
               </div>
             </div>
 
-            {/* Growth Indicator - Updated with formatNumber */}
+            {/* Growth Indicator */}
             <div className="growth-card">
               <div className="growth-info">
                 <span className="growth-label">{t.newUsersThisMonth}:</span>
@@ -854,7 +1406,7 @@ const AdminReportsUsers = () => {
               </div>
             </div>
 
-            {/* Charts Grid - Updated with formatNumber */}
+            {/* Charts Grid */}
             <div className="charts-grid">
               {/* Role Breakdown */}
               <div className="chart-card">
@@ -941,7 +1493,7 @@ const AdminReportsUsers = () => {
               </div>
             </div>
 
-            {/* Monthly Trend - Updated with formatNumber */}
+            {/* Monthly Trend */}
             <div className="trend-card">
               <h3>{t.monthlyTrend}</h3>
               <div className="trend-chart">
@@ -964,7 +1516,7 @@ const AdminReportsUsers = () => {
               </div>
             </div>
 
-            {/* Top Users Table - Updated with formatNumber */}
+            {/* Top Users Table */}
             <div className="table-card">
               <h3>{t.topUsers}</h3>
               <div className="table-wrapper">
@@ -1078,7 +1630,7 @@ const AdminReportsUsers = () => {
           to { transform: translateX(0); opacity: 1; }
         }
 
-        /* ===== LAYOUT - Same as AdminDashboard ===== */
+        /* ===== LAYOUT ===== */
         .dashboard-layout {
           display: flex;
           height: calc(100vh - 195px);
@@ -1088,7 +1640,6 @@ const AdminReportsUsers = () => {
           overflow: hidden;
         }
 
-        /* Sidebar Container - Fixed */
         .sidebar-container {
           position: fixed;
           top: 195px;
@@ -1101,7 +1652,6 @@ const AdminReportsUsers = () => {
           overflow-y: auto;
         }
 
-        /* Main Container - Scrollable */
         .main-container {
           flex: 1;
           margin-left: 260px;
@@ -1187,10 +1737,15 @@ const AdminReportsUsers = () => {
           font-size: 0.85rem;
         }
 
+        .export-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
         .export-btn.pdf { background: #fee2e2; color: #dc2626; }
-        .export-btn.pdf:hover { background: #fecaca; transform: translateY(-1px); }
+        .export-btn.pdf:hover:not(:disabled) { background: #fecaca; transform: translateY(-1px); }
         .export-btn.excel { background: #d1fae5; color: #059669; }
-        .export-btn.excel:hover { background: #a7f3d0; transform: translateY(-1px); }
+        .export-btn.excel:hover:not(:disabled) { background: #a7f3d0; transform: translateY(-1px); }
         .export-btn.print { background: #dbeafe; color: #2563eb; }
         .export-btn.print:hover { background: #bfdbfe; transform: translateY(-1px); }
 

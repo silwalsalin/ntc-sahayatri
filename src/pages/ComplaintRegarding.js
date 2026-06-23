@@ -699,8 +699,29 @@ const ComplaintRegarding = () => {
   };
 
   const copyReferenceNumber = () => {
-    navigator.clipboard.writeText(referenceNumber);
-    showToast(t.copied, 'success', 1500);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(referenceNumber).then(() => {
+        showToast(t.copied, 'success', 1500);
+      }).catch(() => {
+        // Fallback method
+        const textArea = document.createElement('textarea');
+        textArea.value = referenceNumber;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showToast(t.copied, 'success', 1500);
+      });
+    } else {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = referenceNumber;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      showToast(t.copied, 'success', 1500);
+    }
   };
 
   // Function to get formatted Nepali date with time for display
@@ -843,6 +864,8 @@ const ComplaintRegarding = () => {
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
+        
+        showToast(t.successMessage, 'success');
       } else {
         throw new Error(response.data.message || 'Submission failed');
       }
@@ -892,7 +915,7 @@ const ComplaintRegarding = () => {
       {toast.show && (
         <div className={`toast-notification ${toast.type}`}>
           <span className="toast-icon">
-            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : toast.type === 'warning' ? '⚠️' : 'ℹ️'}
           </span>
           <span className="toast-message">{toast.message}</span>
           <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
@@ -908,7 +931,7 @@ const ComplaintRegarding = () => {
             <div className="success-details">
               <p><strong>{t.referenceNo}:</strong> 
                 <span className="highlight">{referenceNumber}</span>
-                <button className="copy-small" onClick={copyReferenceNumber}>📋</button>
+                <button className="copy-small" onClick={copyReferenceNumber} title={t.copyReference}>📋</button>
               </p>
               <p><strong>{t.ticketId}:</strong> 
                 <span className="highlight">{language === 'np' ? successData.complaintNumberNp : successData.complaintNumber}</span>
@@ -1402,6 +1425,7 @@ const ComplaintRegarding = () => {
         }
         .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
         .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.warning { border-left: 4px solid #f59e0b; background: #fffbeb; }
         .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
         .toast-icon { font-size: 1.2rem; }
         .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }

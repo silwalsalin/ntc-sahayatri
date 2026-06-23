@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const AdminAnalytics = () => {
   const navigate = useNavigate();
@@ -10,14 +12,23 @@ const AdminAnalytics = () => {
     return localStorage.getItem('preferredLanguage') || 'np';
   });
   const [timePeriod, setTimePeriod] = useState('month');
+  const [isExporting, setIsExporting] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   // Save language preference
   useEffect(() => {
     localStorage.setItem('preferredLanguage', language);
   }, [language]);
 
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
+
   // Format number with Nepali digits
   const formatNumber = (num) => {
+    if (num === undefined || num === null) return '0';
     if (language === 'np') {
       const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
       return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
@@ -27,6 +38,7 @@ const AdminAnalytics = () => {
 
   // Format decimal with Nepali digits
   const formatDecimal = (num) => {
+    if (num === undefined || num === null) return '0';
     if (language === 'np') {
       const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
       return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
@@ -134,7 +146,13 @@ const AdminAnalytics = () => {
       vsLastMonth: 'गत महिना भन्दा',
       hours: 'घण्टा',
       days: 'दिन',
-      day: 'दिन'
+      day: 'दिन',
+      exporting: 'निर्यात हुँदै...',
+      pdfExport: 'पीडीएफ निर्यात भइरहेको छ...',
+      total: 'जम्मा',
+      category: 'प्रकार',
+      count: 'संख्या',
+      percentage: 'प्रतिशत'
     },
     en: {
       analytics: 'Analytics',
@@ -163,7 +181,13 @@ const AdminAnalytics = () => {
       vsLastMonth: 'vs last month',
       hours: 'hours',
       days: 'days',
-      day: 'day'
+      day: 'day',
+      exporting: 'Exporting...',
+      pdfExport: 'Exporting PDF...',
+      total: 'Total',
+      category: 'Category',
+      count: 'Count',
+      percentage: 'Percentage'
     }
   };
 
@@ -190,12 +214,407 @@ const AdminAnalytics = () => {
     return language === 'np' ? analyticsData.performance.labels : analyticsData.performance.enLabels;
   };
 
-  const handleExportReport = () => {
-    alert(language === 'np' ? 'रिपोर्ट निर्यात भइरहेको छ...' : 'Exporting report...');
+  const getTeamName = (performer) => {
+    return language === 'np' ? performer.name : performer.enName;
+  };
+
+  // ===== PDF EXPORT FUNCTION =====
+  const handleExportPDF = () => {
+    setIsExporting(true);
+    showToast(t.pdfExport, 'info');
+
+    setTimeout(() => {
+      try {
+        const isNepali = language === 'np';
+
+        // Create PDF with proper settings
+        const doc = new jsPDF({
+          orientation: 'landscape',
+          unit: 'mm',
+          format: 'a4',
+          compress: true
+        });
+
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        // Add header with gradient effect
+        doc.setFillColor(13, 71, 161);
+        doc.rect(0, 0, pageWidth, 25, 'F');
+
+        // Add title
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        const title = isNepali ? 'विश्लेषण रिपोर्ट' : 'Analytics Report';
+        doc.text(title, pageWidth / 2, 16, { align: 'center' });
+
+        // Add date and time
+        doc.setTextColor(200, 200, 200);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        const dateStr = new Date().toLocaleString(isNepali ? 'ne-NP' : 'en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        doc.text(`${isNepali ? 'मिति' : 'Date'}: ${dateStr}`, pageWidth - 14, 20, { align: 'right' });
+
+        let yPosition = 32;
+
+        // ===== OVERVIEW SECTION =====
+        doc.setTextColor(13, 71, 161);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(isNepali ? 'सारांश' : 'Overview', 14, yPosition);
+        yPosition += 6;
+
+        const overviewHeaders = [
+          isNepali ? 'विवरण' : 'Description',
+          isNepali ? 'मान' : 'Value'
+        ];
+        const overviewRows = [
+          [isNepali ? 'कुल गुनासो' : 'Total Complaints', String(analyticsData.overview.totalComplaints)],
+          [isNepali ? 'समाधान' : 'Resolved', String(analyticsData.overview.resolvedComplaints)],
+          [isNepali ? 'विचाराधीन' : 'Pending', String(analyticsData.overview.pendingComplaints)],
+          [isNepali ? 'प्रगतिमा' : 'In Progress', String(analyticsData.overview.inProgressComplaints)],
+          [isNepali ? 'सन्तुष्टि दर' : 'Satisfaction Rate', `${analyticsData.overview.satisfactionRate}%`],
+          [isNepali ? 'औसत प्रतिक्रिया समय' : 'Avg Response Time', `${isNepali ? analyticsData.overview.avgResponseTime : analyticsData.overview.enAvgResponseTime} ${isNepali ? 'घण्टा' : 'hours'}`],
+          [isNepali ? 'औसत समाधान समय' : 'Avg Resolution Time', `${isNepali ? analyticsData.overview.avgResolutionTime : analyticsData.overview.enAvgResolutionTime} ${isNepali ? 'दिन' : 'days'}`],
+          [isNepali ? 'व्यस्त समय' : 'Peak Hour', isNepali ? analyticsData.overview.peakHour : analyticsData.overview.enPeakHour],
+          [isNepali ? 'व्यस्त दिन' : 'Busiest Day', isNepali ? analyticsData.overview.busiestDay : analyticsData.overview.enBusiestDay]
+        ];
+
+        doc.autoTable({
+          startY: yPosition,
+          head: [overviewHeaders],
+          body: overviewRows,
+          theme: 'striped',
+          styles: {
+            fontSize: 8,
+            cellPadding: 3,
+            overflow: 'linebreak',
+            font: 'helvetica'
+          },
+          headStyles: {
+            fillColor: [13, 71, 161],
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [240, 245, 255] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            0: { cellWidth: 80 },
+            1: { cellWidth: 40, halign: 'right' }
+          }
+        });
+
+        yPosition = doc.lastAutoTable.finalY + 8;
+
+        // ===== CATEGORY DISTRIBUTION =====
+        doc.setTextColor(13, 71, 161);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(isNepali ? 'प्रकार अनुसार वितरण' : 'Category Distribution', 14, yPosition);
+        yPosition += 6;
+
+        const totalCategories = analyticsData.categories.data.reduce((a, b) => a + b, 0);
+        const categoryHeaders = [
+          isNepali ? 'प्रकार' : 'Category',
+          isNepali ? 'संख्या' : 'Count',
+          isNepali ? 'प्रतिशत' : 'Percentage'
+        ];
+        const categoryRows = analyticsData.categories.data.map((value, idx) => {
+          const percentage = ((value / totalCategories) * 100).toFixed(1);
+          return [
+            getCategoryLabels()[idx],
+            String(value),
+            `${percentage}%`
+          ];
+        });
+
+        doc.autoTable({
+          startY: yPosition,
+          head: [categoryHeaders],
+          body: categoryRows,
+          theme: 'striped',
+          styles: {
+            fontSize: 8,
+            cellPadding: 3,
+            font: 'helvetica'
+          },
+          headStyles: {
+            fillColor: [13, 71, 161],
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [240, 245, 255] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            2: { halign: 'right' }
+          }
+        });
+
+        yPosition = doc.lastAutoTable.finalY + 8;
+
+        // ===== MONTHLY TREND =====
+        doc.setTextColor(13, 71, 161);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(isNepali ? 'मासिक प्रवृत्ति' : 'Monthly Trend', 14, yPosition);
+        yPosition += 6;
+
+        const trendHeaders = [
+          isNepali ? 'महिना' : 'Month',
+          isNepali ? 'गुनासो' : 'Complaints',
+          isNepali ? 'समाधान' : 'Resolved'
+        ];
+        const trendRows = analyticsData.trends.complaints.map((value, idx) => [
+          getMonthLabels()[idx],
+          String(value),
+          String(analyticsData.trends.resolved[idx])
+        ]);
+
+        doc.autoTable({
+          startY: yPosition,
+          head: [trendHeaders],
+          body: trendRows,
+          theme: 'striped',
+          styles: {
+            fontSize: 8,
+            cellPadding: 3,
+            font: 'helvetica'
+          },
+          headStyles: {
+            fillColor: [13, 71, 161],
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [240, 245, 255] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            1: { halign: 'right' },
+            2: { halign: 'right' }
+          }
+        });
+
+        yPosition = doc.lastAutoTable.finalY + 8;
+
+        // ===== RESPONSE VS RESOLUTION =====
+        doc.setTextColor(13, 71, 161);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(isNepali ? 'प्रतिक्रिया बनाम समाधान' : 'Response vs Resolution', 14, yPosition);
+        yPosition += 6;
+
+        const perfHeaders = [
+          isNepali ? 'महिना' : 'Month',
+          isNepali ? 'प्रतिक्रिया समय (घण्टा)' : 'Response Time (hours)',
+          isNepali ? 'समाधान समय (दिन)' : 'Resolution Time (days)'
+        ];
+        const perfRows = analyticsData.performance.responseTime.map((value, idx) => [
+          getPerfLabels()[idx],
+          String(value),
+          String(analyticsData.performance.resolutionTime[idx])
+        ]);
+
+        doc.autoTable({
+          startY: yPosition,
+          head: [perfHeaders],
+          body: perfRows,
+          theme: 'striped',
+          styles: {
+            fontSize: 8,
+            cellPadding: 3,
+            font: 'helvetica'
+          },
+          headStyles: {
+            fillColor: [13, 71, 161],
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [240, 245, 255] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            1: { halign: 'right' },
+            2: { halign: 'right' }
+          }
+        });
+
+        yPosition = doc.lastAutoTable.finalY + 8;
+
+        // ===== TOP PERFORMERS =====
+        doc.setTextColor(13, 71, 161);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(isNepali ? 'शीर्ष प्रदर्शनकर्ताहरू' : 'Top Performers', 14, yPosition);
+        yPosition += 6;
+
+        const performerHeaders = [
+          isNepali ? 'टोली' : 'Team',
+          isNepali ? 'समाधान' : 'Resolved',
+          isNepali ? 'औसत समय (दिन)' : 'Avg Time (days)',
+          isNepali ? 'सन्तुष्टि' : 'Satisfaction'
+        ];
+        const performerRows = analyticsData.topPerformers.map(performer => [
+          getTeamName(performer),
+          String(performer.resolved),
+          performer.avgTime,
+          `${performer.satisfaction}/5`
+        ]);
+
+        doc.autoTable({
+          startY: yPosition,
+          head: [performerHeaders],
+          body: performerRows,
+          theme: 'striped',
+          styles: {
+            fontSize: 8,
+            cellPadding: 3,
+            font: 'helvetica'
+          },
+          headStyles: {
+            fillColor: [13, 71, 161],
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [240, 245, 255] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            1: { halign: 'right' },
+            2: { halign: 'right' },
+            3: { halign: 'right' }
+          }
+        });
+
+        yPosition = doc.lastAutoTable.finalY + 8;
+
+        // ===== HOURLY DISTRIBUTION =====
+        doc.setTextColor(13, 71, 161);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(isNepali ? 'घण्टागत वितरण' : 'Hourly Distribution', 14, yPosition);
+        yPosition += 6;
+
+        const hourlyHeaders = [
+          isNepali ? 'समय' : 'Time',
+          isNepali ? 'संख्या' : 'Count'
+        ];
+        const hourlyRows = analyticsData.hourlyDistribution.map(item => [
+          getHourText(item),
+          String(item.count)
+        ]);
+
+        doc.autoTable({
+          startY: yPosition,
+          head: [hourlyHeaders],
+          body: hourlyRows,
+          theme: 'striped',
+          styles: {
+            fontSize: 8,
+            cellPadding: 3,
+            font: 'helvetica'
+          },
+          headStyles: {
+            fillColor: [13, 71, 161],
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [240, 245, 255] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            1: { halign: 'right' }
+          }
+        });
+
+        yPosition = doc.lastAutoTable.finalY + 8;
+
+        // ===== DAY-WISE DISTRIBUTION =====
+        doc.setTextColor(13, 71, 161);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(isNepali ? 'दिनगत वितरण' : 'Day-wise Distribution', 14, yPosition);
+        yPosition += 6;
+
+        const dayHeaders = [
+          isNepali ? 'दिन' : 'Day',
+          isNepali ? 'संख्या' : 'Count'
+        ];
+        const dayRows = analyticsData.dayWiseDistribution.map(item => [
+          getDayText(item),
+          String(item.count)
+        ]);
+
+        doc.autoTable({
+          startY: yPosition,
+          head: [dayHeaders],
+          body: dayRows,
+          theme: 'striped',
+          styles: {
+            fontSize: 8,
+            cellPadding: 3,
+            font: 'helvetica'
+          },
+          headStyles: {
+            fillColor: [13, 71, 161],
+            textColor: [255, 255, 255],
+            fontSize: 9,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [240, 245, 255] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            1: { halign: 'right' }
+          }
+        });
+
+        // ===== ADD FOOTER =====
+        const totalPages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+          doc.setPage(i);
+          doc.setTextColor(180, 180, 180);
+          doc.setFontSize(6.5);
+          doc.setFont('helvetica', 'italic');
+          const footerText = `NTC Complaint Tracking System - ${new Date().toISOString().split('T')[0]} - Page ${i} of ${totalPages}`;
+          doc.text(footerText, pageWidth / 2, pageHeight - 8, { align: 'center' });
+
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.3);
+          doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12);
+        }
+
+        // Save PDF
+        const filename = `analytics_report_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(filename);
+
+        setTimeout(() => {
+          showToast(language === 'np' ? 'पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : 'PDF file downloaded successfully', 'success');
+          setIsExporting(false);
+        }, 1000);
+
+      } catch (error) {
+        console.error('PDF export error:', error);
+        showToast(
+          language === 'np'
+            ? 'पीडीएफ निर्यात गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।'
+            : 'Failed to export PDF. Please try again.',
+          'error'
+        );
+        setIsExporting(false);
+      }
+    }, 100);
   };
 
   const handleRefresh = () => {
-    alert(language === 'np' ? 'डाटा रिफ्रेस गरियो' : 'Data refreshed');
+    showToast(language === 'np' ? 'डाटा रिफ्रेस गरियो' : 'Data refreshed', 'info');
   };
 
   // Calculate max values for charts
@@ -206,6 +625,17 @@ const AdminAnalytics = () => {
 
   return (
     <div className="admin-analytics">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : toast.type === 'warning' ? '⚠️' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
       <Header language={language} setLanguage={setLanguage} adminName="Admin" />
       
       <div className="dashboard-layout">
@@ -232,12 +662,18 @@ const AdminAnalytics = () => {
                   <option value="quarter">This Quarter</option>
                   <option value="year">This Year</option>
                 </select>
-                <button className="export-btn" onClick={handleExportReport}>📥 {t.exportReport}</button>
+                <button 
+                  className="export-btn" 
+                  onClick={handleExportPDF}
+                  disabled={isExporting}
+                >
+                  📥 {isExporting ? t.exporting : t.exportReport}
+                </button>
                 <button className="refresh-btn" onClick={handleRefresh}>🔄 {t.refresh}</button>
               </div>
             </div>
 
-            {/* Overview Cards - Updated with formatNumber */}
+            {/* Overview Cards */}
             <div className="overview-cards">
               <div className="overview-card">
                 <div className="card-icon blue">📋</div>
@@ -293,7 +729,7 @@ const AdminAnalytics = () => {
               </div>
             </div>
 
-            {/* Stats Row - Updated with formatNumber */}
+            {/* Stats Row */}
             <div className="stats-row">
               <div className="stat-box">
                 <span className="stat-box-icon">⏰</span>
@@ -322,7 +758,7 @@ const AdminAnalytics = () => {
               </div>
             </div>
 
-            {/* Category Distribution - Updated with formatNumber */}
+            {/* Category Distribution */}
             <div className="chart-card">
               <h3>{t.categoryDistribution}</h3>
               <div className="category-grid">
@@ -345,7 +781,7 @@ const AdminAnalytics = () => {
               </div>
             </div>
 
-            {/* Monthly Trend - Updated with formatNumber */}
+            {/* Monthly Trend */}
             <div className="chart-card">
               <h3>{t.monthlyTrend}</h3>
               <div className="trend-container">
@@ -379,7 +815,7 @@ const AdminAnalytics = () => {
               </div>
             </div>
 
-            {/* Response vs Resolution - Updated with formatNumber */}
+            {/* Response vs Resolution */}
             <div className="chart-card">
               <h3>{t.responseVsResolution}</h3>
               <div className="dual-legend">
@@ -405,7 +841,7 @@ const AdminAnalytics = () => {
               </div>
             </div>
 
-            {/* Top Performers - Updated with formatNumber */}
+            {/* Top Performers */}
             <div className="chart-card">
               <h3>{t.topPerformers}</h3>
               <div className="table-wrapper">
@@ -438,7 +874,7 @@ const AdminAnalytics = () => {
               </div>
             </div>
 
-            {/* Hourly Distribution - Updated with formatNumber */}
+            {/* Hourly Distribution */}
             <div className="chart-card">
               <h3>{t.hourlyDistribution}</h3>
               <div className="hourly-container">
@@ -458,7 +894,7 @@ const AdminAnalytics = () => {
               </div>
             </div>
 
-            {/* Day-wise Distribution - Updated with formatNumber */}
+            {/* Day-wise Distribution */}
             <div className="chart-card">
               <h3>{t.dayWiseDistribution}</h3>
               <div className="daywise-container">
@@ -495,6 +931,46 @@ const AdminAnalytics = () => {
           width: 100%;
           overflow: hidden;
           position: relative;
+        }
+
+        /* Toast Notification */
+        .toast-notification {
+          position: fixed;
+          top: 80px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 400px;
+          min-width: 280px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.warning { border-left: 4px solid #f59e0b; background: #fffbeb; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         /* Dashboard Layout */
@@ -602,12 +1078,17 @@ const AdminAnalytics = () => {
           font-size: 0.85rem;
         }
 
+        .export-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
         .export-btn {
           background: linear-gradient(135deg, #10b981, #059669);
           color: white;
         }
 
-        .export-btn:hover {
+        .export-btn:hover:not(:disabled) {
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(16,185,129,0.3);
         }
@@ -1201,6 +1682,15 @@ const AdminAnalytics = () => {
             top: 50%;
             left: 10px;
             transform: translateY(-50%);
+          }
+          
+          .toast-notification {
+            top: auto;
+            bottom: 20px;
+            right: 20px;
+            left: 20px;
+            max-width: calc(100% - 40px);
+            min-width: auto;
           }
         }
 
