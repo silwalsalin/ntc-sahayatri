@@ -1,5 +1,5 @@
 // src/pages/LandingPage.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -66,6 +66,10 @@ const LandingPage = () => {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
   // Toast notification state
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -155,7 +159,16 @@ const LandingPage = () => {
       internetIssues: 'इन्टरनेट समस्याहरू',
       support: 'सहायता',
       availableChannels: 'उपलब्ध च्यानलहरू',
-      quickLinks: 'द्रुत लिङ्कहरू'
+      quickLinks: 'द्रुत लिङ्कहरू',
+      previous: 'अघिल्लो',
+      next: 'अर्को',
+      showing: 'देखाउँदै',
+      of: 'को',
+      itemsPerPage: 'प्रति पृष्ठ आइटमहरू',
+      page: 'पृष्ठ',
+      inProgress: 'प्रगतिमा',
+      underReview: 'समीक्षामा',
+      rejected: 'अस्वीकृत'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -238,7 +251,16 @@ const LandingPage = () => {
       internetIssues: 'Internet Issues',
       support: 'Support',
       availableChannels: 'Available Channels',
-      quickLinks: 'Quick Links'
+      quickLinks: 'Quick Links',
+      previous: 'Previous',
+      next: 'Next',
+      showing: 'Showing',
+      of: 'of',
+      itemsPerPage: 'Items per page',
+      page: 'Page',
+      inProgress: 'In Progress',
+      underReview: 'Under Review',
+      rejected: 'Rejected'
     },
   };
 
@@ -426,13 +448,45 @@ const LandingPage = () => {
     }
   }, [API_URL, showToast, language]);
 
-  // Get complaints to display based on active tab
-  const getComplaintsToDisplay = () => {
+  // Get complaints to display based on active tab - using useMemo for performance
+  const complaintsToDisplay = useMemo(() => {
     if (activeTab === 'all') return allComplaints;
     if (activeTab === 'regular') return regularComplaints;
     if (activeTab === 'regarding') return regardingComplaints;
     return allComplaints;
-  };
+  }, [activeTab, allComplaints, regularComplaints, regardingComplaints]);
+
+  // Calculate pagination data - using useMemo to prevent recalculations
+  const paginationData = useMemo(() => {
+    const totalItems = complaintsToDisplay.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    // Ensure current page is within bounds
+    const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages || 1);
+    const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+    const paginatedItems = complaintsToDisplay.slice(startIndex, endIndex);
+    
+    return {
+      items: paginatedItems,
+      totalItems: totalItems,
+      totalPages: totalPages,
+      currentPage: safeCurrentPage,
+      startIndex: startIndex,
+      endIndex: endIndex
+    };
+  }, [complaintsToDisplay, itemsPerPage, currentPage]);
+
+  // Reset to page 1 when tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
+
+  // Update current page if it exceeds total pages
+  useEffect(() => {
+    if (paginationData.totalPages > 0 && currentPage > paginationData.totalPages) {
+      setCurrentPage(paginationData.totalPages);
+    }
+  }, [paginationData.totalPages, currentPage]);
 
   useEffect(() => {
     fetchAllComplaints();
@@ -522,6 +576,48 @@ const LandingPage = () => {
     document.body.style.overflow = 'unset';
   }, []);
 
+  // Pagination handlers - with safety checks
+  const goToPreviousPage = useCallback(() => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+      // Scroll to top of table
+      const tableWrapper = document.querySelector('.table-wrapper');
+      if (tableWrapper) {
+        tableWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [currentPage]);
+
+  const goToNextPage = useCallback(() => {
+    const totalPages = paginationData.totalPages;
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+      // Scroll to top of table
+      const tableWrapper = document.querySelector('.table-wrapper');
+      if (tableWrapper) {
+        tableWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [currentPage, paginationData.totalPages]);
+
+  const goToPage = useCallback((page) => {
+    const totalPages = paginationData.totalPages;
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      // Scroll to top of table
+      const tableWrapper = document.querySelector('.table-wrapper');
+      if (tableWrapper) {
+        tableWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [paginationData.totalPages]);
+
+  const handleItemsPerPageChange = useCallback((e) => {
+    const newValue = parseInt(e.target.value);
+    setItemsPerPage(newValue);
+    setCurrentPage(1);
+  }, []);
+
   const complaintChannels = [
     { 
       id: 'website', 
@@ -595,26 +691,38 @@ const LandingPage = () => {
   const getUpdatedStatusCounts = () => {
     const total = allComplaints.length;
     const pending = allComplaints.filter(c => c.status === 'विचाराधीन' || c.status === 'Pending').length;
+    const inProgress = allComplaints.filter(c => c.status === 'प्रगतिमा' || c.status === 'In Progress' || c.status === 'in-progress').length;
+    const review = allComplaints.filter(c => c.status === 'समीक्षामा' || c.status === 'Under Review' || c.status === 'review').length;
     const resolved = allComplaints.filter(c => c.status === 'समाधान भयो' || c.status === 'Resolved').length;
+    const rejected = allComplaints.filter(c => c.status === 'अस्वीकृत' || c.status === 'Rejected' || c.status === 'rejected').length;
     
     const counts = [...statusCounts[language]];
     counts[0].count = formatCount(total);
     counts[1].count = formatCount(pending);
-    counts[2].count = formatCount(resolved);
+    counts[2].count = formatCount(inProgress);
+    counts[3].count = formatCount(review);
+    counts[4].count = formatCount(resolved);
+    counts[5].count = formatCount(rejected);
     
     return counts;
   };
 
   const statusCounts = {
     np: [
-      { title: 'हालसम्म दर्ता भएका कुल गुनासोहरू', count: '0', range: '(पछिल्लो २४ घण्टामा: ०)' },
-      { title: 'समीक्षा भई कारबाहीको पर्खाइमा रहेका गुनासोहरू', count: '0', range: '(पछिल्लो २४ घण्टामा: ०)' },
-      { title: 'सहायता टोलीद्वारा हालसम्म समाधान भएका गुनासोहरू', count: '0', range: '(पछिल्लो २४ घण्टामा: ०)' },
+      { title: '📊 कुल गुनासोहरू', count: '0', range: 'दर्ता भएका कुल गुनासोहरू' },
+      { title: '⏳ विचाराधीन', count: '0', range: 'कारबाहीको पर्खाइमा' },
+      { title: '🔄 प्रगतिमा', count: '0', range: 'समाधान प्रक्रियामा' },
+      { title: '📋 समीक्षामा', count: '0', range: 'पुन: समीक्षा भइरहेको' },
+      { title: '✅ समाधान', count: '0', range: 'सफलतापूर्वक समाधान' },
+      { title: '❌ अस्वीकृत', count: '0', range: 'अस्वीकृत गुनासोहरू' }
     ],
     en: [
-      { title: 'Total complaints registered to date', count: '0', range: '(Last 24h: 0)' },
-      { title: 'Complaints reviewed but awaiting action', count: '0', range: '(Last 24h: 0)' },
-      { title: 'Complaints resolved by support team', count: '0', range: '(Last 24h: 0)' },
+      { title: '📊 Total Complaints', count: '0', range: 'Total registered complaints' },
+      { title: '⏳ Pending', count: '0', range: 'Awaiting action' },
+      { title: '🔄 In Progress', count: '0', range: 'Being resolved' },
+      { title: '📋 Under Review', count: '0', range: 'Being reviewed' },
+      { title: '✅ Resolved', count: '0', range: 'Successfully resolved' },
+      { title: '❌ Rejected', count: '0', range: 'Rejected complaints' }
     ],
   };
 
@@ -635,7 +743,7 @@ const LandingPage = () => {
   ];
 
   const currentStatusCounts = getUpdatedStatusCounts();
-  const complaintsToShow = getComplaintsToDisplay();
+  const { items: complaintsToShow, totalItems, totalPages, currentPage: page, startIndex, endIndex } = paginationData;
 
   const handleLanguageChange = useCallback((lang) => {
     setLanguage(lang);
@@ -685,7 +793,7 @@ const LandingPage = () => {
     showToast(language === 'np' ? 'डाटा ताजा गरियो' : 'Data refreshed', 'success', 2000);
   }, [fetchAllComplaints, showToast, language]);
 
-  // Function to display complaints with view details button
+  // Function to display complaints with pagination
   const displayComplaints = () => {
     if (loadingComplaints) {
       return (
@@ -708,9 +816,9 @@ const LandingPage = () => {
       );
     }
     
-    return complaintsToShow.slice(0, 10).map((complaint, index) => {
+    return complaintsToShow.map((complaint, index) => {
       const displayDate = complaint.submittedDate ? formatTableDate(complaint.submittedDate) : '-';
-      const displayIndex = formatCount(index + 1);
+      const displayIndex = formatNumber(startIndex + index + 1);
       
       return (
         <tr key={`${complaint.type}-${complaint.id}`} className="complaint-row">
@@ -756,6 +864,73 @@ const LandingPage = () => {
         </tr>
       );
     });
+  };
+
+  // Render pagination controls
+  const renderPagination = () => {
+    if (totalItems === 0) return null;
+    
+    return (
+      <div className="pagination-container">
+        <div className="pagination-info">
+          <span>{t.showing} {formatNumber(startIndex + 1)} - {formatNumber(endIndex)} {t.of} {formatNumber(totalItems)}</span>
+        </div>
+        <div className="pagination-controls">
+          <button 
+            className="pagination-btn"
+            onClick={goToPreviousPage}
+            disabled={currentPage === 1}
+          >
+            ← {t.previous}
+          </button>
+          <div className="pagination-pages">
+            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 7) {
+                pageNum = i + 1;
+              } else if (currentPage <= 4) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 3) {
+                pageNum = totalPages - 6 + i;
+              } else {
+                pageNum = currentPage - 3 + i;
+              }
+              
+              if (pageNum >= 1 && pageNum <= totalPages) {
+                return (
+                  <button
+                    key={pageNum}
+                    className={`pagination-page-btn ${currentPage === pageNum ? 'active' : ''}`}
+                    onClick={() => goToPage(pageNum)}
+                  >
+                    {formatNumber(pageNum)}
+                  </button>
+                );
+              }
+              return null;
+            })}
+          </div>
+          <button 
+            className="pagination-btn"
+            onClick={goToNextPage}
+            disabled={currentPage === totalPages}
+          >
+            {t.next} →
+          </button>
+        </div>
+        <div className="pagination-items-per-page">
+          <label>
+            {t.itemsPerPage}:
+            <select value={itemsPerPage} onChange={handleItemsPerPageChange}>
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    );
   };
 
   const LogoImage = ({ src, alt, fallback, className }) => {
@@ -1038,14 +1213,19 @@ const LandingPage = () => {
                 </tbody>
               </table>
             </div>
+            {/* Pagination Controls */}
+            {renderPagination()}
           </div>
 
+          {/* Latest Status Card with all status types */}
           <div className="latest-status-card">
             <h3>📊 {t.latestStatusTitle}</h3>
             {currentStatusCounts.map((item, idx) => (
-              <div key={idx} className="status-item">
+              <div key={idx} className={`status-item status-item-${idx}`}>
                 <div className="status-title">{item.title}</div>
-                <div className="status-number">{item.count}</div>
+                <div className="status-number">
+                  <span className="status-number-value">{item.count}</span>
+                </div>
                 <div className="status-range">{item.range}</div>
               </div>
             ))}
@@ -1857,17 +2037,55 @@ const LandingPage = () => {
         .status-closed { background: #e0e0e0; color: #555; }
         .status-rejected { background: #f8d7da; color: #c62828; }
 
+        /* Latest Status Items - Enhanced with color coding */
         .status-item {
           background: #f5f7fa;
-          padding: 14px;
+          padding: 14px 16px;
           border-radius: 10px;
-          margin-bottom: 14px;
+          margin-bottom: 12px;
           transition: all 0.3s ease;
+          border-left: 4px solid #1565c0;
         }
-        .status-item:hover { transform: translateX(4px); background: #e8edf5; }
-        .status-title { font-weight: 500; font-size: 0.8rem; color: #1a2c3e; margin-bottom: 6px; }
-        .status-number { font-size: 1.3rem; font-weight: 700; color: #1565c0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .status-range { font-size: 0.65rem; font-weight: normal; color: #6c8196; margin-top: 3px; }
+        .status-item:hover {
+          transform: translateX(4px);
+          background: #e8edf5;
+        }
+        
+        /* Color coding for different status types */
+        .status-item-0 { border-left-color: #1565c0; } /* Total - Blue */
+        .status-item-1 { border-left-color: #f59e0b; } /* Pending - Yellow */
+        .status-item-2 { border-left-color: #3b82f6; } /* In Progress - Bright Blue */
+        .status-item-3 { border-left-color: #8b5cf6; } /* Under Review - Purple */
+        .status-item-4 { border-left-color: #10b981; } /* Resolved - Green */
+        .status-item-5 { border-left-color: #ef4444; } /* Rejected - Red */
+        
+        .status-title {
+          font-weight: 500;
+          font-size: 0.75rem;
+          color: #1a2c3e;
+          margin-bottom: 4px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .status-number {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .status-number-value {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #0d47a1;
+          line-height: 1.2;
+        }
+        .status-range {
+          font-size: 0.6rem;
+          font-weight: normal;
+          color: #6c8196;
+          margin-top: 2px;
+        }
 
         .view-details-btn {
           background: linear-gradient(135deg, #1565c0, #0d47a1);
@@ -1895,6 +2113,116 @@ const LandingPage = () => {
         }
 
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Pagination Styles - Fixed for smooth navigation */
+        .pagination-container {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 16px;
+          margin-top: 20px;
+          padding-top: 16px;
+          border-top: 1px solid #e0e0e0;
+          transition: all 0.3s ease;
+        }
+
+        .pagination-info {
+          font-size: 0.8rem;
+          color: #6c8196;
+          white-space: nowrap;
+        }
+
+        .pagination-controls {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+          padding: 6px 14px;
+          border-radius: 20px;
+          border: 1px solid #1565c0;
+          background: white;
+          color: #1565c0;
+          cursor: pointer;
+          font-size: 0.75rem;
+          transition: all 0.3s ease;
+          font-weight: 500;
+          min-width: 60px;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+          background: #1565c0;
+          color: white;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(21,101,192,0.2);
+        }
+
+        .pagination-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+          border-color: #ccc;
+          color: #999;
+        }
+
+        .pagination-pages {
+          display: flex;
+          gap: 4px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+
+        .pagination-page-btn {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          border: 1px solid #e0e0e0;
+          background: white;
+          color: #333;
+          cursor: pointer;
+          font-size: 0.75rem;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 32px;
+        }
+
+        .pagination-page-btn:hover:not(.active) {
+          background: #f0f4f8;
+          border-color: #1565c0;
+        }
+
+        .pagination-page-btn.active {
+          background: #1565c0;
+          color: white;
+          border-color: #1565c0;
+        }
+
+        .pagination-items-per-page {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .pagination-items-per-page label {
+          font-size: 0.75rem;
+          color: #6c8196;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .pagination-items-per-page select {
+          padding: 4px 8px;
+          border-radius: 6px;
+          border: 1px solid #e0e0e0;
+          font-size: 0.75rem;
+          background: white;
+          cursor: pointer;
+        }
 
         /* Statistics */
         .statistics {
@@ -2143,6 +2471,8 @@ const LandingPage = () => {
           .complaint-regarding-container { text-align: center; }
           .hero-right { justify-content: center; margin-top: 20px; }
           .channels-list { gap: 14px; }
+          .pagination-container { flex-direction: column; align-items: center; }
+          .pagination-controls { justify-content: center; }
         }
 
         @media (max-width: 768px) {
@@ -2181,7 +2511,14 @@ const LandingPage = () => {
           .complaints-table { min-width: 500px; }
           .complaints-table th, .complaints-table td { padding: 6px 8px; font-size: 0.65rem; }
           .view-details-btn { font-size: 0.55rem; padding: 3px 8px; }
-          .status-number { font-size: 1.1rem; }
+          
+          .status-number-value { font-size: 1.3rem; }
+          .status-item { padding: 12px 14px; }
+          
+          .pagination-controls { flex-wrap: wrap; justify-content: center; }
+          .pagination-pages { flex-wrap: wrap; justify-content: center; }
+          .pagination-items-per-page { width: 100%; justify-content: center; }
+          .pagination-info { white-space: normal; text-align: center; }
         }
 
         @media (max-width: 480px) {
@@ -2194,7 +2531,11 @@ const LandingPage = () => {
           .complaints-table { min-width: 400px; }
           .complaints-table th, .complaints-table td { padding: 4px 6px; font-size: 0.6rem; }
           .view-details-btn { font-size: 0.5rem; padding: 2px 6px; }
-          .status-number { font-size: 1rem; }
+          
+          .status-number-value { font-size: 1.1rem; }
+          .status-item { padding: 10px 12px; }
+          .status-title { font-size: 0.65rem; }
+          
           .contact-info-item { font-size: 0.55rem; padding: 2px 6px; }
           .contact-text { font-size: 0.55rem; }
           .language-selector { font-size: 0.6rem; padding: 3px 8px; }
@@ -2205,6 +2546,9 @@ const LandingPage = () => {
           .we-are-here .quote-text { font-size: 0.65rem; }
           .dept-name { font-size: 0.75rem; }
           .dept-address { font-size: 0.6rem; }
+          
+          .pagination-btn { font-size: 0.65rem; padding: 4px 10px; min-width: 50px; }
+          .pagination-page-btn { width: 28px; height: 28px; font-size: 0.65rem; min-width: 28px; }
         }
       `}</style>
     </div>
