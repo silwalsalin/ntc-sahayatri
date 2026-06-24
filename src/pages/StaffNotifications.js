@@ -17,6 +17,7 @@ const StaffNotifications = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [backendStatus, setBackendStatus] = useState('checking');
+  const [isLoading, setIsLoading] = useState(false);
 
   const [staffData, setStaffData] = useState({
     id: null,
@@ -26,6 +27,8 @@ const StaffNotifications = () => {
     phone: '',
     department: ''
   });
+
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
   // Save language preference
   useEffect(() => {
@@ -76,32 +79,9 @@ const StaffNotifications = () => {
     }
   }, []);
 
-  // Fetch notifications
-  const fetchNotifications = async () => {
-    try {
-      const token = localStorage.getItem('staffToken');
-      if (!token) {
-        navigate('/');
-        return;
-      }
-      
-      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/notifications`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.data.success && Array.isArray(response.data.data)) {
-        const transformedNotifications = response.data.data.map(notification => transformNotificationData(notification));
-        setNotifications(transformedNotifications);
-        setBackendStatus('connected');
-      } else {
-        setNotifications(getSampleNotifications());
-        setBackendStatus('disconnected');
-      }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      setNotifications(getSampleNotifications());
-      setBackendStatus('disconnected');
-    }
+  // Helper function to get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('staffToken') || localStorage.getItem('token');
   };
 
   // Transform notification data
@@ -151,7 +131,7 @@ const StaffNotifications = () => {
     }
   };
 
-  // Get sample notifications
+  // Get sample notifications (fallback)
   const getSampleNotifications = () => {
     return [
       { 
@@ -233,53 +213,73 @@ const StaffNotifications = () => {
         actionUrl: '/staff/performance',
         actionLabel: 'रिपोर्ट पेश गर्नुहोस्',
         sender: 'Manager'
-      },
-      { 
-        id: 6, 
-        title: 'प्रणाली मर्मत', 
-        enTitle: 'System Maintenance',
-        message: 'यो शनिबार राति १० बजेदेखि प्रणाली मर्मत गरिनेछ। कृपया आफ्नो कार्य समयमै समाप्त गर्नुहोस्।',
-        enMessage: 'System maintenance will be performed this Saturday at 10 PM. Please complete your work on time.',
-        type: 'maintenance',
-        read: false,
-        date: '२०८०-०१-२७',
-        enDate: '2024-01-27',
-        createdAt: '2024-01-27T08:00:00',
-        priority: 'high',
-        actionUrl: null,
-        actionLabel: null,
-        sender: 'IT Department'
-      },
-      { 
-        id: 7, 
-        title: 'कार्य सम्पन्न', 
-        enTitle: 'Task Completed',
-        message: 'तपाईंलाई तोकिएको कार्य "साप्ताहिक रिपोर्ट" सफलतापूर्वक सम्पन्न भएको छ।',
-        enMessage: 'The task "Weekly Report" assigned to you has been successfully completed.',
-        type: 'task',
-        read: true,
-        date: '२०८०-०१-२८',
-        enDate: '2024-01-28',
-        createdAt: '2024-01-28T17:00:00',
-        priority: 'medium',
-        actionUrl: '/staff/tasks',
-        actionLabel: 'कार्य हेर्नुहोस्',
-        sender: 'System'
       }
     ];
+  };
+
+  // Fetch notifications from backend
+  const fetchNotifications = async () => {
+    try {
+      setIsLoading(true);
+      const token = getAuthToken();
+      
+      if (!token) {
+        console.error('No auth token found');
+        setBackendStatus('disconnected');
+        setNotifications(getSampleNotifications());
+        setIsLoading(false);
+        return;
+      }
+
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      console.log('🔔 Fetching notifications from:', `${API_URL}/staff/notifications`);
+
+      // Try to fetch from backend
+      const response = await axios.get(`${API_URL}/staff/notifications`, {
+        headers,
+        timeout: 15000
+      });
+      
+      if (response.data && response.data.success && response.data.data) {
+        const transformedNotifications = response.data.data.map(transformNotificationData);
+        setNotifications(transformedNotifications);
+        setBackendStatus('connected');
+        console.log(`🔔 Loaded ${transformedNotifications.length} notifications from backend`);
+      } else {
+        // If response format is unexpected, use sample data
+        setNotifications(getSampleNotifications());
+        setBackendStatus('disconnected');
+        console.log('🔔 Using sample notifications (unexpected response format)');
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      
+      // Use sample data as fallback
+      setNotifications(getSampleNotifications());
+      setBackendStatus('disconnected');
+      
+      if (error.response?.status === 401) {
+        console.log('🔔 Authentication failed, using sample data');
+      } else if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') {
+        console.log('🔔 Network error, using sample data');
+      } else {
+        console.log('🔔 Server error, using sample data');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Mark notification as read
   const markAsRead = async (notificationId) => {
     try {
-      const token = localStorage.getItem('staffToken');
-      const response = await axios.put(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/notifications/${notificationId}/read`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
+      const token = getAuthToken();
+      if (!token) {
+        // Fallback: update locally
         setNotifications(prevNotifications =>
           prevNotifications.map(notification =>
             notification.id === notificationId
@@ -287,9 +287,31 @@ const StaffNotifications = () => {
               : notification
           )
         );
+        return;
       }
+
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      await axios.put(
+        `${API_URL}/staff/notifications/${notificationId}/read`,
+        {},
+        { headers }
+      );
+      
+      // Update local state
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notification =>
+          notification.id === notificationId
+            ? { ...notification, read: true }
+            : notification
+        )
+      );
     } catch (error) {
       console.error('Error marking notification as read:', error);
+      // Fallback: update locally
       setNotifications(prevNotifications =>
         prevNotifications.map(notification =>
           notification.id === notificationId
@@ -303,20 +325,33 @@ const StaffNotifications = () => {
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      const token = localStorage.getItem('staffToken');
-      const response = await axios.put(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/notifications/read-all`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
+      const token = getAuthToken();
+      if (!token) {
+        // Fallback: update locally
         setNotifications(prevNotifications =>
           prevNotifications.map(notification => ({ ...notification, read: true }))
         );
+        return;
       }
+
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      await axios.put(
+        `${API_URL}/staff/notifications/read-all`,
+        {},
+        { headers }
+      );
+      
+      // Update local state
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notification => ({ ...notification, read: true }))
+      );
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
+      // Fallback: update locally
       setNotifications(prevNotifications =>
         prevNotifications.map(notification => ({ ...notification, read: true }))
       );
@@ -326,21 +361,36 @@ const StaffNotifications = () => {
   // Delete notification
   const deleteNotification = async (notificationId) => {
     try {
-      const token = localStorage.getItem('staffToken');
-      const response = await axios.delete(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/notifications/${notificationId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
+      const token = getAuthToken();
+      if (!token) {
+        // Fallback: delete locally
         setNotifications(prevNotifications =>
           prevNotifications.filter(notification => notification.id !== notificationId)
         );
         setShowModal(false);
         setSelectedNotification(null);
+        return;
       }
+
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      await axios.delete(
+        `${API_URL}/staff/notifications/${notificationId}`,
+        { headers }
+      );
+      
+      // Update local state
+      setNotifications(prevNotifications =>
+        prevNotifications.filter(notification => notification.id !== notificationId)
+      );
+      setShowModal(false);
+      setSelectedNotification(null);
     } catch (error) {
       console.error('Error deleting notification:', error);
+      // Fallback: delete locally
       setNotifications(prevNotifications =>
         prevNotifications.filter(notification => notification.id !== notificationId)
       );
@@ -357,15 +407,23 @@ const StaffNotifications = () => {
     
     if (window.confirm(confirmMessage)) {
       try {
-        const token = localStorage.getItem('staffToken');
-        const response = await axios.delete(
-          `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/notifications/delete-all`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        const token = getAuthToken();
+        if (!token) {
+          setNotifications([]);
+          return;
+        }
+
+        const headers = { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
+
+        await axios.delete(
+          `${API_URL}/staff/notifications/delete-all`,
+          { headers }
         );
         
-        if (response.data.success) {
-          setNotifications([]);
-        }
+        setNotifications([]);
       } catch (error) {
         console.error('Error deleting all notifications:', error);
         setNotifications([]);
@@ -375,7 +433,7 @@ const StaffNotifications = () => {
 
   // Check authentication
   useEffect(() => {
-    const token = localStorage.getItem('staffToken');
+    const token = getAuthToken();
     const user = localStorage.getItem('staffUser');
     
     if (!token || !user) {
@@ -478,7 +536,9 @@ const StaffNotifications = () => {
       info: 'जानकारी',
       high: 'उच्च',
       medium: 'मध्यम',
-      low: 'न्यून'
+      low: 'न्यून',
+      loading: 'लोड हुँदै...',
+      backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।'
     },
     en: {
       pageTitle: 'Notifications',
@@ -516,7 +576,9 @@ const StaffNotifications = () => {
       info: 'Info',
       high: 'High',
       medium: 'Medium',
-      low: 'Low'
+      low: 'Low',
+      loading: 'Loading...',
+      backendNotConnected: 'Backend server not connected. Showing sample data.'
     }
   };
 
@@ -579,6 +641,42 @@ const StaffNotifications = () => {
     return texts[type] || type;
   };
 
+  // Loading state
+  if (isLoading && notifications.length === 0) {
+    return (
+      <div className="staff-notifications">
+        <StaffHeader 
+          language={language}
+          setLanguage={setLanguage}
+          staffName={staffData.name}
+          staffRole={staffData.role}
+          onLogout={handleLogout}
+        />
+        <div className="dashboard-layout">
+          <StaffSidebar 
+            language={language}
+            staffName={staffData.name}
+            staffRole={staffData.role}
+            onLogout={handleLogout}
+          />
+          <div className="main-content">
+            <div className="content-wrapper">
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>{t.loading}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <style>{`
+          .loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 400px; gap: 20px; }
+          .loading-spinner { width: 50px; height: 50px; border: 4px solid #e2e8f0; border-top: 4px solid #0288d1; border-radius: 50%; animation: spin 1s linear infinite; }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        `}</style>
+      </div>
+    );
+  }
+
   return (
     <div className="staff-notifications">
       <StaffHeader 
@@ -602,7 +700,7 @@ const StaffNotifications = () => {
             {/* Backend Status Banner */}
             {backendStatus === 'disconnected' && (
               <div className="backend-warning">
-                ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।' : 'Backend server not connected. Showing sample data.'}
+                ⚠️ {t.backendNotConnected}
               </div>
             )}
 
@@ -621,8 +719,8 @@ const StaffNotifications = () => {
                 <button className="action-btn delete-all-btn" onClick={deleteAllNotifications}>
                   🗑️ {t.deleteAll}
                 </button>
-                <button className="refresh-btn" onClick={fetchNotifications}>
-                  🔄 {t.refresh}
+                <button className="refresh-btn" onClick={fetchNotifications} disabled={isLoading}>
+                  {isLoading ? '⏳' : '🔄'} {t.refresh}
                 </button>
               </div>
             </div>
@@ -794,6 +892,29 @@ const StaffNotifications = () => {
           position: relative;
         }
 
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 400px;
+          gap: 20px;
+        }
+
+        .loading-spinner {
+          width: 50px;
+          height: 50px;
+          border: 4px solid #e2e8f0;
+          border-top: 4px solid #0288d1;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
         .dashboard-layout {
           display: flex;
           height: calc(100vh - 195px);
@@ -878,6 +999,11 @@ const StaffNotifications = () => {
           font-weight: 500;
           transition: all 0.2s;
           border: none;
+        }
+
+        .action-btn:disabled, .refresh-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         .mark-read-btn {

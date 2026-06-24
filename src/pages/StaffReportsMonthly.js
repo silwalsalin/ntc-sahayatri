@@ -102,7 +102,7 @@ const StaffReportsMonthly = () => {
     return `${year}-${month}`;
   }
 
-  // Get month name - FIXED for Nepali language
+  // Get month name
   function getMonthName(year, month) {
     const monthNames = language === 'np' 
       ? ['जनवरी', 'फेब्रुअरी', 'मार्च', 'अप्रिल', 'मे', 'जुन', 'जुलाई', 'अगस्त', 'सेप्टेम्बर', 'अक्टोबर', 'नोभेम्बर', 'डिसेम्बर']
@@ -280,7 +280,6 @@ const StaffReportsMonthly = () => {
       c.status === 'review' || c.status === 'under-review' || c.status === 'Under Review' || c.status === 'underReview'
     ).length;
 
-    // Calculate complaints by priority
     const complaintsByPriority = {
       urgent: monthComplaints.filter(c => c.priority === 'urgent' || c.priority === 'Urgent').length,
       high: monthComplaints.filter(c => c.priority === 'high' || c.priority === 'High').length,
@@ -288,7 +287,6 @@ const StaffReportsMonthly = () => {
       low: monthComplaints.filter(c => c.priority === 'low' || c.priority === 'Low').length
     };
 
-    // Calculate complaints by category
     const complaintsByCategory = {
       internet: monthComplaints.filter(c => c.category === 'internet' || c.category === 'Internet').length,
       recharge: monthComplaints.filter(c => c.category === 'recharge' || c.category === 'Recharge').length,
@@ -337,7 +335,6 @@ const StaffReportsMonthly = () => {
       });
     }
 
-    // Calculate tasks summary
     const tasksSummary = {
       completed: resolvedComplaints,
       pending: pendingComplaints,
@@ -345,7 +342,6 @@ const StaffReportsMonthly = () => {
       completionRate: totalComplaints > 0 ? (resolvedComplaints / totalComplaints) * 100 : 0
     };
 
-    // Calculate performance metrics
     const totalResponseTime = monthComplaints.reduce((sum, c) => sum + (c.responseTime || 0), 0);
     const avgResponseTime = totalComplaints > 0 ? totalResponseTime / totalComplaints : 0;
     
@@ -355,14 +351,10 @@ const StaffReportsMonthly = () => {
     const totalResolutionTime = monthComplaints.reduce((sum, c) => sum + (c.resolutionTime || 2), 0);
     const avgResolutionTime = totalComplaints > 0 ? totalResolutionTime / totalComplaints : 0;
 
-    // Calculate resolution rate
     const resolutionRate = totalComplaints > 0 ? (resolvedComplaints / totalComplaints) * 100 : 0;
-
-    // Calculate SLA compliance
     const slaViolations = Math.floor(totalComplaints * 0.04);
     const slaCompliance = totalComplaints > 0 ? 100 - ((slaViolations / totalComplaints) * 100) : 0;
 
-    // Calculate top performing staff
     const staffMap = {};
     monthComplaints.forEach(c => {
       const staffIdKey = c.assignedTo || c.assignedStaff || '1';
@@ -398,7 +390,6 @@ const StaffReportsMonthly = () => {
       .sort((a, b) => b.resolved - a.resolved)
       .slice(0, 5);
 
-    // Calculate peak hour analysis
     const hourMap = {};
     monthComplaints.forEach(c => {
       const date = new Date(c.createdAt || c.createdDate || c.date || c.created);
@@ -407,7 +398,6 @@ const StaffReportsMonthly = () => {
       hourMap[hourKey] = (hourMap[hourKey] || 0) + 1;
     });
 
-    // Calculate month over month growth
     const prevMonthStr = getPreviousMonth(monthStr);
     const prevMonthRange = getMonthRange(prevMonthStr);
     const prevMonthComplaints = complaints.filter(c => {
@@ -488,7 +478,7 @@ const StaffReportsMonthly = () => {
     }
   };
 
-  // Fetch monthly report
+  // Fetch monthly report - CONNECTED TO SERVER
   const fetchMonthlyReport = useCallback(async () => {
     setLoading(true);
     try {
@@ -525,25 +515,44 @@ const StaffReportsMonthly = () => {
       let complaints = [];
       let fromBackend = false;
       
+      // Try to fetch from backend using the correct endpoint
       try {
-        // Try /staff/complaints endpoint
-        const response = await axios.get(`${API_URL}/staff/complaints`, {
+        const response = await axios.get(`${API_URL}/staff/complaints/assigned`, {
           headers,
           params: { 
-            staffId: staffId,
-            startDate: startDate,
-            endDate: endDate
+            status: 'all',
+            limit: 1000
           },
           timeout: 15000
         });
         
-        if (response.data && response.data.complaints) {
-          complaints = response.data.complaints;
+        if (response.data && response.data.success && response.data.data) {
+          complaints = response.data.data;
           fromBackend = true;
-          console.log(`📊 Found ${complaints.length} complaints from backend`);
+          console.log(`📊 Found ${complaints.length} complaints from /staff/complaints/assigned`);
         }
-      } catch (error) {
-        console.warn('Backend fetch failed, using localStorage:', error.message);
+      } catch (error1) {
+        console.warn('Endpoint /staff/complaints/assigned failed:', error1.message);
+        
+        try {
+          // Try alternative endpoint
+          const response2 = await axios.get(`${API_URL}/staff/complaints`, {
+            headers,
+            params: { 
+              assignedTo: staffId,
+              limit: 1000
+            },
+            timeout: 15000
+          });
+          
+          if (response2.data && response2.data.success && response2.data.data) {
+            complaints = response2.data.data;
+            fromBackend = true;
+            console.log(`📊 Found ${complaints.length} complaints from /staff/complaints`);
+          }
+        } catch (error2) {
+          console.warn('All server endpoints failed, using localStorage data');
+        }
       }
 
       // If no complaints from backend, use localStorage
@@ -611,11 +620,18 @@ const StaffReportsMonthly = () => {
           'error'
         );
         setTimeout(() => navigate('/'), 1500);
-      } else {
+      } else if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') {
         showToast(
           language === 'np' 
             ? '⚠️ सर्भरमा जडान हुन सकेन। स्थानीय डाटा देखाउँदै।' 
             : '⚠️ Cannot connect to server. Showing local data.',
+          'warning'
+        );
+      } else {
+        showToast(
+          language === 'np' 
+            ? `⚠️ डाटा लोड गर्न असफल (${error.message || 'अज्ञात त्रुटि'})। स्थानीय डाटा देखाउँदै।` 
+            : `⚠️ Failed to load data (${error.message || 'unknown error'}). Showing local data.`,
           'warning'
         );
       }
@@ -893,6 +909,11 @@ const StaffReportsMonthly = () => {
             </div>
           </div>
         </div>
+        <style>{`
+          .loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 400px; gap: 20px; }
+          .loading-spinner { width: 50px; height: 50px; border: 4px solid #e2e8f0; border-top: 4px solid #0288d1; border-radius: 50%; animation: spin 1s linear infinite; }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        `}</style>
       </div>
     );
   }
@@ -1412,8 +1433,6 @@ const StaffReportsMonthly = () => {
           position: relative;
         }
 
-    
-
         .toast-notification {
           position: fixed;
           top: 200px;
@@ -1463,7 +1482,6 @@ const StaffReportsMonthly = () => {
 
         .main-content {
           flex: 1;
-        
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;

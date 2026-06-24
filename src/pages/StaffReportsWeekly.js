@@ -181,7 +181,6 @@ const StaffReportsWeekly = () => {
           const date = new Date();
           date.setDate(date.getDate() - (i % 14));
           
-          // Distribute dates across weeks
           const dayOffset = i % 7;
           date.setDate(date.getDate() - dayOffset);
           
@@ -260,7 +259,6 @@ const StaffReportsWeekly = () => {
       return complaintDate >= weekStart && complaintDate <= weekEnd;
     });
 
-    // If no complaints in this week, use all complaints
     if (weekComplaints.length === 0) {
       weekComplaints = complaints.slice(0, 20);
     }
@@ -280,7 +278,6 @@ const StaffReportsWeekly = () => {
       c.status === 'review' || c.status === 'under-review' || c.status === 'Under Review' || c.status === 'underReview'
     ).length;
 
-    // Calculate complaints by priority
     const complaintsByPriority = {
       urgent: weekComplaints.filter(c => c.priority === 'urgent' || c.priority === 'Urgent').length,
       high: weekComplaints.filter(c => c.priority === 'high' || c.priority === 'High').length,
@@ -288,7 +285,6 @@ const StaffReportsWeekly = () => {
       low: weekComplaints.filter(c => c.priority === 'low' || c.priority === 'Low').length
     };
 
-    // Calculate complaints by category
     const complaintsByCategory = {
       internet: weekComplaints.filter(c => c.category === 'internet' || c.category === 'Internet').length,
       recharge: weekComplaints.filter(c => c.category === 'recharge' || c.category === 'Recharge').length,
@@ -298,7 +294,6 @@ const StaffReportsWeekly = () => {
       general: weekComplaints.filter(c => c.category === 'general' || c.category === 'General' || !c.category).length
     };
 
-    // Calculate daily breakdown
     const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const dailyBreakdown = daysOfWeek.map(day => {
       const dayIndex = daysOfWeek.indexOf(day);
@@ -314,7 +309,6 @@ const StaffReportsWeekly = () => {
       };
     });
 
-    // Calculate tasks summary
     const tasksSummary = {
       completed: resolvedComplaints,
       pending: pendingComplaints,
@@ -322,7 +316,6 @@ const StaffReportsWeekly = () => {
       completionRate: totalComplaints > 0 ? (resolvedComplaints / totalComplaints) * 100 : 0
     };
 
-    // Calculate performance metrics
     const totalResponseTime = weekComplaints.reduce((sum, c) => sum + (c.responseTime || 0), 0);
     const avgResponseTime = totalComplaints > 0 ? totalResponseTime / totalComplaints : 0;
     
@@ -332,7 +325,6 @@ const StaffReportsWeekly = () => {
     const totalResolutionTime = weekComplaints.reduce((sum, c) => sum + (c.resolutionTime || 2), 0);
     const avgResolutionTime = totalComplaints > 0 ? totalResolutionTime / totalComplaints : 0;
 
-    // Calculate top complaint types
     const categoryCounts = Object.entries(complaintsByCategory)
       .map(([category, count]) => ({
         category,
@@ -342,7 +334,6 @@ const StaffReportsWeekly = () => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 6);
 
-    // Calculate week over week growth
     const prevWeekStr = getPreviousWeek(weekStr);
     const prevWeekRange = getWeekRange(prevWeekStr);
     const prevWeekComplaints = complaints.filter(c => {
@@ -441,7 +432,6 @@ const StaffReportsWeekly = () => {
         console.error('No auth token found');
         setBackendStatus('disconnected');
         
-        // Generate report from localStorage
         const complaints = loadComplaintsFromStorage();
         const report = generateWeeklyReportFromComplaints(complaints, selectedWeek);
         setReportData(report);
@@ -460,7 +450,6 @@ const StaffReportsWeekly = () => {
         'Content-Type': 'application/json'
       };
       
-      // Try multiple API endpoints
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
       const { start, end } = getWeekDateRange(selectedWeek);
       
@@ -469,69 +458,45 @@ const StaffReportsWeekly = () => {
       
       let complaints = [];
       let fromBackend = false;
-      let allComplaints = [];
       
-      // Try to fetch complaints from server
+      // Try to fetch complaints from server using the correct endpoint
       try {
-        // Try endpoint 1: /staff/complaints
-        const response = await axios.get(`${API_URL}/staff/complaints`, {
+        // Use the staff complaints endpoint that returns assigned complaints
+        const response = await axios.get(`${API_URL}/staff/complaints/assigned`, {
           headers,
           params: { 
-            staffId: staffId,
-            startDate: start,
-            endDate: end
+            status: 'all',
+            limit: 1000
           },
           timeout: 15000
         });
         
-        if (response.data && response.data.complaints) {
-          complaints = response.data.complaints;
+        if (response.data && response.data.success && response.data.data) {
+          complaints = response.data.data;
           fromBackend = true;
-          console.log(`📊 Found ${complaints.length} complaints from /staff/complaints`);
+          console.log(`📊 Found ${complaints.length} complaints from /staff/complaints/assigned`);
         }
       } catch (error1) {
-        console.warn('Endpoint /staff/complaints failed:', error1.message);
+        console.warn('Endpoint /staff/complaints/assigned failed:', error1.message);
         
         try {
-          // Try endpoint 2: /complaints/staff
-          const response2 = await axios.get(`${API_URL}/complaints/staff`, {
+          // Try alternative endpoint
+          const response2 = await axios.get(`${API_URL}/staff/complaints`, {
             headers,
             params: { 
-              staffId: staffId,
-              startDate: start,
-              endDate: end
+              assignedTo: staffId,
+              limit: 1000
             },
             timeout: 15000
           });
           
-          if (response2.data && response2.data.complaints) {
-            complaints = response2.data.complaints;
+          if (response2.data && response2.data.success && response2.data.data) {
+            complaints = response2.data.data;
             fromBackend = true;
-            console.log(`📊 Found ${complaints.length} complaints from /complaints/staff`);
+            console.log(`📊 Found ${complaints.length} complaints from /staff/complaints`);
           }
         } catch (error2) {
-          console.warn('Endpoint /complaints/staff failed:', error2.message);
-          
-          try {
-            // Try endpoint 3: /staff/assigned-complaints
-            const response3 = await axios.get(`${API_URL}/staff/assigned-complaints`, {
-              headers,
-              params: { 
-                staffId: staffId,
-                startDate: start,
-                endDate: end
-              },
-              timeout: 15000
-            });
-            
-            if (response3.data && response3.data.complaints) {
-              complaints = response3.data.complaints;
-              fromBackend = true;
-              console.log(`📊 Found ${complaints.length} complaints from /staff/assigned-complaints`);
-            }
-          } catch (error3) {
-            console.warn('All server endpoints failed, using localStorage data');
-          }
+          console.warn('All server endpoints failed, using localStorage data');
         }
       }
 
@@ -577,7 +542,6 @@ const StaffReportsWeekly = () => {
         );
       } else {
         setBackendStatus('disconnected');
-        // Ensure we have some data to show
         const fallbackComplaints = loadComplaintsFromStorage();
         if (fallbackComplaints.length > 0) {
           const fallbackReport = generateWeeklyReportFromComplaints(fallbackComplaints, selectedWeek);
@@ -593,7 +557,6 @@ const StaffReportsWeekly = () => {
     } catch (error) {
       console.error('Error fetching weekly report:', error);
       
-      // Try to get complaints from localStorage as fallback
       const complaints = loadComplaintsFromStorage();
       const report = generateWeeklyReportFromComplaints(complaints, selectedWeek);
       setReportData(report);
@@ -656,17 +619,14 @@ const StaffReportsWeekly = () => {
     if (!token || !user) {
       navigate('/');
     } else {
-      // Ensure local data exists
       ensureLocalData();
       
-      // Load complaints from storage first
       const complaints = loadComplaintsFromStorage();
       if (complaints.length > 0) {
         const report = generateWeeklyReportFromComplaints(complaints, selectedWeek);
         setReportData(report);
       }
       
-      // Then try to fetch from backend
       fetchWeeklyReport();
     }
   }, [navigate, fetchWeeklyReport, loadComplaintsFromStorage, generateWeeklyReportFromComplaints, selectedWeek, ensureLocalData]);
@@ -894,6 +854,11 @@ const StaffReportsWeekly = () => {
             </div>
           </div>
         </div>
+        <style>{`
+          .loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 400px; gap: 20px; }
+          .loading-spinner { width: 50px; height: 50px; border: 4px solid #e2e8f0; border-top: 4px solid #0288d1; border-radius: 50%; animation: spin 1s linear infinite; }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        `}</style>
       </div>
     );
   }
@@ -1092,40 +1057,33 @@ const StaffReportsWeekly = () => {
                             <stop offset="100%" style={{ stopColor: '#10b981', stopOpacity: 0.05 }} />
                           </linearGradient>
                         </defs>
-                        {/* Grid lines */}
                         {[0, 60, 120, 180, 240, 300].map(y => (
                           <line key={y} x1="40" y1={y} x2="760" y2={y} stroke="#e2e8f0" strokeWidth="1" />
                         ))}
-                        {/* Axes */}
                         <line x1="40" y1="260" x2="760" y2="260" stroke="#94a3b8" strokeWidth="2" />
                         <line x1="40" y1="20" x2="40" y2="260" stroke="#94a3b8" strokeWidth="2" />
-                        {/* Y-axis labels */}
                         {[0, 4, 8, 12, 16, 20].map((val, i) => (
                           <text key={i} x="35" y={260 - (val / 20) * 240} textAnchor="end" fontSize="10" fill="#64748b">
                             {formatNumber(val)}
                           </text>
                         ))}
-                        {/* X-axis labels */}
                         {reportData?.dailyBreakdown?.map((day, i) => (
                           <text key={i} x={80 + i * 100} y="275" textAnchor="middle" fontSize="10" fill="#64748b">
                             {getDayTranslation(day.day).substring(0, 3)}
                           </text>
                         ))}
-                        {/* Complaints Line */}
                         <polyline
                           points={reportData?.dailyBreakdown?.map((day, i) => `${80 + i * 100},${260 - Math.min((day.complaints / 20) * 240, 240)}`).join(' ')}
                           fill="none"
                           stroke="#3b82f6"
                           strokeWidth="3"
                         />
-                        {/* Resolved Line */}
                         <polyline
                           points={reportData?.dailyBreakdown?.map((day, i) => `${80 + i * 100},${260 - Math.min((day.resolved / 20) * 240, 240)}`).join(' ')}
                           fill="none"
                           stroke="#10b981"
                           strokeWidth="3"
                         />
-                        {/* Data points */}
                         {reportData?.dailyBreakdown?.map((day, i) => (
                           <circle key={`complaint-${i}`} cx={80 + i * 100} cy={260 - Math.min((day.complaints / 20) * 240, 240)} r="4" fill="#3b82f6" />
                         ))}
@@ -1363,8 +1321,6 @@ const StaffReportsWeekly = () => {
           overflow-x: hidden;
           position: relative;
         }
-
-    
 
         /* Toast Notification */
         .toast-notification {
