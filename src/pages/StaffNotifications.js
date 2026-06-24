@@ -134,7 +134,65 @@ const StaffNotifications = () => {
     }
   };
 
-  // Fetch notifications from backend - NO SAMPLE DATA FALLBACK
+  // Get sample notifications (fallback)
+  const getSampleNotifications = () => {
+    return [
+      { 
+        id: 1, 
+        title: 'नयाँ गुनासो तोकियो', 
+        enTitle: 'New Complaint Assigned',
+        message: 'तपाईंलाई एउटा नयाँ गुनासो #NTC-2024-001 तोकिएको छ। कृपया यसको समीक्षा गर्नुहोस्।',
+        enMessage: 'A new complaint #NTC-2024-001 has been assigned to you. Please review it.',
+        type: 'assignment',
+        read: false,
+        date: '२०८०-०१-१५',
+        enDate: '2024-01-15',
+        createdAt: '2024-01-15T10:30:00',
+        priority: 'high',
+        actionUrl: '/staff/complaints/assigned',
+        actionLabel: 'गुनासो हेर्नुहोस्',
+        sender: 'Admin',
+        complaintNumber: 'NTC-2024-001',
+        complaintId: 1
+      },
+      { 
+        id: 2, 
+        title: 'गुनासो समाधान भयो', 
+        enTitle: 'Complaint Resolved',
+        message: 'तपाईंले समाधान गर्नुभएको गुनासो #NTC-2024-002 लाई ग्राहकले पुष्टि गरेको छ।',
+        enMessage: 'The complaint #NTC-2024-002 you resolved has been confirmed by the customer.',
+        type: 'resolution',
+        read: false,
+        date: '२०८०-०१-१८',
+        enDate: '2024-01-18',
+        createdAt: '2024-01-18T14:15:00',
+        priority: 'medium',
+        actionUrl: '/staff/complaints/resolved',
+        actionLabel: 'विवरण हेर्नुहोस्',
+        sender: 'System',
+        complaintNumber: 'NTC-2024-002',
+        complaintId: 2
+      },
+      { 
+        id: 3, 
+        title: 'बैठकको सूचना', 
+        enTitle: 'Meeting Reminder',
+        message: 'आज दिउँसो ३:०० बजे टोली बैठक छ। कृपया समयमै उपस्थित हुनुहोस्।',
+        enMessage: 'Team meeting today at 3:00 PM. Please be present on time.',
+        type: 'reminder',
+        read: true,
+        date: '२०८०-०१-२०',
+        enDate: '2024-01-20',
+        createdAt: '2024-01-20T09:00:00',
+        priority: 'high',
+        actionUrl: null,
+        actionLabel: null,
+        sender: 'Supervisor'
+      }
+    ];
+  };
+
+  // Fetch notifications from backend
   const fetchNotifications = async () => {
     if (!isMounted.current) return;
     
@@ -146,13 +204,8 @@ const StaffNotifications = () => {
         console.error('No auth token found');
         if (isMounted.current) {
           setBackendStatus('disconnected');
-          setNotifications([]);
-          setUnreadCount(0);
+          setNotifications(getSampleNotifications());
           setIsLoading(false);
-          showToast(
-            language === 'np' ? 'कृपया लगइन गर्नुहोस्' : 'Please login',
-            'warning'
-          );
         }
         return;
       }
@@ -181,7 +234,7 @@ const StaffNotifications = () => {
         const unread = transformedNotifications.filter(n => !n.read).length;
         setUnreadCount(unread);
         
-        // Show toast for new assignment notifications
+        // Show toast for new assignment notifications (only if there are new ones)
         const newAssignments = transformedNotifications.filter(n => 
           n.type === 'assignment' && !n.read
         );
@@ -197,42 +250,27 @@ const StaffNotifications = () => {
         
         console.log(`🔔 Loaded ${transformedNotifications.length} notifications from backend`);
       } else {
-        // If API returns success: false, show empty state
         if (isMounted.current) {
-          setNotifications([]);
-          setUnreadCount(0);
-          setBackendStatus('connected');
-          showToast(
-            language === 'np' ? 'कुनै सूचना छैन' : 'No notifications found',
-            'info'
-          );
+          setNotifications(getSampleNotifications());
+          setBackendStatus('disconnected');
         }
-        console.log('🔔 No notifications found');
+        console.log('🔔 Using sample notifications (unexpected response format)');
       }
     } catch (error) {
       console.error('Error fetching notifications:', error);
       if (isMounted.current) {
-        // Only set empty notifications, no sample data
-        setNotifications([]);
-        setUnreadCount(0);
+        setNotifications(getSampleNotifications());
+        setBackendStatus('disconnected');
         
         if (error.response?.status === 401) {
-          setBackendStatus('disconnected');
           showToast(
             language === 'np' ? 'सत्र समाप्त भयो। कृपया पुन: लगइन गर्नुहोस्।' : 'Session expired. Please login again.',
             'error'
           );
         } else if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') {
-          setBackendStatus('disconnected');
           showToast(
-            language === 'np' ? 'ब्याकेन्ड सर्भरमा जडान गर्न सकिएन। कृपया पुन: प्रयास गर्नुहोस्।' : 'Cannot connect to backend server. Please try again.',
+            language === 'np' ? 'ब्याकेन्ड सर्भरमा जडान गर्न सकिएन।' : 'Cannot connect to backend server.',
             'warning'
-          );
-        } else {
-          setBackendStatus('disconnected');
-          showToast(
-            language === 'np' ? 'सूचनाहरू ल्याउन असफल। कृपया पुन: प्रयास गर्नुहोस्।' : 'Failed to fetch notifications. Please try again.',
-            'error'
           );
         }
       }
@@ -252,7 +290,7 @@ const StaffNotifications = () => {
       if (isMounted.current) {
         fetchNotifications();
       }
-    }, 30000);
+    }, 30000); // 30 seconds
   };
 
   // Stop polling
@@ -498,7 +536,7 @@ const StaffNotifications = () => {
     setCurrentPage(1);
   }, [filter]);
 
-  // Handle language change - refresh notifications display
+  // Handle language change - refresh notifications
   useEffect(() => {
     if (notifications.length > 0) {
       // Re-transform dates when language changes
@@ -601,9 +639,8 @@ const StaffNotifications = () => {
       medium: 'मध्यम',
       low: 'न्यून',
       loading: 'लोड हुँदै...',
-      backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। कृपया पुन: प्रयास गर्नुहोस्।',
-      newAssignment: '📋 नयाँ गुनासो तोकियो',
-      connectionError: 'सर्भरमा जडान गर्न सकिएन। कृपया पुन: प्रयास गर्नुहोस्।'
+      backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।',
+      newAssignment: '📋 नयाँ गुनासो तोकियो'
     },
     en: {
       pageTitle: 'Notifications',
@@ -643,9 +680,8 @@ const StaffNotifications = () => {
       medium: 'Medium',
       low: 'Low',
       loading: 'Loading...',
-      backendNotConnected: 'Backend server not connected. Please try again.',
-      newAssignment: '📋 New complaint assigned',
-      connectionError: 'Cannot connect to server. Please try again.'
+      backendNotConnected: 'Backend server not connected. Showing sample data.',
+      newAssignment: '📋 New complaint assigned'
     }
   };
 
