@@ -97,7 +97,6 @@ const StaffSidebar = ({ language, staffName = "Staff User", staffRole = "Support
       icon: '📈',
       label: t.reports,
       children: [
-        { id: 'daily-report', icon: '📅', label: t.dailyReport, path: '/staff/reports/daily' },
         { id: 'weekly-report', icon: '📆', label: t.weeklyReport, path: '/staff/reports/weekly' },
         { id: 'monthly-report', icon: '📊', label: t.monthlyReport, path: '/staff/reports/monthly' }
       ]
