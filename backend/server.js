@@ -606,67 +606,26 @@ app.post('/api/complaint-regarding', upload.array('attachments', 5), (req, res) 
     }
 });
 
-// ==================== COMPLAINT TRACKING ROUTES (FIXED) ====================
-
-// POST /api/complaints/track - Track complaint (public) - FIXED
+// POST /api/complaints/track - Track complaint (public)
 app.post('/api/complaints/track', (req, res) => {
     try {
-        const { complaintNumber, password, trackingPassword } = req.body;
-        
-        // Accept both 'password' and 'trackingPassword' for compatibility
-        const trackPassword = password || trackingPassword;
+        const { complaintNumber, password } = req.body;
 
-        if (!complaintNumber || !trackPassword) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Complaint number and password are required' 
-            });
+        if (!complaintNumber || !password) {
+            return res.status(400).json({ success: false, message: 'Complaint number and password are required' });
         }
 
-        // First check regular complaints
-        db.get(`SELECT * FROM complaints WHERE complaint_number = ? AND tracking_password = ?`, 
-            [complaintNumber, trackPassword], 
-            (err, complaint) => {
-                if (err) {
-                    return res.status(500).json({ success: false, error: err.message });
-                }
-                
-                if (complaint) {
-                    delete complaint.tracking_password;
-                    return res.json({ 
-                        success: true, 
-                        data: complaint,
-                        type: 'regular'
-                    });
-                }
-                
-                // Then check regarding complaints
-                db.get(`SELECT * FROM complaint_regarding WHERE complaint_number = ? AND tracking_password = ?`, 
-                    [complaintNumber, trackPassword], 
-                    (err, regarding) => {
-                        if (err) {
-                            return res.status(500).json({ success: false, error: err.message });
-                        }
-                        
-                        if (regarding) {
-                            delete regarding.tracking_password;
-                            return res.json({ 
-                                success: true, 
-                                data: regarding,
-                                type: 'regarding'
-                            });
-                        }
-                        
-                        return res.status(404).json({ 
-                            success: false, 
-                            message: 'Invalid complaint number or password' 
-                        });
-                    }
-                );
+        db.get(`SELECT * FROM complaints WHERE complaint_number = ? AND tracking_password = ?`, [complaintNumber, password], (err, row) => {
+            if (err) {
+                return res.status(500).json({ success: false, error: err.message });
             }
-        );
+            if (!row) {
+                return res.status(404).json({ success: false, message: 'Invalid complaint number or password' });
+            }
+            delete row.tracking_password;
+            res.json({ success: true, data: row });
+        });
     } catch (error) {
-        console.error('Error tracking complaint:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -727,144 +686,6 @@ app.get('/api/complaints/track/:trackingNumber', (req, res) => {
         );
     } catch (error) {
         console.error('Error tracking complaint:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// POST /api/complaint-regarding/track - Track regarding complaint (public) - FIXED
-app.post('/api/complaint-regarding/track', (req, res) => {
-    try {
-        const { complaintNumber, password, trackingPassword } = req.body;
-        
-        // Accept both 'password' and 'trackingPassword' for compatibility
-        const trackPassword = password || trackingPassword;
-
-        if (!complaintNumber || !trackPassword) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Complaint number and password are required' 
-            });
-        }
-
-        db.get(`SELECT * FROM complaint_regarding WHERE complaint_number = ? AND tracking_password = ?`, 
-            [complaintNumber, trackPassword], 
-            (err, row) => {
-                if (err) {
-                    return res.status(500).json({ success: false, error: err.message });
-                }
-                if (!row) {
-                    return res.status(404).json({ 
-                        success: false, 
-                        message: 'Invalid complaint number or password' 
-                    });
-                }
-                delete row.tracking_password;
-                res.json({ success: true, data: row });
-            }
-        );
-    } catch (error) {
-        console.error('Error tracking regarding complaint:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ==================== UNIFIED TRACKING ROUTE (RECOMMENDED) ====================
-
-// POST /api/track - Unified tracking for all complaint types
-app.post('/api/track', (req, res) => {
-    try {
-        const { complaintNumber, password, trackingPassword } = req.body;
-        
-        // Accept both 'password' and 'trackingPassword' for compatibility
-        const trackPassword = password || trackingPassword;
-
-        if (!complaintNumber || !trackPassword) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Complaint number and password are required' 
-            });
-        }
-
-        // First check regular complaints
-        db.get(`SELECT * FROM complaints WHERE complaint_number = ? AND tracking_password = ?`, 
-            [complaintNumber, trackPassword], 
-            (err, complaint) => {
-                if (err) {
-                    return res.status(500).json({ success: false, error: err.message });
-                }
-                
-                if (complaint) {
-                    delete complaint.tracking_password;
-                    return res.json({ 
-                        success: true, 
-                        data: complaint,
-                        type: 'regular'
-                    });
-                }
-                
-                // Then check regarding complaints
-                db.get(`SELECT * FROM complaint_regarding WHERE complaint_number = ? AND tracking_password = ?`, 
-                    [complaintNumber, trackPassword], 
-                    (err, regarding) => {
-                        if (err) {
-                            return res.status(500).json({ success: false, error: err.message });
-                        }
-                        
-                        if (regarding) {
-                            delete regarding.tracking_password;
-                            return res.json({ 
-                                success: true, 
-                                data: regarding,
-                                type: 'regarding'
-                            });
-                        }
-                        
-                        return res.status(404).json({ 
-                            success: false, 
-                            message: 'Invalid complaint number or password' 
-                        });
-                    }
-                );
-            }
-        );
-    } catch (error) {
-        console.error('Error tracking complaint:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ==================== DEBUG TRACKING ROUTE (Admin Only) ====================
-
-// GET /api/debug/tracking/:complaintNumber - Debug tracking (admin only)
-app.get('/api/debug/tracking/:complaintNumber', protect, adminOnly, (req, res) => {
-    try {
-        const { complaintNumber } = req.params;
-        
-        db.get(
-            `SELECT complaint_number, tracking_password, name, email, created_at FROM complaints WHERE complaint_number = ?`,
-            [complaintNumber],
-            (err, complaint) => {
-                if (err) {
-                    return res.status(500).json({ success: false, error: err.message });
-                }
-                
-                db.get(
-                    `SELECT complaint_number, tracking_password, name, email, created_at FROM complaint_regarding WHERE complaint_number = ?`,
-                    [complaintNumber],
-                    (err, regarding) => {
-                        res.json({
-                            success: true,
-                            data: {
-                                complaint: complaint || null,
-                                regarding: regarding || null
-                            }
-                        });
-                    }
-                );
-            }
-        );
-    } catch (error) {
-        console.error('Error in debug tracking:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -2199,6 +2020,405 @@ app.patch('/api/admin/complaint-regarding/:id/assign', protect, adminOnly, (req,
         });
     } catch (error) {
         console.error('Error assigning complaint regarding:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==================== STAFF COMPLAINT ROUTES (NEW) ====================
+
+// GET /api/staff/complaints/assigned - Get all complaints assigned to current staff
+app.get('/api/staff/complaints/assigned', protect, staffOrAdmin, (req, res) => {
+    try {
+        const staffEmail = req.user.email;
+        const { status, category, search, limit = 100 } = req.query;
+        
+        let sql = `SELECT * FROM complaints WHERE assigned_to = ?`;
+        const params = [staffEmail];
+
+        if (status && status !== 'all') {
+            sql += ` AND status = ?`;
+            params.push(status);
+        }
+
+        if (category && category !== 'all') {
+            sql += ` AND nature_of_complaint = ?`;
+            params.push(category);
+        }
+
+        if (search) {
+            sql += ` AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR complaint_number LIKE ?)`;
+            const searchPattern = `%${search}%`;
+            params.push(searchPattern, searchPattern, searchPattern, searchPattern);
+        }
+
+        sql += ` ORDER BY created_at DESC`;
+
+        if (limit && limit !== 'all') {
+            sql += ` LIMIT ?`;
+            params.push(parseInt(limit));
+        }
+
+        db.all(sql, params, (err, complaints) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            
+            // Also get complaint regarding
+            let sql2 = `SELECT * FROM complaint_regarding WHERE assigned_to = ?`;
+            const params2 = [staffEmail];
+
+            if (status && status !== 'all') {
+                sql2 += ` AND status = ?`;
+                params2.push(status);
+            }
+
+            if (category && category !== 'all') {
+                sql2 += ` AND complaint_type = ?`;
+                params2.push(category);
+            }
+
+            if (search) {
+                sql2 += ` AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR complaint_number LIKE ? OR subject LIKE ?)`;
+                const searchPattern = `%${search}%`;
+                params2.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern);
+            }
+
+            sql2 += ` ORDER BY created_at DESC`;
+
+            if (limit && limit !== 'all') {
+                sql2 += ` LIMIT ?`;
+                params2.push(parseInt(limit));
+            }
+
+            db.all(sql2, params2, (err, regardingComplaints) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                
+                const allComplaints = [...(complaints || []), ...(regardingComplaints || [])];
+                res.json({ 
+                    success: true, 
+                    data: allComplaints,
+                    count: allComplaints.length
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error fetching assigned complaints:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/staff/complaints/ticket/:ticketNumber - Get complaint by ticket number for staff
+app.get('/api/staff/complaints/ticket/:ticketNumber', protect, staffOrAdmin, (req, res) => {
+    try {
+        const { ticketNumber } = req.params;
+        const staffEmail = req.user.email;
+        
+        // First check regular complaints
+        db.get(
+            `SELECT * FROM complaints 
+             WHERE (complaint_number = ? OR complaint_number_np = ? OR id = ?) 
+             AND assigned_to = ?`,
+            [ticketNumber, ticketNumber, ticketNumber, staffEmail],
+            (err, complaint) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                
+                if (complaint) {
+                    return res.json({ 
+                        success: true, 
+                        data: complaint,
+                        type: 'regular'
+                    });
+                }
+                
+                // Then check complaint regarding
+                db.get(
+                    `SELECT * FROM complaint_regarding 
+                     WHERE (complaint_number = ? OR complaint_number_np = ? OR id = ?) 
+                     AND assigned_to = ?`,
+                    [ticketNumber, ticketNumber, ticketNumber, staffEmail],
+                    (err, regarding) => {
+                        if (err) {
+                            console.error('Database error:', err);
+                            return res.status(500).json({ success: false, error: err.message });
+                        }
+                        
+                        if (regarding) {
+                            return res.json({ 
+                                success: true, 
+                                data: regarding,
+                                type: 'regarding'
+                            });
+                        }
+                        
+                        res.status(404).json({ 
+                            success: false, 
+                            message: 'Complaint not found or not assigned to you' 
+                        });
+                    }
+                );
+            }
+        );
+    } catch (error) {
+        console.error('Error fetching complaint by ticket number:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/staff/complaints/:id - Get complaint by ID for staff
+app.get('/api/staff/complaints/:id', protect, staffOrAdmin, (req, res) => {
+    try {
+        const { id } = req.params;
+        const staffEmail = req.user.email;
+        
+        console.log('🔍 Staff fetching complaint:', { id, staffEmail });
+        
+        const isNumeric = /^\d+$/.test(id);
+        
+        let query, params;
+        
+        if (isNumeric) {
+            query = `SELECT * FROM complaints WHERE id = ? AND assigned_to = ?`;
+            params = [id, staffEmail];
+        } else {
+            query = `SELECT * FROM complaints WHERE (complaint_number = ? OR complaint_number_np = ?) AND assigned_to = ?`;
+            params = [id, id, staffEmail];
+        }
+        
+        db.get(query, params, (err, complaint) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            
+            if (complaint) {
+                return res.json({ 
+                    success: true, 
+                    data: complaint,
+                    type: 'regular'
+                });
+            }
+            
+            // Check complaint regarding
+            let query2, params2;
+            
+            if (isNumeric) {
+                query2 = `SELECT * FROM complaint_regarding WHERE id = ? AND assigned_to = ?`;
+                params2 = [id, staffEmail];
+            } else {
+                query2 = `SELECT * FROM complaint_regarding WHERE (complaint_number = ? OR complaint_number_np = ?) AND assigned_to = ?`;
+                params2 = [id, id, staffEmail];
+            }
+            
+            db.get(query2, params2, (err, regarding) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                
+                if (regarding) {
+                    return res.json({ 
+                        success: true, 
+                        data: regarding,
+                        type: 'regarding'
+                    });
+                }
+                
+                // If not found, try without assigned_to check (in case complaint wasn't assigned properly)
+                let fallbackQuery, fallbackParams;
+                
+                if (isNumeric) {
+                    fallbackQuery = `SELECT * FROM complaints WHERE id = ?`;
+                    fallbackParams = [id];
+                } else {
+                    fallbackQuery = `SELECT * FROM complaints WHERE complaint_number = ? OR complaint_number_np = ?`;
+                    fallbackParams = [id, id];
+                }
+                
+                db.get(fallbackQuery, fallbackParams, (err, fallbackComplaint) => {
+                    if (err) {
+                        console.error('Database error:', err);
+                        return res.status(500).json({ success: false, error: err.message });
+                    }
+                    
+                    if (fallbackComplaint) {
+                        return res.json({ 
+                            success: true, 
+                            data: fallbackComplaint,
+                            type: 'regular',
+                            warning: 'Complaint is not assigned to you but you can still view it'
+                        });
+                    }
+                    
+                    res.status(404).json({ 
+                        success: false, 
+                        message: 'Complaint not found' 
+                    });
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error fetching complaint:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /api/staff/complaints/:id/update - Update complaint status by staff
+app.post('/api/staff/complaints/:id/update', protect, staffOrAdmin, (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, resolution, actionTaken, notes } = req.body;
+        const staffEmail = req.user.email;
+        
+        console.log('📝 Staff update request:', { id, status, resolution, actionTaken, notes, staffEmail });
+        
+        const validStatuses = ['pending', 'in-progress', 'resolved', 'rejected', 'closed', 'review'];
+        if (!status || !validStatuses.includes(status.toLowerCase())) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid status. Valid statuses: pending, in-progress, resolved, rejected, closed, review'
+            });
+        }
+        
+        const normalizedStatus = status.toLowerCase();
+        const isNumeric = /^\d+$/.test(id);
+        
+        let findQuery, findParams;
+        
+        if (isNumeric) {
+            findQuery = `SELECT id, assigned_to FROM complaints WHERE id = ?`;
+            findParams = [id];
+        } else {
+            findQuery = `SELECT id, assigned_to FROM complaints WHERE complaint_number = ? OR complaint_number_np = ?`;
+            findParams = [id, id];
+        }
+        
+        db.get(findQuery, findParams, (err, complaint) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            
+            if (complaint) {
+                if (complaint.assigned_to !== staffEmail && req.user.role !== 'admin') {
+                    return res.status(403).json({ 
+                        success: false, 
+                        message: 'You are not authorized to update this complaint' 
+                    });
+                }
+                
+                let updateSql = `UPDATE complaints SET status = ?, updated_at = CURRENT_TIMESTAMP`;
+                const updateParams = [normalizedStatus];
+                
+                if (resolution) {
+                    updateSql += `, resolution = ?`;
+                    updateParams.push(resolution);
+                }
+                
+                if (normalizedStatus === 'resolved') {
+                    updateSql += `, resolved_at = CURRENT_TIMESTAMP`;
+                }
+                
+                updateSql += ` WHERE id = ?`;
+                updateParams.push(complaint.id);
+                
+                db.run(updateSql, updateParams, function(err) {
+                    if (err) {
+                        console.error('Database error:', err);
+                        return res.status(500).json({ success: false, error: err.message });
+                    }
+                    
+                    db.get(`SELECT * FROM complaints WHERE id = ?`, [complaint.id], (err, updatedComplaint) => {
+                        if (err) {
+                            console.error('Error fetching updated complaint:', err);
+                            return res.status(500).json({ success: false, error: err.message });
+                        }
+                        
+                        res.json({
+                            success: true,
+                            message: 'Complaint updated successfully',
+                            data: updatedComplaint
+                        });
+                    });
+                });
+                return;
+            }
+            
+            // Check complaint regarding
+            let findQuery2, findParams2;
+            
+            if (isNumeric) {
+                findQuery2 = `SELECT id, assigned_to FROM complaint_regarding WHERE id = ?`;
+                findParams2 = [id];
+            } else {
+                findQuery2 = `SELECT id, assigned_to FROM complaint_regarding WHERE complaint_number = ? OR complaint_number_np = ?`;
+                findParams2 = [id, id];
+            }
+            
+            db.get(findQuery2, findParams2, (err, regarding) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                
+                if (!regarding) {
+                    return res.status(404).json({ 
+                        success: false, 
+                        message: 'Complaint not found' 
+                    });
+                }
+                
+                if (regarding.assigned_to !== staffEmail && req.user.role !== 'admin') {
+                    return res.status(403).json({ 
+                        success: false, 
+                        message: 'You are not authorized to update this complaint' 
+                    });
+                }
+                
+                let updateSql = `UPDATE complaint_regarding SET status = ?, updated_at = CURRENT_TIMESTAMP`;
+                const updateParams = [normalizedStatus];
+                
+                if (resolution) {
+                    updateSql += `, resolution = ?`;
+                    updateParams.push(resolution);
+                }
+                
+                if (normalizedStatus === 'resolved') {
+                    updateSql += `, resolved_at = CURRENT_TIMESTAMP`;
+                }
+                
+                updateSql += ` WHERE id = ?`;
+                updateParams.push(regarding.id);
+                
+                db.run(updateSql, updateParams, function(err) {
+                    if (err) {
+                        console.error('Database error:', err);
+                        return res.status(500).json({ success: false, error: err.message });
+                    }
+                    
+                    db.get(`SELECT * FROM complaint_regarding WHERE id = ?`, [regarding.id], (err, updatedComplaint) => {
+                        if (err) {
+                            console.error('Error fetching updated complaint:', err);
+                            return res.status(500).json({ success: false, error: err.message });
+                        }
+                        
+                        res.json({
+                            success: true,
+                            message: 'Complaint updated successfully',
+                            data: updatedComplaint
+                        });
+                    });
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error updating complaint:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -3595,19 +3815,15 @@ const startServer = async () => {
             console.log(`   9. binod@ntc.gov.np / staff123 (Technical Support)`);
             console.log(`  10. sunita@ntc.gov.np / staff123 (Billing)`);
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-            console.log(`🔍 TRACKING ENDPOINTS (FIXED):`);
-            console.log(`   POST /api/complaints/track - Track complaint`);
-            console.log(`   POST /api/complaint-regarding/track - Track regarding complaint`);
-            console.log(`   POST /api/track - Unified tracking (recommended)`);
-            console.log(`   GET /api/complaints/track/:trackingNumber - Track by number`);
+            console.log(`📋 STAFF COMPLAINT ENDPOINTS (NEW):`);
+            console.log(`   📋 GET /api/staff/complaints/assigned - View assigned complaints`);
+            console.log(`   📋 GET /api/staff/complaints/:id - View complaint by ID`);
+            console.log(`   📋 GET /api/staff/complaints/ticket/:ticketNumber - View by ticket number`);
+            console.log(`   📋 POST /api/staff/complaints/:id/update - Update complaint status`);
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             console.log(`📋 PDF Export Endpoints:`);
             console.log(`   📄 GET /api/staff/reports/pdf - Staff PDF report`);
             console.log(`   📄 GET /api/admin/reports/pdf - Admin PDF report`);
-            console.log(`   Parameters: reportType (Daily/Weekly/Monthly), startDate, endDate`);
-            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-            console.log(`🔍 DEBUG Endpoint (Admin only):`);
-            console.log(`   GET /api/debug/tracking/:complaintNumber`);
             console.log(`=================================\n`);
         });
     } catch (error) {

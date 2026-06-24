@@ -58,8 +58,29 @@ const Complaints = () => {
 
   // Copy to clipboard
   const copyToClipboard = useCallback((text, successMessage) => {
-    navigator.clipboard.writeText(text);
-    showToast(successMessage, 'success', 2000);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(successMessage, 'success', 2000);
+      }).catch(() => {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast(successMessage, 'success', 2000);
+      });
+    } else {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      showToast(successMessage, 'success', 2000);
+    }
   }, [showToast]);
 
   // Format date to Nepali format
@@ -204,11 +225,11 @@ const Complaints = () => {
     return categoryMap[category] || 'General';
   };
 
-  // Fetch complaints from backend
+  // Fetch complaints from backend with improved endpoint handling
   const fetchComplaints = useCallback(async () => {
     setLoading(true);
     try {
-      // Try to get token from multiple possible storage keys
+      // Get token from localStorage
       const token = localStorage.getItem('adminToken') || 
                     localStorage.getItem('token') || 
                     sessionStorage.getItem('adminToken') ||
@@ -220,76 +241,139 @@ const Complaints = () => {
         headers['Authorization'] = `Bearer ${token}`;
       }
       
-      // First attempt: Try the main complaints endpoint
-      try {
-        const response = await axios.get(`${API_URL}/complaints`, { headers });
-        
-        if (response.data && response.data.data && Array.isArray(response.data.data)) {
-          const complaints = response.data.data;
-          const transformedComplaints = transformComplaints(complaints);
-          setComplaintsData(transformedComplaints);
-          setBackendStatus('connected');
-          if (transformedComplaints.length === 0) {
-            showToast('No complaints found in the database', 'info', 2000);
-          }
-          setLoading(false);
-          return;
-        }
-      } catch (mainError) {
-        console.log('Main endpoint failed, trying public endpoint...');
-      }
-      
-      // Second attempt: Try the public endpoint
-      try {
-        const response = await axios.get(`${API_URL}/complaints/public`);
-        
-        if (response.data && response.data.data && Array.isArray(response.data.data)) {
-          const complaints = response.data.data;
-          const transformedComplaints = transformComplaints(complaints);
-          setComplaintsData(transformedComplaints);
-          setBackendStatus('connected');
-          if (transformedComplaints.length === 0) {
-            showToast('No complaints found in the database', 'info', 2000);
-          }
-          setLoading(false);
-          return;
-        }
-      } catch (publicError) {
-        console.log('Public endpoint failed too');
-      }
-      
-      // Third attempt: Try with different endpoint patterns
+      // Define all possible endpoints to try
       const endpoints = [
-        `${API_URL}/complaints/all`,
-        `${API_URL}/complaints/list`,
-        `${API_URL}/complaints/get`,
-        `${API_URL}/admin/complaints`,
-        `${API_URL}/complaints?limit=100`,
+        // Primary endpoints
+        { url: `${API_URL}/complaints`, auth: !!token },
+        { url: `${API_URL}/admin/complaints`, auth: !!token },
+        // Staff endpoints
+        { url: `${API_URL}/staff/complaints`, auth: !!token },
+        // Public endpoints (if available)
+        { url: `${API_URL}/complaints/public`, auth: false },
+        // Alternative patterns
+        { url: `${API_URL}/complaints/all`, auth: !!token },
+        { url: `${API_URL}/complaints/list`, auth: !!token },
+        // With query params
+        { url: `${API_URL}/complaints?limit=100`, auth: !!token },
+        { url: `${API_URL}/admin/complaints?limit=100`, auth: !!token },
       ];
       
+      let response = null;
+      let lastError = null;
+      
+      // Try each endpoint until one works
       for (const endpoint of endpoints) {
         try {
-          const response = await axios.get(endpoint, { headers });
-          if (response.data && response.data.data && Array.isArray(response.data.data)) {
-            const complaints = response.data.data;
-            const transformedComplaints = transformComplaints(complaints);
-            setComplaintsData(transformedComplaints);
-            setBackendStatus('connected');
-            if (transformedComplaints.length === 0) {
-              showToast('No complaints found in the database', 'info', 2000);
+          const config = {
+            headers: endpoint.auth ? headers : {},
+            timeout: 10000
+          };
+          
+          console.log(`Trying endpoint: ${endpoint.url}`);
+          const res = await axios.get(endpoint.url, config);
+          
+          // Check if response has valid data
+          if (res.data) {
+            let hasData = false;
+            
+            // Check various response formats
+            if (res.data.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
+              hasData = true;
+            } else if (res.data.complaints && Array.isArray(res.data.complaints) && res.data.complaints.length > 0) {
+              hasData = true;
+            } else if (Array.isArray(res.data) && res.data.length > 0) {
+              hasData = true;
+            } else if (res.data.data && Array.isArray(res.data.data) && res.data.data.length === 0) {
+              // Empty array is still a valid response
+              hasData = true;
             }
-            setLoading(false);
-            return;
+            
+            if (hasData || res.status === 200 || res.status === 304) {
+              response = res;
+              console.log(`Successfully fetched from: ${endpoint.url}`);
+              break;
+            }
           }
-        } catch (e) {
+        } catch (err) {
+          lastError = err;
+          console.log(`Failed at ${endpoint.url}: ${err.response?.status || err.message}`);
           // Continue to next endpoint
         }
       }
       
-      // If all attempts fail
-      setComplaintsData([]);
-      setBackendStatus('disconnected');
-      showToast('Unable to fetch complaints. Please check your backend connection.', 'error', 4000);
+      // If no response received, try a fallback approach
+      if (!response) {
+        console.log('All endpoints failed, trying fallback...');
+        // Try to get complaints from the database directly via a simple GET
+        try {
+          const fallbackRes = await axios.get(`${API_URL}/complaints`, {
+            headers: headers,
+            timeout: 5000
+          });
+          if (fallbackRes.data) {
+            response = fallbackRes;
+            console.log('Fallback endpoint succeeded');
+          }
+        } catch (fallbackErr) {
+          console.log('Fallback also failed:', fallbackErr.message);
+        }
+      }
+      
+      // Process the response
+      if (response && response.data) {
+        console.log('Processing response:', response.data);
+        
+        let complaints = [];
+        
+        // Extract complaints from various response formats
+        if (response.data.data && Array.isArray(response.data.data)) {
+          complaints = response.data.data;
+        } else if (response.data.complaints && Array.isArray(response.data.complaints)) {
+          complaints = response.data.complaints;
+        } else if (Array.isArray(response.data)) {
+          complaints = response.data;
+        } else if (response.data.results && Array.isArray(response.data.results)) {
+          complaints = response.data.results;
+        } else if (response.data.complaints && response.data.complaints.data && Array.isArray(response.data.complaints.data)) {
+          complaints = response.data.complaints.data;
+        }
+        
+        if (complaints.length > 0) {
+          const transformedComplaints = transformComplaints(complaints);
+          setComplaintsData(transformedComplaints);
+          setBackendStatus('connected');
+          console.log(`Loaded ${transformedComplaints.length} complaints`);
+        } else {
+          // Try to get from nested data
+          const dataKeys = ['data', 'complaints', 'results', 'items', 'list'];
+          let found = false;
+          for (const key of dataKeys) {
+            if (response.data[key] && Array.isArray(response.data[key]) && response.data[key].length > 0) {
+              const transformed = transformComplaints(response.data[key]);
+              setComplaintsData(transformed);
+              setBackendStatus('connected');
+              found = true;
+              console.log(`Loaded ${transformed.length} complaints from ${key}`);
+              break;
+            }
+          }
+          
+          if (!found) {
+            // No complaints found
+            setComplaintsData([]);
+            setBackendStatus('connected');
+            console.log('No complaints found in response');
+            showToast('No complaints found in the database', 'info', 2000);
+          }
+        }
+      } else {
+        // No valid response
+        console.error('No valid response received');
+        setComplaintsData([]);
+        setBackendStatus('disconnected');
+        showToast('Unable to fetch complaints. Please check your backend connection.', 'error', 4000);
+      }
+      
       setLoading(false);
       
     } catch (error) {
@@ -297,8 +381,16 @@ const Complaints = () => {
       setBackendStatus('disconnected');
       setComplaintsData([]);
       
-      if (error.code === 'ERR_NETWORK') {
-        showToast('Cannot connect to backend server. Please make sure the server is running at ' + API_URL, 'error', 5000);
+      if (error.code === 'ERR_NETWORK' || error.message.includes('Network Error')) {
+        showToast(`Cannot connect to backend server. Please make sure the server is running at ${API_URL}`, 'error', 5000);
+      } else if (error.response) {
+        if (error.response.status === 401) {
+          showToast('Authentication required. Please login to view complaints.', 'error', 4000);
+        } else if (error.response.status === 404) {
+          showToast('Complaints endpoint not found. Please check API configuration.', 'error', 4000);
+        } else {
+          showToast(`Failed to load complaints: ${error.response.data?.message || error.message || 'Unknown error'}`, 'error', 3000);
+        }
       } else {
         showToast(`Failed to load complaints: ${error.message || 'Unknown error'}`, 'error', 3000);
       }
@@ -308,42 +400,52 @@ const Complaints = () => {
 
   // Transform complaints data
   const transformComplaints = (complaints) => {
-    return complaints.map(complaint => ({
-      id: complaint.id || complaint._id || Math.random().toString(36).substr(2, 9),
-      ticketId: complaint.complaint_number || complaint.ticketId || `NTC-${complaint.id || complaint._id || Date.now()}`,
-      enTicketId: complaint.complaint_number || complaint.ticketId || `NTC-${complaint.id || complaint._id || Date.now()}`,
-      name: complaint.name || complaint.fullName || complaint.complainantName || 'N/A',
-      enName: complaint.name || complaint.fullName || complaint.complainantName || 'N/A',
-      email: complaint.email || complaint.complainantEmail || 'N/A',
-      phone: complaint.phone || complaint.phoneNumber || complaint.complainantPhone || 'N/A',
-      category: complaint.category || complaint.nature_of_complaint || complaint.complaintType || 'general',
-      subCategory: complaint.subCategory || complaint.subcategory || null,
-      description: complaint.description || complaint.message || complaint.complaintText || 'No description',
-      enDescription: complaint.description || complaint.message || complaint.complaintText || 'No description',
-      status: mapStatus(complaint.status || complaint.complaintStatus),
-      statusText: getStatusTextNp(mapStatus(complaint.status || complaint.complaintStatus)),
-      enStatusText: getStatusTextEn(mapStatus(complaint.status || complaint.complaintStatus)),
-      date: formatNepaliDate(complaint.createdAt || complaint.created_at || complaint.date),
-      enDate: formatEnglishDate(complaint.createdAt || complaint.created_at || complaint.date),
-      channel: complaint.channel || complaint.source || 'वेबसाइट पोर्टल',
-      enChannel: complaint.channel || complaint.source || 'Website Portal',
-      priority: mapPriority(complaint.priority || complaint.complaintPriority),
-      priorityText: getPriorityTextNp(mapPriority(complaint.priority || complaint.complaintPriority)),
-      enPriorityText: getPriorityTextEn(mapPriority(complaint.priority || complaint.complaintPriority)),
-      resolvedDate: complaint.resolvedAt || complaint.resolved_at ? 
-        formatNepaliDate(complaint.resolvedAt || complaint.resolved_at) : null,
-      enResolvedDate: complaint.resolvedAt || complaint.resolved_at ? 
-        formatEnglishDate(complaint.resolvedAt || complaint.resolved_at) : null,
-      resolution: complaint.resolution || complaint.resolvedDescription || null,
-      enResolution: complaint.resolution || complaint.resolvedDescription || null,
-      assignedTo: complaint.assignedTo || complaint.assigned_to || complaint.assigned || null,
-      enAssignedTo: complaint.assignedTo || complaint.assigned_to || complaint.assigned || null,
-      location: complaint.location || complaint.district || complaint.state || complaint.address || 'N/A',
-      enLocation: complaint.location || complaint.district || complaint.state || complaint.address || 'N/A',
-      rawStatus: complaint.status || complaint.complaintStatus,
-      rawPriority: complaint.priority || complaint.complaintPriority,
-      submittedDate: complaint.createdAt || complaint.created_at || complaint.date
-    }));
+    if (!complaints || !Array.isArray(complaints)) return [];
+    
+    return complaints.map((complaint, index) => {
+      // Generate a unique ID if not present
+      const id = complaint.id || complaint._id || `comp-${index}-${Date.now()}`;
+      
+      return {
+        id: id,
+        _id: complaint._id || id,
+        ticketId: complaint.complaint_number || complaint.ticketId || `NTC-${String(index + 1).padStart(4, '0')}`,
+        enTicketId: complaint.complaint_number || complaint.ticketId || `NTC-${String(index + 1).padStart(4, '0')}`,
+        name: complaint.name || complaint.fullName || complaint.complainantName || 'N/A',
+        enName: complaint.name || complaint.fullName || complaint.complainantName || 'N/A',
+        email: complaint.email || complaint.complainantEmail || 'N/A',
+        phone: complaint.phone || complaint.phoneNumber || complaint.complainantPhone || 'N/A',
+        category: complaint.category || complaint.nature_of_complaint || complaint.complaintType || 'general',
+        subCategory: complaint.subCategory || complaint.subcategory || null,
+        description: complaint.description || complaint.message || complaint.complaintText || 'No description provided',
+        enDescription: complaint.description || complaint.message || complaint.complaintText || 'No description provided',
+        status: mapStatus(complaint.status || complaint.complaintStatus),
+        statusText: getStatusTextNp(mapStatus(complaint.status || complaint.complaintStatus)),
+        enStatusText: getStatusTextEn(mapStatus(complaint.status || complaint.complaintStatus)),
+        date: formatNepaliDate(complaint.createdAt || complaint.created_at || complaint.date || complaint.submittedDate),
+        enDate: formatEnglishDate(complaint.createdAt || complaint.created_at || complaint.date || complaint.submittedDate),
+        channel: complaint.channel || complaint.source || 'वेबसाइट पोर्टल',
+        enChannel: complaint.channel || complaint.source || 'Website Portal',
+        priority: mapPriority(complaint.priority || complaint.complaintPriority),
+        priorityText: getPriorityTextNp(mapPriority(complaint.priority || complaint.complaintPriority)),
+        enPriorityText: getPriorityTextEn(mapPriority(complaint.priority || complaint.complaintPriority)),
+        resolvedDate: complaint.resolvedAt || complaint.resolved_at ? 
+          formatNepaliDate(complaint.resolvedAt || complaint.resolved_at) : null,
+        enResolvedDate: complaint.resolvedAt || complaint.resolved_at ? 
+          formatEnglishDate(complaint.resolvedAt || complaint.resolved_at) : null,
+        resolution: complaint.resolution || complaint.resolvedDescription || null,
+        enResolution: complaint.resolution || complaint.resolvedDescription || null,
+        assignedTo: complaint.assignedTo || complaint.assigned_to || complaint.assigned || null,
+        enAssignedTo: complaint.assignedTo || complaint.assigned_to || complaint.assigned || null,
+        location: complaint.location || complaint.district || complaint.state || complaint.address || 'N/A',
+        enLocation: complaint.location || complaint.district || complaint.state || complaint.address || 'N/A',
+        rawStatus: complaint.status || complaint.complaintStatus,
+        rawPriority: complaint.priority || complaint.complaintPriority,
+        submittedDate: complaint.createdAt || complaint.created_at || complaint.date || complaint.submittedDate,
+        // Preserve original data
+        _original: complaint
+      };
+    });
   };
 
   // Initial fetch
@@ -939,7 +1041,7 @@ const Complaints = () => {
                         <span className={`priority-badge ${getPriorityClass(complaint.priority)}`}>
                           {getPriorityText(complaint)}
                         </span>
-                       </td>
+                      </td>
                       <td {...getTableDataProps(t.actions)}>
                         <button 
                           className="view-btn"
@@ -947,8 +1049,8 @@ const Complaints = () => {
                         >
                           👁️ {t.viewDetails}
                         </button>
-                       </td>
-                     </tr>
+                      </td>
+                    </tr>
                   ))
                 ) : (
                   <tr>
