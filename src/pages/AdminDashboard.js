@@ -1154,7 +1154,7 @@ const AdminDashboard = () => {
         .chart-bar {
           width: 50px;
           border-radius: 8px 8px 0 0;
-          position: relative;
+         
           transition: height 0.5s ease;
           cursor: pointer;
         }

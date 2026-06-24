@@ -2004,7 +2004,7 @@ const AdminReportsComplaints = () => {
         .trend-bar-fill {
           width: 40px;
           border-radius: 8px 8px 0 0;
-          position: relative;
+       
           transition: height 0.5s;
           min-height: 30px;
         }

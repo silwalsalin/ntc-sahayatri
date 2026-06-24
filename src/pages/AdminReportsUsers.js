@@ -21,6 +21,7 @@ const AdminReportsUsers = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [isExporting, setIsExporting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Save language preference
   useEffect(() => {
@@ -37,6 +38,37 @@ const AdminReportsUsers = () => {
     return num.toString();
   };
 
+  // Format date to Nepali format with Nepali digits
+  const formatNepaliDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      const year = d.getFullYear() - 57;
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+      const yearNp = year.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const monthNp = month.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      const dayNp = day.replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+      return `${yearNp}-${monthNp}-${dayNp}`;
+    } catch (error) {
+      return '-';
+    }
+  };
+
+  // Format date to English format
+  const formatEnglishDate = (date) => {
+    if (!date) return '-';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '-';
+      return d.toISOString().split('T')[0];
+    } catch (error) {
+      return '-';
+    }
+  };
+
   const [reportData, setReportData] = useState({
     summary: {
       totalUsers: 0,
@@ -48,13 +80,15 @@ const AdminReportsUsers = () => {
       growth: 0,
       totalComplaints: 0,
       avgComplaintsPerUser: 0,
-      satisfactionRate: 0
+      satisfactionRate: 0,
+      adminCount: 0,
+      staffCount: 0,
+      userCount: 0
     },
     roleBreakdown: [],
     statusBreakdown: [],
     monthlyTrend: [],
     activityBreakdown: [],
-    topUsers: [],
     registrationMethod: []
   });
 
@@ -73,170 +107,317 @@ const AdminReportsUsers = () => {
     return localStorage.getItem('adminToken') || localStorage.getItem('token');
   };
 
-  // Fetch users and complaints from database
-  const fetchData = async () => {
+  // Helper function to get date range parameters
+  const getDateRangeParams = () => {
+    const params = {};
+    const now = new Date();
+    
+    if (dateRange === 'custom' && customStartDate && customEndDate) {
+      params.startDate = new Date(customStartDate).toISOString();
+      params.endDate = new Date(customEndDate).toISOString();
+    } else if (dateRange !== 'custom') {
+      let startDate = new Date();
+      if (dateRange === 'today') {
+        startDate.setHours(0, 0, 0, 0);
+      } else if (dateRange === 'week') {
+        startDate.setDate(now.getDate() - 7);
+      } else if (dateRange === 'month') {
+        startDate.setMonth(now.getMonth() - 1);
+      } else if (dateRange === 'quarter') {
+        startDate.setMonth(now.getMonth() - 3);
+      } else if (dateRange === 'year') {
+        startDate.setFullYear(now.getFullYear() - 1);
+      }
+      params.startDate = startDate.toISOString();
+      params.endDate = now.toISOString();
+    }
+    
+    return params;
+  };
+
+  // Helper function to get date range display text
+  const getDateRangeDisplay = () => {
+    const now = new Date();
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    
+    if (dateRange === 'custom') {
+      if (customStartDate && customEndDate) {
+        return `${new Date(customStartDate).toLocaleDateString('en-US', options)} — ${new Date(customEndDate).toLocaleDateString('en-US', options)}`;
+      }
+      return 'Select dates';
+    }
+    
+    if (dateRange === 'today') {
+      return now.toLocaleDateString('en-US', options);
+    }
+    
+    if (dateRange === 'week') {
+      const startDate = new Date(now);
+      startDate.setDate(now.getDate() - 7);
+      return `${startDate.toLocaleDateString('en-US', options)} — ${now.toLocaleDateString('en-US', options)}`;
+    }
+    
+    if (dateRange === 'month') {
+      const startDate = new Date(now);
+      startDate.setMonth(now.getMonth() - 1);
+      return `${startDate.toLocaleDateString('en-US', options)} — ${now.toLocaleDateString('en-US', options)}`;
+    }
+    
+    if (dateRange === 'quarter') {
+      const startDate = new Date(now);
+      startDate.setMonth(now.getMonth() - 3);
+      return `${startDate.toLocaleDateString('en-US', options)} — ${now.toLocaleDateString('en-US', options)}`;
+    }
+    
+    if (dateRange === 'year') {
+      const startDate = new Date(now);
+      startDate.setFullYear(now.getFullYear() - 1);
+      return `${startDate.toLocaleDateString('en-US', options)} — ${now.toLocaleDateString('en-US', options)}`;
+    }
+    
+    return 'All time';
+  };
+
+  // Filter users by date range
+  const filterUsersByDateRange = (users, dateParams) => {
+    if (!dateParams.startDate && !dateParams.endDate) return users;
+    
+    return users.filter(user => {
+      const createdAt = new Date(user.createdAt || user.created_at || user.createdAt);
+      if (isNaN(createdAt.getTime())) return true;
+      
+      if (dateParams.startDate) {
+        const startDate = new Date(dateParams.startDate);
+        if (createdAt < startDate) return false;
+      }
+      if (dateParams.endDate) {
+        const endDate = new Date(dateParams.endDate);
+        if (createdAt > endDate) return false;
+      }
+      return true;
+    });
+  };
+
+  // Filter complaints by date range
+  const filterComplaintsByDateRange = (complaints, dateParams) => {
+    if (!dateParams.startDate && !dateParams.endDate) return complaints;
+    
+    return complaints.filter(complaint => {
+      const createdAt = new Date(complaint.createdAt || complaint.created_at || complaint.createdAt);
+      if (isNaN(createdAt.getTime())) return true;
+      
+      if (dateParams.startDate) {
+        const startDate = new Date(dateParams.startDate);
+        if (createdAt < startDate) return false;
+      }
+      if (dateParams.endDate) {
+        const endDate = new Date(dateParams.endDate);
+        if (createdAt > endDate) return false;
+      }
+      return true;
+    });
+  };
+
+  // Fetch all users from database (fallback method if reports endpoint not available)
+  const fetchAllUsers = async () => {
     try {
       const token = getAuthToken();
-      if (!token) {
-        setBackendStatus('disconnected');
-        setReportData(getSampleReportData());
-        return;
+      if (!token) return null;
+
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const response = await axios.get(`${API_URL}/admin/users`, { headers });
+      if (response.data.success) {
+        return response.data.data || [];
       }
-
-      const headers = { Authorization: `Bearer ${token}` };
-
-      // Fetch all users
-      const usersResponse = await axios.get(`${API_URL}/admin/users`, {
-        headers,
-        params: {
-          page: 1,
-          limit: 1000,
-          role: selectedRole !== 'all' ? selectedRole : undefined,
-          status: selectedStatus !== 'all' ? selectedStatus : undefined
-        }
-      });
-
-      // Fetch all complaints
-      const complaintsResponse = await axios.get(`${API_URL}/admin/complaints`, { headers });
-
-      if (usersResponse.data.success && Array.isArray(usersResponse.data.data)) {
-        const usersData = usersResponse.data.data;
-        const complaintsData = complaintsResponse.data.data || [];
-        
-        const summary = calculateSummaryStats(usersData, complaintsData);
-        const roleBreakdown = calculateRoleBreakdown(usersData);
-        const statusBreakdown = calculateStatusBreakdown(usersData);
-        const monthlyTrend = calculateMonthlyTrend(usersData);
-        const activityBreakdown = calculateActivityBreakdown(usersData, complaintsData);
-        const topUsers = getTopUsers(usersData, complaintsData);
-        const registrationMethod = calculateRegistrationMethod(usersData);
-        
-        setReportData({
-          summary,
-          roleBreakdown,
-          statusBreakdown,
-          monthlyTrend,
-          activityBreakdown,
-          topUsers,
-          registrationMethod
-        });
-        setBackendStatus('connected');
-        showToast(t.reportGenerated, 'success');
-      } else {
-        setReportData(getSampleReportData());
-        setBackendStatus('disconnected');
-        showToast(t.backendNotConnected, 'warning');
-      }
+      return null;
     } catch (error) {
-      console.error('Error fetching data:', error);
-      setReportData(getSampleReportData());
-      setBackendStatus('disconnected');
-      showToast(t.backendNotConnected, 'warning');
+      console.error('Error fetching users:', error);
+      return null;
     }
   };
 
-  // Calculate summary statistics
-  const calculateSummaryStats = (usersData, complaintsData) => {
-    const now = new Date();
-    const thisMonth = now.getMonth();
-    const thisYear = now.getFullYear();
-    const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1;
-    const lastMonthYear = thisMonth === 0 ? thisYear - 1 : thisYear;
+  // Fetch all complaints from database (fallback method)
+  const fetchAllComplaints = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) return null;
 
-    const activeUsers = usersData.filter(u => u.status === 'active').length;
-    const inactiveUsers = usersData.filter(u => u.status === 'inactive').length;
-    const suspendedUsers = usersData.filter(u => u.status === 'suspended').length;
-    const totalUsers = usersData.length;
-    
-    const newUsersThisMonth = usersData.filter(u => {
-      const createdDate = new Date(u.createdAt || u.created_at);
-      return createdDate.getMonth() === thisMonth && createdDate.getFullYear() === thisYear;
-    }).length;
-    
-    const newUsersLastMonth = usersData.filter(u => {
-      const createdDate = new Date(u.createdAt || u.created_at);
-      return createdDate.getMonth() === lastMonth && createdDate.getFullYear() === lastMonthYear;
-    }).length;
-    
-    const growth = newUsersLastMonth > 0 
-      ? ((newUsersThisMonth - newUsersLastMonth) / newUsersLastMonth) * 100 
-      : 0;
-    
-    const totalComplaints = complaintsData.length;
-    const avgComplaintsPerUser = totalUsers > 0 ? (totalComplaints / totalUsers) : 0;
-    
-    const resolvedComplaints = complaintsData.filter(c => 
-      c.status === 'resolved' || c.status === 'Resolved'
-    ).length;
-    const satisfactionRate = totalComplaints > 0 ? ((resolvedComplaints / totalComplaints) * 100) : 0;
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
 
-    return {
-      totalUsers,
-      activeUsers,
-      inactiveUsers,
-      suspendedUsers,
-      newUsersThisMonth,
-      newUsersLastMonth,
-      growth: parseFloat(growth.toFixed(1)),
-      totalComplaints,
-      avgComplaintsPerUser: parseFloat(avgComplaintsPerUser.toFixed(2)),
-      satisfactionRate: parseFloat(satisfactionRate.toFixed(1))
+      const response = await axios.get(`${API_URL}/admin/complaints`, { 
+        headers,
+        params: { limit: 10000 }
+      });
+      
+      if (response.data.success) {
+        return response.data.data || [];
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching complaints:', error);
+      return null;
+    }
+  };
+
+  // Get role text based on language
+  const getRoleText = (role) => {
+    const roleMap = {
+      np: { user: 'प्रयोगकर्ता', staff: 'कर्मचारी', admin: 'प्रशासक' },
+      en: { user: 'User', staff: 'Staff', admin: 'Admin' }
     };
+    return roleMap[language][role] || role || 'N/A';
+  };
+
+  // Get status text based on language
+  const getStatusText = (status) => {
+    const statusMap = {
+      np: { active: 'सक्रिय', inactive: 'निष्क्रिय', suspended: 'निलम्बित' },
+      en: { active: 'Active', inactive: 'Inactive', suspended: 'Suspended' }
+    };
+    return statusMap[language][status] || status || 'N/A';
+  };
+
+  // Get status class for styling
+  const getStatusClass = (status) => {
+    const classes = {
+      active: 'status-active',
+      inactive: 'status-inactive',
+      suspended: 'status-suspended'
+    };
+    return classes[status] || 'status-inactive';
+  };
+
+  // Get role class for styling
+  const getRoleClass = (role) => {
+    const classes = {
+      admin: 'role-admin',
+      staff: 'role-staff',
+      user: 'role-user'
+    };
+    return classes[role] || 'role-user';
   };
 
   // Calculate role breakdown
-  const calculateRoleBreakdown = (usersData) => {
-    const roles = {
-      user: { count: 0, name: 'प्रयोगकर्ता', enName: 'User' },
-      staff: { count: 0, name: 'कर्मचारी', enName: 'Staff' },
-      admin: { count: 0, name: 'प्रशासक', enName: 'Admin' }
-    };
-    
-    usersData.forEach(user => {
+  const calculateRoleBreakdown = (users) => {
+    const roles = {};
+    users.forEach(user => {
       const role = user.role || 'user';
-      if (roles[role]) {
-        roles[role].count++;
-      } else {
-        roles.user.count++;
-      }
+      roles[role] = (roles[role] || 0) + 1;
     });
-    
-    const total = usersData.length;
-    return Object.values(roles).map(role => ({
-      name: role.name,
-      enName: role.enName,
-      count: role.count,
-      percentage: total > 0 ? parseFloat(((role.count / total) * 100).toFixed(1)) : 0
+    const total = users.length || 1;
+    return Object.entries(roles).map(([role, count]) => ({
+      role,
+      count,
+      percentage: parseFloat(((count / total) * 100).toFixed(1))
     }));
   };
 
   // Calculate status breakdown
-  const calculateStatusBreakdown = (usersData) => {
-    const statuses = {
-      active: { count: 0, name: 'सक्रिय', enName: 'Active' },
-      inactive: { count: 0, name: 'निष्क्रिय', enName: 'Inactive' },
-      suspended: { count: 0, name: 'निलम्बित', enName: 'Suspended' }
-    };
-    
-    usersData.forEach(user => {
+  const calculateStatusBreakdown = (users) => {
+    const statuses = {};
+    users.forEach(user => {
       const status = user.status || 'inactive';
-      if (statuses[status]) {
-        statuses[status].count++;
-      } else {
-        statuses.inactive.count++;
-      }
+      statuses[status] = (statuses[status] || 0) + 1;
     });
-    
-    const total = usersData.length;
-    return Object.values(statuses).map(status => ({
-      name: status.name,
-      enName: status.enName,
-      count: status.count,
-      percentage: total > 0 ? parseFloat(((status.count / total) * 100).toFixed(1)) : 0
+    const total = users.length || 1;
+    return Object.entries(statuses).map(([status, count]) => ({
+      status,
+      count,
+      percentage: parseFloat(((count / total) * 100).toFixed(1))
     }));
   };
 
-  // Calculate monthly trend
+  // Calculate activity breakdown based on complaints
+  const calculateActivityBreakdown = (usersData, complaintsData) => {
+    const complaintCounts = {};
+    
+    complaintsData.forEach(complaint => {
+      let userId = complaint.userId || complaint.user_id || complaint.user;
+      
+      if (userId && typeof userId === 'object') {
+        userId = userId._id || userId.id || String(userId);
+      }
+      
+      if (!userId || typeof userId === 'object') {
+        if (complaint.user && typeof complaint.user === 'object') {
+          userId = complaint.user._id || complaint.user.id || complaint.user.userId;
+        }
+        if (!userId && complaint.userId && typeof complaint.userId === 'object') {
+          userId = complaint.userId._id || complaint.userId.id;
+        }
+      }
+      
+      if (userId) {
+        const userIdStr = String(userId);
+        complaintCounts[userIdStr] = (complaintCounts[userIdStr] || 0) + 1;
+      }
+    });
+
+    let highlyActive = 0;
+    let moderatelyActive = 0;
+    let lowActivity = 0;
+    let usersWithoutComplaints = 0;
+    
+    usersData.forEach(user => {
+      const userId = user.id || user._id || String(user._id);
+      const userIdStr = String(userId);
+      const userComplaints = complaintCounts[userIdStr] || 0;
+      
+      if (userComplaints > 0) {
+        if (userComplaints > 10) {
+          highlyActive++;
+        } else if (userComplaints > 3) {
+          moderatelyActive++;
+        } else {
+          lowActivity++;
+        }
+      } else {
+        usersWithoutComplaints++;
+      }
+    });
+    
+    const total = usersData.length || 1;
+    
+    return [
+      { 
+        name: 'उच्च सक्रिय', 
+        enName: 'Highly Active', 
+        count: highlyActive, 
+        percentage: parseFloat(((highlyActive / total) * 100).toFixed(1)),
+        description: '10+ complaints'
+      },
+      { 
+        name: 'मध्यम सक्रिय', 
+        enName: 'Moderately Active', 
+        count: moderatelyActive, 
+        percentage: parseFloat(((moderatelyActive / total) * 100).toFixed(1)),
+        description: '4-9 complaints'
+      },
+      { 
+        name: 'कम सक्रिय', 
+        enName: 'Low Activity', 
+        count: lowActivity, 
+        percentage: parseFloat(((lowActivity / total) * 100).toFixed(1)),
+        description: '1-3 complaints'
+      },
+      { 
+        name: 'गुनासो नगरेका', 
+        enName: 'No Complaints', 
+        count: usersWithoutComplaints, 
+        percentage: parseFloat(((usersWithoutComplaints / total) * 100).toFixed(1)),
+        description: '0 complaints'
+      }
+    ];
+  };
+
+  // Calculate monthly trend based on date range
   const calculateMonthlyTrend = (usersData) => {
     const months = [];
     const monthNames = {
@@ -244,118 +425,84 @@ const AdminReportsUsers = () => {
       en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     };
     
-    const currentYear = new Date().getFullYear();
+    const dateParams = getDateRangeParams();
+    let startDate = null;
+    let endDate = null;
     
-    for (let i = 0; i < 12; i++) {
-      const monthCount = usersData.filter(user => {
-        const createdDate = new Date(user.createdAt || user.created_at);
-        return createdDate.getMonth() === i && createdDate.getFullYear() === currentYear;
-      }).length;
-      
-      months.push({
-        month: monthNames.np[i],
-        enMonth: monthNames.en[i],
-        count: monthCount
-      });
+    if (dateParams.startDate) {
+      startDate = new Date(dateParams.startDate);
+    }
+    if (dateParams.endDate) {
+      endDate = new Date(dateParams.endDate);
+    }
+    
+    let startYear = new Date().getFullYear();
+    let endYear = new Date().getFullYear();
+    let startMonth = 0;
+    let endMonth = 11;
+    
+    if (startDate) {
+      startYear = startDate.getFullYear();
+      startMonth = startDate.getMonth();
+    }
+    if (endDate) {
+      endYear = endDate.getFullYear();
+      endMonth = endDate.getMonth();
+    }
+    
+    if (startYear === endYear) {
+      for (let month = startMonth; month <= endMonth; month++) {
+        const monthCount = usersData.filter(user => {
+          const createdDate = new Date(user.createdAt || user.created_at || user.createdAt);
+          return createdDate.getMonth() === month && createdDate.getFullYear() === startYear;
+        }).length;
+        
+        months.push({
+          month: monthNames.np[month],
+          enMonth: monthNames.en[month],
+          count: monthCount
+        });
+      }
+    } else {
+      for (let year = startYear; year <= endYear; year++) {
+        const monthStart = (year === startYear) ? startMonth : 0;
+        const monthEnd = (year === endYear) ? endMonth : 11;
+        
+        for (let month = monthStart; month <= monthEnd; month++) {
+          const monthCount = usersData.filter(user => {
+            const createdDate = new Date(user.createdAt || user.created_at || user.createdAt);
+            return createdDate.getMonth() === month && createdDate.getFullYear() === year;
+          }).length;
+          
+          months.push({
+            month: monthNames.np[month],
+            enMonth: monthNames.en[month],
+            count: monthCount
+          });
+        }
+      }
+    }
+    
+    if (months.length === 0) {
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      for (let i = 0; i < 6; i++) {
+        const month = (currentMonth - i + 12) % 12;
+        const year = currentMonth - i < 0 ? currentYear - 1 : currentYear;
+        const monthCount = usersData.filter(user => {
+          const createdDate = new Date(user.createdAt || user.created_at || user.createdAt);
+          return createdDate.getMonth() === month && createdDate.getFullYear() === year;
+        }).length;
+        
+        months.unshift({
+          month: monthNames.np[month],
+          enMonth: monthNames.en[month],
+          count: monthCount
+        });
+      }
     }
     
     return months;
-  };
-
-  // Calculate activity breakdown based on complaints
-  const calculateActivityBreakdown = (usersData, complaintsData) => {
-    const complaintsPerUser = {};
-    complaintsData.forEach(complaint => {
-      const userId = complaint.userId || complaint.user_id;
-      if (userId) {
-        complaintsPerUser[userId] = (complaintsPerUser[userId] || 0) + 1;
-      }
-    });
-    
-    let highlyActive = 0;
-    let moderatelyActive = 0;
-    let lowActivity = 0;
-    
-    usersData.forEach(user => {
-      const userComplaints = complaintsPerUser[user.id] || 0;
-      if (userComplaints > 10) {
-        highlyActive++;
-      } else if (userComplaints > 3) {
-        moderatelyActive++;
-      } else {
-        lowActivity++;
-      }
-    });
-    
-    const total = usersData.length;
-    return [
-      { name: 'उच्च सक्रिय', enName: 'Highly Active', count: highlyActive, percentage: total > 0 ? parseFloat(((highlyActive / total) * 100).toFixed(1)) : 0 },
-      { name: 'मध्यम सक्रिय', enName: 'Moderately Active', count: moderatelyActive, percentage: total > 0 ? parseFloat(((moderatelyActive / total) * 100).toFixed(1)) : 0 },
-      { name: 'कम सक्रिय', enName: 'Low Activity', count: lowActivity, percentage: total > 0 ? parseFloat(((lowActivity / total) * 100).toFixed(1)) : 0 }
-    ];
-  };
-
-  // Get top users by complaints
-  const getTopUsers = (usersData, complaintsData) => {
-    const complaintsByUser = {};
-    
-    complaintsData.forEach(complaint => {
-      const userId = complaint.userId || complaint.user_id;
-      if (!userId) return;
-      
-      if (!complaintsByUser[userId]) {
-        complaintsByUser[userId] = {
-          total: 0,
-          resolved: 0,
-          pending: 0,
-          inProgress: 0
-        };
-      }
-      complaintsByUser[userId].total++;
-      
-      if (complaint.status === 'resolved' || complaint.status === 'Resolved') {
-        complaintsByUser[userId].resolved++;
-      } else if (complaint.status === 'pending' || complaint.status === 'Pending') {
-        complaintsByUser[userId].pending++;
-      } else if (complaint.status === 'in-progress' || complaint.status === 'In Progress') {
-        complaintsByUser[userId].inProgress++;
-      }
-    });
-    
-    const userStats = usersData.map(user => {
-      const userComplaints = complaintsByUser[user.id] || { total: 0, resolved: 0, pending: 0, inProgress: 0 };
-      const satisfaction = userComplaints.total > 0 
-        ? (userComplaints.resolved / userComplaints.total) * 5 
-        : 0;
-      
-      return {
-        id: user.id,
-        name: user.name || user.fullName || user.full_name || 'N/A',
-        enName: user.name_en || user.nameEn || user.name || 'N/A',
-        email: user.email,
-        phone: user.phone || user.mobile || 'N/A',
-        complaints: userComplaints.total,
-        resolved: userComplaints.resolved,
-        pending: userComplaints.pending,
-        inProgress: userComplaints.inProgress,
-        satisfaction: parseFloat(satisfaction.toFixed(1)),
-        status: user.status || 'inactive',
-        role: user.role || 'user',
-        registeredAt: user.createdAt || user.created_at,
-        department: user.department || 'N/A'
-      };
-    });
-    
-    let filtered = userStats;
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(user => user.status === selectedStatus);
-    }
-    
-    if (selectedRole !== 'all') {
-      filtered = filtered.filter(user => user.role === selectedRole);
-    }
-    
-    return filtered.sort((a, b) => b.complaints - a.complaints).slice(0, 10);
   };
 
   // Calculate registration method
@@ -363,11 +510,12 @@ const AdminReportsUsers = () => {
     const methods = {
       website: { count: 0, name: 'वेबसाइट', enName: 'Website' },
       mobile: { count: 0, name: 'मोबाइल एप', enName: 'Mobile App' },
-      staff: { count: 0, name: 'कर्मचारी', enName: 'Staff' }
+      staff: { count: 0, name: 'कर्मचारी', enName: 'Staff' },
+      google: { count: 0, name: 'गुगल', enName: 'Google' }
     };
     
     usersData.forEach(user => {
-      const method = user.registrationMethod || user.registration_method || 'website';
+      const method = user.registrationMethod || user.registration_method || user.registrationSource || 'website';
       if (methods[method]) {
         methods[method].count++;
       } else {
@@ -375,13 +523,84 @@ const AdminReportsUsers = () => {
       }
     });
     
-    const total = usersData.length;
+    const total = usersData.length || 1;
     return Object.values(methods).map(method => ({
       name: method.name,
       enName: method.enName,
       count: method.count,
-      percentage: total > 0 ? parseFloat(((method.count / total) * 100).toFixed(1)) : 0
-    }));
+      percentage: parseFloat(((method.count / total) * 100).toFixed(1))
+    })).filter(m => m.count > 0);
+  };
+
+  // Process report data
+  const processReportData = (usersData, complaintsData) => {
+    const users = usersData.users || usersData || [];
+    const summary = usersData.summary || {};
+    const roleBreakdown = usersData.roleBreakdown || [];
+    const statusBreakdown = usersData.statusBreakdown || [];
+    const complaints = complaintsData.complaints || complaintsData || [];
+    const complaintSummary = complaintsData.summary || {};
+
+    // Apply date range filter
+    const dateParams = getDateRangeParams();
+    const filteredUsers = filterUsersByDateRange(users, dateParams);
+    const filteredComplaints = filterComplaintsByDateRange(complaints, dateParams);
+
+    const now = new Date();
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    // Calculate new users based on filtered users
+    const newUsersThisMonth = filteredUsers.filter(user => {
+      const createdAt = new Date(user.createdAt || user.created_at || user.createdAt);
+      return createdAt >= thisMonthStart && createdAt <= now;
+    }).length;
+
+    const newUsersLastMonth = filteredUsers.filter(user => {
+      const createdAt = new Date(user.createdAt || user.created_at || user.createdAt);
+      return createdAt >= lastMonthStart && createdAt <= lastMonthEnd;
+    }).length;
+
+    const growth = newUsersLastMonth > 0 
+      ? ((newUsersThisMonth - newUsersLastMonth) / newUsersLastMonth) * 100
+      : newUsersThisMonth > 0 ? 100 : 0;
+
+    const activityBreakdown = calculateActivityBreakdown(filteredUsers, filteredComplaints);
+    const monthlyTrend = calculateMonthlyTrend(filteredUsers);
+    const registrationMethod = calculateRegistrationMethod(filteredUsers);
+    const allRoleBreakdown = calculateRoleBreakdown(filteredUsers);
+    const allStatusBreakdown = calculateStatusBreakdown(filteredUsers);
+
+    // Calculate role counts for stats
+    const adminCount = filteredUsers.filter(u => u.role === 'admin').length;
+    const staffCount = filteredUsers.filter(u => u.role === 'staff').length;
+    const userCount = filteredUsers.filter(u => u.role === 'user').length;
+
+    return {
+      summary: {
+        totalUsers: filteredUsers.length || 0,
+        activeUsers: filteredUsers.filter(u => u.status === 'active').length || 0,
+        inactiveUsers: filteredUsers.filter(u => u.status === 'inactive').length || 0,
+        suspendedUsers: filteredUsers.filter(u => u.status === 'suspended').length || 0,
+        newUsersThisMonth: newUsersThisMonth,
+        newUsersLastMonth: newUsersLastMonth,
+        growth: parseFloat(growth.toFixed(1)),
+        totalComplaints: filteredComplaints.length || 0,
+        avgComplaintsPerUser: filteredUsers.length > 0 ? (filteredComplaints.length || 0) / filteredUsers.length : 0,
+        satisfactionRate: filteredComplaints.length > 0 
+          ? parseFloat(((filteredComplaints.filter(c => c.status === 'resolved' || c.status === 'Resolved' || c.status === 'completed' || c.status === 'Completed').length / filteredComplaints.length) * 100).toFixed(1))
+          : 0,
+        adminCount: adminCount,
+        staffCount: staffCount,
+        userCount: userCount
+      },
+      roleBreakdown: roleBreakdown.length > 0 ? roleBreakdown : allRoleBreakdown,
+      statusBreakdown: statusBreakdown.length > 0 ? statusBreakdown : allStatusBreakdown,
+      monthlyTrend,
+      activityBreakdown,
+      registrationMethod
+    };
   };
 
   // Get sample report data (fallback)
@@ -397,17 +616,20 @@ const AdminReportsUsers = () => {
         growth: -13.5,
         totalComplaints: 342,
         avgComplaintsPerUser: 0.27,
-        satisfactionRate: 72.5
+        satisfactionRate: 72.5,
+        adminCount: 15,
+        staffCount: 85,
+        userCount: 1150
       },
       roleBreakdown: [
-        { name: 'प्रयोगकर्ता', enName: 'Users', count: 1150, percentage: 92.0 },
-        { name: 'कर्मचारी', enName: 'Staff', count: 85, percentage: 6.8 },
-        { name: 'प्रशासक', enName: 'Admin', count: 15, percentage: 1.2 }
+        { role: 'user', count: 1150, percentage: 92.0 },
+        { role: 'staff', count: 85, percentage: 6.8 },
+        { role: 'admin', count: 15, percentage: 1.2 }
       ],
       statusBreakdown: [
-        { name: 'सक्रिय', enName: 'Active', count: 980, percentage: 78.4 },
-        { name: 'निष्क्रिय', enName: 'Inactive', count: 200, percentage: 16.0 },
-        { name: 'निलम्बित', enName: 'Suspended', count: 70, percentage: 5.6 }
+        { status: 'active', count: 980, percentage: 78.4 },
+        { status: 'inactive', count: 200, percentage: 16.0 },
+        { status: 'suspended', count: 70, percentage: 5.6 }
       ],
       monthlyTrend: [
         { month: 'जनवरी', enMonth: 'Jan', count: 85 },
@@ -424,14 +646,10 @@ const AdminReportsUsers = () => {
         { month: 'डिसेम्बर', enMonth: 'Dec', count: 45 }
       ],
       activityBreakdown: [
-        { name: 'उच्च सक्रिय', enName: 'Highly Active', count: 45, percentage: 3.6 },
-        { name: 'मध्यम सक्रिय', enName: 'Moderately Active', count: 234, percentage: 18.7 },
-        { name: 'कम सक्रिय', enName: 'Low Activity', count: 971, percentage: 77.7 }
-      ],
-      topUsers: [
-        { id: 1, name: 'राम बहादुर', enName: 'Ram Bahadur', email: 'ram@example.com', phone: '9841234567', complaints: 12, resolved: 8, pending: 2, inProgress: 2, satisfaction: 3.3, status: 'active', role: 'user', department: 'Customer Support' },
-        { id: 2, name: 'सीता शर्मा', enName: 'Sita Sharma', email: 'sita@example.com', phone: '9812345678', complaints: 9, resolved: 7, pending: 1, inProgress: 1, satisfaction: 3.9, status: 'active', role: 'user', department: 'Customer Support' },
-        { id: 3, name: 'कृष्ण प्रसाद', enName: 'Krishna Prasad', email: 'krishna@example.com', phone: '9801234567', complaints: 8, resolved: 6, pending: 1, inProgress: 1, satisfaction: 3.8, status: 'active', role: 'staff', department: 'Technical Support' }
+        { name: 'उच्च सक्रिय', enName: 'Highly Active', count: 45, percentage: 3.6, description: '10+ complaints' },
+        { name: 'मध्यम सक्रिय', enName: 'Moderately Active', count: 234, percentage: 18.7, description: '4-9 complaints' },
+        { name: 'कम सक्रिय', enName: 'Low Activity', count: 200, percentage: 16.0, description: '1-3 complaints' },
+        { name: 'गुनासो नगरेका', enName: 'No Complaints', count: 771, percentage: 61.7, description: '0 complaints' }
       ],
       registrationMethod: [
         { name: 'वेबसाइट', enName: 'Website', count: 680, percentage: 54.4 },
@@ -439,6 +657,168 @@ const AdminReportsUsers = () => {
         { name: 'कर्मचारी', enName: 'Staff', count: 50, percentage: 4.0 }
       ]
     };
+  };
+
+  // Fetch users and complaints from database
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const token = getAuthToken();
+      
+      if (!token) {
+        setBackendStatus('disconnected');
+        setReportData(getSampleReportData());
+        setIsLoading(false);
+        showToast(
+          language === 'np' ? 'कृपया लगइन गर्नुहोस्' : 'Please login',
+          'warning'
+        );
+        return;
+      }
+
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const params = new URLSearchParams();
+      
+      if (selectedRole !== 'all') {
+        params.append('role', selectedRole);
+      }
+      
+      if (selectedStatus !== 'all') {
+        params.append('status', selectedStatus);
+      }
+      
+      const dateParams = getDateRangeParams();
+      if (dateParams.startDate) {
+        params.append('startDate', dateParams.startDate);
+      }
+      if (dateParams.endDate) {
+        params.append('endDate', dateParams.endDate);
+      }
+
+      let allUsers = [];
+      let allComplaints = [];
+
+      // Try to fetch from reports endpoints first
+      try {
+        const usersResponse = await axios.get(`${API_URL}/admin/reports/users`, {
+          headers,
+          params: Object.fromEntries(params)
+        });
+        if (usersResponse.data && usersResponse.data.success) {
+          const usersData = usersResponse.data.data;
+          allUsers = usersData.users || usersData || [];
+        }
+      } catch (error) {
+        console.log('Users reports endpoint not found, trying fallback...');
+      }
+
+      try {
+        const complaintsParams = new URLSearchParams();
+        if (selectedStatus !== 'all') {
+          complaintsParams.append('status', selectedStatus);
+        }
+        if (dateParams.startDate) {
+          complaintsParams.append('startDate', dateParams.startDate);
+        }
+        if (dateParams.endDate) {
+          complaintsParams.append('endDate', dateParams.endDate);
+        }
+        complaintsParams.append('limit', '10000');
+
+        const complaintsResponse = await axios.get(`${API_URL}/admin/reports/complaints`, {
+          headers,
+          params: Object.fromEntries(complaintsParams)
+        });
+        if (complaintsResponse.data && complaintsResponse.data.success) {
+          const complaintsData = complaintsResponse.data.data;
+          allComplaints = complaintsData.complaints || complaintsData || [];
+        }
+      } catch (error) {
+        console.log('Complaints reports endpoint not found, trying fallback...');
+      }
+
+      // If reports endpoints didn't work, try fallback
+      if (allUsers.length === 0) {
+        const usersResponse = await fetchAllUsers();
+        if (usersResponse) {
+          allUsers = usersResponse;
+          
+          if (selectedRole !== 'all') {
+            allUsers = allUsers.filter(user => user.role === selectedRole);
+          }
+          if (selectedStatus !== 'all') {
+            allUsers = allUsers.filter(user => user.status === selectedStatus);
+          }
+        }
+      }
+
+      if (allComplaints.length === 0) {
+        const complaintsResponse = await fetchAllComplaints();
+        if (complaintsResponse) {
+          allComplaints = complaintsResponse;
+        }
+      }
+
+      console.log('Users fetched:', allUsers.length);
+      console.log('Complaints fetched:', allComplaints.length);
+
+      if (allUsers.length > 0 || allComplaints.length > 0) {
+        const processedData = processReportData(
+          { users: allUsers }, 
+          { complaints: allComplaints }
+        );
+        setReportData(processedData);
+        setBackendStatus('connected');
+        showToast(
+          language === 'np' 
+            ? `रिपोर्ट सफलतापूर्वक उत्पन्न गरियो (${processedData.summary.totalUsers} प्रयोगकर्ता, ${processedData.summary.totalComplaints} गुनासो)` 
+            : `Report generated successfully (${processedData.summary.totalUsers} users, ${processedData.summary.totalComplaints} complaints)`,
+          'success'
+        );
+      } else {
+        setReportData(getSampleReportData());
+        setBackendStatus('disconnected');
+        showToast(
+          language === 'np' ? 'डाटा ल्याउन असफल। नमूना डाटा देखाउँदै।' : 'Failed to fetch data. Showing sample data.',
+          'warning'
+        );
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      
+      if (error.response) {
+        if (error.response.status === 401) {
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('token');
+          localStorage.removeItem('adminUser');
+          navigate('/admin-login');
+          showToast(
+            language === 'np' ? 'सत्र समाप्त भयो। कृपया पुन: लगइन गर्नुहोस्।' : 'Session expired. Please login again.',
+            'error'
+          );
+        } else {
+          showToast(
+            language === 'np' ? `सर्भर त्रुटि: ${error.response.status}` : `Server error: ${error.response.status}`,
+            'error'
+          );
+          setReportData(getSampleReportData());
+          setBackendStatus('disconnected');
+        }
+      } else {
+        setReportData(getSampleReportData());
+        setBackendStatus('disconnected');
+        showToast(
+          language === 'np' ? 'ब्याकेन्ड सर्भरमा जडान गर्न सकिएन। नमूना डाटा देखाउँदै।' : 'Cannot connect to backend server. Showing sample data.',
+          'warning'
+        );
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Check authentication and load data
@@ -450,7 +830,18 @@ const AdminReportsUsers = () => {
     } else {
       fetchData();
     }
-  }, [navigate, selectedStatus, selectedRole]);
+  }, []);
+
+  // Re-fetch when filters change (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const token = getAuthToken();
+      if (token) {
+        fetchData();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [selectedStatus, selectedRole, dateRange, customStartDate, customEndDate]);
 
   // ===== EXPORT FUNCTIONS =====
 
@@ -459,7 +850,6 @@ const AdminReportsUsers = () => {
     const isNepali = language === 'np';
     const data = [];
     
-    // Summary section
     data.push({ 
       [isNepali ? 'विवरण' : 'Description']: isNepali ? 'प्रयोगकर्ता रिपोर्ट' : 'Users Report',
       [isNepali ? 'मान' : 'Value']: ''
@@ -497,10 +887,6 @@ const AdminReportsUsers = () => {
       [isNepali ? 'मान' : 'Value']: reportData.summary.totalComplaints
     });
     data.push({ 
-      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'प्रति प्रयोगकर्ता औसत गुनासो' : 'Avg Complaints/User',
-      [isNepali ? 'मान' : 'Value']: reportData.summary.avgComplaintsPerUser
-    });
-    data.push({ 
       [isNepali ? 'विवरण' : 'Description']: isNepali ? 'सन्तुष्टि दर' : 'Satisfaction Rate',
       [isNepali ? 'मान' : 'Value']: `${reportData.summary.satisfactionRate}%`
     });
@@ -508,48 +894,19 @@ const AdminReportsUsers = () => {
     return data;
   };
 
-  // Generate top users data for export
-  const generateTopUsersData = () => {
-    const isNepali = language === 'np';
-    const headers = {
-      name: isNepali ? 'नाम' : 'Name',
-      email: isNepali ? 'इमेल' : 'Email',
-      phone: isNepali ? 'फोन' : 'Phone',
-      role: isNepali ? 'भूमिका' : 'Role',
-      department: isNepali ? 'विभाग' : 'Department',
-      complaints: isNepali ? 'गुनासो' : 'Complaints',
-      resolved: isNepali ? 'समाधान' : 'Resolved',
-      satisfaction: isNepali ? 'सन्तुष्टि' : 'Satisfaction',
-      status: isNepali ? 'स्थिति' : 'Status'
-    };
-    
-    return [
-      headers,
-      ...reportData.topUsers.map(user => ({
-        [headers.name]: isNepali ? user.name : user.enName,
-        [headers.email]: user.email,
-        [headers.phone]: user.phone,
-        [headers.role]: getRoleText(user.role),
-        [headers.department]: user.department,
-        [headers.complaints]: user.complaints,
-        [headers.resolved]: user.resolved,
-        [headers.satisfaction]: user.satisfaction,
-        [headers.status]: getStatusText(user.status)
-      }))
-    ];
-  };
-
   // Export to Excel
   const handleExportExcel = () => {
     setIsExporting(true);
-    showToast(t.excelExport, 'info');
+    showToast(
+      language === 'np' ? 'एक्सेल निर्यात भइरहेको छ...' : 'Exporting Excel...',
+      'info'
+    );
     
     setTimeout(() => {
       try {
         const wb = XLSX.utils.book_new();
         const isNepali = language === 'np';
         
-        // Sheet 1: Summary
         const summaryData = generateExcelData();
         const ws1 = XLSX.utils.json_to_sheet(summaryData);
         const colWidths = Object.keys(summaryData[0] || {}).map(key => ({
@@ -558,47 +915,44 @@ const AdminReportsUsers = () => {
         ws1['!cols'] = colWidths;
         XLSX.utils.book_append_sheet(wb, ws1, isNepali ? 'सारांश' : 'Summary');
         
-        // Sheet 2: Top Users
-        const topUsersData = generateTopUsersData();
-        const ws2 = XLSX.utils.json_to_sheet(topUsersData);
-        const colWidths2 = Object.keys(topUsersData[0] || {}).map(key => ({
-          wch: Math.max(key.length, 20)
-        }));
-        ws2['!cols'] = colWidths2;
-        XLSX.utils.book_append_sheet(wb, ws2, isNepali ? 'शीर्ष प्रयोगकर्ता' : 'Top Users');
-        
-        // Create filename
         const date = new Date();
         const dateStr = date.toISOString().split('T')[0];
         const filename = `users_report_${dateStr}.xlsx`;
         
-        // Save file
         XLSX.writeFile(wb, filename);
         
         setTimeout(() => {
-          showToast(language === 'np' ? '✅ एक्सेल फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ Excel file downloaded successfully', 'success');
+          showToast(
+            language === 'np' ? '✅ एक्सेल फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ Excel file downloaded successfully',
+            'success'
+          );
           setIsExporting(false);
         }, 1000);
         
       } catch (error) {
         console.error('Excel export error:', error);
-        showToast(language === 'np' ? '❌ एक्सेल निर्यात गर्न असफल' : '❌ Failed to export Excel', 'error');
+        showToast(
+          language === 'np' ? '❌ एक्सेल निर्यात गर्न असफल' : '❌ Failed to export Excel',
+          'error'
+        );
         setIsExporting(false);
       }
     }, 500);
   };
 
-  // ===== PDF EXPORT - SAME STYLE AS AdminReportsComplaints =====
+  // ===== PDF EXPORT =====
   const handleExportPDF = () => {
     if (isExporting) return;
     
     setIsExporting(true);
-    showToast(t.pdfExport, 'info');
+    showToast(
+      language === 'np' ? 'पीडीएफ निर्यात भइरहेको छ...' : 'Exporting PDF...',
+      'info'
+    );
     
     try {
       const now = new Date();
       
-      // Create PDF with proper settings
       const doc = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
@@ -609,17 +963,14 @@ const AdminReportsUsers = () => {
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       
-      // ===== HEADER =====
       doc.setFillColor(13, 71, 161);
       doc.rect(0, 0, pageWidth, 30, 'F');
       
-      // Title - Use English for clean PDF
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
       doc.text('Users Report', pageWidth / 2, 18, { align: 'center' });
       
-      // Date
       doc.setTextColor(200, 200, 200);
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
@@ -634,14 +985,12 @@ const AdminReportsUsers = () => {
       
       let yPosition = 38;
       
-      // ===== SUMMARY CARDS =====
       doc.setTextColor(13, 71, 161);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text('Overall Overview', 14, yPosition);
       yPosition += 8;
       
-      // Summary cards in 3x2 grid
       const summaryData = [
         { label: 'Total Users', value: reportData.summary.totalUsers },
         { label: 'Active', value: reportData.summary.activeUsers },
@@ -678,29 +1027,7 @@ const AdminReportsUsers = () => {
       
       yPosition += (2 * (cardHeight + 5)) + 10;
       
-      // ===== FILTERS SECTION =====
-      doc.setTextColor(13, 71, 161);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Filters', 14, yPosition);
-      yPosition += 7;
-      
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(71, 85, 105);
-      
-      const filters = [
-        `Date Range: ${dateRange === 'month' ? 'This Month' : dateRange}`,
-        `Report Type: ${reportType === 'summary' ? 'Summary' : reportType}`,
-        `Role: ${selectedRole === 'all' ? 'All' : getRoleText(selectedRole)}`,
-        `Status: ${selectedStatus === 'all' ? 'All' : getStatusText(selectedStatus)}`
-      ];
-      
-      const filterText = filters.join('  |  ');
-      doc.text(filterText, 14, yPosition + 4);
-      yPosition += 14;
-      
-      // ===== ROLE BREAKDOWN =====
+      // Role Breakdown
       doc.setTextColor(13, 71, 161);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
@@ -709,7 +1036,7 @@ const AdminReportsUsers = () => {
       
       const roleHeaders = ['Role', 'Count', 'Percentage'];
       const roleRows = reportData.roleBreakdown.map(item => [
-        item.enName,
+        getRoleText(item.role),
         String(item.count),
         `${item.percentage}%`
       ]);
@@ -739,7 +1066,7 @@ const AdminReportsUsers = () => {
       
       yPosition = doc.lastAutoTable.finalY + 10;
       
-      // ===== STATUS BREAKDOWN =====
+      // Status Breakdown
       doc.setTextColor(13, 71, 161);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
@@ -748,7 +1075,7 @@ const AdminReportsUsers = () => {
       
       const statusHeaders = ['Status', 'Count', 'Percentage'];
       const statusRows = reportData.statusBreakdown.map(item => [
-        item.enName,
+        getStatusText(item.status),
         String(item.count),
         `${item.percentage}%`
       ]);
@@ -778,18 +1105,19 @@ const AdminReportsUsers = () => {
       
       yPosition = doc.lastAutoTable.finalY + 10;
       
-      // ===== ACTIVITY BREAKDOWN =====
+      // Activity Breakdown
       doc.setTextColor(13, 71, 161);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text('Activity Breakdown', 14, yPosition);
       yPosition += 6;
       
-      const activityHeaders = ['Activity', 'Count', 'Percentage'];
+      const activityHeaders = ['Activity', 'Count', 'Percentage', 'Description'];
       const activityRows = reportData.activityBreakdown.map(item => [
         item.enName,
         String(item.count),
-        `${item.percentage}%`
+        `${item.percentage}%`,
+        item.description || ''
       ]);
       
       doc.autoTable({
@@ -817,7 +1145,7 @@ const AdminReportsUsers = () => {
       
       yPosition = doc.lastAutoTable.finalY + 10;
       
-      // ===== REGISTRATION METHOD =====
+      // Registration Method
       doc.setTextColor(13, 71, 161);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
@@ -856,7 +1184,7 @@ const AdminReportsUsers = () => {
       
       yPosition = doc.lastAutoTable.finalY + 10;
       
-      // ===== MONTHLY TREND =====
+      // Monthly Trend
       doc.setTextColor(13, 71, 161);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
@@ -894,66 +1222,7 @@ const AdminReportsUsers = () => {
       
       yPosition = doc.lastAutoTable.finalY + 10;
       
-      // ===== TOP USERS =====
-      doc.setTextColor(13, 71, 161);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Top Users', 14, yPosition);
-      yPosition += 6;
-      
-      const topHeaders = ['Name', 'Email', 'Phone', 'Role', 'Department', 'Complaints', 'Resolved', 'Satisfaction', 'Status'];
-      
-      const topRows = reportData.topUsers.map(user => [
-        user.enName,
-        user.email,
-        user.phone,
-        getRoleText(user.role),
-        user.department,
-        String(user.complaints),
-        String(user.resolved),
-        String(user.satisfaction),
-        getStatusText(user.status)
-      ]);
-      
-      if (topRows.length > 0) {
-        doc.autoTable({
-          startY: yPosition,
-          head: [topHeaders],
-          body: topRows,
-          theme: 'striped',
-          styles: { 
-            fontSize: 7,
-            cellPadding: 2.5,
-            font: 'helvetica'
-          },
-          headStyles: { 
-            fillColor: [13, 71, 161], 
-            textColor: [255, 255, 255],
-            fontSize: 8,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: { fillColor: [248, 250, 255] },
-          margin: { left: 10, right: 10 },
-          columnStyles: {
-            0: { cellWidth: 30 },
-            1: { cellWidth: 35 },
-            2: { cellWidth: 25 },
-            3: { cellWidth: 22 },
-            4: { cellWidth: 28 },
-            5: { cellWidth: 18, halign: 'center' },
-            6: { cellWidth: 18, halign: 'center' },
-            7: { cellWidth: 18, halign: 'center' },
-            8: { cellWidth: 22 }
-          }
-        });
-      } else {
-        doc.setTextColor(150, 150, 150);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'italic');
-        doc.text('No users found', pageWidth / 2, yPosition + 20, { align: 'center' });
-      }
-      
-      // ===== ADD FOOTER =====
+      // FOOTER
       const totalPages = doc.internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
@@ -969,17 +1238,18 @@ const AdminReportsUsers = () => {
         doc.text(footerText, pageWidth / 2, pageHeight - 6, { align: 'center' });
       }
       
-      // Save PDF
       const filename = `users_report_${now.toISOString().split('T')[0]}.pdf`;
       doc.save(filename);
       
-      showToast(language === 'np' ? '✅ पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ PDF file downloaded successfully', 'success');
+      showToast(
+        language === 'np' ? '✅ पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ PDF file downloaded successfully',
+        'success'
+      );
       setIsExporting(false);
       
     } catch (error) {
       console.error('PDF export error:', error);
       
-      // Simple fallback PDF
       try {
         const now = new Date();
         const doc = new jsPDF('landscape', 'mm', 'a4');
@@ -1010,7 +1280,10 @@ const AdminReportsUsers = () => {
         const filename = `users_report_${now.toISOString().split('T')[0]}.pdf`;
         doc.save(filename);
         
-        showToast(language === 'np' ? '✅ पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ PDF file downloaded successfully', 'success');
+        showToast(
+          language === 'np' ? '✅ पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ PDF file downloaded successfully',
+          'success'
+        );
       } catch (fallbackError) {
         console.error('Fallback PDF export error:', fallbackError);
         showToast(
@@ -1067,7 +1340,6 @@ const AdminReportsUsers = () => {
       statusBreakdown: 'स्थिति अनुसार विभाजन',
       monthlyTrend: 'मासिक प्रवृत्ति',
       activityBreakdown: 'गतिविधि अनुसार विभाजन',
-      topUsers: 'शीर्ष प्रयोगकर्ताहरू',
       registrationMethod: 'दर्ता विधि',
       reportGenerated: 'रिपोर्ट उत्पन्न गरियो',
       noDataFound: 'कुनै डाटा फेला परेन',
@@ -1093,6 +1365,7 @@ const AdminReportsUsers = () => {
       highlyActive: 'उच्च सक्रिय',
       moderatelyActive: 'मध्यम सक्रिय',
       lowActivity: 'कम सक्रिय',
+      noComplaints: 'गुनासो नगरेका',
       website: 'वेबसाइट',
       mobileApp: 'मोबाइल एप',
       backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।',
@@ -1101,7 +1374,11 @@ const AdminReportsUsers = () => {
       pdfExport: 'पीडीएफ निर्यात भइरहेको छ...',
       excelExport: 'एक्सेल निर्यात भइरहेको छ...',
       exporting: 'निर्यात हुँदै...',
-      days: 'दिन'
+      days: 'दिन',
+      generating: 'रिपोर्ट उत्पन्न हुँदै...',
+      dateRangeDisplay: 'मिति दायरा:',
+      usersCount: 'प्रयोगकर्ताहरू',
+      registeredDate: 'दर्ता मिति'
     },
     en: {
       usersReports: 'Users Reports',
@@ -1139,7 +1416,6 @@ const AdminReportsUsers = () => {
       statusBreakdown: 'Status Breakdown',
       monthlyTrend: 'Monthly Trend',
       activityBreakdown: 'Activity Breakdown',
-      topUsers: 'Top Users',
       registrationMethod: 'Registration Method',
       reportGenerated: 'Report Generated',
       noDataFound: 'No data found',
@@ -1165,6 +1441,7 @@ const AdminReportsUsers = () => {
       highlyActive: 'Highly Active',
       moderatelyActive: 'Moderately Active',
       lowActivity: 'Low Activity',
+      noComplaints: 'No Complaints',
       website: 'Website',
       mobileApp: 'Mobile App',
       backendNotConnected: 'Backend server not connected. Showing sample data.',
@@ -1173,30 +1450,17 @@ const AdminReportsUsers = () => {
       pdfExport: 'Exporting PDF...',
       excelExport: 'Exporting Excel...',
       exporting: 'Exporting...',
-      days: 'days'
+      days: 'days',
+      generating: 'Generating report...',
+      dateRangeDisplay: 'Date Range:',
+      usersCount: 'users',
+      registeredDate: 'Registered Date'
     }
   };
 
   const t = content[language];
   const currentData = reportData;
   const maxTrendCount = Math.max(...currentData.monthlyTrend.map(m => m.count), 1);
-
-  const getStatusText = (status) => {
-    const statuses = {
-      np: { active: 'सक्रिय', inactive: 'निष्क्रिय', suspended: 'निलम्बित' },
-      en: { active: 'Active', inactive: 'Inactive', suspended: 'Suspended' }
-    };
-    return statuses[language][status] || status;
-  };
-
-  const getStatusClass = (status) => {
-    const classes = {
-      active: 'status-active',
-      inactive: 'status-inactive',
-      suspended: 'status-suspended'
-    };
-    return classes[status] || 'status-inactive';
-  };
 
   const getMonthText = (month) => {
     if (language === 'np') {
@@ -1209,14 +1473,6 @@ const AdminReportsUsers = () => {
       return monthMap[month] || month;
     }
     return month;
-  };
-
-  const getRoleText = (role) => {
-    const roles = {
-      np: { user: 'प्रयोगकर्ता', staff: 'कर्मचारी', admin: 'प्रशासक' },
-      en: { user: 'User', staff: 'Staff', admin: 'Admin' }
-    };
-    return roles[language][role] || role;
   };
 
   const handleGenerateReport = async () => {
@@ -1261,14 +1517,14 @@ const AdminReportsUsers = () => {
                 <button 
                   className="export-btn pdf" 
                   onClick={handleExportPDF} 
-                  disabled={isExporting}
+                  disabled={isExporting || isLoading}
                 >
                   📄 {isExporting ? t.exporting : t.exportPDF}
                 </button>
                 <button 
                   className="export-btn excel" 
                   onClick={handleExportExcel} 
-                  disabled={isExporting}
+                  disabled={isExporting || isLoading}
                 >
                   📊 {isExporting ? t.exporting : t.exportExcel}
                 </button>
@@ -1276,6 +1532,15 @@ const AdminReportsUsers = () => {
                   🖨️ {t.print}
                 </button>
               </div>
+            </div>
+
+            {/* Date Range Display */}
+            <div className="date-range-display">
+              <span className="range-label">📅 {t.dateRangeDisplay}</span>
+              <span className="range-value">{getDateRangeDisplay()}</span>
+              <span className="user-count">
+                👥 {formatNumber(reportData.summary.totalUsers)} {t.usersCount}
+              </span>
             </div>
 
             {/* Filters Section */}
@@ -1355,8 +1620,8 @@ const AdminReportsUsers = () => {
                 </select>
               </div>
 
-              <button className="generate-btn" onClick={handleGenerateReport}>
-                🔄 {t.generateReport}
+              <button className="generate-btn" onClick={handleGenerateReport} disabled={isLoading}>
+                {isLoading ? '⏳ ' + t.generating : '🔄 ' + t.generateReport}
               </button>
             </div>
 
@@ -1406,30 +1671,24 @@ const AdminReportsUsers = () => {
               </div>
             </div>
 
-            {/* Growth Indicator */}
-            <div className="growth-card">
-              <div className="growth-info">
-                <span className="growth-label">{t.newUsersThisMonth}:</span>
-                <span className="growth-value">{formatNumber(currentData.summary.newUsersThisMonth)}</span>
+            {/* Role Distribution Cards - Similar to AdminUsers.js */}
+            <div className="stats-row-small">
+              <div className="stat-card-small">
+                <span className="stat-icon-small">👑</span>
+                <div className="stat-info-small">
+                  <div className="stat-value-small">{formatNumber(currentData.summary.adminCount || 0)}</div>
+                  <div className="stat-label-small">{getRoleText('admin')}</div>
+                </div>
               </div>
-              <div className="growth-info">
-                <span className="growth-label">{t.newUsersLastMonth}:</span>
-                <span className="growth-value">{formatNumber(currentData.summary.newUsersLastMonth)}</span>
+              <div className="stat-card-small">
+                <span className="stat-icon-small">👔</span>
+                <div className="stat-info-small">
+                  <div className="stat-value-small">{formatNumber(currentData.summary.staffCount || 0)}</div>
+                  <div className="stat-label-small">{getRoleText('staff')}</div>
+                </div>
               </div>
-              <div className="growth-info">
-                <span className="growth-label">{t.growth}:</span>
-                <span className={`growth-value ${currentData.summary.growth >= 0 ? 'positive' : 'negative'}`}>
-                  {currentData.summary.growth >= 0 ? '+' : ''}{formatNumber(currentData.summary.growth)}%
-                </span>
-              </div>
-              <div className="growth-info">
-                <span className="growth-label">{t.totalComplaints}:</span>
-                <span className="growth-value">{formatNumber(currentData.summary.totalComplaints)}</span>
-              </div>
-              <div className="growth-info">
-                <span className="growth-label">{t.avgComplaintsPerUser}:</span>
-                <span className="growth-value">{formatNumber(currentData.summary.avgComplaintsPerUser)}</span>
-              </div>
+           
+             
             </div>
 
             {/* Charts Grid */}
@@ -1438,20 +1697,27 @@ const AdminReportsUsers = () => {
               <div className="chart-card">
                 <h3>{t.roleBreakdown}</h3>
                 <div className="chart-content">
-                  {currentData.roleBreakdown.map((item, idx) => (
-                    <div key={idx} className="chart-bar-item">
-                      <div className="chart-label">
-                        <span>{language === 'np' ? item.name : item.enName}</span>
-                        <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
+                  {currentData.roleBreakdown.length > 0 ? (
+                    currentData.roleBreakdown.map((item, idx) => (
+                      <div key={idx} className="chart-bar-item">
+                        <div className="chart-label">
+                          <span>{getRoleText(item.role)}</span>
+                          <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
+                        </div>
+                        <div className="chart-bar-bg">
+                          <div 
+                            className="chart-bar-fill" 
+                            style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${200 + idx * 120}, 70%, 55%)` }}
+                          />
+                        </div>
                       </div>
-                      <div className="chart-bar-bg">
-                        <div 
-                          className="chart-bar-fill" 
-                          style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${200 + idx * 120}, 70%, 55%)` }}
-                        />
-                      </div>
+                    ))
+                  ) : (
+                    <div className="no-data-content">
+                      <span className="no-data-icon">📭</span>
+                      <p>{t.noDataFound}</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
@@ -1459,20 +1725,27 @@ const AdminReportsUsers = () => {
               <div className="chart-card">
                 <h3>{t.statusBreakdown}</h3>
                 <div className="chart-content">
-                  {currentData.statusBreakdown.map((item, idx) => (
-                    <div key={idx} className="chart-bar-item">
-                      <div className="chart-label">
-                        <span>{language === 'np' ? item.name : item.enName}</span>
-                        <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
+                  {currentData.statusBreakdown.length > 0 ? (
+                    currentData.statusBreakdown.map((item, idx) => (
+                      <div key={idx} className="chart-bar-item">
+                        <div className="chart-label">
+                          <span>{getStatusText(item.status)}</span>
+                          <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
+                        </div>
+                        <div className="chart-bar-bg">
+                          <div 
+                            className="chart-bar-fill" 
+                            style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${120 + idx * 90}, 70%, 55%)` }}
+                          />
+                        </div>
                       </div>
-                      <div className="chart-bar-bg">
-                        <div 
-                          className="chart-bar-fill" 
-                          style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${120 + idx * 90}, 70%, 55%)` }}
-                        />
-                      </div>
+                    ))
+                  ) : (
+                    <div className="no-data-content">
+                      <span className="no-data-icon">📭</span>
+                      <p>{t.noDataFound}</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
@@ -1480,20 +1753,36 @@ const AdminReportsUsers = () => {
               <div className="chart-card">
                 <h3>{t.activityBreakdown}</h3>
                 <div className="chart-content">
-                  {currentData.activityBreakdown.map((item, idx) => (
-                    <div key={idx} className="chart-bar-item">
-                      <div className="chart-label">
-                        <span>{language === 'np' ? item.name : item.enName}</span>
-                        <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
+                  {currentData.activityBreakdown.map((item, idx) => {
+                    const colors = [
+                      { bg: 'hsl(280, 70%, 55%)' },
+                      { bg: 'hsl(210, 70%, 55%)' },
+                      { bg: 'hsl(150, 70%, 55%)' },
+                      { bg: 'hsl(30, 70%, 55%)' }
+                    ];
+                    return (
+                      <div key={idx} className="chart-bar-item">
+                        <div className="chart-label">
+                          <span>
+                            {language === 'np' ? item.name : item.enName}
+                            {item.description && (
+                              <span className="chart-desc"> ({item.description})</span>
+                            )}
+                          </span>
+                          <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
+                        </div>
+                        <div className="chart-bar-bg">
+                          <div 
+                            className="chart-bar-fill" 
+                            style={{ 
+                              width: `${item.percentage}%`, 
+                              backgroundColor: colors[idx % colors.length].bg 
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div className="chart-bar-bg">
-                        <div 
-                          className="chart-bar-fill" 
-                          style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${280 + idx * 30}, 70%, 55%)` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1541,68 +1830,11 @@ const AdminReportsUsers = () => {
                 ))}
               </div>
             </div>
-
-            {/* Top Users Table */}
-            <div className="table-card">
-              <h3>{t.topUsers}</h3>
-              <div className="table-wrapper">
-                <table className="reports-table">
-                  <thead>
-                    <tr>
-                      <th>{t.name}</th>
-                      <th>{t.email}</th>
-                      <th>{t.phone}</th>
-                      <th>{t.role}</th>
-                      <th>{t.department}</th>
-                      <th>{t.complaints}</th>
-                      <th>{t.resolved}</th>
-                      <th>{t.satisfaction}</th>
-                      <th>{t.status}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentData.topUsers.length > 0 ? (
-                      currentData.topUsers.map((user) => (
-                        <tr key={user.id}>
-                          <td className="user-name">{language === 'np' ? user.name : user.enName}</td>
-                          <td className="user-email">{user.email}</td>
-                          <td>{user.phone}</td>
-                          <td>{getRoleText(user.role)}</td>
-                          <td>{user.department}</td>
-                          <td className="complaint-count">{formatNumber(user.complaints)}</td>
-                          <td className="resolved-count">{formatNumber(user.resolved)}</td>
-                          <td>
-                            <div className="satisfaction-star">
-                              <span>⭐</span> {formatNumber(user.satisfaction)}
-                            </div>
-                          </td>
-                          <td>
-                            <span className={`status-badge ${getStatusClass(user.status)}`}>
-                              {getStatusText(user.status)}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="9" className="no-data">
-                          <div className="no-data-content">
-                            <span className="no-data-icon">📭</span>
-                            <p>{t.noDataFound}</p>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
           </div>
         </div>
       </div>
 
       <style>{`
-        /* All CSS styles remain the same as before */
         * {
           margin: 0;
           padding: 0;
@@ -1724,7 +1956,7 @@ const AdminReportsUsers = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 24px;
+          margin-bottom: 16px;
           padding-bottom: 16px;
           border-bottom: 2px solid #e2e8f0;
           flex-wrap: wrap;
@@ -1770,6 +2002,37 @@ const AdminReportsUsers = () => {
         .export-btn.excel:hover:not(:disabled) { background: #a7f3d0; transform: translateY(-1px); }
         .export-btn.print { background: #dbeafe; color: #2563eb; }
         .export-btn.print:hover { background: #bfdbfe; transform: translateY(-1px); }
+
+        .date-range-display {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 12px 20px;
+          background: #f8fafc;
+          border-radius: 12px;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+          border: 1px solid #e2e8f0;
+        }
+
+        .date-range-display .range-label {
+          font-weight: 600;
+          color: #0f172a;
+          font-size: 0.85rem;
+        }
+
+        .date-range-display .range-value {
+          color: #3b82f6;
+          font-weight: 500;
+          font-size: 0.85rem;
+        }
+
+        .date-range-display .user-count {
+          margin-left: auto;
+          color: #64748b;
+          font-size: 0.85rem;
+          font-weight: 500;
+        }
 
         .filters-section {
           background: white;
@@ -1842,9 +2105,14 @@ const AdminReportsUsers = () => {
           gap: 8px;
         }
 
-        .generate-btn:hover {
+        .generate-btn:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 6px 20px rgba(59,130,246,0.35);
+        }
+
+        .generate-btn:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
         }
 
         .summary-cards {
@@ -1892,6 +2160,43 @@ const AdminReportsUsers = () => {
         .card-info { flex: 1; min-width: 0; }
         .card-value { font-size: 1.4rem; font-weight: 700; color: #0f172a; }
         .card-label { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
+
+        .stats-row-small {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+          margin-bottom: 28px;
+        }
+
+        .stat-card-small {
+          background: white;
+          border-radius: 12px;
+          padding: 12px 16px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .stat-icon-small {
+          font-size: 1.5rem;
+        }
+
+        .stat-info-small {
+          flex: 1;
+        }
+
+        .stat-value-small {
+          font-size: 1.2rem;
+          font-weight: 700;
+          color: #0f172a;
+        }
+
+        .stat-label-small {
+          font-size: 0.7rem;
+          color: #64748b;
+          margin-top: 2px;
+        }
 
         .growth-card {
           background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
@@ -1965,6 +2270,12 @@ const AdminReportsUsers = () => {
           color: #475569; 
           font-weight: 500;
         }
+        .chart-desc {
+          font-size: 0.65rem;
+          color: #94a3b8;
+          font-weight: 400;
+          margin-left: 4px;
+        }
         .chart-bar-bg { 
           background: #f1f5f9; 
           border-radius: 8px; 
@@ -2030,7 +2341,7 @@ const AdminReportsUsers = () => {
           width: 80%; 
           max-width: 50px; 
           border-radius: 8px 8px 0 0; 
-          position: relative; 
+         
           transition: height 0.6s ease; 
           min-height: 30px;
           display: flex;
@@ -2048,101 +2359,10 @@ const AdminReportsUsers = () => {
           white-space: nowrap; 
         }
 
-        .table-card {
-          background: white;
-          border-radius: 16px;
-          padding: 24px;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-          overflow: hidden;
-        }
-
-        .table-card h3 {
-          font-size: 1rem;
-          font-weight: 600;
-          color: #0f172a;
-          margin-bottom: 20px;
-          padding-bottom: 12px;
-          border-bottom: 2px solid #e2e8f0;
-        }
-
-        .table-wrapper { 
-          overflow-x: auto; 
-          margin: 0 -4px;
-        }
-        .reports-table { 
-          width: 100%; 
-          border-collapse: collapse; 
-          min-width: 800px; 
-        }
-        .reports-table th, .reports-table td { 
-          padding: 12px 14px; 
-          text-align: left; 
-          border-bottom: 1px solid #f1f5f9; 
-        }
-        .reports-table th { 
-          color: #64748b; 
-          font-weight: 600; 
-          font-size: 0.7rem; 
-          text-transform: uppercase;
-          letter-spacing: 0.3px;
-        }
-        .reports-table td { 
-          color: #334155; 
-          font-size: 0.8rem; 
-        }
-
-        .user-name { 
-          font-weight: 600; 
-          color: #0f172a; 
-        }
-        .user-email { 
-          color: #64748b; 
-        }
-        .complaint-count { 
-          font-weight: 700; 
-          color: #dc2626; 
-        }
-        .resolved-count { 
-          font-weight: 700; 
-          color: #059669; 
-        }
-
-        .status-badge { 
-          display: inline-block; 
-          padding: 4px 14px; 
-          border-radius: 20px; 
-          font-size: 0.7rem; 
-          font-weight: 600; 
-        }
-        .status-active { background: #d1fae5; color: #059669; }
-        .status-inactive { background: #fef3c7; color: #d97706; }
-        .status-suspended { background: #fee2e2; color: #dc2626; }
-
-        .satisfaction-star { 
-          display: flex; 
-          align-items: center; 
-          gap: 6px; 
-          font-weight: 600;
-        }
-
-        .no-data { 
-          text-align: center; 
-          padding: 50px !important; 
-        }
-        .no-data-content { 
-          display: flex; 
-          flex-direction: column; 
-          align-items: center; 
-          gap: 10px; 
-        }
-        .no-data-icon { 
-          font-size: 2.5rem; 
-        }
-
         @media (max-width: 1200px) {
           .summary-cards { grid-template-columns: repeat(3, 1fr); }
           .charts-grid { grid-template-columns: 1fr; }
+          .stats-row-small { grid-template-columns: repeat(3, 1fr); }
         }
 
         @media (max-width: 768px) {
@@ -2194,6 +2414,9 @@ const AdminReportsUsers = () => {
           .summary-cards { 
             grid-template-columns: repeat(2, 1fr); 
           }
+          .stats-row-small { 
+            grid-template-columns: 1fr; 
+          }
           .trend-chart { 
             height: auto; 
             flex-direction: column; 
@@ -2227,9 +2450,6 @@ const AdminReportsUsers = () => {
             flex-direction: row; 
             flex-wrap: wrap;
           }
-          .reports-table { 
-            min-width: 600px; 
-          }
           .toast-notification {
             top: auto;
             bottom: 20px;
@@ -2238,15 +2458,19 @@ const AdminReportsUsers = () => {
             max-width: calc(100% - 40px);
             min-width: auto;
           }
+          .date-range-display {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+          .date-range-display .user-count {
+            margin-left: 0;
+          }
         }
 
         @media (max-width: 480px) {
           .summary-cards { 
             grid-template-columns: 1fr; 
-          }
-          .reports-table th, .reports-table td { 
-            padding: 8px 10px; 
-            font-size: 0.7rem; 
           }
           .export-btn {
             padding: 8px 14px;
@@ -2268,7 +2492,7 @@ const AdminReportsUsers = () => {
             margin-left: 0 !important;
             width: 100% !important;
           }
-          .summary-card, .chart-card, .trend-card, .table-card {
+          .summary-card, .chart-card, .trend-card {
             break-inside: avoid;
             box-shadow: none !important;
             border: 1px solid #ddd !important;

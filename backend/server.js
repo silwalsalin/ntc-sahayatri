@@ -4090,6 +4090,12 @@ const startServer = async () => {
             console.log(`   9. binod@ntc.gov.np / staff123 (Technical Support)`);
             console.log(`  10. sunita@ntc.gov.np / staff123 (Billing)`);
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`📋 ADMIN REPORTS ENDPOINTS:`);
+            console.log(`   👥 GET /api/admin/reports/users - Users report`);
+            console.log(`   👥 GET /api/admin/reports/users/export - Export users report`);
+            console.log(`   📊 GET /api/admin/reports/complaints - Complaints report`);
+            console.log(`   📊 GET /api/admin/reports/stats - Quick statistics`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             console.log(`📋 TRACKING ENDPOINTS (NO PASSWORD REQUIRED):`);
             console.log(`   📋 GET /api/complaints/track/:ticketNumber - Track by ticket number`);
             console.log(`   📋 POST /api/track - Unified tracking (recommended)`);

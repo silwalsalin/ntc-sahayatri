@@ -126,7 +126,7 @@ const Sidebar = ({ language, isOpen = true, onClose }) => {
       label: t.support,
       children: [
         { id: 'documentation', icon: '📚', label: t.documentation, path: '/admin-documentation' },
-        { id: 'contact-support', icon: '📞', label: t.contactSupport, path: '/admin-contact' }
+      
       ]
     }
   ];
