@@ -2299,7 +2299,7 @@ app.patch('/api/admin/complaint-regarding/:id/assign', protect, adminOnly, (req,
     }
 });
 
-// ==================== STAFF COMPLAINT ROUTES (NEW) ====================
+// ==================== STAFF COMPLAINT ROUTES ====================
 
 // GET /api/staff/complaints/assigned - Get all complaints assigned to current staff
 app.get('/api/staff/complaints/assigned', protect, staffOrAdmin, (req, res) => {
@@ -3621,6 +3621,1026 @@ app.get('/api/admin/reports/pdf', protect, adminOnly, async (req, res) => {
     }
 });
 
+// ==================== ADMIN REPORTS ROUTES ====================
+
+// GET /api/admin/reports/users - Get users report (admin only)
+app.get('/api/admin/reports/users', protect, adminOnly, (req, res) => {
+    try {
+        const { startDate, endDate, role, status } = req.query;
+        
+        let sql = `SELECT id, name, name_en, email, phone, role, status, department, employee_id, join_date, last_login, created_at, updated_at FROM users WHERE 1=1`;
+        const params = [];
+
+        if (role && role !== 'all') {
+            sql += ` AND role = ?`;
+            params.push(role);
+        }
+
+        if (status && status !== 'all') {
+            sql += ` AND status = ?`;
+            params.push(status);
+        }
+
+        if (startDate) {
+            sql += ` AND created_at >= ?`;
+            params.push(startDate);
+        }
+
+        if (endDate) {
+            sql += ` AND created_at <= ?`;
+            params.push(endDate);
+        }
+
+        sql += ` ORDER BY created_at DESC`;
+
+        db.all(sql, params, (err, users) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ success: false, error: err.message });
+            }
+
+            // Calculate statistics
+            const totalUsers = users.length;
+            const activeUsers = users.filter(u => u.status === 'active').length;
+            const inactiveUsers = users.filter(u => u.status === 'inactive').length;
+            const suspendedUsers = users.filter(u => u.status === 'suspended').length;
+            
+            const roleBreakdown = {};
+            users.forEach(u => {
+                const roleName = u.role || 'user';
+                roleBreakdown[roleName] = (roleBreakdown[roleName] || 0) + 1;
+            });
+
+            const statusBreakdown = {};
+            users.forEach(u => {
+                const statusName = u.status || 'inactive';
+                statusBreakdown[statusName] = (statusBreakdown[statusName] || 0) + 1;
+            });
+
+            const formattedRoleBreakdown = Object.entries(roleBreakdown).map(([role, count]) => ({
+                role,
+                count,
+                percentage: parseFloat(((count / totalUsers) * 100).toFixed(1))
+            }));
+
+            const formattedStatusBreakdown = Object.entries(statusBreakdown).map(([status, count]) => ({
+                status,
+                count,
+                percentage: parseFloat(((count / totalUsers) * 100).toFixed(1))
+            }));
+
+            // Calculate new users this month vs last month
+            const now = new Date();
+            const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+            const newUsersThisMonth = users.filter(u => {
+                const created = new Date(u.created_at);
+                return created >= thisMonthStart && created <= now;
+            }).length;
+
+            const newUsersLastMonth = users.filter(u => {
+                const created = new Date(u.created_at);
+                return created >= lastMonthStart && created <= lastMonthEnd;
+            }).length;
+
+            const growth = newUsersLastMonth > 0 
+                ? ((newUsersThisMonth - newUsersLastMonth) / newUsersLastMonth) * 100
+                : 0;
+
+            res.json({
+                success: true,
+                data: {
+                    users: users,
+                    summary: {
+                        totalUsers,
+                        activeUsers,
+                        inactiveUsers,
+                        suspendedUsers,
+                        newUsersThisMonth,
+                        newUsersLastMonth,
+                        growth: parseFloat(growth.toFixed(1))
+                    },
+                    roleBreakdown: formattedRoleBreakdown,
+                    statusBreakdown: formattedStatusBreakdown
+                }
+            });
+        });
+    } catch (error) {
+        console.error('Error generating users report:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/admin/reports/users/export - Export users report as CSV
+app.get('/api/admin/reports/users/export', protect, adminOnly, (req, res) => {
+    try {
+        const { startDate, endDate, role, status } = req.query;
+        
+        let sql = `SELECT id, name, name_en, email, phone, role, status, department, employee_id, join_date, created_at FROM users WHERE 1=1`;
+        const params = [];
+
+        if (role && role !== 'all') {
+            sql += ` AND role = ?`;
+            params.push(role);
+        }
+
+        if (status && status !== 'all') {
+            sql += ` AND status = ?`;
+            params.push(status);
+        }
+
+        if (startDate) {
+            sql += ` AND created_at >= ?`;
+            params.push(startDate);
+        }
+
+        if (endDate) {
+            sql += ` AND created_at <= ?`;
+            params.push(endDate);
+        }
+
+        sql += ` ORDER BY created_at DESC`;
+
+        db.all(sql, params, (err, users) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ success: false, error: err.message });
+            }
+
+            const headers = ['ID', 'Name', 'Name (English)', 'Email', 'Phone', 'Role', 'Status', 'Department', 'Employee ID', 'Join Date', 'Created At'];
+            const csvRows = [headers.join(',')];
+
+            users.forEach(user => {
+                const row = [
+                    user.id,
+                    `"${user.name || ''}"`,
+                    `"${user.name_en || ''}"`,
+                    `"${user.email || ''}"`,
+                    `"${user.phone || ''}"`,
+                    `"${user.role || 'user'}"`,
+                    `"${user.status || 'inactive'}"`,
+                    `"${user.department || ''}"`,
+                    `"${user.employee_id || ''}"`,
+                    `"${user.join_date || ''}"`,
+                    `"${user.created_at || ''}"`
+                ];
+                csvRows.push(row.join(','));
+            });
+
+            const csvContent = csvRows.join('\n');
+            const filename = `users_report_${new Date().toISOString().split('T')[0]}.csv`;
+
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.send(csvContent);
+        });
+    } catch (error) {
+        console.error('Error exporting users report:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/admin/reports/complaints - Get complaints report (admin only)
+app.get('/api/admin/reports/complaints', protect, adminOnly, (req, res) => {
+    try {
+        const { startDate, endDate, status, category, limit = 1000 } = req.query;
+        
+        let sql = `SELECT * FROM complaints WHERE 1=1`;
+        const params = [];
+
+        if (status && status !== 'all') {
+            sql += ` AND status = ?`;
+            params.push(status);
+        }
+
+        if (category && category !== 'all') {
+            sql += ` AND nature_of_complaint = ?`;
+            params.push(category);
+        }
+
+        if (startDate) {
+            sql += ` AND created_at >= ?`;
+            params.push(startDate);
+        }
+
+        if (endDate) {
+            sql += ` AND created_at <= ?`;
+            params.push(endDate);
+        }
+
+        sql += ` ORDER BY created_at DESC LIMIT ?`;
+        params.push(parseInt(limit));
+
+        db.all(sql, params, (err, complaints) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ success: false, error: err.message });
+            }
+
+            // Also get regarding complaints
+            let sql2 = `SELECT * FROM complaint_regarding WHERE 1=1`;
+            const params2 = [];
+
+            if (status && status !== 'all') {
+                sql2 += ` AND status = ?`;
+                params2.push(status);
+            }
+
+            if (category && category !== 'all') {
+                sql2 += ` AND complaint_type = ?`;
+                params2.push(category);
+            }
+
+            if (startDate) {
+                sql2 += ` AND created_at >= ?`;
+                params2.push(startDate);
+            }
+
+            if (endDate) {
+                sql2 += ` AND created_at <= ?`;
+                params2.push(endDate);
+            }
+
+            sql2 += ` ORDER BY created_at DESC LIMIT ?`;
+            params2.push(parseInt(limit));
+
+            db.all(sql2, params2, (err, regardingComplaints) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+
+                const allComplaints = [...complaints, ...regardingComplaints];
+                
+                // Calculate statistics
+                const total = allComplaints.length;
+                const resolved = allComplaints.filter(c => c.status === 'resolved' || c.status === 'Resolved' || c.status === 'completed').length;
+                const pending = allComplaints.filter(c => c.status === 'pending' || c.status === 'Pending').length;
+                const inProgress = allComplaints.filter(c => c.status === 'in-progress' || c.status === 'In Progress').length;
+                const rejected = allComplaints.filter(c => c.status === 'rejected' || c.status === 'Rejected').length;
+
+                res.json({
+                    success: true,
+                    data: {
+                        complaints: allComplaints,
+                        summary: {
+                            total,
+                            resolved,
+                            pending,
+                            inProgress,
+                            rejected,
+                            resolutionRate: total > 0 ? parseFloat(((resolved / total) * 100).toFixed(1)) : 0
+                        }
+                    }
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error generating complaints report:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/admin/reports/stats - Quick statistics (admin only)
+app.get('/api/admin/reports/stats', protect, adminOnly, (req, res) => {
+    try {
+        // Get total users
+        db.get(`SELECT COUNT(*) as total FROM users`, [], (err, userResult) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ success: false, error: err.message });
+            }
+
+            // Get total complaints
+            db.get(`SELECT COUNT(*) as total FROM complaints`, [], (err, complaintResult) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+
+                // Get total regarding complaints
+                db.get(`SELECT COUNT(*) as total FROM complaint_regarding`, [], (err, regardingResult) => {
+                    if (err) {
+                        console.error('Database error:', err);
+                        return res.status(500).json({ success: false, error: err.message });
+                    }
+
+                    // Get resolved complaints
+                    db.get(`SELECT COUNT(*) as total FROM complaints WHERE status = 'resolved' OR status = 'Resolved'`, [], (err, resolvedResult) => {
+                        if (err) {
+                            console.error('Database error:', err);
+                            return res.status(500).json({ success: false, error: err.message });
+                        }
+
+                        db.get(`SELECT COUNT(*) as total FROM complaint_regarding WHERE status = 'resolved' OR status = 'Resolved'`, [], (err, resolvedRegardingResult) => {
+                            if (err) {
+                                console.error('Database error:', err);
+                                return res.status(500).json({ success: false, error: err.message });
+                            }
+
+                            const totalUsers = userResult?.total || 0;
+                            const totalComplaints = (complaintResult?.total || 0) + (regardingResult?.total || 0);
+                            const totalResolved = (resolvedResult?.total || 0) + (resolvedRegardingResult?.total || 0);
+
+                            res.json({
+                                success: true,
+                                data: {
+                                    totalUsers,
+                                    totalComplaints,
+                                    totalResolved,
+                                    resolutionRate: totalComplaints > 0 ? parseFloat(((totalResolved / totalComplaints) * 100).toFixed(1)) : 0
+                                }
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==================== ANALYTICS ROUTES ====================
+
+// ===== OVERVIEW STATISTICS =====
+app.get('/api/admin/analytics/overview', protect, adminOnly, async (req, res) => {
+    try {
+        const { period = 'month' } = req.query;
+        
+        // Calculate date range based on period
+        const dateRange = getDateRange(period);
+        const startDateStr = dateRange.start.toISOString();
+        const endDateStr = dateRange.end.toISOString();
+        
+        // Get all complaints within date range - using SQLite syntax
+        const complaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaints 
+                 WHERE created_at BETWEEN ? AND ?`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const regardingComplaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaint_regarding 
+                 WHERE created_at BETWEEN ? AND ?`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const allComplaints = [...complaints, ...regardingComplaints];
+        
+        // Calculate statistics
+        const totalComplaints = allComplaints.length;
+        const resolvedComplaints = allComplaints.filter(c => 
+            c.status === 'resolved' || c.status === 'Resolved' || c.status === 'completed'
+        ).length;
+        const pendingComplaints = allComplaints.filter(c => 
+            c.status === 'pending' || c.status === 'Pending'
+        ).length;
+        const inProgressComplaints = allComplaints.filter(c => 
+            c.status === 'in-progress' || c.status === 'In Progress' || c.status === 'inProgress'
+        ).length;
+        
+        // Calculate satisfaction rate
+        const ratedComplaints = allComplaints.filter(c => c.rating && c.rating > 0);
+        const satisfactionRate = ratedComplaints.length > 0
+            ? (ratedComplaints.reduce((sum, c) => sum + c.rating, 0) / ratedComplaints.length) * 20
+            : 0;
+        
+        // Calculate average response time (hours)
+        const resolvedWithResponse = allComplaints.filter(c => 
+            c.resolvedAt && c.createdAt
+        );
+        let avgResponseTime = '0';
+        if (resolvedWithResponse.length > 0) {
+            const totalHours = resolvedWithResponse.reduce((sum, c) => {
+                const hours = (new Date(c.resolvedAt) - new Date(c.createdAt)) / (1000 * 60 * 60);
+                return sum + hours;
+            }, 0);
+            avgResponseTime = (totalHours / resolvedWithResponse.length).toFixed(1);
+        }
+        
+        // Calculate average resolution time (days)
+        let avgResolutionTime = '0';
+        if (resolvedWithResponse.length > 0) {
+            const totalDays = resolvedWithResponse.reduce((sum, c) => {
+                const days = (new Date(c.resolvedAt) - new Date(c.createdAt)) / (1000 * 60 * 60 * 24);
+                return sum + days;
+            }, 0);
+            avgResolutionTime = (totalDays / resolvedWithResponse.length).toFixed(1);
+        }
+        
+        // Find peak hour
+        const hourCounts = {};
+        allComplaints.forEach(c => {
+            const hour = new Date(c.createdAt).getHours();
+            hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+        });
+        let peakHour = 'N/A';
+        let maxHourCount = 0;
+        for (const [hour, count] of Object.entries(hourCounts)) {
+            if (count > maxHourCount) {
+                maxHourCount = count;
+                peakHour = `${hour}:00 - ${parseInt(hour) + 1}:00`;
+            }
+        }
+        
+        // Find busiest day
+        const dayCounts = {};
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        allComplaints.forEach(c => {
+            const day = days[new Date(c.createdAt).getDay()];
+            dayCounts[day] = (dayCounts[day] || 0) + 1;
+        });
+        let busiestDay = 'N/A';
+        let maxDayCount = 0;
+        for (const [day, count] of Object.entries(dayCounts)) {
+            if (count > maxDayCount) {
+                maxDayCount = count;
+                busiestDay = day;
+            }
+        }
+        
+        res.json({
+            success: true,
+            data: {
+                totalComplaints,
+                resolvedComplaints,
+                pendingComplaints,
+                inProgressComplaints,
+                satisfactionRate: Math.round(satisfactionRate * 10) / 10,
+                avgResponseTime,
+                enAvgResponseTime: avgResponseTime,
+                avgResolutionTime,
+                enAvgResolutionTime: avgResolutionTime,
+                peakHour: convertToNepaliTime(peakHour),
+                enPeakHour: peakHour,
+                busiestDay: convertToNepaliDay(busiestDay),
+                enBusiestDay: busiestDay
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching overview:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// ===== TRENDS DATA =====
+app.get('/api/admin/analytics/trends', protect, adminOnly, async (req, res) => {
+    try {
+        const { period = 'month' } = req.query;
+        const dateRange = getDateRange(period);
+        const startDateStr = dateRange.start.toISOString();
+        const endDateStr = dateRange.end.toISOString();
+        
+        // Get all complaints - using SQLite syntax
+        const complaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaints 
+                 WHERE created_at BETWEEN ? AND ?`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const regardingComplaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaint_regarding 
+                 WHERE created_at BETWEEN ? AND ?`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const allComplaints = [...complaints, ...regardingComplaints];
+        
+        // Group by month
+        const monthData = {};
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const nepaliMonthNames = ['जनवरी', 'फेब्रुअरी', 'मार्च', 'अप्रिल', 'मे', 'जुन', 'जुलाई', 'अगस्ट', 'सेप्टेम्बर', 'अक्टोबर', 'नोभेम्बर', 'डिसेम्बर'];
+        
+        // Initialize months in range
+        const startMonth = dateRange.start.getMonth();
+        const endMonth = dateRange.end.getMonth();
+        const startYear = dateRange.start.getFullYear();
+        const endYear = dateRange.end.getFullYear();
+        
+        for (let year = startYear; year <= endYear; year++) {
+            const monthStart = year === startYear ? startMonth : 0;
+            const monthEnd = year === endYear ? endMonth : 11;
+            for (let month = monthStart; month <= monthEnd; month++) {
+                const key = `${year}-${month}`;
+                monthData[key] = { complaints: 0, resolved: 0 };
+            }
+        }
+        
+        // Count complaints per month
+        allComplaints.forEach(c => {
+            const date = new Date(c.createdAt);
+            const key = `${date.getFullYear()}-${date.getMonth()}`;
+            if (monthData[key]) {
+                monthData[key].complaints++;
+                if (c.status === 'resolved' || c.status === 'Resolved' || c.status === 'completed') {
+                    monthData[key].resolved++;
+                }
+            }
+        });
+        
+        // Extract data
+        const monthKeys = Object.keys(monthData).sort();
+        const complaintsData = monthKeys.map(key => monthData[key].complaints);
+        const resolvedData = monthKeys.map(key => monthData[key].resolved);
+        const monthLabels = monthKeys.map(key => {
+            const [, month] = key.split('-').map(Number);
+            return monthNames[month];
+        });
+        const nepaliMonthLabels = monthKeys.map(key => {
+            const [, month] = key.split('-').map(Number);
+            return nepaliMonthNames[month];
+        });
+        
+        res.json({
+            success: true,
+            data: {
+                complaints: complaintsData,
+                resolved: resolvedData,
+                months: nepaliMonthLabels,
+                enMonths: monthLabels
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching trends:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// ===== CATEGORY DISTRIBUTION =====
+app.get('/api/admin/analytics/categories', protect, adminOnly, async (req, res) => {
+    try {
+        const { period = 'month' } = req.query;
+        const dateRange = getDateRange(period);
+        const startDateStr = dateRange.start.toISOString();
+        const endDateStr = dateRange.end.toISOString();
+        
+        const complaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaints 
+                 WHERE created_at BETWEEN ? AND ?`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const regardingComplaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaint_regarding 
+                 WHERE created_at BETWEEN ? AND ?`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const allComplaints = [...complaints, ...regardingComplaints];
+        
+        // Count by category
+        const categoryMap = {};
+        allComplaints.forEach(c => {
+            const category = c.nature_of_complaint || c.complaint_type || 'Other';
+            categoryMap[category] = (categoryMap[category] || 0) + 1;
+        });
+        
+        // Sort by count descending
+        const sorted = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]);
+        const categories = sorted.map(([name]) => name);
+        const data = sorted.map(([, count]) => count);
+        const nepaliCategories = categories.map(convertToNepaliCategory);
+        
+        const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+        
+        res.json({
+            success: true,
+            data: {
+                labels: nepaliCategories,
+                enLabels: categories,
+                data: data,
+                colors: colors.slice(0, data.length)
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// ===== PERFORMANCE METRICS =====
+app.get('/api/admin/analytics/performance', protect, adminOnly, async (req, res) => {
+    try {
+        const { period = 'month' } = req.query;
+        const dateRange = getDateRange(period);
+        const startDateStr = dateRange.start.toISOString();
+        const endDateStr = dateRange.end.toISOString();
+        
+        const complaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaints 
+                 WHERE created_at BETWEEN ? AND ? 
+                 AND (status = 'resolved' OR status = 'Resolved')`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const regardingComplaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaint_regarding 
+                 WHERE created_at BETWEEN ? AND ? 
+                 AND (status = 'resolved' OR status = 'Resolved')`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const allComplaints = [...complaints, ...regardingComplaints];
+        
+        // Group by month
+        const monthData = {};
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        const nepaliMonthNames = ['जनवरी', 'फेब्रुअरी', 'मार्च', 'अप्रिल', 'मे', 'जुन'];
+        
+        for (let i = 0; i < 6; i++) {
+            const d = new Date();
+            d.setMonth(d.getMonth() - i);
+            const key = `${d.getFullYear()}-${d.getMonth()}`;
+            monthData[key] = { responseTime: [], resolutionTime: [] };
+        }
+        
+        allComplaints.forEach(c => {
+            if (c.resolvedAt && c.createdAt) {
+                const date = new Date(c.resolvedAt);
+                const key = `${date.getFullYear()}-${date.getMonth()}`;
+                if (monthData[key]) {
+                    const responseHours = (new Date(c.resolvedAt) - new Date(c.createdAt)) / (1000 * 60 * 60);
+                    const resolutionDays = responseHours / 24;
+                    monthData[key].responseTime.push(responseHours);
+                    monthData[key].resolutionTime.push(resolutionDays);
+                }
+            }
+        });
+        
+        const monthKeys = Object.keys(monthData).sort();
+        const responseTime = monthKeys.map(key => {
+            const times = monthData[key].responseTime;
+            return times.length > 0 ? parseFloat((times.reduce((a, b) => a + b, 0) / times.length).toFixed(1)) : 0;
+        });
+        const resolutionTime = monthKeys.map(key => {
+            const times = monthData[key].resolutionTime;
+            return times.length > 0 ? parseFloat((times.reduce((a, b) => a + b, 0) / times.length).toFixed(1)) : 0;
+        });
+        const labels = monthKeys.map(key => {
+            const [, month] = key.split('-').map(Number);
+            return nepaliMonthNames[month % 6] || monthNames[month % 6];
+        });
+        const enLabels = monthKeys.map(key => {
+            const [, month] = key.split('-').map(Number);
+            return monthNames[month % 6] || monthNames[month % 6];
+        });
+        
+        res.json({
+            success: true,
+            data: {
+                responseTime,
+                resolutionTime,
+                labels,
+                enLabels
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching performance:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// ===== TOP PERFORMERS =====
+app.get('/api/admin/analytics/performers', protect, adminOnly, async (req, res) => {
+    try {
+        const { period = 'month' } = req.query;
+        const dateRange = getDateRange(period);
+        const startDateStr = dateRange.start.toISOString();
+        const endDateStr = dateRange.end.toISOString();
+        
+        const complaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaints 
+                 WHERE created_at BETWEEN ? AND ?`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const regardingComplaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaint_regarding 
+                 WHERE created_at BETWEEN ? AND ?`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const allComplaints = [...complaints, ...regardingComplaints];
+        
+        // Group by assigned team/department
+        const teamMap = {};
+        allComplaints.forEach(c => {
+            const team = c.assigned_to || c.department || 'General';
+            if (!teamMap[team]) {
+                teamMap[team] = { resolved: 0, totalTime: 0, count: 0, satisfaction: 0 };
+            }
+            if (c.status === 'resolved' || c.status === 'Resolved' || c.status === 'completed') {
+                teamMap[team].resolved++;
+                if (c.resolvedAt && c.createdAt) {
+                    const days = (new Date(c.resolvedAt) - new Date(c.createdAt)) / (1000 * 60 * 60 * 24);
+                    teamMap[team].totalTime += days;
+                    teamMap[team].count++;
+                }
+                if (c.rating) {
+                    teamMap[team].satisfaction += c.rating;
+                }
+            }
+        });
+        
+        const performers = Object.entries(teamMap).map(([team, data]) => ({
+            id: team,
+            name: convertToNepaliTeam(team),
+            enName: team,
+            resolved: data.resolved,
+            avgTime: data.count > 0 ? (data.totalTime / data.count).toFixed(1) : '0',
+            satisfaction: data.resolved > 0 ? parseFloat((data.satisfaction / data.resolved).toFixed(1)) : 0
+        }));
+        
+        // Sort by resolved count descending
+        performers.sort((a, b) => b.resolved - a.resolved);
+        
+        res.json({
+            success: true,
+            data: performers.slice(0, 10)
+        });
+    } catch (error) {
+        console.error('Error fetching performers:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// ===== HOURLY DISTRIBUTION =====
+app.get('/api/admin/analytics/hourly', protect, adminOnly, async (req, res) => {
+    try {
+        const { period = 'month' } = req.query;
+        const dateRange = getDateRange(period);
+        const startDateStr = dateRange.start.toISOString();
+        const endDateStr = dateRange.end.toISOString();
+        
+        const complaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaints 
+                 WHERE created_at BETWEEN ? AND ?`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const regardingComplaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaint_regarding 
+                 WHERE created_at BETWEEN ? AND ?`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const allComplaints = [...complaints, ...regardingComplaints];
+        
+        const hourlyData = {};
+        for (let i = 0; i < 24; i += 2) {
+            const key = `${String(i).padStart(2, '0')}-${String(i + 2).padStart(2, '0')}`;
+            hourlyData[key] = 0;
+        }
+        
+        allComplaints.forEach(c => {
+            const hour = new Date(c.createdAt).getHours();
+            const key = `${String(hour - (hour % 2)).padStart(2, '0')}-${String(hour - (hour % 2) + 2).padStart(2, '0')}`;
+            if (hourlyData[key] !== undefined) {
+                hourlyData[key]++;
+            }
+        });
+        
+        const result = Object.entries(hourlyData).map(([key, count]) => {
+            const [start, end] = key.split('-');
+            const hour = parseInt(start);
+            return {
+                hour: `${convertToNepaliNumber(start)}-${convertToNepaliNumber(end)}`,
+                enHour: `${start}-${end}`,
+                count
+            };
+        });
+        
+        res.json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        console.error('Error fetching hourly data:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// ===== DAY-WISE DISTRIBUTION =====
+app.get('/api/admin/analytics/daywise', protect, adminOnly, async (req, res) => {
+    try {
+        const { period = 'month' } = req.query;
+        const dateRange = getDateRange(period);
+        const startDateStr = dateRange.start.toISOString();
+        const endDateStr = dateRange.end.toISOString();
+        
+        const complaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaints 
+                 WHERE created_at BETWEEN ? AND ?`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const regardingComplaints = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT * FROM complaint_regarding 
+                 WHERE created_at BETWEEN ? AND ?`,
+                [startDateStr, endDateStr],
+                (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows || []);
+                }
+            );
+        });
+        
+        const allComplaints = [...complaints, ...regardingComplaints];
+        
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const nepaliDays = ['आइतबार', 'सोमबार', 'मंगलबार', 'बुधबार', 'बिहिबार', 'शुक्रबार', 'शनिबार'];
+        
+        const dayData = {};
+        days.forEach(d => dayData[d] = 0);
+        
+        allComplaints.forEach(c => {
+            const day = days[new Date(c.createdAt).getDay()];
+            dayData[day]++;
+        });
+        
+        const result = days.map((day, index) => ({
+            day: nepaliDays[index],
+            enDay: day,
+            count: dayData[day] || 0
+        }));
+        
+        res.json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        console.error('Error fetching daywise data:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// ==================== HELPER FUNCTIONS ====================
+
+function getDateRange(period) {
+    const now = new Date();
+    const start = new Date();
+    const end = new Date();
+    
+    switch (period) {
+        case 'today':
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            break;
+        case 'week':
+            start.setDate(now.getDate() - 7);
+            break;
+        case 'month':
+            start.setMonth(now.getMonth() - 1);
+            break;
+        case 'quarter':
+            start.setMonth(now.getMonth() - 3);
+            break;
+        case 'year':
+            start.setFullYear(now.getFullYear() - 1);
+            break;
+        default:
+            start.setMonth(now.getMonth() - 1);
+    }
+    
+    return { start, end };
+}
+
+function convertToNepaliNumber(num) {
+    const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+    return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+}
+
+function convertToNepaliTime(time) {
+    if (!time || time === 'N/A') return 'N/A';
+    const parts = time.split('-');
+    return parts.map(p => convertToNepaliNumber(p.trim())).join(' - ');
+}
+
+function convertToNepaliDay(day) {
+    const map = {
+        'Monday': 'सोमबार',
+        'Tuesday': 'मंगलबार',
+        'Wednesday': 'बुधबार',
+        'Thursday': 'बिहिबार',
+        'Friday': 'शुक्रबार',
+        'Saturday': 'शनिबार',
+        'Sunday': 'आइतबार'
+    };
+    return map[day] || day;
+}
+
+function convertToNepaliCategory(category) {
+    const map = {
+        'Internet': 'इन्टरनेट',
+        'Billing': 'बिलिङ',
+        'Network': 'नेटवर्क',
+        'Recharge': 'रिचार्ज',
+        'Technical': 'प्राविधिक',
+        'Activation': 'सक्रियता',
+        'Service': 'सेवा',
+        'Signal': 'सिग्नल',
+        'Other': 'अन्य',
+        'General': 'सामान्य'
+    };
+    return map[category] || category;
+}
+
+function convertToNepaliTeam(team) {
+    const map = {
+        'Technical': 'प्राविधिक टोली',
+        'Billing': 'बिलिङ टोली',
+        'Network': 'नेटवर्क टोली',
+        'Customer Service': 'ग्राहक सेवा',
+        'Administration': 'प्रशासन',
+        'Support': 'सहायता टोली',
+        'General': 'सामान्य'
+    };
+    return map[team] || team;
+}
+
 // ==================== CREATE ADMIN SETTINGS TABLE ====================
 
 const createAdminSettingsTable = () => {
@@ -4095,6 +5115,15 @@ const startServer = async () => {
             console.log(`   👥 GET /api/admin/reports/users/export - Export users report`);
             console.log(`   📊 GET /api/admin/reports/complaints - Complaints report`);
             console.log(`   📊 GET /api/admin/reports/stats - Quick statistics`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`📊 ANALYTICS ENDPOINTS:`);
+            console.log(`   📊 GET /api/admin/analytics/overview - Overview statistics`);
+            console.log(`   📊 GET /api/admin/analytics/trends - Monthly trends`);
+            console.log(`   📊 GET /api/admin/analytics/categories - Category distribution`);
+            console.log(`   📊 GET /api/admin/analytics/performance - Performance metrics`);
+            console.log(`   📊 GET /api/admin/analytics/performers - Top performers`);
+            console.log(`   📊 GET /api/admin/analytics/hourly - Hourly distribution`);
+            console.log(`   📊 GET /api/admin/analytics/daywise - Day-wise distribution`);
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             console.log(`📋 TRACKING ENDPOINTS (NO PASSWORD REQUIRED):`);
             console.log(`   📋 GET /api/complaints/track/:ticketNumber - Track by ticket number`);
