@@ -1,6 +1,7 @@
 // src/pages/AdminReportsComplaints.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import * as XLSX from 'xlsx';
@@ -22,11 +23,238 @@ const AdminReportsComplaints = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [isExporting, setIsExporting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [reportData, setReportData] = useState({
+    summary: {
+      totalComplaints: 0,
+      pendingComplaints: 0,
+      inProgressComplaints: 0,
+      resolvedComplaints: 0,
+      avgResolutionDays: 0,
+      satisfactionRate: 0,
+      thisMonth: 0,
+      lastMonth: 0,
+      growth: 0
+    },
+    categoryBreakdown: [],
+    statusBreakdown: [],
+    priorityBreakdown: [],
+    monthlyTrend: [],
+    allComplaints: [],
+    channelBreakdown: []
+  });
 
-  // Save language preference
-  useEffect(() => {
-    localStorage.setItem('preferredLanguage', language);
-  }, [language]);
+  // API URL
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+  // Content translations
+  const content = {
+    np: {
+      complaintsReports: 'गुनासो रिपोर्टहरू',
+      generateReports: 'रिपोर्ट उत्पन्न गर्नुहोस्',
+      dateRange: 'मिति दायरा',
+      today: 'आज',
+      week: 'यो हप्ता',
+      month: 'यो महिना',
+      quarter: 'यो त्रैमास',
+      year: 'यो वर्ष',
+      custom: 'अनुकूल',
+      startDate: 'सुरु मिति',
+      endDate: 'अन्त्य मिति',
+      reportType: 'रिपोर्ट प्रकार',
+      summary: 'सारांश',
+      detailed: 'विस्तृत',
+      comparative: 'तुलनात्मक',
+      filterByCategory: 'प्रकार अनुसार फिल्टर',
+      filterByStatus: 'स्थिति अनुसार फिल्टर',
+      filterByPriority: 'प्राथमिकता अनुसार फिल्टर',
+      generateReport: 'रिपोर्ट उत्पन्न गर्नुहोस्',
+      exportPDF: 'पीडीएफ निर्यात गर्नुहोस्',
+      exportExcel: 'एक्सेल निर्यात गर्नुहोस्',
+      print: 'प्रिन्ट गर्नुहोस्',
+      totalComplaints: 'कुल गुनासो',
+      pendingComplaints: 'विचाराधीन',
+      inProgressComplaints: 'प्रगतिमा',
+      resolvedComplaints: 'समाधान',
+      avgResolutionDays: 'औसत समाधान दिन',
+      satisfactionRate: 'सन्तुष्टि दर',
+      thisMonth: 'यो महिना',
+      lastMonth: 'गत महिना',
+      growth: 'वृद्धि',
+      categoryBreakdown: 'प्रकार अनुसार विभाजन',
+      statusBreakdown: 'स्थिति अनुसार विभाजन',
+      priorityBreakdown: 'प्राथमिकता अनुसार विभाजन',
+      monthlyTrend: 'मासिक प्रवृत्ति',
+      allComplaints: 'सबै गुनासोहरू',
+      channelBreakdown: 'च्यानल अनुसार विभाजन',
+      reportGenerated: 'रिपोर्ट उत्पन्न गरियो',
+      noDataFound: 'कुनै डाटा फेला परेन',
+      all: 'सबै',
+      internet: 'इन्टरनेट',
+      billing: 'बिलिङ',
+      network: 'नेटवर्क',
+      recharge: 'रिचार्ज',
+      technical: 'प्राविधिक',
+      activation: 'सक्रियता',
+      signal: 'सिग्नल',
+      pending: 'विचाराधीन',
+      inProgress: 'प्रगतिमा',
+      resolved: 'समाधान',
+      high: 'उच्च',
+      medium: 'मध्यम',
+      low: 'न्यून',
+      count: 'संख्या',
+      percentage: 'प्रतिशत',
+      category: 'प्रकार',
+      status: 'स्थिति',
+      priority: 'प्राथमिकता',
+      channel: 'च्यानल',
+      ticketId: 'टिकट नं.',
+      complainant: 'उजुरीकर्ता',
+      phone: 'फोन नं.',
+      email: 'इमेल',
+      location: 'स्थान',
+      date: 'मिति',
+      description: 'विवरण',
+      assignedTo: 'जिम्मेवार',
+      actions: 'कार्यहरू',
+      viewDetails: 'विवरण हेर्नुहोस्',
+      overallOverview: 'समग्र अवलोकन',
+      userComplaintsDetails: 'प्रयोगकर्ता गुनासो विवरण',
+      january: 'जनवरी',
+      february: 'फेब्रुअरी',
+      march: 'मार्च',
+      april: 'अप्रिल',
+      may: 'मे',
+      june: 'जुन',
+      july: 'जुलाई',
+      august: 'अगस्ट',
+      september: 'सेप्टेम्बर',
+      october: 'अक्टोबर',
+      november: 'नोभेम्बर',
+      december: 'डिसेम्बर',
+      resetFilters: 'फिल्टर रिसेट गर्नुहोस्',
+      showing: 'देखाउँदै',
+      of: 'को',
+      entries: 'प्रविष्टिहरू',
+      exportStarted: 'निर्यात सुरु भयो...',
+      pdfExport: 'पीडीएफ निर्यात भइरहेको छ...',
+      excelExport: 'एक्सेल निर्यात भइरहेको छ...',
+      days: 'दिन',
+      day: 'दिन',
+      exporting: 'निर्यात हुँदै...',
+      loading: 'लोड हुँदै...',
+      error: 'त्रुटि',
+      retry: 'पुन: प्रयास गर्नुहोस्',
+      noComplaints: 'कुनै गुनासो फेला परेन'
+    },
+    en: {
+      complaintsReports: 'Complaints Reports',
+      generateReports: 'Generate Reports',
+      dateRange: 'Date Range',
+      today: 'Today',
+      week: 'This Week',
+      month: 'This Month',
+      quarter: 'This Quarter',
+      year: 'This Year',
+      custom: 'Custom',
+      startDate: 'Start Date',
+      endDate: 'End Date',
+      reportType: 'Report Type',
+      summary: 'Summary',
+      detailed: 'Detailed',
+      comparative: 'Comparative',
+      filterByCategory: 'Filter by Category',
+      filterByStatus: 'Filter by Status',
+      filterByPriority: 'Filter by Priority',
+      generateReport: 'Generate Report',
+      exportPDF: 'Export PDF',
+      exportExcel: 'Export Excel',
+      print: 'Print',
+      totalComplaints: 'Total Complaints',
+      pendingComplaints: 'Pending',
+      inProgressComplaints: 'In Progress',
+      resolvedComplaints: 'Resolved',
+      avgResolutionDays: 'Avg Resolution Days',
+      satisfactionRate: 'Satisfaction Rate',
+      thisMonth: 'This Month',
+      lastMonth: 'Last Month',
+      growth: 'Growth',
+      categoryBreakdown: 'Category Breakdown',
+      statusBreakdown: 'Status Breakdown',
+      priorityBreakdown: 'Priority Breakdown',
+      monthlyTrend: 'Monthly Trend',
+      allComplaints: 'All Complaints',
+      channelBreakdown: 'Channel Breakdown',
+      reportGenerated: 'Report Generated',
+      noDataFound: 'No data found',
+      all: 'All',
+      internet: 'Internet',
+      billing: 'Billing',
+      network: 'Network',
+      recharge: 'Recharge',
+      technical: 'Technical',
+      activation: 'Activation',
+      signal: 'Signal',
+      pending: 'Pending',
+      inProgress: 'In Progress',
+      resolved: 'Resolved',
+      high: 'High',
+      medium: 'Medium',
+      low: 'Low',
+      count: 'Count',
+      percentage: 'Percentage',
+      category: 'Category',
+      status: 'Status',
+      priority: 'Priority',
+      channel: 'Channel',
+      ticketId: 'Ticket ID',
+      complainant: 'Complainant',
+      phone: 'Phone',
+      email: 'Email',
+      location: 'Location',
+      date: 'Date',
+      description: 'Description',
+      assignedTo: 'Assigned To',
+      actions: 'Actions',
+      viewDetails: 'View Details',
+      overallOverview: 'Overall Overview',
+      userComplaintsDetails: 'User Complaints Details',
+      january: 'January',
+      february: 'February',
+      march: 'March',
+      april: 'April',
+      may: 'May',
+      june: 'June',
+      july: 'July',
+      august: 'August',
+      september: 'September',
+      october: 'October',
+      november: 'November',
+      december: 'December',
+      resetFilters: 'Reset Filters',
+      showing: 'Showing',
+      of: 'of',
+      entries: 'entries',
+      exportStarted: 'Export started...',
+      pdfExport: 'Exporting PDF...',
+      excelExport: 'Exporting Excel...',
+      days: 'days',
+      day: 'day',
+      exporting: 'Exporting...',
+      loading: 'Loading...',
+      error: 'Error',
+      retry: 'Retry',
+      noComplaints: 'No complaints found'
+    }
+  };
+
+  const t = content[language];
+
+  // Helper function to get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('adminToken') || localStorage.getItem('token');
+  };
 
   // Format number with Nepali digits
   const formatNumber = (num) => {
@@ -38,229 +266,367 @@ const AdminReportsComplaints = () => {
     return num.toString();
   };
 
-  // Report data
-  const [reportData, setReportData] = useState({
-    summary: {
-      totalComplaints: 1247,
-      pendingComplaints: 342,
-      inProgressComplaints: 156,
-      resolvedComplaints: 749,
-      avgResolutionDays: 5.2,
-      satisfactionRate: 78.5,
-      thisMonth: 145,
-      lastMonth: 132,
-      growth: 9.8
-    },
-    categoryBreakdown: [
-      { name: 'Internet', count: 425, percentage: 34.1 },
-      { name: 'Billing', count: 312, percentage: 25.0 },
-      { name: 'Network', count: 198, percentage: 15.9 },
-      { name: 'Recharge', count: 156, percentage: 12.5 },
-      { name: 'Technical', count: 98, percentage: 7.9 },
-      { name: 'Activation', count: 58, percentage: 4.6 }
-    ],
-    statusBreakdown: [
-      { name: 'Resolved', count: 749, percentage: 60.1 },
-      { name: 'Pending', count: 342, percentage: 27.4 },
-      { name: 'In Progress', count: 156, percentage: 12.5 }
-    ],
-    priorityBreakdown: [
-      { name: 'High', count: 423, percentage: 33.9 },
-      { name: 'Medium', count: 589, percentage: 47.2 },
-      { name: 'Low', count: 235, percentage: 18.9 }
-    ],
-    monthlyTrend: [
-      { month: 'Jan', count: 95 },
-      { month: 'Feb', count: 102 },
-      { month: 'Mar', count: 118 },
-      { month: 'Apr', count: 125 },
-      { month: 'May', count: 132 },
-      { month: 'Jun', count: 145 },
-      { month: 'Jul', count: 158 },
-      { month: 'Aug', count: 167 },
-      { month: 'Sep', count: 175 },
-      { month: 'Oct', count: 182 },
-      { month: 'Nov', count: 190 },
-      { month: 'Dec', count: 198 }
-    ],
-    allComplaints: [
-      { 
-        id: 1, 
-        ticketId: 'NTC-2024-001', 
-        name: 'Ramesh KC', 
-        phone: '9841234567',
-        email: 'ramesh.kc@example.com',
-        location: 'Kathmandu',
-        category: 'internet', 
-        date: '2024-01-15', 
-        status: 'in-progress', 
-        priority: 'high',
-        description: 'Internet connection issue',
-        assignedTo: 'Technical Team',
-        channel: 'website'
-      },
-      { 
-        id: 2, 
-        ticketId: 'NTC-2024-002', 
-        name: 'Sita Sharma', 
-        phone: '9842345678',
-        email: 'sita.sharma@example.com',
-        location: 'Lalitpur',
-        category: 'recharge', 
-        date: '2024-01-18', 
-        status: 'resolved', 
-        priority: 'medium',
-        description: 'Recharge not credited',
-        assignedTo: 'Customer Support',
-        channel: 'phone'
-      },
-      { 
-        id: 3, 
-        ticketId: 'NTC-2024-003', 
-        name: 'Hari Prasad', 
-        phone: '9843456789',
-        email: 'hari.prasad@example.com',
-        location: 'Bhaktapur',
-        category: 'activation', 
-        date: '2024-01-20', 
-        status: 'pending', 
-        priority: 'low',
-        description: 'SIM activation failed',
-        assignedTo: 'Administration',
-        channel: 'whatsapp'
-      },
-      { 
-        id: 4, 
-        ticketId: 'NTC-2024-004', 
-        name: 'Gita Adhikari', 
-        phone: '9844567890',
-        email: 'gita.adhikari@example.com',
-        location: 'Pokhara',
-        category: 'billing', 
-        date: '2024-01-22', 
-        status: 'pending', 
-        priority: 'high',
-        description: 'Billing error',
-        assignedTo: 'Billing Department',
-        channel: 'email'
-      },
-      { 
-        id: 5, 
-        ticketId: 'NTC-2024-005', 
-        name: 'Bikas Neupane', 
-        phone: '9845678901',
-        email: 'bikas.neupane@example.com',
-        location: 'Butwal',
-        category: 'network', 
-        date: '2024-01-25', 
-        status: 'in-progress', 
-        priority: 'medium',
-        description: 'No network coverage',
-        assignedTo: 'Network Team',
-        channel: 'facebook'
-      },
-      { 
-        id: 6, 
-        ticketId: 'NTC-2024-006', 
-        name: 'Mina Basnet', 
-        phone: '9846789012',
-        email: 'mina.basnet@example.com',
-        location: 'Dharan',
-        category: 'technical', 
-        date: '2024-01-28', 
-        status: 'resolved', 
-        priority: 'high',
-        description: 'Technical assistance needed',
-        assignedTo: 'Tech Support',
-        channel: 'website'
-      },
-      { 
-        id: 7, 
-        ticketId: 'NTC-2024-007', 
-        name: 'Suraj Thapa', 
-        phone: '9847890123',
-        email: 'suraj.thapa@example.com',
-        location: 'Hetauda',
-        category: 'internet', 
-        date: '2024-01-30', 
-        status: 'pending', 
-        priority: 'medium',
-        description: 'Slow internet speed',
-        assignedTo: 'IP Core Team',
-        channel: 'phone'
-      },
-      { 
-        id: 8, 
-        ticketId: 'NTC-2024-008', 
-        name: 'Anjana Karki', 
-        phone: '9848901234',
-        email: 'anjana.karki@example.com',
-        location: 'Biratnagar',
-        category: 'billing', 
-        date: '2024-02-02', 
-        status: 'in-progress', 
-        priority: 'high',
-        description: 'Double billing deduction',
-        assignedTo: 'Finance Department',
-        channel: 'whatsapp'
-      },
-      { 
-        id: 9, 
-        ticketId: 'NTC-2024-009', 
-        name: 'Rajan Paudel', 
-        phone: '9849012345',
-        email: 'rajan.paudel@example.com',
-        location: 'Nepalgunj',
-        category: 'network', 
-        date: '2024-02-05', 
-        status: 'resolved', 
-        priority: 'low',
-        description: 'Network dropping issue',
-        assignedTo: 'Network Team',
-        channel: 'email'
-      },
-      { 
-        id: 10, 
-        ticketId: 'NTC-2024-010', 
-        name: 'Samjhana Lamichhane', 
-        phone: '9850123456',
-        email: 'samjhana.l@example.com',
-        location: 'Chitwan',
-        category: 'technical', 
-        date: '2024-02-08', 
-        status: 'in-progress', 
-        priority: 'high',
-        description: 'No voice on phone',
-        assignedTo: 'Tech Support',
-        channel: 'facebook'
-      }
-    ],
-    channelBreakdown: [
-      { name: 'Website Portal', count: 587, percentage: 47.1 },
-      { name: 'Phone', count: 234, percentage: 18.8 },
-      { name: 'WhatsApp', count: 189, percentage: 15.2 },
-      { name: 'Email', count: 145, percentage: 11.6 },
-      { name: 'Facebook', count: 92, percentage: 7.3 }
-    ]
-  });
-
   // Show toast notification
-  const showToast = (message, type = 'success') => {
+  const showToast = (message, type = 'success', duration = 3000) => {
     setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), duration);
   };
 
   // Check authentication
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
+    const token = getAuthToken();
     const user = localStorage.getItem('adminUser');
     if (!token || !user) {
       navigate('/admin-login');
     }
   }, [navigate]);
 
+  // Get category text
+  const getCategoryText = useCallback((category) => {
+    const categories = {
+      np: {
+        internet: 'इन्टरनेट',
+        billing: 'बिलिङ',
+        network: 'नेटवर्क',
+        recharge: 'रिचार्ज',
+        technical: 'प्राविधिक',
+        activation: 'सक्रियता',
+        signal: 'सिग्नल',
+        general: 'सामान्य',
+        other: 'अन्य'
+      },
+      en: {
+        internet: 'Internet',
+        billing: 'Billing',
+        network: 'Network',
+        recharge: 'Recharge',
+        technical: 'Technical',
+        activation: 'Activation',
+        signal: 'Signal',
+        general: 'General',
+        other: 'Other'
+      }
+    };
+    return categories[language][category] || category;
+  }, [language]);
+
+  // Get status text
+  const getStatusText = useCallback((status) => {
+    const statuses = {
+      np: { 
+        pending: 'विचाराधीन', 
+        'in-progress': 'प्रगतिमा', 
+        resolved: 'समाधान',
+        review: 'समीक्षामा',
+        rejected: 'अस्वीकृत',
+        closed: 'बन्द'
+      },
+      en: { 
+        pending: 'Pending', 
+        'in-progress': 'In Progress', 
+        resolved: 'Resolved',
+        review: 'Under Review',
+        rejected: 'Rejected',
+        closed: 'Closed'
+      }
+    };
+    return statuses[language][status] || status;
+  }, [language]);
+
+  // Get priority text
+  const getPriorityText = useCallback((priority) => {
+    const priorities = {
+      np: { high: 'उच्च', medium: 'मध्यम', low: 'न्यून', urgent: 'अत्यावश्यक' },
+      en: { high: 'High', medium: 'Medium', low: 'Low', urgent: 'Urgent' }
+    };
+    return priorities[language][priority] || priority;
+  }, [language]);
+
+  // Fetch complaints from backend
+  const fetchComplaintsData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = getAuthToken();
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (selectedCategory !== 'all') params.append('category', selectedCategory);
+      if (selectedStatus !== 'all') params.append('status', selectedStatus);
+      if (selectedPriority !== 'all') params.append('priority', selectedPriority);
+      
+      // Date range handling
+      if (dateRange === 'custom' && customStartDate && customEndDate) {
+        params.append('startDate', customStartDate);
+        params.append('endDate', customEndDate);
+      } else if (dateRange !== 'custom') {
+        params.append('period', dateRange);
+      }
+      
+      params.append('reportType', reportType);
+      params.append('limit', '100');
+
+      const url = `${API_URL}/admin/reports/complaints?${params.toString()}`;
+      console.log('Fetching reports from:', url);
+
+      const response = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 15000
+      });
+
+      if (response.data && response.data.success) {
+        const data = response.data.data;
+        
+        // Transform data to match component structure
+        setReportData({
+          summary: {
+            totalComplaints: data.summary?.totalComplaints || 0,
+            pendingComplaints: data.summary?.pendingComplaints || 0,
+            inProgressComplaints: data.summary?.inProgressComplaints || 0,
+            resolvedComplaints: data.summary?.resolvedComplaints || 0,
+            avgResolutionDays: data.summary?.avgResolutionDays || 0,
+            satisfactionRate: data.summary?.satisfactionRate || 0,
+            thisMonth: data.summary?.thisMonth || 0,
+            lastMonth: data.summary?.lastMonth || 0,
+            growth: data.summary?.growth || 0
+          },
+          categoryBreakdown: data.categoryBreakdown || [],
+          statusBreakdown: data.statusBreakdown || [],
+          priorityBreakdown: data.priorityBreakdown || [],
+          monthlyTrend: data.monthlyTrend || [],
+          allComplaints: data.allComplaints || [],
+          channelBreakdown: data.channelBreakdown || []
+        });
+      } else {
+        // If no data from API, try to fetch from complaints endpoint
+        await fetchComplaintsFromList();
+      }
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      
+      // Fallback: Try to get complaints from list endpoint
+      if (error.response?.status === 404 || error.code === 'ERR_NETWORK') {
+        await fetchComplaintsFromList();
+      } else {
+        showToast(
+          language === 'np' ? 'डाटा लोड गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' : 'Failed to load data. Please try again.',
+          'error'
+        );
+        // Use sample data as fallback
+        generateSampleData();
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [API_URL, language, selectedCategory, selectedStatus, selectedPriority, dateRange, customStartDate, customEndDate, reportType]);
+
+  // Fallback: Fetch complaints from list endpoint
+  const fetchComplaintsFromList = useCallback(async () => {
+    try {
+      const token = getAuthToken();
+      const response = await axios.get(`${API_URL}/complaints`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      });
+
+      if (response.data && response.data.data) {
+        const complaints = response.data.data;
+        const transformedData = transformComplaintsData(complaints);
+        setReportData(transformedData);
+        showToast(
+          language === 'np' ? 'डाटा सफलतापूर्वक लोड भयो' : 'Data loaded successfully',
+          'success'
+        );
+      } else {
+        generateSampleData();
+      }
+    } catch (error) {
+      console.error('Error fetching complaints list:', error);
+      generateSampleData();
+    }
+  }, [API_URL, language]);
+
+  // Transform complaints data for reports
+  const transformComplaintsData = useCallback((complaints) => {
+    if (!complaints || complaints.length === 0) {
+      return getEmptyReportData();
+    }
+
+    const total = complaints.length;
+    const pending = complaints.filter(c => c.status === 'pending' || c.status === 'Pending').length;
+    const inProgress = complaints.filter(c => c.status === 'in-progress' || c.status === 'inprogress' || c.status === 'In Progress').length;
+    const resolved = complaints.filter(c => c.status === 'resolved' || c.status === 'Resolved').length;
+    const rejected = complaints.filter(c => c.status === 'rejected' || c.status === 'Rejected').length;
+    const review = complaints.filter(c => c.status === 'review' || c.status === 'Under Review' || c.status === 'review').length;
+
+    // Category breakdown
+    const categoryMap = {};
+    complaints.forEach(c => {
+      const cat = c.nature_of_complaint || c.category || 'general';
+      categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+    });
+    const categoryBreakdown = Object.keys(categoryMap).map(key => ({
+      name: getCategoryText(key),
+      count: categoryMap[key],
+      percentage: ((categoryMap[key] / total) * 100)
+    })).sort((a, b) => b.count - a.count);
+
+    // Status breakdown
+    const statusMap = {
+      pending: pending,
+      'in-progress': inProgress,
+      resolved: resolved,
+      review: review,
+      rejected: rejected
+    };
+    const statusBreakdown = Object.keys(statusMap).filter(key => statusMap[key] > 0).map(key => ({
+      name: getStatusText(key),
+      count: statusMap[key],
+      percentage: ((statusMap[key] / total) * 100)
+    }));
+
+    // Priority breakdown
+    const priorityMap = {};
+    complaints.forEach(c => {
+      const pri = c.priority || 'medium';
+      priorityMap[pri] = (priorityMap[pri] || 0) + 1;
+    });
+    const priorityBreakdown = Object.keys(priorityMap).map(key => ({
+      name: getPriorityText(key),
+      count: priorityMap[key],
+      percentage: ((priorityMap[key] / total) * 100)
+    })).sort((a, b) => b.count - a.count);
+
+    // Monthly trend
+    const monthMap = {};
+    complaints.forEach(c => {
+      const date = new Date(c.created_at || c.submittedDate || Date.now());
+      const monthKey = date.toLocaleString('en-US', { month: 'short' });
+      monthMap[monthKey] = (monthMap[monthKey] || 0) + 1;
+    });
+    const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthlyTrend = monthOrder.filter(m => monthMap[m]).map(m => ({
+      month: m,
+      count: monthMap[m] || 0
+    }));
+
+    // Channel breakdown
+    const channelMap = {};
+    complaints.forEach(c => {
+      const ch = c.channel || c.source || 'website';
+      channelMap[ch] = (channelMap[ch] || 0) + 1;
+    });
+    const channelBreakdown = Object.keys(channelMap).map(key => ({
+      name: key.charAt(0).toUpperCase() + key.slice(1),
+      count: channelMap[key],
+      percentage: ((channelMap[key] / total) * 100)
+    })).sort((a, b) => b.count - a.count);
+
+    // Prepare all complaints list
+    const allComplaints = complaints.slice(0, 100).map(c => ({
+      id: c.id || c._id,
+      ticketId: c.complaint_number || c.ticketId || `NTC-${c.id || c._id}`,
+      name: c.name || c.complainantName || 'N/A',
+      phone: c.phone || c.phoneNumber || 'N/A',
+      email: c.email || c.complainantEmail || 'N/A',
+      location: c.location || c.district || c.state || c.address || 'N/A',
+      category: c.nature_of_complaint || c.category || 'general',
+      date: c.created_at ? new Date(c.created_at).toISOString().split('T')[0] : '-',
+      status: c.status || 'pending',
+      priority: c.priority || 'medium',
+      description: c.description || c.complaint || 'No description',
+      assignedTo: c.assigned_to || c.assignedTo || 'Unassigned',
+      channel: c.channel || c.source || 'website'
+    }));
+
+    return {
+      summary: {
+        totalComplaints: total,
+        pendingComplaints: pending,
+        inProgressComplaints: inProgress,
+        resolvedComplaints: resolved,
+        avgResolutionDays: 0,
+        satisfactionRate: 0,
+        thisMonth: complaints.filter(c => {
+          const date = new Date(c.created_at || c.submittedDate);
+          const now = new Date();
+          return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+        }).length,
+        lastMonth: complaints.filter(c => {
+          const date = new Date(c.created_at || c.submittedDate);
+          const now = new Date();
+          const lastMonth = now.getMonth() - 1;
+          return date.getMonth() === lastMonth && date.getFullYear() === now.getFullYear();
+        }).length,
+        growth: 0
+      },
+      categoryBreakdown,
+      statusBreakdown,
+      priorityBreakdown,
+      monthlyTrend,
+      allComplaints,
+      channelBreakdown
+    };
+  }, [getCategoryText, getStatusText, getPriorityText]);
+
+  // Get empty report data
+  const getEmptyReportData = () => ({
+    summary: {
+      totalComplaints: 0,
+      pendingComplaints: 0,
+      inProgressComplaints: 0,
+      resolvedComplaints: 0,
+      avgResolutionDays: 0,
+      satisfactionRate: 0,
+      thisMonth: 0,
+      lastMonth: 0,
+      growth: 0
+    },
+    categoryBreakdown: [],
+    statusBreakdown: [],
+    priorityBreakdown: [],
+    monthlyTrend: [],
+    allComplaints: [],
+    channelBreakdown: []
+  });
+
+  // Generate sample data for demo
+  const generateSampleData = useCallback(() => {
+    const sampleComplaints = [
+      { id: 1, ticketId: 'NTC-2024-001', name: 'Ramesh KC', phone: '9841234567', email: 'ramesh.kc@example.com', location: 'Kathmandu', category: 'internet', date: '2024-01-15', status: 'in-progress', priority: 'high', description: 'Internet connection issue', assignedTo: 'Technical Team', channel: 'website' },
+      { id: 2, ticketId: 'NTC-2024-002', name: 'Sita Sharma', phone: '9842345678', email: 'sita.sharma@example.com', location: 'Lalitpur', category: 'recharge', date: '2024-01-18', status: 'resolved', priority: 'medium', description: 'Recharge not credited', assignedTo: 'Customer Support', channel: 'phone' },
+      { id: 3, ticketId: 'NTC-2024-003', name: 'Hari Prasad', phone: '9843456789', email: 'hari.prasad@example.com', location: 'Bhaktapur', category: 'activation', date: '2024-01-20', status: 'pending', priority: 'low', description: 'SIM activation failed', assignedTo: 'Administration', channel: 'whatsapp' },
+      { id: 4, ticketId: 'NTC-2024-004', name: 'Gita Adhikari', phone: '9844567890', email: 'gita.adhikari@example.com', location: 'Pokhara', category: 'billing', date: '2024-01-22', status: 'pending', priority: 'high', description: 'Billing error', assignedTo: 'Billing Department', channel: 'email' },
+      { id: 5, ticketId: 'NTC-2024-005', name: 'Bikas Neupane', phone: '9845678901', email: 'bikas.neupane@example.com', location: 'Butwal', category: 'network', date: '2024-01-25', status: 'in-progress', priority: 'medium', description: 'No network coverage', assignedTo: 'Network Team', channel: 'facebook' },
+      { id: 6, ticketId: 'NTC-2024-006', name: 'Mina Basnet', phone: '9846789012', email: 'mina.basnet@example.com', location: 'Dharan', category: 'technical', date: '2024-01-28', status: 'resolved', priority: 'high', description: 'Technical assistance needed', assignedTo: 'Tech Support', channel: 'website' },
+      { id: 7, ticketId: 'NTC-2024-007', name: 'Suraj Thapa', phone: '9847890123', email: 'suraj.thapa@example.com', location: 'Hetauda', category: 'internet', date: '2024-01-30', status: 'pending', priority: 'medium', description: 'Slow internet speed', assignedTo: 'IP Core Team', channel: 'phone' },
+      { id: 8, ticketId: 'NTC-2024-008', name: 'Anjana Karki', phone: '9848901234', email: 'anjana.karki@example.com', location: 'Biratnagar', category: 'billing', date: '2024-02-02', status: 'in-progress', priority: 'high', description: 'Double billing deduction', assignedTo: 'Finance Department', channel: 'whatsapp' },
+      { id: 9, ticketId: 'NTC-2024-009', name: 'Rajan Paudel', phone: '9849012345', email: 'rajan.paudel@example.com', location: 'Nepalgunj', category: 'network', date: '2024-02-05', status: 'resolved', priority: 'low', description: 'Network dropping issue', assignedTo: 'Network Team', channel: 'email' },
+      { id: 10, ticketId: 'NTC-2024-010', name: 'Samjhana Lamichhane', phone: '9850123456', email: 'samjhana.l@example.com', location: 'Chitwan', category: 'technical', date: '2024-02-08', status: 'in-progress', priority: 'high', description: 'No voice on phone', assignedTo: 'Tech Support', channel: 'facebook' }
+    ];
+
+    const transformed = transformComplaintsData(sampleComplaints);
+    setReportData(transformed);
+    
+    showToast(
+      language === 'np' ? 'नमूना डाटा लोड भयो (ब्याकेन्ड उपलब्ध छैन)' : 'Sample data loaded (Backend not available)',
+      'info',
+      3000
+    );
+  }, [language, transformComplaintsData]);
+
+  // Initial data load
+  useEffect(() => {
+    fetchComplaintsData();
+  }, [fetchComplaintsData]);
+
   // Get filtered complaints
-  const getFilteredComplaints = () => {
+  const getFilteredComplaints = useCallback(() => {
     let filtered = [...reportData.allComplaints];
     
     if (selectedCategory !== 'all') {
@@ -274,76 +640,43 @@ const AdminReportsComplaints = () => {
     }
     
     return filtered;
-  };
+  }, [reportData.allComplaints, selectedCategory, selectedStatus, selectedPriority]);
 
   const filteredComplaints = getFilteredComplaints();
-
-  // Helper functions
-  const getCategoryText = (category) => {
-    const categories = {
-      np: {
-        internet: 'इन्टरनेट',
-        billing: 'बिलिङ',
-        network: 'नेटवर्क',
-        recharge: 'रिचार्ज',
-        technical: 'प्राविधिक',
-        activation: 'सक्रियता',
-        signal: 'सिग्नल'
-      },
-      en: {
-        internet: 'Internet',
-        billing: 'Billing',
-        network: 'Network',
-        recharge: 'Recharge',
-        technical: 'Technical',
-        activation: 'Activation',
-        signal: 'Signal'
-      }
-    };
-    return categories[language][category] || category;
-  };
-
-  const getStatusText = (status) => {
-    const statuses = {
-      np: { pending: 'विचाराधीन', 'in-progress': 'प्रगतिमा', resolved: 'समाधान' },
-      en: { pending: 'Pending', 'in-progress': 'In Progress', resolved: 'Resolved' }
-    };
-    return statuses[language][status] || status;
-  };
-
-  const getPriorityText = (priority) => {
-    const priorities = {
-      np: { high: 'उच्च', medium: 'मध्यम', low: 'न्यून' },
-      en: { high: 'High', medium: 'Medium', low: 'Low' }
-    };
-    return priorities[language][priority] || priority;
-  };
 
   // ===== EXPORT FUNCTIONS =====
 
   // Generate CSV/Excel data
-  const generateExportData = () => {
+  const generateExportData = useCallback(() => {
     const complaints = filteredComplaints;
     const isNepali = language === 'np';
     
+    if (complaints.length === 0) {
+      showToast(
+        isNepali ? 'निर्यात गर्न कुनै डाटा छैन' : 'No data to export',
+        'warning'
+      );
+      return [];
+    }
+    
     return complaints.map(c => ({
       [isNepali ? 'टिकट नं.' : 'Ticket ID']: c.ticketId,
-      [isNepali ? 'उजुरीकर्ता' : 'Complainant']: isNepali ? c.name : c.name,
+      [isNepali ? 'उजुरीकर्ता' : 'Complainant']: c.name,
       [isNepali ? 'फोन नं.' : 'Phone']: c.phone,
       [isNepali ? 'इमेल' : 'Email']: c.email,
-      [isNepali ? 'स्थान' : 'Location']: isNepali ? c.location : c.location,
+      [isNepali ? 'स्थान' : 'Location']: c.location,
       [isNepali ? 'प्रकार' : 'Category']: getCategoryText(c.category),
-      [isNepali ? 'मिति' : 'Date']: isNepali ? c.date : c.date,
+      [isNepali ? 'मिति' : 'Date']: c.date,
       [isNepali ? 'स्थिति' : 'Status']: getStatusText(c.status),
       [isNepali ? 'प्राथमिकता' : 'Priority']: getPriorityText(c.priority),
-      [isNepali ? 'विवरण' : 'Description']: isNepali ? c.description : c.description,
-      [isNepali ? 'जिम्मेवार' : 'Assigned To']: isNepali ? c.assignedTo : c.assignedTo,
+      [isNepali ? 'विवरण' : 'Description']: c.description,
+      [isNepali ? 'जिम्मेवार' : 'Assigned To']: c.assignedTo,
       [isNepali ? 'च्यानल' : 'Channel']: c.channel
     }));
-  };
+  }, [filteredComplaints, language, getCategoryText, getStatusText, getPriorityText, showToast]);
 
   // Generate summary data for export
-  const generateSummaryData = () => {
+  const generateSummaryData = useCallback(() => {
     const isNepali = language === 'np';
     const data = [];
     
@@ -384,16 +717,16 @@ const AdminReportsComplaints = () => {
     });
     reportData.categoryBreakdown.forEach(item => {
       data.push({ 
-        [isNepali ? 'विवरण' : 'Description']: isNepali ? item.name : item.name,
-        [isNepali ? 'मान' : 'Value']: `${item.count} (${item.percentage}%)`
+        [isNepali ? 'विवरण' : 'Description']: item.name,
+        [isNepali ? 'मान' : 'Value']: `${item.count} (${item.percentage.toFixed(1)}%)`
       });
     });
     
     return data;
-  };
+  }, [language, reportData]);
 
   // Export to Excel
-  const handleExportExcel = () => {
+  const handleExportExcel = useCallback(() => {
     setIsExporting(true);
     showToast(t.excelExport, 'info');
     
@@ -407,6 +740,10 @@ const AdminReportsComplaints = () => {
           sheetName = language === 'np' ? 'सारांश' : 'Summary';
         } else {
           exportData = generateExportData();
+          if (exportData.length === 0) {
+            setIsExporting(false);
+            return;
+          }
           sheetName = language === 'np' ? 'गुनासोहरू' : 'Complaints';
         }
         
@@ -428,10 +765,10 @@ const AdminReportsComplaints = () => {
         setIsExporting(false);
       }
     }, 500);
-  };
+  }, [activeTab, generateExportData, generateSummaryData, language, showToast, t.excelExport]);
 
-  // ===== FIXED PDF EXPORT FUNCTION - Using English for proper display =====
-  const handleExportPDF = () => {
+  // Export to PDF
+  const handleExportPDF = useCallback(() => {
     if (isExporting) return;
     
     setIsExporting(true);
@@ -439,8 +776,9 @@ const AdminReportsComplaints = () => {
     
     try {
       const now = new Date();
+      const complaints = filteredComplaints;
       
-      // Create PDF with proper settings - Use English for clean display
+      // Create PDF with proper settings
       const doc = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
@@ -455,7 +793,7 @@ const AdminReportsComplaints = () => {
       doc.setFillColor(13, 71, 161);
       doc.rect(0, 0, pageWidth, 30, 'F');
       
-      // Title - Use English for clean PDF
+      // Title
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
@@ -559,7 +897,7 @@ const AdminReportsComplaints = () => {
       doc.setTextColor(71, 85, 105);
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Total: ${filteredComplaints.length} complaints`, 14, yPosition);
+      doc.text(`Total: ${complaints.length} complaints`, 14, yPosition);
       yPosition += 5;
       
       // Table headers
@@ -575,7 +913,7 @@ const AdminReportsComplaints = () => {
       ];
       
       // Prepare table rows (limit to first 10 for PDF)
-      const tableRows = filteredComplaints.slice(0, 10).map(c => [
+      const tableRows = complaints.slice(0, 10).map(c => [
         c.ticketId,
         c.name,
         c.phone,
@@ -622,11 +960,11 @@ const AdminReportsComplaints = () => {
         yPosition = doc.lastAutoTable.finalY + 8;
         
         // Show if more records exist
-        if (filteredComplaints.length > 10) {
+        if (complaints.length > 10) {
           doc.setTextColor(150, 150, 150);
           doc.setFontSize(7);
           doc.setFont('helvetica', 'italic');
-          doc.text(`... and ${filteredComplaints.length - 10} more complaints`, 14, yPosition);
+          doc.text(`... and ${complaints.length - 10} more complaints`, 14, yPosition);
         }
       } else {
         doc.setTextColor(150, 150, 150);
@@ -707,228 +1045,69 @@ const AdminReportsComplaints = () => {
       
       setIsExporting(false);
     }
-  };
+  }, [filteredComplaints, reportData, dateRange, reportType, selectedCategory, selectedStatus, selectedPriority, getCategoryText, getStatusText, getPriorityText, isExporting, language, showToast, t.pdfExport]);
 
   // Print function
   const handlePrint = () => {
     window.print();
   };
 
-  const content = {
-    np: {
-      complaintsReports: 'गुनासो रिपोर्टहरू',
-      generateReports: 'रिपोर्ट उत्पन्न गर्नुहोस्',
-      dateRange: 'मिति दायरा',
-      today: 'आज',
-      week: 'यो हप्ता',
-      month: 'यो महिना',
-      quarter: 'यो त्रैमास',
-      year: 'यो वर्ष',
-      custom: 'अनुकूल',
-      startDate: 'सुरु मिति',
-      endDate: 'अन्त्य मिति',
-      reportType: 'रिपोर्ट प्रकार',
-      summary: 'सारांश',
-      detailed: 'विस्तृत',
-      comparative: 'तुलनात्मक',
-      filterByCategory: 'प्रकार अनुसार फिल्टर',
-      filterByStatus: 'स्थिति अनुसार फिल्टर',
-      filterByPriority: 'प्राथमिकता अनुसार फिल्टर',
-      generateReport: 'रिपोर्ट उत्पन्न गर्नुहोस्',
-      exportPDF: 'पीडीएफ निर्यात गर्नुहोस्',
-      exportExcel: 'एक्सेल निर्यात गर्नुहोस्',
-      print: 'प्रिन्ट गर्नुहोस्',
-      totalComplaints: 'कुल गुनासो',
-      pendingComplaints: 'विचाराधीन',
-      inProgressComplaints: 'प्रगतिमा',
-      resolvedComplaints: 'समाधान',
-      avgResolutionDays: 'औसत समाधान दिन',
-      satisfactionRate: 'सन्तुष्टि दर',
-      thisMonth: 'यो महिना',
-      lastMonth: 'गत महिना',
-      growth: 'वृद्धि',
-      categoryBreakdown: 'प्रकार अनुसार विभाजन',
-      statusBreakdown: 'स्थिति अनुसार विभाजन',
-      priorityBreakdown: 'प्राथमिकता अनुसार विभाजन',
-      monthlyTrend: 'मासिक प्रवृत्ति',
-      allComplaints: 'सबै गुनासोहरू',
-      channelBreakdown: 'च्यानल अनुसार विभाजन',
-      reportGenerated: 'रिपोर्ट उत्पन्न गरियो',
-      noDataFound: 'कुनै डाटा फेला परेन',
-      all: 'सबै',
-      internet: 'इन्टरनेट',
-      billing: 'बिलिङ',
-      network: 'नेटवर्क',
-      recharge: 'रिचार्ज',
-      technical: 'प्राविधिक',
-      activation: 'सक्रियता',
-      signal: 'सिग्नल',
-      pending: 'विचाराधीन',
-      inProgress: 'प्रगतिमा',
-      resolved: 'समाधान',
-      high: 'उच्च',
-      medium: 'मध्यम',
-      low: 'न्यून',
-      count: 'संख्या',
-      percentage: 'प्रतिशत',
-      category: 'प्रकार',
-      status: 'स्थिति',
-      priority: 'प्राथमिकता',
-      channel: 'च्यानल',
-      ticketId: 'टिकट नं.',
-      complainant: 'उजुरीकर्ता',
-      phone: 'फोन नं.',
-      email: 'इमेल',
-      location: 'स्थान',
-      date: 'मिति',
-      description: 'विवरण',
-      assignedTo: 'जिम्मेवार',
-      actions: 'कार्यहरू',
-      viewDetails: 'विवरण हेर्नुहोस्',
-      overallOverview: 'समग्र अवलोकन',
-      userComplaintsDetails: 'प्रयोगकर्ता गुनासो विवरण',
-      january: 'जनवरी',
-      february: 'फेब्रुअरी',
-      march: 'मार्च',
-      april: 'अप्रिल',
-      may: 'मे',
-      june: 'जुन',
-      july: 'जुलाई',
-      august: 'अगस्ट',
-      september: 'सेप्टेम्बर',
-      october: 'अक्टोबर',
-      november: 'नोभेम्बर',
-      december: 'डिसेम्बर',
-      resetFilters: 'फिल्टर रिसेट गर्नुहोस्',
-      showing: 'देखाउँदै',
-      of: 'को',
-      entries: 'प्रविष्टिहरू',
-      exportStarted: 'निर्यात सुरु भयो...',
-      pdfExport: 'पीडीएफ निर्यात भइरहेको छ...',
-      excelExport: 'एक्सेल निर्यात भइरहेको छ...',
-      days: 'दिन',
-      day: 'दिन',
-      exporting: 'निर्यात हुँदै...'
-    },
-    en: {
-      complaintsReports: 'Complaints Reports',
-      generateReports: 'Generate Reports',
-      dateRange: 'Date Range',
-      today: 'Today',
-      week: 'This Week',
-      month: 'This Month',
-      quarter: 'This Quarter',
-      year: 'This Year',
-      custom: 'Custom',
-      startDate: 'Start Date',
-      endDate: 'End Date',
-      reportType: 'Report Type',
-      summary: 'Summary',
-      detailed: 'Detailed',
-      comparative: 'Comparative',
-      filterByCategory: 'Filter by Category',
-      filterByStatus: 'Filter by Status',
-      filterByPriority: 'Filter by Priority',
-      generateReport: 'Generate Report',
-      exportPDF: 'Export PDF',
-      exportExcel: 'Export Excel',
-      print: 'Print',
-      totalComplaints: 'Total Complaints',
-      pendingComplaints: 'Pending',
-      inProgressComplaints: 'In Progress',
-      resolvedComplaints: 'Resolved',
-      avgResolutionDays: 'Avg Resolution Days',
-      satisfactionRate: 'Satisfaction Rate',
-      thisMonth: 'This Month',
-      lastMonth: 'Last Month',
-      growth: 'Growth',
-      categoryBreakdown: 'Category Breakdown',
-      statusBreakdown: 'Status Breakdown',
-      priorityBreakdown: 'Priority Breakdown',
-      monthlyTrend: 'Monthly Trend',
-      allComplaints: 'All Complaints',
-      channelBreakdown: 'Channel Breakdown',
-      reportGenerated: 'Report Generated',
-      noDataFound: 'No data found',
-      all: 'All',
-      internet: 'Internet',
-      billing: 'Billing',
-      network: 'Network',
-      recharge: 'Recharge',
-      technical: 'Technical',
-      activation: 'Activation',
-      signal: 'Signal',
-      pending: 'Pending',
-      inProgress: 'In Progress',
-      resolved: 'Resolved',
-      high: 'High',
-      medium: 'Medium',
-      low: 'Low',
-      count: 'Count',
-      percentage: 'Percentage',
-      category: 'Category',
-      status: 'Status',
-      priority: 'Priority',
-      channel: 'Channel',
-      ticketId: 'Ticket ID',
-      complainant: 'Complainant',
-      phone: 'Phone',
-      email: 'Email',
-      location: 'Location',
-      date: 'Date',
-      description: 'Description',
-      assignedTo: 'Assigned To',
-      actions: 'Actions',
-      viewDetails: 'View Details',
-      overallOverview: 'Overall Overview',
-      userComplaintsDetails: 'User Complaints Details',
-      january: 'January',
-      february: 'February',
-      march: 'March',
-      april: 'April',
-      may: 'May',
-      june: 'June',
-      july: 'July',
-      august: 'August',
-      september: 'September',
-      october: 'October',
-      november: 'November',
-      december: 'December',
-      resetFilters: 'Reset Filters',
-      showing: 'Showing',
-      of: 'of',
-      entries: 'entries',
-      exportStarted: 'Export started...',
-      pdfExport: 'Exporting PDF...',
-      excelExport: 'Exporting Excel...',
-      days: 'days',
-      day: 'day',
-      exporting: 'Exporting...'
-    }
-  };
-
-  const t = content[language];
-
+  // Handle generate report
   const handleGenerateReport = () => {
+    fetchComplaintsData();
     showToast(t.reportGenerated, 'success');
   };
 
+  // Handle reset filters
   const handleResetFilters = () => {
     setSelectedCategory('all');
     setSelectedStatus('all');
     setSelectedPriority('all');
     setDateRange('month');
     setReportType('summary');
+    setCustomStartDate('');
+    setCustomEndDate('');
     showToast(t.resetFilters, 'info');
+    // Refresh data with reset filters
+    setTimeout(fetchComplaintsData, 300);
   };
 
+  // Handle view details
   const handleViewDetails = (complaint) => {
     const details = language === 'np' 
       ? `टिकट: ${complaint.ticketId}\nनाम: ${complaint.name}\nफोन: ${complaint.phone}\nइमेल: ${complaint.email}\nस्थान: ${complaint.location}\nप्रकार: ${getCategoryText(complaint.category)}\nविवरण: ${complaint.description}\nजिम्मेवार: ${complaint.assignedTo}`
       : `Ticket: ${complaint.ticketId}\nName: ${complaint.name}\nPhone: ${complaint.phone}\nEmail: ${complaint.email}\nLocation: ${complaint.location}\nCategory: ${getCategoryText(complaint.category)}\nDescription: ${complaint.description}\nAssigned To: ${complaint.assignedTo}`;
-    showToast(details, 'info');
+    showToast(details, 'info', 5000);
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="admin-reports">
+        <Header language={language} setLanguage={setLanguage} adminName="Admin" />
+        <div className="dashboard-layout">
+          <div className="sidebar-container">
+            <Sidebar language={language} />
+          </div>
+          <div className="main-container">
+            <div className="content-wrapper" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div className="loading-spinner" style={{ width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }}></div>
+                <p style={{ color: '#64748b' }}>{t.loading}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Main render
   return (
     <div className="admin-reports">
       {/* Toast Notification */}
@@ -960,14 +1139,14 @@ const AdminReportsComplaints = () => {
                 <button 
                   className="export-btn pdf" 
                   onClick={handleExportPDF} 
-                  disabled={isExporting}
+                  disabled={isExporting || filteredComplaints.length === 0}
                 >
                   📄 {isExporting ? t.exporting : t.exportPDF}
                 </button>
                 <button 
                   className="export-btn excel" 
                   onClick={handleExportExcel} 
-                  disabled={isExporting}
+                  disabled={isExporting || filteredComplaints.length === 0}
                 >
                   📊 {isExporting ? t.exporting : t.exportExcel}
                 </button>
@@ -1173,70 +1352,86 @@ const AdminReportsComplaints = () => {
                   <div className="chart-card">
                     <h3>{t.categoryBreakdown}</h3>
                     <div className="chart-content">
-                      {reportData.categoryBreakdown.map((item, idx) => (
-                        <div key={idx} className="chart-bar-item">
-                          <div className="chart-label">
-                            <span>{language === 'np' ? item.name : item.name}</span>
-                            <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
+                      {reportData.categoryBreakdown.length > 0 ? (
+                        reportData.categoryBreakdown.map((item, idx) => (
+                          <div key={idx} className="chart-bar-item">
+                            <div className="chart-label">
+                              <span>{item.name}</span>
+                              <span>{formatNumber(item.count)} ({formatNumber(item.percentage.toFixed(1))}%)</span>
+                            </div>
+                            <div className="chart-bar-bg">
+                              <div 
+                                className="chart-bar-fill" 
+                                style={{ width: `${Math.min(item.percentage, 100)}%`, backgroundColor: `hsl(${200 + idx * 30}, 70%, 55%)` }}
+                              />
+                            </div>
                           </div>
-                          <div className="chart-bar-bg">
-                            <div 
-                              className="chart-bar-fill" 
-                              style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${200 + idx * 30}, 70%, 55%)` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <div className="no-data">{t.noDataFound}</div>
+                      )}
                     </div>
                   </div>
 
                   <div className="chart-card">
                     <h3>{t.statusBreakdown}</h3>
                     <div className="pie-chart-container">
-                      {reportData.statusBreakdown.map((item, idx) => (
-                        <div key={idx} className="pie-segment-info">
-                          <div className="pie-color" style={{ backgroundColor: `hsl(${120 + idx * 90}, 70%, 55%)` }} />
-                          <div className="pie-label">
-                            <span>{language === 'np' ? item.name : item.name}</span>
-                            <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
+                      {reportData.statusBreakdown.length > 0 ? (
+                        reportData.statusBreakdown.map((item, idx) => (
+                          <div key={idx} className="pie-segment-info">
+                            <div className="pie-color" style={{ backgroundColor: `hsl(${120 + idx * 90}, 70%, 55%)` }} />
+                            <div className="pie-label">
+                              <span>{item.name}</span>
+                              <span>{formatNumber(item.count)} ({formatNumber(item.percentage.toFixed(1))}%)</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <div className="no-data">{t.noDataFound}</div>
+                      )}
                     </div>
                   </div>
 
                   <div className="chart-card">
                     <h3>{t.priorityBreakdown}</h3>
                     <div className="pie-chart-container">
-                      {reportData.priorityBreakdown.map((item, idx) => (
-                        <div key={idx} className="pie-segment-info">
-                          <div className="pie-color" style={{ backgroundColor: `hsl(${0 + idx * 45}, 70%, 55%)` }} />
-                          <div className="pie-label">
-                            <span>{language === 'np' ? item.name : item.name}</span>
-                            <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
+                      {reportData.priorityBreakdown.length > 0 ? (
+                        reportData.priorityBreakdown.map((item, idx) => (
+                          <div key={idx} className="pie-segment-info">
+                            <div className="pie-color" style={{ backgroundColor: `hsl(${0 + idx * 45}, 70%, 55%)` }} />
+                            <div className="pie-label">
+                              <span>{item.name}</span>
+                              <span>{formatNumber(item.count)} ({formatNumber(item.percentage.toFixed(1))}%)</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <div className="no-data">{t.noDataFound}</div>
+                      )}
                     </div>
                   </div>
 
                   <div className="chart-card">
                     <h3>{t.channelBreakdown}</h3>
                     <div className="chart-content">
-                      {reportData.channelBreakdown.map((item, idx) => (
-                        <div key={idx} className="chart-bar-item">
-                          <div className="chart-label">
-                            <span>{language === 'np' ? item.name : item.name}</span>
-                            <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
+                      {reportData.channelBreakdown.length > 0 ? (
+                        reportData.channelBreakdown.map((item, idx) => (
+                          <div key={idx} className="chart-bar-item">
+                            <div className="chart-label">
+                              <span>{item.name}</span>
+                              <span>{formatNumber(item.count)} ({formatNumber(item.percentage.toFixed(1))}%)</span>
+                            </div>
+                            <div className="chart-bar-bg">
+                              <div 
+                                className="chart-bar-fill" 
+                                style={{ width: `${Math.min(item.percentage, 100)}%`, backgroundColor: `hsl(${280 + idx * 20}, 70%, 55%)` }}
+                              />
+                            </div>
                           </div>
-                          <div className="chart-bar-bg">
-                            <div 
-                              className="chart-bar-fill" 
-                              style={{ width: `${item.percentage}%`, backgroundColor: `hsl(${280 + idx * 20}, 70%, 55%)` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <div className="no-data">{t.noDataFound}</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1245,22 +1440,30 @@ const AdminReportsComplaints = () => {
                 <div className="trend-card">
                   <h3>{t.monthlyTrend}</h3>
                   <div className="trend-chart">
-                    {reportData.monthlyTrend.map((item, idx) => (
-                      <div key={idx} className="trend-bar-item">
-                        <div className="trend-label">{item.month}</div>
-                        <div className="trend-bar-bg">
-                          <div 
-                            className="trend-bar-fill" 
-                            style={{ 
-                              height: `${(item.count / Math.max(...reportData.monthlyTrend.map(m => m.count))) * 100}%`,
-                              backgroundColor: `hsl(${210 + idx * 5}, 70%, 55%)`
-                            }}
-                          >
-                            <span className="trend-value">{formatNumber(item.count)}</span>
+                    {reportData.monthlyTrend.length > 0 ? (
+                      reportData.monthlyTrend.map((item, idx) => {
+                        const maxCount = Math.max(...reportData.monthlyTrend.map(m => m.count), 1);
+                        const heightPercent = (item.count / maxCount) * 100;
+                        return (
+                          <div key={idx} className="trend-bar-item">
+                            <div className="trend-label">{item.month}</div>
+                            <div className="trend-bar-bg">
+                              <div 
+                                className="trend-bar-fill" 
+                                style={{ 
+                                  height: `${Math.max(heightPercent, 10)}%`,
+                                  backgroundColor: `hsl(${210 + idx * 5}, 70%, 55%)`
+                                }}
+                              >
+                                <span className="trend-value">{formatNumber(item.count)}</span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    ))}
+                        );
+                      })
+                    ) : (
+                      <div className="no-data" style={{ padding: '40px 0' }}>{t.noDataFound}</div>
+                    )}
                   </div>
                 </div>
               </>
@@ -1276,36 +1479,36 @@ const AdminReportsComplaints = () => {
                   </div>
                 </div>
                 <div className="table-wrapper">
-                  <table className="reports-table">
-                    <thead>
-                      <tr>
-                        <th>{t.ticketId}</th>
-                        <th>{t.complainant}</th>
-                        <th>{t.phone}</th>
-                        <th>{t.email}</th>
-                        <th>{t.location}</th>
-                        <th>{t.category}</th>
-                        <th>{t.date}</th>
-                        <th>{t.status}</th>
-                        <th>{t.priority}</th>
-                        <th>{t.description}</th>
-                        <th>{t.assignedTo}</th>
-                        <th>{t.actions}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredComplaints.length > 0 ? (
-                        filteredComplaints.map((complaint) => (
+                  {filteredComplaints.length > 0 ? (
+                    <table className="reports-table">
+                      <thead>
+                        <tr>
+                          <th>{t.ticketId}</th>
+                          <th>{t.complainant}</th>
+                          <th>{t.phone}</th>
+                          <th>{t.email}</th>
+                          <th>{t.location}</th>
+                          <th>{t.category}</th>
+                          <th>{t.date}</th>
+                          <th>{t.status}</th>
+                          <th>{t.priority}</th>
+                          <th>{t.description}</th>
+                          <th>{t.assignedTo}</th>
+                          <th>{t.actions}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredComplaints.map((complaint) => (
                           <tr key={complaint.id}>
                             <td className="ticket-id">{complaint.ticketId}</td>
                             <td>
-                              <div className="user-name">{language === 'np' ? complaint.name : complaint.name}</div>
+                              <div className="user-name">{complaint.name}</div>
                             </td>
                             <td className="phone-number">{complaint.phone}</td>
                             <td className="email-address">{complaint.email}</td>
-                            <td>{language === 'np' ? complaint.location : complaint.location}</td>
+                            <td>{complaint.location}</td>
                             <td>{getCategoryText(complaint.category)}</td>
-                            <td>{language === 'np' ? complaint.date : complaint.date}</td>
+                            <td>{complaint.date}</td>
                             <td>
                               <span className={`status-badge status-${complaint.status}`}>
                                 {getStatusText(complaint.status)}
@@ -1317,11 +1520,11 @@ const AdminReportsComplaints = () => {
                               </span>
                             </td>
                             <td className="description-cell">
-                              <div className="description-text" title={language === 'np' ? complaint.description : complaint.description}>
-                                {language === 'np' ? complaint.description : complaint.description}
+                              <div className="description-text" title={complaint.description}>
+                                {complaint.description}
                               </div>
                             </td>
-                            <td>{language === 'np' ? complaint.assignedTo : complaint.assignedTo}</td>
+                            <td>{complaint.assignedTo}</td>
                             <td>
                               <button 
                                 className="view-details-btn"
@@ -1331,16 +1534,21 @@ const AdminReportsComplaints = () => {
                               </button>
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="12" className="no-data">
-                            {t.noDataFound}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="no-data" style={{ padding: '40px', textAlign: 'center' }}>
+                      <p style={{ fontSize: '1.1rem', color: '#64748b' }}>{t.noComplaints}</p>
+                      <button 
+                        className="generate-btn" 
+                        onClick={fetchComplaintsData}
+                        style={{ marginTop: '16px', padding: '8px 24px' }}
+                      >
+                        🔄 {t.retry}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1895,10 +2103,14 @@ const AdminReportsComplaints = () => {
         .status-pending { background: #fef3c7; color: #d97706; }
         .status-in-progress { background: #dbeafe; color: #2563eb; }
         .status-resolved { background: #d1fae5; color: #059669; }
+        .status-review { background: #e0e7ff; color: #4f46e5; }
+        .status-rejected { background: #fee2e2; color: #dc2626; }
+        .status-closed { background: #d1d5db; color: #4b5563; }
 
         .priority-high { background: #fee2e2; color: #dc2626; }
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #e0e7ff; color: #4f46e5; }
+        .priority-urgent { background: #fecaca; color: #dc2626; }
 
         .view-details-btn {
           background: transparent;
@@ -1920,6 +2132,19 @@ const AdminReportsComplaints = () => {
           text-align: center;
           padding: 40px;
           color: #64748b;
+        }
+
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid #e2e8f0;
+          border-top-color: #3b82f6;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
 
         @media (max-width: 1200px) {
