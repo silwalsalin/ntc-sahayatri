@@ -13,6 +13,7 @@ const StaffPerformance = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('monthly');
   const [performanceData, setPerformanceData] = useState(null);
   const [backendStatus, setBackendStatus] = useState('checking');
+  const [isLoading, setIsLoading] = useState(false);
 
   const [staffData, setStaffData] = useState({
     id: null,
@@ -24,6 +25,8 @@ const StaffPerformance = () => {
     joinDate: '',
     employeeId: ''
   });
+
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
   // Save language preference
   useEffect(() => {
@@ -64,6 +67,11 @@ const StaffPerformance = () => {
     return num + '%';
   };
 
+  // Helper function to get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('staffToken') || localStorage.getItem('token');
+  };
+
   // Load staff data from localStorage
   useEffect(() => {
     const userStr = localStorage.getItem('staffUser');
@@ -86,35 +94,9 @@ const StaffPerformance = () => {
     }
   }, []);
 
-  // Fetch performance data
-  const fetchPerformanceData = async () => {
-    try {
-      const token = localStorage.getItem('staffToken');
-      if (!token) {
-        navigate('/');
-        return;
-      }
-      
-      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/performance?period=${selectedPeriod}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.data.success) {
-        setPerformanceData(response.data.data);
-        setBackendStatus('connected');
-      } else {
-        setPerformanceData(getSamplePerformanceData());
-        setBackendStatus('disconnected');
-      }
-    } catch (error) {
-      console.error('Error fetching performance data:', error);
-      setPerformanceData(getSamplePerformanceData());
-      setBackendStatus('disconnected');
-    }
-  };
-
-  // Get sample performance data
+  // Get sample performance data (fallback)
   const getSamplePerformanceData = () => {
+    const isNepali = language === 'np';
     return {
       staffInfo: {
         name: staffData.name,
@@ -154,28 +136,86 @@ const StaffPerformance = () => {
         general: { resolved: 16, satisfaction: 4.8, avgTime: 1.5 }
       },
       achievements: [
-        { title: language === 'np' ? 'महिनाको उत्कृष्ट कर्मचारी' : 'Best Performer of the Month', date: 'March 2024', icon: '🏆' },
-        { title: language === 'np' ? '१०० गुनासो समाधान' : '100 Complaints Resolved', date: 'February 2024', icon: '🎯' },
-        { title: language === 'np' ? 'ग्राहक सन्तुष्टि पुरस्कार' : 'Customer Satisfaction Award', date: 'January 2024', icon: '⭐' },
-        { title: language === 'np' ? 'पूर्ण उपस्थिति' : 'Perfect Attendance', date: 'December 2023', icon: '📅' }
+        { title: isNepali ? 'महिनाको उत्कृष्ट कर्मचारी' : 'Best Performer of the Month', date: 'March 2024', icon: '🏆' },
+        { title: isNepali ? '१०० गुनासो समाधान' : '100 Complaints Resolved', date: 'February 2024', icon: '🎯' },
+        { title: isNepali ? 'ग्राहक सन्तुष्टि पुरस्कार' : 'Customer Satisfaction Award', date: 'January 2024', icon: '⭐' },
+        { title: isNepali ? 'पूर्ण उपस्थिति' : 'Perfect Attendance', date: 'December 2023', icon: '📅' }
       ],
       feedback: [
-        { from: 'Admin', message: language === 'np' ? 'यो महिना उत्कृष्ट प्रदर्शन! यसरी नै जारी राख्नुहोस्।' : 'Excellent performance this month! Keep it up.', rating: 5, date: '2024-03-30' },
-        { from: 'Supervisor', message: language === 'np' ? 'जटिल गुनासोहरू समाधान गर्ने उत्कृष्ट कार्य।' : 'Great work on resolving complex complaints.', rating: 4.5, date: '2024-03-25' },
-        { from: 'Customer', message: language === 'np' ? 'धेरै सहयोगी र व्यावसायिक सेवा।' : 'Very helpful and professional service.', rating: 5, date: '2024-03-20' }
+        { from: 'Admin', message: isNepali ? 'यो महिना उत्कृष्ट प्रदर्शन! यसरी नै जारी राख्नुहोस्।' : 'Excellent performance this month! Keep it up.', rating: 5, date: '2024-03-30' },
+        { from: 'Supervisor', message: isNepali ? 'जटिल गुनासोहरू समाधान गर्ने उत्कृष्ट कार्य।' : 'Great work on resolving complex complaints.', rating: 4.5, date: '2024-03-25' },
+        { from: 'Customer', message: isNepali ? 'धेरै सहयोगी र व्यावसायिक सेवा।' : 'Very helpful and professional service.', rating: 5, date: '2024-03-20' }
       ],
-      strengths: language === 'np' 
+      strengths: isNepali 
         ? ['द्रुत समाधान', 'उच्च ग्राहक सन्तुष्टि', 'प्राविधिक विशेषज्ञता', 'टोली खेलाडी']
         : ['Quick Resolution', 'High Customer Satisfaction', 'Technical Expertise', 'Team Player'],
-      improvements: language === 'np'
+      improvements: isNepali
         ? ['कागजातीकरण', 'पालना संचार', 'समय व्यवस्थापन']
         : ['Documentation', 'Follow-up Communication', 'Time Management']
     };
   };
 
+  // Fetch performance data from backend
+  const fetchPerformanceData = async () => {
+    try {
+      setIsLoading(true);
+      const token = getAuthToken();
+      
+      if (!token) {
+        console.error('No auth token found');
+        setBackendStatus('disconnected');
+        setPerformanceData(getSamplePerformanceData());
+        setIsLoading(false);
+        return;
+      }
+
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      console.log(`📊 Fetching performance data for period: ${selectedPeriod}`);
+
+      const response = await axios.get(`${API_URL}/staff/performance`, {
+        headers,
+        params: { period: selectedPeriod },
+        timeout: 15000
+      });
+      
+      if (response.data && response.data.success && response.data.data) {
+        setPerformanceData(response.data.data);
+        setBackendStatus('connected');
+        console.log('📊 Performance data loaded from backend');
+      } else {
+        setPerformanceData(getSamplePerformanceData());
+        setBackendStatus('disconnected');
+        console.log('📊 Using sample performance data (unexpected response)');
+      }
+    } catch (error) {
+      console.error('Error fetching performance data:', error);
+      
+      // Use sample data as fallback
+      setPerformanceData(getSamplePerformanceData());
+      setBackendStatus('disconnected');
+      
+      if (error.response?.status === 401) {
+        console.log('📊 Authentication failed, using sample data');
+        localStorage.removeItem('staffToken');
+        localStorage.removeItem('staffUser');
+        navigate('/');
+      } else if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') {
+        console.log('📊 Network error, using sample data');
+      } else {
+        console.log('📊 Server error, using sample data');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Check authentication
   useEffect(() => {
-    const token = localStorage.getItem('staffToken');
+    const token = getAuthToken();
     const user = localStorage.getItem('staffUser');
     
     if (!token || !user) {
@@ -203,15 +243,61 @@ const StaffPerformance = () => {
     setSelectedPeriod(period);
   };
 
-  const handleExportReport = () => {
-    if (!performanceData) return;
-    const dataStr = JSON.stringify(performanceData, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = `performance_report_${selectedPeriod}.json`;
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
+  const handleExportReport = async () => {
+    if (!performanceData) {
+      return;
+    }
+
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        // Fallback: export JSON
+        const dataStr = JSON.stringify(performanceData, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', `performance_report_${selectedPeriod}.json`);
+        linkElement.click();
+        return;
+      }
+
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const response = await axios.get(`${API_URL}/staff/performance/export`, {
+        headers,
+        params: { period: selectedPeriod, format: 'json' },
+        timeout: 15000
+      });
+
+      if (response.data && response.data.success) {
+        const dataStr = JSON.stringify(response.data.data, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', `performance_report_${selectedPeriod}.json`);
+        linkElement.click();
+      } else {
+        // Fallback: export local data
+        const dataStr = JSON.stringify(performanceData, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', `performance_report_${selectedPeriod}.json`);
+        linkElement.click();
+      }
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      // Fallback: export local data
+      const dataStr = JSON.stringify(performanceData, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', `performance_report_${selectedPeriod}.json`);
+      linkElement.click();
+    }
   };
 
   const handlePrintReport = () => {
@@ -297,7 +383,9 @@ const StaffPerformance = () => {
       activation: 'सक्रियता',
       billing: 'बिलिङ',
       network: 'नेटवर्क',
-      general: 'सामान्य'
+      general: 'सामान्य',
+      loading: 'लोड हुँदै...',
+      backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।'
     },
     en: {
       pageTitle: 'My Performance',
@@ -352,7 +440,9 @@ const StaffPerformance = () => {
       activation: 'Activation',
       billing: 'Billing',
       network: 'Network',
-      general: 'General'
+      general: 'General',
+      loading: 'Loading...',
+      backendNotConnected: 'Backend server not connected. Showing sample data.'
     }
   };
 
@@ -360,6 +450,42 @@ const StaffPerformance = () => {
 
   const currentData = selectedPeriod === 'weekly' ? performanceData?.weeklyBreakdown : performanceData?.monthlyBreakdown;
   const maxResolved = Math.max(...(currentData?.map(item => item.resolved) || [0]));
+
+  // Loading state
+  if (isLoading && !performanceData) {
+    return (
+      <div className="staff-performance">
+        <StaffHeader 
+          language={language}
+          setLanguage={setLanguage}
+          staffName={staffData.name}
+          staffRole={staffData.role}
+          onLogout={handleLogout}
+        />
+        <div className="dashboard-layout">
+          <StaffSidebar 
+            language={language}
+            staffName={staffData.name}
+            staffRole={staffData.role}
+            onLogout={handleLogout}
+          />
+          <div className="main-content">
+            <div className="content-wrapper">
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>{t.loading}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <style>{`
+          .loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 400px; gap: 20px; }
+          .loading-spinner { width: 50px; height: 50px; border: 4px solid #e2e8f0; border-top: 4px solid #0288d1; border-radius: 50%; animation: spin 1s linear infinite; }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="staff-performance">
@@ -384,7 +510,7 @@ const StaffPerformance = () => {
             {/* Backend Status Banner */}
             {backendStatus === 'disconnected' && (
               <div className="backend-warning">
-                ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।' : 'Backend server not connected. Showing sample data.'}
+                ⚠️ {t.backendNotConnected}
               </div>
             )}
 
@@ -392,14 +518,14 @@ const StaffPerformance = () => {
             <div className="page-header">
               <h1 className="page-title">{t.performance}</h1>
               <div className="header-actions">
-                <button className="action-btn export-btn" onClick={handleExportReport}>
+                <button className="action-btn export-btn" onClick={handleExportReport} disabled={isLoading}>
                   📥 {t.export}
                 </button>
                 <button className="action-btn print-btn" onClick={handlePrintReport}>
                   🖨️ {t.print}
                 </button>
-                <button className="refresh-btn" onClick={fetchPerformanceData}>
-                  🔄 {t.refresh}
+                <button className="refresh-btn" onClick={fetchPerformanceData} disabled={isLoading}>
+                  {isLoading ? '⏳' : '🔄'} {t.refresh}
                 </button>
               </div>
             </div>
@@ -434,11 +560,11 @@ const StaffPerformance = () => {
                   <span className="avatar-icon">👨‍💻</span>
                 </div>
                 <div className="staff-details">
-                  <h2>{performanceData?.staffInfo?.name}</h2>
-                  <p>{performanceData?.staffInfo?.role} | {performanceData?.staffInfo?.department}</p>
+                  <h2>{performanceData?.staffInfo?.name || staffData.name}</h2>
+                  <p>{performanceData?.staffInfo?.role || staffData.role} | {performanceData?.staffInfo?.department || staffData.department}</p>
                   <div className="staff-meta">
-                    <span>🆔 {performanceData?.staffInfo?.employeeId}</span>
-                    <span>📅 {t.joinDate}: {performanceData?.staffInfo?.joinDate}</span>
+                    <span>🆔 {performanceData?.staffInfo?.employeeId || staffData.employeeId}</span>
+                    <span>📅 {t.joinDate}: {performanceData?.staffInfo?.joinDate || staffData.joinDate}</span>
                   </div>
                 </div>
                 <div className="overall-score">
@@ -654,6 +780,29 @@ const StaffPerformance = () => {
           position: relative;
         }
 
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 400px;
+          gap: 20px;
+        }
+
+        .loading-spinner {
+          width: 50px;
+          height: 50px;
+          border: 4px solid #e2e8f0;
+          border-top: 4px solid #0288d1;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
         .dashboard-layout {
           display: flex;
           height: calc(100vh - 195px);
@@ -732,6 +881,11 @@ const StaffPerformance = () => {
           font-weight: 500;
           transition: all 0.2s;
           border: none;
+        }
+
+        .action-btn:disabled, .refresh-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         .export-btn {

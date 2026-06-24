@@ -162,6 +162,431 @@ const staffOrAdmin = (req, res, next) => {
     }
 };
 
+// ==================== STAFF NOTIFICATIONS TABLE ====================
+
+// Create notifications table if it doesn't exist
+const createNotificationsTable = () => {
+    db.run(`CREATE TABLE IF NOT EXISTS staff_notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        user_type TEXT DEFAULT 'staff',
+        title TEXT NOT NULL,
+        en_title TEXT,
+        message TEXT NOT NULL,
+        en_message TEXT,
+        type TEXT DEFAULT 'info',
+        priority TEXT DEFAULT 'medium',
+        sender TEXT DEFAULT 'System',
+        read_status INTEGER DEFAULT 0,
+        read_at DATETIME,
+        action_url TEXT,
+        action_label TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`, (err) => {
+        if (err) {
+            console.error('Error creating staff_notifications table:', err);
+        } else {
+            console.log('✅ staff_notifications table ready');
+        }
+    });
+};
+
+// ==================== STAFF NOTIFICATIONS ROUTES ====================
+
+// GET /api/staff/notifications - Get all notifications for current staff
+app.get('/api/staff/notifications', protect, staffOrAdmin, (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { limit = 50, offset = 0, unreadOnly = false } = req.query;
+
+        let sql = `SELECT * FROM staff_notifications WHERE user_id = ?`;
+        const params = [userId];
+
+        if (unreadOnly === 'true') {
+            sql += ` AND read_status = 0`;
+        }
+
+        sql += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+        params.push(parseInt(limit), parseInt(offset));
+
+        db.all(sql, params, (err, notifications) => {
+            if (err) {
+                console.error('Database error fetching notifications:', err);
+                return res.status(500).json({ success: false, message: 'Database error' });
+            }
+
+            // Get total count for pagination
+            let countSql = `SELECT COUNT(*) as total FROM staff_notifications WHERE user_id = ?`;
+            const countParams = [userId];
+
+            if (unreadOnly === 'true') {
+                countSql += ` AND read_status = 0`;
+            }
+
+            db.get(countSql, countParams, (err, countResult) => {
+                if (err) {
+                    console.error('Database error counting notifications:', err);
+                    return res.status(500).json({ success: false, message: 'Database error' });
+                }
+
+                // Transform data to match frontend expected format
+                const transformedNotifications = notifications.map(n => ({
+                    id: n.id,
+                    title: n.title,
+                    enTitle: n.en_title || n.title,
+                    message: n.message,
+                    enMessage: n.en_message || n.message,
+                    type: n.type || 'info',
+                    read: n.read_status === 1,
+                    date: n.created_at,
+                    createdAt: n.created_at,
+                    priority: n.priority || 'medium',
+                    actionUrl: n.action_url,
+                    actionLabel: n.action_label,
+                    sender: n.sender || 'System'
+                }));
+
+                res.json({
+                    success: true,
+                    data: transformedNotifications,
+                    pagination: {
+                        total: countResult?.total || 0,
+                        limit: parseInt(limit),
+                        offset: parseInt(offset)
+                    }
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// GET /api/staff/notifications/unread-count - Get unread notification count
+app.get('/api/staff/notifications/unread-count', protect, staffOrAdmin, (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        db.get(
+            `SELECT COUNT(*) as unreadCount FROM staff_notifications WHERE user_id = ? AND read_status = 0`,
+            [userId],
+            (err, result) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, message: 'Database error' });
+                }
+                res.json({
+                    success: true,
+                    data: { unreadCount: result?.unreadCount || 0 }
+                });
+            }
+        );
+    } catch (error) {
+        console.error('Error getting unread count:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// PUT /api/staff/notifications/:id/read - Mark notification as read
+app.put('/api/staff/notifications/:id/read', protect, staffOrAdmin, (req, res) => {
+    try {
+        const userId = req.user.id;
+        const notificationId = req.params.id;
+
+        db.run(
+            `UPDATE staff_notifications 
+             SET read_status = 1, read_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+             WHERE id = ? AND user_id = ?`,
+            [notificationId, userId],
+            function(err) {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, message: 'Database error' });
+                }
+
+                if (this.changes === 0) {
+                    return res.status(404).json({ 
+                        success: false, 
+                        message: 'Notification not found or already read' 
+                    });
+                }
+
+                res.json({
+                    success: true,
+                    message: 'Notification marked as read'
+                });
+            }
+        );
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// PUT /api/staff/notifications/read-all - Mark all notifications as read
+app.put('/api/staff/notifications/read-all', protect, staffOrAdmin, (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        db.run(
+            `UPDATE staff_notifications 
+             SET read_status = 1, read_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+             WHERE user_id = ? AND read_status = 0`,
+            [userId],
+            function(err) {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, message: 'Database error' });
+                }
+
+                res.json({
+                    success: true,
+                    message: `All notifications marked as read (${this.changes} notifications)`,
+                    data: { updatedCount: this.changes }
+                });
+            }
+        );
+    } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// DELETE /api/staff/notifications/:id - Delete a notification
+app.delete('/api/staff/notifications/:id', protect, staffOrAdmin, (req, res) => {
+    try {
+        const userId = req.user.id;
+        const notificationId = req.params.id;
+
+        db.run(
+            `DELETE FROM staff_notifications WHERE id = ? AND user_id = ?`,
+            [notificationId, userId],
+            function(err) {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, message: 'Database error' });
+                }
+
+                if (this.changes === 0) {
+                    return res.status(404).json({ 
+                        success: false, 
+                        message: 'Notification not found' 
+                    });
+                }
+
+                res.json({
+                    success: true,
+                    message: 'Notification deleted successfully'
+                });
+            }
+        );
+    } catch (error) {
+        console.error('Error deleting notification:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// DELETE /api/staff/notifications/delete-all - Delete all notifications for a user
+app.delete('/api/staff/notifications/delete-all', protect, staffOrAdmin, (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        db.run(
+            `DELETE FROM staff_notifications WHERE user_id = ?`,
+            [userId],
+            function(err) {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, message: 'Database error' });
+                }
+
+                res.json({
+                    success: true,
+                    message: `All notifications deleted successfully (${this.changes} notifications)`,
+                    data: { deletedCount: this.changes }
+                });
+            }
+        );
+    } catch (error) {
+        console.error('Error deleting all notifications:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// POST /api/staff/notifications - Create a new notification (Admin only)
+app.post('/api/staff/notifications', protect, adminOnly, (req, res) => {
+    try {
+        const { 
+            userId, 
+            title, 
+            enTitle, 
+            message, 
+            enMessage, 
+            type = 'info', 
+            priority = 'medium', 
+            actionUrl, 
+            actionLabel,
+            userType = 'staff'
+        } = req.body;
+
+        if (!userId || !title || !message) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'userId, title, and message are required' 
+            });
+        }
+
+        // Verify user exists
+        db.get(`SELECT id FROM users WHERE id = ?`, [userId], (err, user) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ success: false, message: 'Database error' });
+            }
+
+            if (!user) {
+                return res.status(404).json({ 
+                    success: false, 
+                    message: 'User not found' 
+                });
+            }
+
+            db.run(
+                `INSERT INTO staff_notifications 
+                 (user_id, user_type, title, en_title, message, en_message, type, priority, action_url, action_label, sender) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    userId,
+                    userType || 'staff',
+                    title,
+                    enTitle || title,
+                    message,
+                    enMessage || message,
+                    type,
+                    priority,
+                    actionUrl || null,
+                    actionLabel || null,
+                    req.user.name || 'Admin'
+                ],
+                function(err) {
+                    if (err) {
+                        console.error('Database error:', err);
+                        return res.status(500).json({ success: false, message: 'Database error' });
+                    }
+
+                    // Get the created notification
+                    db.get(
+                        `SELECT * FROM staff_notifications WHERE id = ?`,
+                        [this.lastID],
+                        (err, notification) => {
+                            if (err) {
+                                console.error('Database error:', err);
+                                return res.status(500).json({ success: false, message: 'Database error' });
+                            }
+
+                            // Transform to frontend format
+                            const transformed = {
+                                id: notification.id,
+                                title: notification.title,
+                                enTitle: notification.en_title || notification.title,
+                                message: notification.message,
+                                enMessage: notification.en_message || notification.message,
+                                type: notification.type || 'info',
+                                read: false,
+                                date: notification.created_at,
+                                createdAt: notification.created_at,
+                                priority: notification.priority || 'medium',
+                                actionUrl: notification.action_url,
+                                actionLabel: notification.action_label,
+                                sender: notification.sender || 'System'
+                            };
+
+                            res.status(201).json({
+                                success: true,
+                                message: 'Notification created successfully',
+                                data: transformed
+                            });
+                        }
+                    );
+                }
+            );
+        });
+    } catch (error) {
+        console.error('Error creating notification:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
+// POST /api/staff/notifications/bulk - Create multiple notifications (Admin only)
+app.post('/api/staff/notifications/bulk', protect, adminOnly, (req, res) => {
+    try {
+        const { notifications } = req.body;
+
+        if (!notifications || !Array.isArray(notifications) || notifications.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Notifications array is required' 
+            });
+        }
+
+        const insertedIds = [];
+        let errorCount = 0;
+
+        // Process each notification
+        const stmt = db.prepare(`
+            INSERT INTO staff_notifications 
+            (user_id, user_type, title, en_title, message, en_message, type, priority, action_url, action_label, sender) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        notifications.forEach(n => {
+            if (!n.userId || !n.title || !n.message) {
+                errorCount++;
+                return;
+            }
+
+            stmt.run(
+                [
+                    n.userId,
+                    n.userType || 'staff',
+                    n.title,
+                    n.enTitle || n.title,
+                    n.message,
+                    n.enMessage || n.message,
+                    n.type || 'info',
+                    n.priority || 'medium',
+                    n.actionUrl || null,
+                    n.actionLabel || null,
+                    req.user.name || 'Admin'
+                ],
+                function(err) {
+                    if (!err) {
+                        insertedIds.push(this.lastID);
+                    } else {
+                        errorCount++;
+                    }
+                }
+            );
+        });
+
+        stmt.finalize();
+
+        res.json({
+            success: true,
+            message: `Bulk notifications created: ${insertedIds.length} successful, ${errorCount} failed`,
+            data: {
+                insertedCount: insertedIds.length,
+                errorCount: errorCount
+            }
+        });
+    } catch (error) {
+        console.error('Error creating bulk notifications:', error);
+        res.status(500).json({ success: false, message: 'Server error: ' + error.message });
+    }
+});
+
 // ==================== HELPER FUNCTIONS FOR SETTINGS ====================
 
 // Get settings from database
@@ -3456,6 +3881,315 @@ app.get('/api/staff/reports/export', protect, staffOrAdmin, (req, res) => {
     }
 });
 
+// ==================== STAFF PERFORMANCE ROUTES ====================
+
+// GET /api/staff/performance - Get staff performance data
+app.get('/api/staff/performance', protect, staffOrAdmin, (req, res) => {
+  try {
+    const staffId = req.user.id;
+    const staffEmail = req.user.email;
+    const { period = 'monthly' } = req.query;
+
+    // Get date range based on period
+    const now = new Date();
+    let startDate = new Date();
+    let endDate = new Date();
+
+    if (period === 'weekly') {
+      startDate.setDate(now.getDate() - 7);
+    } else if (period === 'monthly') {
+      startDate.setMonth(now.getMonth() - 1);
+    } else if (period === 'yearly') {
+      startDate.setFullYear(now.getFullYear() - 1);
+    } else {
+      startDate.setMonth(now.getMonth() - 1);
+    }
+
+    const startDateStr = startDate.toISOString();
+    const endDateStr = endDate.toISOString();
+
+    // Get staff info
+    const staffInfo = {
+      id: req.user.id,
+      name: req.user.name || 'Staff Member',
+      enName: req.user.name_en || req.user.name || 'Staff Member',
+      role: req.user.role || 'Staff',
+      department: req.user.department || 'Customer Support',
+      joinDate: req.user.join_date || '2023-01-15',
+      employeeId: req.user.employee_id || `EMP-${String(req.user.id).padStart(3, '0')}`
+    };
+
+    // Get complaints assigned to this staff
+    db.all(
+      `SELECT * FROM complaints WHERE assigned_to = ? AND created_at BETWEEN ? AND ?`,
+      [staffEmail, startDateStr, endDateStr],
+      (err, complaints) => {
+        if (err) {
+          console.error('Error fetching complaints:', err);
+          return res.status(500).json({ success: false, message: 'Database error' });
+        }
+
+        // Get regarding complaints
+        db.all(
+          `SELECT * FROM complaint_regarding WHERE assigned_to = ? AND created_at BETWEEN ? AND ?`,
+          [staffEmail, startDateStr, endDateStr],
+          (err, regardingComplaints) => {
+            if (err) {
+              console.error('Error fetching regarding complaints:', err);
+              return res.status(500).json({ success: false, message: 'Database error' });
+            }
+
+            const allComplaints = [...(complaints || []), ...(regardingComplaints || [])];
+
+            // Calculate performance metrics
+            const totalComplaints = allComplaints.length;
+            const resolvedComplaints = allComplaints.filter(c => 
+              c.status === 'resolved' || c.status === 'Resolved' || c.status === 'completed' || c.status === 'Completed'
+            ).length;
+
+            // Calculate average resolution time
+            let totalResolutionTime = 0;
+            let resolvedCount = 0;
+            allComplaints.forEach(c => {
+              if (c.resolved_at && c.created_at) {
+                const resolutionTime = (new Date(c.resolved_at) - new Date(c.created_at)) / (1000 * 60 * 60 * 24);
+                totalResolutionTime += resolutionTime;
+                resolvedCount++;
+              }
+            });
+            const avgResolutionTime = resolvedCount > 0 ? totalResolutionTime / resolvedCount : 0;
+
+            // Calculate customer satisfaction
+            let totalSatisfaction = 0;
+            let satisfactionCount = 0;
+            allComplaints.forEach(c => {
+              if (c.satisfaction && c.satisfaction > 0) {
+                totalSatisfaction += c.satisfaction;
+                satisfactionCount++;
+              }
+            });
+            const customerSatisfaction = satisfactionCount > 0 ? totalSatisfaction / satisfactionCount : 0;
+
+            // Calculate tasks completed (complaints resolved)
+            const tasksCompleted = resolvedComplaints;
+
+            // Calculate monthly breakdown
+            const monthlyData = {};
+            allComplaints.forEach(c => {
+              const date = new Date(c.created_at);
+              const monthKey = date.toLocaleString('en-US', { month: 'short' });
+              if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = { resolved: 0, satisfaction: 0, tasks: 0, score: 0, count: 0 };
+              }
+              if (c.status === 'resolved' || c.status === 'Resolved' || c.status === 'completed') {
+                monthlyData[monthKey].resolved++;
+              }
+              monthlyData[monthKey].tasks++;
+              monthlyData[monthKey].count++;
+              if (c.satisfaction) {
+                monthlyData[monthKey].satisfaction += c.satisfaction;
+              }
+            });
+
+            const monthlyBreakdown = Object.entries(monthlyData).map(([month, data]) => ({
+              month,
+              resolved: data.resolved,
+              satisfaction: data.count > 0 ? data.satisfaction / data.count : 0,
+              tasks: data.tasks,
+              score: data.count > 0 ? (data.resolved / data.count) * 5 : 0
+            }));
+
+            // Calculate weekly breakdown
+            const weeklyData = {};
+            allComplaints.forEach(c => {
+              const date = new Date(c.created_at);
+              const weekNumber = Math.ceil(date.getDate() / 7);
+              const weekKey = `Week ${weekNumber}`;
+              if (!weeklyData[weekKey]) {
+                weeklyData[weekKey] = { resolved: 0, satisfaction: 0, tasks: 0, score: 0, count: 0 };
+              }
+              if (c.status === 'resolved' || c.status === 'Resolved' || c.status === 'completed') {
+                weeklyData[weekKey].resolved++;
+              }
+              weeklyData[weekKey].tasks++;
+              weeklyData[weekKey].count++;
+              if (c.satisfaction) {
+                weeklyData[weekKey].satisfaction += c.satisfaction;
+              }
+            });
+
+            const weeklyBreakdown = Object.entries(weeklyData).map(([week, data]) => ({
+              week,
+              resolved: data.resolved,
+              satisfaction: data.count > 0 ? data.satisfaction / data.count : 0,
+              tasks: data.tasks,
+              score: data.count > 0 ? (data.resolved / data.count) * 5 : 0
+            }));
+
+            // Calculate category performance
+            const categoryData = {};
+            allComplaints.forEach(c => {
+              const category = c.nature_of_complaint || c.complaint_type || 'general';
+              if (!categoryData[category]) {
+                categoryData[category] = { resolved: 0, satisfaction: 0, avgTime: 0, count: 0, totalTime: 0 };
+              }
+              if (c.status === 'resolved' || c.status === 'Resolved' || c.status === 'completed') {
+                categoryData[category].resolved++;
+              }
+              categoryData[category].count++;
+              if (c.satisfaction) {
+                categoryData[category].satisfaction += c.satisfaction;
+              }
+              if (c.resolved_at && c.created_at) {
+                const resolutionTime = (new Date(c.resolved_at) - new Date(c.created_at)) / (1000 * 60 * 60 * 24);
+                categoryData[category].totalTime += resolutionTime;
+              }
+            });
+
+            const categoryPerformance = {};
+            Object.entries(categoryData).forEach(([category, data]) => {
+              categoryPerformance[category] = {
+                resolved: data.resolved,
+                satisfaction: data.count > 0 ? data.satisfaction / data.count : 0,
+                avgTime: data.count > 0 ? data.totalTime / data.count : 0
+              };
+            });
+
+            // Sample achievements (in a real system, these would come from a database)
+            const achievements = [
+              { title: 'Best Performer of the Month', date: 'March 2024', icon: '🏆' },
+              { title: '100 Complaints Resolved', date: 'February 2024', icon: '🎯' },
+              { title: 'Customer Satisfaction Award', date: 'January 2024', icon: '⭐' },
+              { title: 'Perfect Attendance', date: 'December 2023', icon: '📅' }
+            ];
+
+            // Sample feedback
+            const feedback = [
+              { from: 'Admin', message: 'Excellent performance this month! Keep it up.', rating: 5, date: '2024-03-30' },
+              { from: 'Supervisor', message: 'Great work on resolving complex complaints.', rating: 4.5, date: '2024-03-25' },
+              { from: 'Customer', message: 'Very helpful and professional service.', rating: 5, date: '2024-03-20' }
+            ];
+
+            // Strengths and improvements
+            const strengths = ['Quick Resolution', 'High Customer Satisfaction', 'Technical Expertise', 'Team Player'];
+            const improvements = ['Documentation', 'Follow-up Communication', 'Time Management'];
+
+            // Calculate overall score
+            const overallScore = totalComplaints > 0 ? (resolvedComplaints / totalComplaints) * 5 : 0;
+
+            res.json({
+              success: true,
+              data: {
+                staffInfo,
+                summary: {
+                  totalComplaintsResolved: resolvedComplaints,
+                  avgResolutionTime: Math.round(avgResolutionTime * 10) / 10,
+                  customerSatisfaction: Math.round(customerSatisfaction * 10) / 10,
+                  tasksCompleted,
+                  attendance: 98.5, // Sample data
+                  punctuality: 96, // Sample data
+                  overallScore: Math.min(Math.round(overallScore * 10) / 10, 5)
+                },
+                monthlyBreakdown,
+                weeklyBreakdown,
+                categoryPerformance,
+                achievements,
+                feedback,
+                strengths,
+                improvements
+              }
+            });
+          }
+        );
+      }
+    );
+  } catch (error) {
+    console.error('Error fetching performance data:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// GET /api/staff/performance/export - Export performance report
+app.get('/api/staff/performance/export', protect, staffOrAdmin, (req, res) => {
+  try {
+    const { format = 'json', period = 'monthly' } = req.query;
+
+    // Get staff info
+    const staffInfo = {
+      name: req.user.name || 'Staff Member',
+      role: req.user.role || 'Staff',
+      department: req.user.department || 'Customer Support',
+      employeeId: req.user.employee_id || `EMP-${String(req.user.id).padStart(3, '0')}`
+    };
+
+    // Get staff performance data (simplified for export)
+    db.get(
+      `SELECT COUNT(*) as total, 
+              SUM(CASE WHEN status = 'resolved' OR status = 'Resolved' THEN 1 ELSE 0 END) as resolved
+       FROM complaints WHERE assigned_to = ?`,
+      [req.user.email],
+      (err, complaintStats) => {
+        if (err) {
+          console.error('Error fetching export data:', err);
+          return res.status(500).json({ success: false, message: 'Database error' });
+        }
+
+        // Also get regarding complaints
+        db.get(
+          `SELECT COUNT(*) as total, 
+                  SUM(CASE WHEN status = 'resolved' OR status = 'Resolved' THEN 1 ELSE 0 END) as resolved
+           FROM complaint_regarding WHERE assigned_to = ?`,
+          [req.user.email],
+          (err, regardingStats) => {
+            if (err) {
+              console.error('Error fetching regarding export data:', err);
+              return res.status(500).json({ success: false, message: 'Database error' });
+            }
+
+            const totalComplaints = (complaintStats?.total || 0) + (regardingStats?.total || 0);
+            const resolvedComplaints = (complaintStats?.resolved || 0) + (regardingStats?.resolved || 0);
+
+            const exportData = {
+              staffInfo,
+              summary: {
+                totalComplaints: totalComplaints,
+                resolvedComplaints: resolvedComplaints,
+                resolutionRate: totalComplaints > 0 ? (resolvedComplaints / totalComplaints) * 100 : 0,
+                generatedAt: new Date().toISOString(),
+                period: period
+              }
+            };
+
+            if (format === 'csv') {
+              const headers = ['Staff Name', 'Employee ID', 'Total Complaints', 'Resolved Complaints', 'Resolution Rate'];
+              const row = [
+                staffInfo.name,
+                staffInfo.employeeId,
+                totalComplaints,
+                resolvedComplaints,
+                totalComplaints > 0 ? ((resolvedComplaints / totalComplaints) * 100).toFixed(1) + '%' : '0%'
+              ];
+              const csvContent = headers.join(',') + '\n' + row.join(',');
+              
+              res.setHeader('Content-Type', 'text/csv');
+              res.setHeader('Content-Disposition', `attachment; filename=performance_report_${period}.csv`);
+              return res.send(csvContent);
+            }
+
+            res.json({
+              success: true,
+              data: exportData
+            });
+          }
+        );
+      }
+    );
+  } catch (error) {
+    console.error('Error exporting performance data:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // ==================== PDF REPORT GENERATION ROUTES ====================
 
 // GET /api/staff/reports/pdf - Generate PDF report
@@ -4986,6 +5720,8 @@ const startServer = async () => {
         await initDatabase();
         updateUsersTableSchema();
         createAdminSettingsTable();
+        // Create notifications table
+        createNotificationsTable();
 
         const complaintColumns = [
             'resolution TEXT',
@@ -5110,6 +5846,16 @@ const startServer = async () => {
             console.log(`   9. binod@ntc.gov.np / staff123 (Technical Support)`);
             console.log(`  10. sunita@ntc.gov.np / staff123 (Billing)`);
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`📋 STAFF NOTIFICATIONS ENDPOINTS:`);
+            console.log(`   🔔 GET /api/staff/notifications - Get all notifications`);
+            console.log(`   🔔 GET /api/staff/notifications/unread-count - Get unread count`);
+            console.log(`   🔔 PUT /api/staff/notifications/:id/read - Mark as read`);
+            console.log(`   🔔 PUT /api/staff/notifications/read-all - Mark all as read`);
+            console.log(`   🔔 DELETE /api/staff/notifications/:id - Delete notification`);
+            console.log(`   🔔 DELETE /api/staff/notifications/delete-all - Delete all`);
+            console.log(`   🔔 POST /api/staff/notifications - Create notification (Admin only)`);
+            console.log(`   🔔 POST /api/staff/notifications/bulk - Bulk create (Admin only)`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             console.log(`📋 ADMIN REPORTS ENDPOINTS:`);
             console.log(`   👥 GET /api/admin/reports/users - Users report`);
             console.log(`   👥 GET /api/admin/reports/users/export - Export users report`);
@@ -5124,6 +5870,10 @@ const startServer = async () => {
             console.log(`   📊 GET /api/admin/analytics/performers - Top performers`);
             console.log(`   📊 GET /api/admin/analytics/hourly - Hourly distribution`);
             console.log(`   📊 GET /api/admin/analytics/daywise - Day-wise distribution`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`📋 STAFF PERFORMANCE ENDPOINTS:`);
+            console.log(`   📊 GET /api/staff/performance - Staff performance data`);
+            console.log(`   📊 GET /api/staff/performance/export - Export performance report`);
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             console.log(`📋 TRACKING ENDPOINTS (NO PASSWORD REQUIRED):`);
             console.log(`   📋 GET /api/complaints/track/:ticketNumber - Track by ticket number`);
