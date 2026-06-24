@@ -10,17 +10,22 @@ const StaffComplaintSolve = () => {
   const location = useLocation();
   const { id } = useParams();
   const { complaint: initialComplaint } = location.state || {};
-  const [language, setLanguage] = useState('np');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
   const [isEditMode, setIsEditMode] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
   
   const [staffData, setStaffData] = useState({
-    name: 'Ram Bahadur',
-    role: 'Technical Support',
-    email: 'ram@ntc.gov.np',
-    phone: '9841234567'
+    id: null,
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
+    department: ''
   });
 
   const [complaint, setComplaint] = useState(initialComplaint || null);
@@ -42,9 +47,45 @@ const StaffComplaintSolve = () => {
     description: ''
   });
 
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
+
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+  };
+
+  // Load staff data from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffData({
+          id: user.id,
+          name: user.name || 'Staff Member',
+          role: user.role || 'Staff',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support'
+        });
+      } catch (e) {
+        console.error('Error parsing staff user:', e);
+      }
+    }
+  }, []);
+
+  // Helper function to get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('staffToken') || localStorage.getItem('token');
+  };
+
   // Fetch complaint details if not passed via state
   useEffect(() => {
-    const token = localStorage.getItem('staffToken');
+    const token = getAuthToken();
     const user = localStorage.getItem('staffUser');
     
     if (!token || !user) {
@@ -52,48 +93,110 @@ const StaffComplaintSolve = () => {
       return;
     }
     
-    if (!complaint && id) {
-      fetchComplaintDetails(id);
-    } else if (complaint) {
-      setLoading(false);
-      setStatus(complaint.status);
-      // Load existing resolution data if available
-      if (complaint.resolution) {
-        setResolution(complaint.resolution);
+    // Check if we have a complaint from location state
+    if (initialComplaint && initialComplaint.id) {
+      console.log('Using complaint from location state:', initialComplaint);
+      setComplaint(initialComplaint);
+      setStatus(initialComplaint.status);
+      if (initialComplaint.resolution) {
+        setResolution(initialComplaint.resolution);
       }
-      if (complaint.actionTaken) {
-        setActionTaken(complaint.actionTaken);
+      if (initialComplaint.actionTaken) {
+        setActionTaken(initialComplaint.actionTaken);
       }
-      if (complaint.updateHistory) {
-        setUpdateHistory(complaint.updateHistory);
+      if (initialComplaint.updateHistory) {
+        setUpdateHistory(initialComplaint.updateHistory);
       }
-      // Initialize edit fields
       setEditFields({
-        name: complaint.name || '',
-        email: complaint.email || '',
-        phone: complaint.phone || '',
-        address: complaint.address || '',
-        landmark: complaint.landmark || '',
-        description: complaint.description || ''
+        name: initialComplaint.name || '',
+        email: initialComplaint.email || '',
+        phone: initialComplaint.phone || '',
+        address: initialComplaint.address || '',
+        landmark: initialComplaint.landmark || '',
+        description: initialComplaint.description || ''
       });
-    } else {
-      navigate('/staff/complaints/assigned');
+      setLoading(false);
+      return;
     }
-  }, [navigate, complaint, id]);
+    
+    // If we have ID from params, fetch from API
+    if (id) {
+      console.log('Fetching complaint with ID from params:', id);
+      fetchComplaintDetails(id);
+      return;
+    }
+    
+    // Try to get complaint from localStorage as fallback
+    const savedComplaint = localStorage.getItem('currentComplaint');
+    if (savedComplaint) {
+      try {
+        const parsed = JSON.parse(savedComplaint);
+        if (parsed && parsed.id) {
+          console.log('Using complaint from localStorage:', parsed);
+          setComplaint(parsed);
+          setStatus(parsed.status);
+          if (parsed.resolution) setResolution(parsed.resolution);
+          if (parsed.actionTaken) setActionTaken(parsed.actionTaken);
+          if (parsed.updateHistory) setUpdateHistory(parsed.updateHistory);
+          setEditFields({
+            name: parsed.name || '',
+            email: parsed.email || '',
+            phone: parsed.phone || '',
+            address: parsed.address || '',
+            landmark: parsed.landmark || '',
+            description: parsed.description || ''
+          });
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.error('Error parsing saved complaint:', e);
+      }
+    }
+    
+    // No complaint found anywhere
+    console.error('No complaint found. State:', { initialComplaint, id });
+    setError(language === 'np' ? '❌ गुनासो फेला परेन' : '❌ Complaint not found');
+    showToast(
+      language === 'np' ? '❌ गुनासो फेला परेन' : '❌ Complaint not found',
+      'error'
+    );
+    setTimeout(() => navigate('/staff/complaints/assigned'), 3000);
+  }, [navigate, initialComplaint, id]);
 
   const fetchComplaintDetails = async (complaintId) => {
     setLoading(true);
+    setError('');
     try {
-      const token = localStorage.getItem('staffToken');
-      const response = await axios.get(`http://localhost:5000/api/complaints/${complaintId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const token = getAuthToken();
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      
+      console.log('Fetching complaint with ID:', complaintId);
+      console.log('API URL:', `${API_URL}/complaints/${complaintId}`);
+      
+      const response = await axios.get(`${API_URL}/complaints/${complaintId}`, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       
-      if (response.data.success) {
-        const transformedComplaint = transformComplaintData(response.data.data);
+      console.log('Fetch response:', response.data);
+      
+      // Check if response has data in different formats
+      let complaintData = null;
+      if (response.data && response.data.success) {
+        complaintData = response.data.data || response.data.complaint;
+      } else if (response.data && !response.data.success) {
+        complaintData = response.data;
+      } else if (response.data) {
+        complaintData = response.data;
+      }
+      
+      if (complaintData && complaintData.id) {
+        const transformedComplaint = transformComplaintData(complaintData);
         setComplaint(transformedComplaint);
         setStatus(transformedComplaint.status);
-        // Load existing resolution data
         if (transformedComplaint.resolution) {
           setResolution(transformedComplaint.resolution);
         }
@@ -103,7 +206,6 @@ const StaffComplaintSolve = () => {
         if (transformedComplaint.updateHistory) {
           setUpdateHistory(transformedComplaint.updateHistory);
         }
-        // Initialize edit fields
         setEditFields({
           name: transformedComplaint.name || '',
           email: transformedComplaint.email || '',
@@ -112,43 +214,80 @@ const StaffComplaintSolve = () => {
           landmark: transformedComplaint.landmark || '',
           description: transformedComplaint.description || ''
         });
+        
+        // Save to localStorage as fallback
+        localStorage.setItem('currentComplaint', JSON.stringify(transformedComplaint));
       } else {
-        setError('Complaint not found');
-        setTimeout(() => navigate('/staff/complaints/assigned'), 2000);
+        throw new Error('Complaint data not found in response');
       }
     } catch (error) {
-      console.error('Error fetching complaint:', error);
-      setError('Failed to load complaint details');
-      setTimeout(() => navigate('/staff/complaints/assigned'), 2000);
+      console.error('Error fetching complaint details:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
+      let errorMsg = language === 'np' 
+        ? '❌ गुनासो फेला परेन। कृपया पुन: प्रयास गर्नुहोस्।' 
+        : '❌ Complaint not found. Please try again.';
+      
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMsg = language === 'np' 
+            ? '❌ सत्र समाप्त भयो। कृपया पुन: लगइन गर्नुहोस्।' 
+            : '❌ Session expired. Please login again.';
+          setTimeout(() => navigate('/'), 2000);
+        } else if (error.response.status === 404) {
+          errorMsg = language === 'np' 
+            ? '❌ गुनासो फेला परेन। कृपया सही टिकेट आईडी प्रयोग गर्नुहोस्।' 
+            : '❌ Complaint not found. Please use a valid ticket ID.';
+        } else if (error.response.status === 500) {
+          errorMsg = language === 'np' 
+            ? '❌ सर्भर त्रुटि। कृपया पछि प्रयास गर्नुहोस्।' 
+            : '❌ Server error. Please try later.';
+        }
+      } else if (error.request) {
+        errorMsg = language === 'np' 
+          ? '❌ सर्भरमा जडान गर्न असफल। कृपया आफ्नो इन्टरनेट जाँच गर्नुहोस्।' 
+          : '❌ Failed to connect to server. Please check your internet.';
+      }
+      
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const transformComplaintData = (complaint) => ({
-    id: complaint.id,
-    ticketId: complaint.complaintNumber || `NTC-${complaint.id}`,
-    name: complaint.name || 'N/A',
-    enName: complaint.nameEn || complaint.name || 'N/A',
-    email: complaint.email || 'N/A',
-    phone: complaint.phone || 'N/A',
-    category: complaint.category || 'general',
-    category_np: complaint.categoryNp || getCategoryNepali(complaint.category),
-    category_en: complaint.category || 'General',
-    description: complaint.complaint || complaint.description || 'N/A',
-    enDescription: complaint.complaintEn || complaint.complaint || complaint.description || 'N/A',
-    status: mapStatus(complaint.status),
-    date: complaint.date || formatDate(complaint.submittedDate),
-    enDate: complaint.enDate || formatEnglishDate(complaint.submittedDate),
-    channel: complaint.channel || 'वेबसाइट पोर्टल',
-    enChannel: complaint.enChannel || 'Website Portal',
-    priority: mapPriority(complaint.priority),
-    address: complaint.address || '',
-    landmark: complaint.landmark || '',
-    resolution: complaint.resolution || '',
-    actionTaken: complaint.actionTaken || '',
-    updateHistory: complaint.updateHistory || []
-  });
+  const transformComplaintData = (complaint) => {
+    if (!complaint) return null;
+    
+    return {
+      id: complaint.id || complaint._id,
+      ticketId: complaint.complaintNumber || complaint.ticketId || `NTC-${complaint.id || complaint._id}`,
+      name: complaint.name || 'N/A',
+      enName: complaint.nameEn || complaint.name || 'N/A',
+      email: complaint.email || 'N/A',
+      phone: complaint.phone || 'N/A',
+      category: complaint.category || complaint.nature_of_complaint || 'general',
+      category_np: complaint.categoryNp || getCategoryNepali(complaint.category || complaint.nature_of_complaint),
+      category_en: complaint.category || complaint.nature_of_complaint || 'General',
+      description: complaint.complaint || complaint.description || 'N/A',
+      enDescription: complaint.complaintEn || complaint.complaint || complaint.description || 'N/A',
+      status: mapStatus(complaint.status),
+      date: complaint.date || formatDate(complaint.createdAt || complaint.submittedDate || complaint.created_at),
+      enDate: complaint.enDate || formatEnglishDate(complaint.createdAt || complaint.submittedDate || complaint.created_at),
+      channel: complaint.channel || 'वेबसाइट पोर्टल',
+      enChannel: complaint.enChannel || 'Website Portal',
+      priority: mapPriority(complaint.priority),
+      address: complaint.address || '',
+      landmark: complaint.landmark || '',
+      resolution: complaint.resolution || '',
+      actionTaken: complaint.actionTaken || '',
+      updateHistory: complaint.updateHistory || [],
+      assignedTo: complaint.assignedTo || '',
+      assignedBy: complaint.assignedBy || '',
+      assignedAt: complaint.assignedAt || ''
+    };
+  };
 
   const getCategoryNepali = (category) => {
     const categories = {
@@ -156,6 +295,8 @@ const StaffComplaintSolve = () => {
       'recharge': 'रिचार्ज',
       'activation': 'सक्रियता',
       'billing': 'बिलिङ',
+      'network': 'नेटवर्क',
+      'technical': 'प्राविधिक',
       'general': 'सामान्य'
     };
     return categories[category] || 'सामान्य';
@@ -219,75 +360,172 @@ const StaffComplaintSolve = () => {
 
   // Handle complaint data update (edit complaint details)
   const handleUpdateComplaintData = async () => {
+    if (!editFields.name.trim()) {
+      const errorMsg = language === 'np' 
+        ? 'कृपया उजुरीकर्ताको नाम प्रविष्ट गर्नुहोस्' 
+        : 'Please enter complainant name';
+      setError(errorMsg);
+      showToast(errorMsg, 'warning');
+      return;
+    }
+    
+    if (!editFields.email.trim()) {
+      const errorMsg = language === 'np' 
+        ? 'कृपया इमेल प्रविष्ट गर्नुहोस्' 
+        : 'Please enter email';
+      setError(errorMsg);
+      showToast(errorMsg, 'warning');
+      return;
+    }
+    
+    if (!editFields.phone.trim()) {
+      const errorMsg = language === 'np' 
+        ? 'कृपया फोन नम्बर प्रविष्ट गर्नुहोस्' 
+        : 'Please enter phone number';
+      setError(errorMsg);
+      showToast(errorMsg, 'warning');
+      return;
+    }
+
+    if (!editFields.description.trim()) {
+      const errorMsg = language === 'np' 
+        ? 'कृपया गुनासो विवरण प्रविष्ट गर्नुहोस्' 
+        : 'Please enter complaint description';
+      setError(errorMsg);
+      showToast(errorMsg, 'warning');
+      return;
+    }
+
     setUpdating(true);
     setError('');
     setSuccess('');
     
     try {
-      const token = localStorage.getItem('staffToken');
+      const token = getAuthToken();
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
       
-      // Prepare update data
       const updateData = {
-        name: editFields.name,
-        email: editFields.email,
-        phone: editFields.phone,
-        address: editFields.address,
-        landmark: editFields.landmark,
-        complaint: editFields.description,
-        updatedBy: staffData.name,
-        updatedAt: new Date().toISOString()
+        name: editFields.name.trim(),
+        email: editFields.email.trim(),
+        phone: editFields.phone.trim(),
+        address: editFields.address.trim(),
+        landmark: editFields.landmark.trim(),
+        complaint: editFields.description.trim()
       };
 
+      console.log('Updating complaint with data:', updateData);
+      console.log('Complaint ID:', complaint.id);
+      console.log('API URL:', `${API_URL}/complaints/${complaint.id}`);
+
       const response = await axios.put(
-        `http://localhost:5000/api/complaints/${complaint.id}`,
+        `${API_URL}/complaints/${complaint.id}`,
         updateData,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
       );
       
-      if (response.data.success) {
-        // Update local complaint data
+      console.log('Update response:', response.data);
+      
+      if (response.data && response.data.success) {
         const updatedComplaint = response.data.data || response.data.complaint;
-        const transformed = transformComplaintData(updatedComplaint);
         
-        setComplaint(prev => ({
-          ...prev,
-          ...transformed,
-          name: editFields.name,
-          email: editFields.email,
-          phone: editFields.phone,
-          address: editFields.address,
-          landmark: editFields.landmark,
-          description: editFields.description
-        }));
+        if (updatedComplaint) {
+          const transformed = transformComplaintData(updatedComplaint);
+          
+          setComplaint(prev => ({
+            ...prev,
+            ...transformed,
+            name: editFields.name.trim(),
+            email: editFields.email.trim(),
+            phone: editFields.phone.trim(),
+            address: editFields.address.trim(),
+            landmark: editFields.landmark.trim(),
+            description: editFields.description.trim()
+          }));
 
-        // Show success message
-        const successMsg = language === 'np' 
-          ? 'गुनासो विवरण सफलतापूर्वक अपडेट गरियो' 
-          : 'Complaint details updated successfully';
-        setSuccess(successMsg);
-
-        // Exit edit mode
-        setIsEditMode(false);
-
-        // Navigate after delay
-        setTimeout(() => {
-          navigate('/staff/complaints/assigned', { 
-            state: { 
-              updated: true, 
-              complaintId: complaint.id,
-              message: successMsg
-            }
+          setEditFields({
+            name: editFields.name.trim(),
+            email: editFields.email.trim(),
+            phone: editFields.phone.trim(),
+            address: editFields.address.trim(),
+            landmark: editFields.landmark.trim(),
+            description: editFields.description.trim()
           });
-        }, 2000);
+
+          localStorage.setItem('currentComplaint', JSON.stringify({
+            ...complaint,
+            ...transformed,
+            name: editFields.name.trim(),
+            email: editFields.email.trim(),
+            phone: editFields.phone.trim(),
+            address: editFields.address.trim(),
+            landmark: editFields.landmark.trim(),
+            description: editFields.description.trim()
+          }));
+
+          const successMsg = language === 'np' 
+            ? '✅ गुनासो विवरण सफलतापूर्वक अपडेट गरियो' 
+            : '✅ Complaint details updated successfully';
+          setSuccess(successMsg);
+          showToast(successMsg, 'success');
+
+          setIsEditMode(false);
+
+          setTimeout(() => {
+            navigate('/staff/complaints/assigned', { 
+              state: { 
+                updated: true, 
+                complaintId: complaint.id,
+                message: successMsg
+              }
+            });
+          }, 2000);
+        } else {
+          throw new Error('No complaint data in response');
+        }
       } else {
-        throw new Error(response.data.message || 'Update failed');
+        throw new Error(response.data?.message || 'Update failed');
       }
     } catch (error) {
       console.error('Error updating complaint data:', error);
-      setError(language === 'np' 
-        ? 'अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
-        : 'Update failed. Please try again.');
-      setTimeout(() => setError(''), 3000);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
+      let errorMsg = language === 'np' 
+        ? '❌ अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
+        : '❌ Update failed. Please try again.';
+      
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMsg = language === 'np' 
+            ? '❌ सत्र समाप्त भयो। कृपया पुन: लगइन गर्नुहोस्।' 
+            : '❌ Session expired. Please login again.';
+          setTimeout(() => navigate('/'), 2000);
+        } else if (error.response.status === 404) {
+          errorMsg = language === 'np' 
+            ? '❌ गुनासो फेला परेन।' 
+            : '❌ Complaint not found.';
+        } else if (error.response.status === 400) {
+          errorMsg = error.response.data?.message || (language === 'np' 
+            ? '❌ अमान्य डाटा। कृपया जाँच गर्नुहोस्।' 
+            : '❌ Invalid data. Please check.');
+        } else if (error.response.status === 500) {
+          errorMsg = language === 'np' 
+            ? '❌ सर्भर त्रुटि। कृपया पछि प्रयास गर्नुहोस्।' 
+            : '❌ Server error. Please try later.';
+        }
+      } else if (error.request) {
+        errorMsg = language === 'np' 
+          ? '❌ सर्भरमा जडान गर्न असफल। कृपया आफ्नो इन्टरनेट जाँच गर्नुहोस्।' 
+          : '❌ Failed to connect to server. Please check your internet.';
+      }
+      
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setUpdating(false);
     }
@@ -296,17 +534,20 @@ const StaffComplaintSolve = () => {
   // Handle status and resolution update
   const handleUpdateStatus = async () => {
     if (!status) {
-      setError(language === 'np' ? 'कृपया स्थिति चयन गर्नुहोस्' : 'Please select a status');
-      setTimeout(() => setError(''), 3000);
+      const errorMsg = language === 'np' 
+        ? 'कृपया स्थिति चयन गर्नुहोस्' 
+        : 'Please select a status';
+      setError(errorMsg);
+      showToast(errorMsg, 'warning');
       return;
     }
     
-    // Validate resolution if status is "resolved"
     if (status === 'resolved' && !resolution.trim()) {
-      setError(language === 'np' 
+      const errorMsg = language === 'np' 
         ? 'कृपया समाधान विवरण प्रदान गर्नुहोस्' 
-        : 'Please provide resolution details');
-      setTimeout(() => setError(''), 3000);
+        : 'Please provide resolution details';
+      setError(errorMsg);
+      showToast(errorMsg, 'warning');
       return;
     }
     
@@ -315,7 +556,9 @@ const StaffComplaintSolve = () => {
     setSuccess('');
     
     try {
-      const token = localStorage.getItem('staffToken');
+      const token = getAuthToken();
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      
       const statusMap = {
         'pending': 'Pending',
         'in-progress': 'In Progress',
@@ -323,34 +566,38 @@ const StaffComplaintSolve = () => {
         'review': 'Under Review'
       };
       
-      // Prepare update data with all fields
       const updateData = {
-        status: statusMap[status],
+        status: statusMap[status] || status,
         resolution: resolution.trim(),
         notes: updateNotes.trim(),
         actionTaken: actionTaken.trim(),
         followUpNeeded: followUpNeeded,
-        followUpDate: followUpDate,
-        updatedBy: staffData.name,
-        updatedAt: new Date().toISOString()
+        followUpDate: followUpDate
       };
 
+      console.log('Updating status with data:', updateData);
+
       const response = await axios.put(
-        `http://localhost:5000/api/complaints/${complaint.id}/status`,
+        `${API_URL}/complaints/${complaint.id}/status`,
         updateData,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
       );
       
-      if (response.data.success) {
-        // Get the updated complaint data from response
+      console.log('Status update response:', response.data);
+      
+      if (response.data && response.data.success) {
         const updatedComplaint = response.data.data || response.data.complaint;
         
-        // Create new history entry
         const historyEntry = {
           id: Date.now(),
           date: new Date().toISOString(),
           status: status,
-          statusDisplay: statusMap[status],
+          statusDisplay: statusMap[status] || status,
           resolution: resolution.trim(),
           actionTaken: actionTaken.trim(),
           notes: updateNotes.trim(),
@@ -358,37 +605,44 @@ const StaffComplaintSolve = () => {
           timestamp: new Date().toLocaleString()
         };
         
-        // Update local state with complete data
-        setComplaint(prev => ({
-          ...prev,
-          status: status,
-          resolution: resolution.trim(),
-          actionTaken: actionTaken.trim(),
-          updateHistory: [...(prev.updateHistory || []), historyEntry]
-        }));
+        if (updatedComplaint) {
+          const transformed = transformComplaintData(updatedComplaint);
+          setComplaint(prev => ({
+            ...prev,
+            ...transformed,
+            status: status,
+            resolution: resolution.trim(),
+            actionTaken: actionTaken.trim(),
+            updateHistory: [...(prev.updateHistory || []), historyEntry]
+          }));
+        } else {
+          setComplaint(prev => ({
+            ...prev,
+            status: status,
+            resolution: resolution.trim(),
+            actionTaken: actionTaken.trim(),
+            updateHistory: [...(prev.updateHistory || []), historyEntry]
+          }));
+        }
 
-        // Update the updateHistory state
         setUpdateHistory(prev => [...prev, historyEntry]);
         
-        // Show success message
         const successMsg = language === 'np' 
-          ? 'गुनासो सफलतापूर्वक अपडेट गरियो' 
-          : 'Complaint updated successfully';
+          ? '✅ गुनासो सफलतापूर्वक अपडेट गरियो' 
+          : '✅ Complaint updated successfully';
         setSuccess(successMsg);
+        showToast(successMsg, 'success');
 
-        // Reset form fields
         setUpdateNotes('');
         setFollowUpNeeded(false);
         setFollowUpDate('');
 
-        // Switch to resolution tab to show the updated solution
         if (status === 'resolved') {
           setTimeout(() => {
             setActiveTab('resolution');
           }, 500);
         }
 
-        // Navigate after delay
         setTimeout(() => {
           navigate('/staff/complaints/assigned', { 
             state: { 
@@ -400,20 +654,45 @@ const StaffComplaintSolve = () => {
           });
         }, 3000);
       } else {
-        throw new Error(response.data.message || 'Update failed');
+        throw new Error(response.data?.message || 'Update failed');
       }
     } catch (error) {
       console.error('Error updating complaint:', error);
-      setError(language === 'np' 
-        ? 'अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
-        : 'Update failed. Please try again.');
-      setTimeout(() => setError(''), 3000);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
+      let errorMsg = language === 'np' 
+        ? '❌ अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
+        : '❌ Update failed. Please try again.';
+      
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMsg = language === 'np' 
+            ? '❌ सत्र समाप्त भयो। कृपया पुन: लगइन गर्नुहोस्।' 
+            : '❌ Session expired. Please login again.';
+          setTimeout(() => navigate('/'), 2000);
+        } else if (error.response.status === 404) {
+          errorMsg = language === 'np' 
+            ? '❌ गुनासो फेला परेन।' 
+            : '❌ Complaint not found.';
+        } else if (error.response.status === 400) {
+          errorMsg = error.response.data?.message || (language === 'np' 
+            ? '❌ अमान्य डाटा। कृपया जाँच गर्नुहोस्।' 
+            : '❌ Invalid data. Please check.');
+        }
+      } else if (error.request) {
+        errorMsg = language === 'np' 
+          ? '❌ सर्भरमा जडान गर्न असफल। कृपया आफ्नो इन्टरनेट जाँच गर्नुहोस्।' 
+          : '❌ Failed to connect to server. Please check your internet.';
+      }
+      
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setUpdating(false);
     }
   };
 
-  // Handle edit field changes
   const handleEditFieldChange = (field, value) => {
     setEditFields(prev => ({
       ...prev,
@@ -425,9 +704,11 @@ const StaffComplaintSolve = () => {
     localStorage.removeItem('staffToken');
     localStorage.removeItem('staffUser');
     localStorage.removeItem('staffRole');
+    localStorage.removeItem('currentComplaint');
     navigate('/');
   };
 
+  // Content translations - keeping the same as your original
   const content = {
     np: {
       pageTitle: 'गुनासो समाधान',
@@ -481,7 +762,10 @@ const StaffComplaintSolve = () => {
       editDetails: 'विवरण सम्पादन गर्नुहोस्',
       saveChanges: 'परिवर्तन सुरक्षित गर्नुहोस्',
       cancel: 'रद्द गर्नुहोस्',
-      editMode: 'सम्पादन मोड'
+      editMode: 'सम्पादन मोड',
+      assignedTo: 'तोकिएको',
+      assignedBy: 'तोक्ने',
+      assignedAt: 'तोकिएको मिति'
     },
     en: {
       pageTitle: 'Solve Complaint',
@@ -535,7 +819,10 @@ const StaffComplaintSolve = () => {
       editDetails: 'Edit Details',
       saveChanges: 'Save Changes',
       cancel: 'Cancel',
-      editMode: 'Edit Mode'
+      editMode: 'Edit Mode',
+      assignedTo: 'Assigned To',
+      assignedBy: 'Assigned By',
+      assignedAt: 'Assigned At'
     }
   };
 
@@ -585,24 +872,80 @@ const StaffComplaintSolve = () => {
 
   if (loading) {
     return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.loading}</p>
+      <div className="staff-complaint-solve">
+        <StaffHeader 
+          language={language}
+          setLanguage={setLanguage}
+          staffName={staffData.name}
+          staffRole={staffData.role}
+          onLogout={handleLogout}
+        />
+        <div className="dashboard-layout">
+          <StaffSidebar 
+            language={language}
+            staffName={staffData.name}
+            staffRole={staffData.role}
+            onLogout={handleLogout}
+          />
+          <div className="main-content">
+            <div className="loading-container">
+              <div className="loading-spinner"></div>
+              <p>{t.loading}</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!complaint) {
     return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>{t.error}</p>
+      <div className="staff-complaint-solve">
+        <StaffHeader 
+          language={language}
+          setLanguage={setLanguage}
+          staffName={staffData.name}
+          staffRole={staffData.role}
+          onLogout={handleLogout}
+        />
+        <div className="dashboard-layout">
+          <StaffSidebar 
+            language={language}
+            staffName={staffData.name}
+            staffRole={staffData.role}
+            onLogout={handleLogout}
+          />
+          <div className="main-content">
+            <div className="loading-container">
+              <p style={{ color: '#ef4444', fontSize: '1.2rem' }}>
+                {error || (language === 'np' ? '❌ गुनासो फेला परेन' : '❌ Complaint not found')}
+              </p>
+              <button 
+                className="back-btn" 
+                onClick={() => navigate('/staff/complaints/assigned')}
+                style={{ marginTop: '16px' }}
+              >
+                ← {t.back}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="staff-complaint-solve">
+      {toast.show && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-icon">
+            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : toast.type === 'warning' ? '⚠️' : 'ℹ️'}
+          </span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast({ show: false, message: '', type: '' })}>✕</button>
+        </div>
+      )}
+
       <StaffHeader 
         language={language}
         setLanguage={setLanguage}
@@ -645,7 +988,6 @@ const StaffComplaintSolve = () => {
               </div>
             )}
 
-            {/* Tab Navigation */}
             <div className="tab-navigation">
               <button 
                 className={`tab-btn ${activeTab === 'details' ? 'active' : ''}`}
@@ -678,7 +1020,6 @@ const StaffComplaintSolve = () => {
               )}
             </div>
 
-            {/* Details Tab with Edit Functionality */}
             {activeTab === 'details' && (
               <div className="complaint-card">
                 <div className="card-header">
@@ -699,7 +1040,6 @@ const StaffComplaintSolve = () => {
 
                 <div className="complaint-info">
                   {!isEditMode ? (
-                    // View Mode
                     <div className="info-grid">
                       <div className="info-row">
                         <label>{t.ticketId}:</label>
@@ -750,9 +1090,20 @@ const StaffComplaintSolve = () => {
                           <span>{complaint.landmark}</span>
                         </div>
                       )}
+                      {complaint.assignedTo && (
+                        <div className="info-row">
+                          <label>{t.assignedTo}:</label>
+                          <span>{complaint.assignedTo}</span>
+                        </div>
+                      )}
+                      {complaint.assignedAt && (
+                        <div className="info-row">
+                          <label>{t.assignedAt}:</label>
+                          <span>{formatDisplayDate(complaint.assignedAt)}</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    // Edit Mode
                     <div className="edit-form">
                       <div className="edit-grid">
                         <div className="form-group">
@@ -763,6 +1114,7 @@ const StaffComplaintSolve = () => {
                             onChange={(e) => handleEditFieldChange('name', e.target.value)}
                             className="edit-input"
                             disabled={updating}
+                            placeholder={language === 'np' ? 'उजुरीकर्ताको नाम' : 'Complainant name'}
                           />
                         </div>
                         <div className="form-group">
@@ -773,6 +1125,7 @@ const StaffComplaintSolve = () => {
                             onChange={(e) => handleEditFieldChange('email', e.target.value)}
                             className="edit-input"
                             disabled={updating}
+                            placeholder="email@example.com"
                           />
                         </div>
                         <div className="form-group">
@@ -783,6 +1136,7 @@ const StaffComplaintSolve = () => {
                             onChange={(e) => handleEditFieldChange('phone', e.target.value)}
                             className="edit-input"
                             disabled={updating}
+                            placeholder={language === 'np' ? 'फोन नम्बर' : 'Phone number'}
                           />
                         </div>
                         <div className="form-group">
@@ -793,6 +1147,7 @@ const StaffComplaintSolve = () => {
                             onChange={(e) => handleEditFieldChange('address', e.target.value)}
                             className="edit-input"
                             disabled={updating}
+                            placeholder={language === 'np' ? 'ठेगाना' : 'Address'}
                           />
                         </div>
                         <div className="form-group">
@@ -803,6 +1158,7 @@ const StaffComplaintSolve = () => {
                             onChange={(e) => handleEditFieldChange('landmark', e.target.value)}
                             className="edit-input"
                             disabled={updating}
+                            placeholder={language === 'np' ? 'सन्दर्भ स्थल' : 'Landmark'}
                           />
                         </div>
                       </div>
@@ -814,6 +1170,7 @@ const StaffComplaintSolve = () => {
                           className="edit-textarea"
                           rows="4"
                           disabled={updating}
+                          placeholder={language === 'np' ? 'गुनासो विवरण लेख्नुहोस्' : 'Write complaint description'}
                         />
                       </div>
                       <div className="edit-actions">
@@ -837,7 +1194,7 @@ const StaffComplaintSolve = () => {
                         <button 
                           className="btn-save" 
                           onClick={handleUpdateComplaintData}
-                          disabled={updating || !editFields.name || !editFields.email || !editFields.phone}
+                          disabled={updating || !editFields.name.trim() || !editFields.email.trim() || !editFields.phone.trim()}
                         >
                           {updating ? t.updating : t.saveChanges}
                         </button>
@@ -855,7 +1212,6 @@ const StaffComplaintSolve = () => {
               </div>
             )}
 
-            {/* Update Tab */}
             {activeTab === 'update' && (
               <div className="update-card">
                 <div className="card-header">
@@ -956,7 +1312,6 @@ const StaffComplaintSolve = () => {
               </div>
             )}
 
-            {/* Preview Tab */}
             {activeTab === 'preview' && (
               <div className="preview-card">
                 <div className="card-header">
@@ -1032,7 +1387,6 @@ const StaffComplaintSolve = () => {
               </div>
             )}
 
-            {/* Resolution Tab */}
             {activeTab === 'resolution' && (
               <div className="resolution-card">
                 <div className="card-header">
@@ -1121,6 +1475,7 @@ const StaffComplaintSolve = () => {
       </div>
 
       <style jsx>{`
+        /* All your existing styles remain the same */
         * {
           margin: 0;
           padding: 0;
@@ -1130,10 +1485,49 @@ const StaffComplaintSolve = () => {
         .staff-complaint-solve {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          height: 100vh;
+          min-height: 100vh;
           width: 100%;
-          overflow: hidden;
+          overflow-x: hidden;
           position: relative;
+        }
+
+        .toast-notification {
+          position: fixed;
+          top: 80px;
+          right: 20px;
+          z-index: 3000;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 20px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          animation: slideInRight 0.3s ease;
+          max-width: 400px;
+          min-width: 280px;
+        }
+        
+        .toast-notification.success { border-left: 4px solid #10b981; background: #ecfdf5; }
+        .toast-notification.error { border-left: 4px solid #ef4444; background: #fef2f2; }
+        .toast-notification.warning { border-left: 4px solid #f59e0b; background: #fffbeb; }
+        .toast-notification.info { border-left: 4px solid #3b82f6; background: #eff6ff; }
+        
+        .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
+        .toast-message { font-size: 0.85rem; color: #1f2937; flex: 1; }
+        .toast-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #999;
+          font-size: 1rem;
+          padding: 0 4px;
+        }
+        .toast-close:hover { color: #666; }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
 
         .loading-container {
@@ -1141,8 +1535,10 @@ const StaffComplaintSolve = () => {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 100vh;
+          min-height: 400px;
           gap: 16px;
+          padding: 40px;
+          width: 100%;
         }
 
         .loading-spinner {
@@ -1169,6 +1565,7 @@ const StaffComplaintSolve = () => {
 
         .main-content {
           flex: 1;
+        
           width: calc(100% - 260px);
           height: 100%;
           overflow-y: auto;
@@ -1188,6 +1585,10 @@ const StaffComplaintSolve = () => {
         .main-content::-webkit-scrollbar-thumb {
           background: #0288d1;
           border-radius: 10px;
+        }
+
+        .main-content::-webkit-scrollbar-thumb:hover {
+          background: #0277bd;
         }
 
         .content-wrapper {
@@ -1235,26 +1636,33 @@ const StaffComplaintSolve = () => {
           font-weight: 500;
         }
 
+        .status-pending { background: #fef3c7; color: #d97706; }
+        .status-progress { background: #dbeafe; color: #2563eb; }
+        .status-resolved { background: #d1fae5; color: #059669; }
+        .status-review { background: #e0e7ff; color: #4f46e5; }
+
         .error-message {
-          background: #ffebee;
-          border-left: 4px solid #f44336;
+          background: #fef2f2;
+          border-left: 4px solid #ef4444;
           padding: 12px 16px;
           border-radius: 12px;
           display: flex;
           align-items: center;
           gap: 10px;
           margin-bottom: 20px;
+          color: #dc2626;
         }
 
         .success-message {
-          background: #e8f5e9;
-          border-left: 4px solid #4caf50;
+          background: #ecfdf5;
+          border-left: 4px solid #10b981;
           padding: 12px 16px;
           border-radius: 12px;
           display: flex;
           align-items: center;
           gap: 10px;
           margin-bottom: 20px;
+          color: #059669;
         }
 
         .tab-navigation {
@@ -1313,6 +1721,8 @@ const StaffComplaintSolve = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
         }
 
         .card-header h2 {
@@ -1452,7 +1862,6 @@ const StaffComplaintSolve = () => {
           color: #334155;
         }
 
-        /* Edit Form Styles */
         .edit-form {
           padding: 0;
         }
@@ -1567,6 +1976,13 @@ const StaffComplaintSolve = () => {
           border-radius: 10px;
           font-size: 0.9rem;
           background: white;
+          transition: border-color 0.2s;
+        }
+
+        .status-select:focus {
+          outline: none;
+          border-color: #0288d1;
+          box-shadow: 0 0 0 3px rgba(2, 136, 209, 0.1);
         }
 
         .form-group textarea {
@@ -1577,12 +1993,13 @@ const StaffComplaintSolve = () => {
           font-size: 0.9rem;
           font-family: inherit;
           resize: vertical;
+          transition: border-color 0.2s;
         }
 
-        .form-group textarea:focus,
-        .status-select:focus {
+        .form-group textarea:focus {
           outline: none;
           border-color: #0288d1;
+          box-shadow: 0 0 0 3px rgba(2, 136, 209, 0.1);
         }
 
         .field-error {
@@ -1627,6 +2044,13 @@ const StaffComplaintSolve = () => {
           border: 1px solid #e2e8f0;
           border-radius: 10px;
           font-size: 0.9rem;
+          transition: border-color 0.2s;
+        }
+
+        .date-input:focus {
+          outline: none;
+          border-color: #0288d1;
+          box-shadow: 0 0 0 3px rgba(2, 136, 209, 0.1);
         }
 
         .action-buttons {
@@ -1699,6 +2123,7 @@ const StaffComplaintSolve = () => {
           border: 1px solid #e2e8f0;
           background: white;
           color: #475569;
+          transition: all 0.2s;
         }
 
         .btn-edit:hover {
@@ -1715,6 +2140,7 @@ const StaffComplaintSolve = () => {
           border: none;
           background: linear-gradient(135deg, #0288d1, #0277bd);
           color: white;
+          transition: all 0.2s;
         }
 
         .btn-submit:hover:not(:disabled) {
@@ -1727,7 +2153,6 @@ const StaffComplaintSolve = () => {
           cursor: not-allowed;
         }
 
-        /* Resolution Tab Styles */
         .current-resolution {
           margin-bottom: 24px;
         }
@@ -1847,6 +2272,7 @@ const StaffComplaintSolve = () => {
           border: none;
           background: linear-gradient(135deg, #0288d1, #0277bd);
           color: white;
+          transition: all 0.2s;
         }
 
         .btn-go-update:hover {
@@ -1855,9 +2281,22 @@ const StaffComplaintSolve = () => {
         }
 
         @media (max-width: 768px) {
+          .staff-complaint-solve {
+            height: auto;
+            overflow: auto;
+          }
+          
+          .dashboard-layout {
+            flex-direction: column;
+            height: auto;
+            margin-top: 150px;
+            overflow: visible;
+          }
+          
           .main-content {
             margin-left: 0;
             width: 100%;
+            overflow-y: visible;
           }
           
           .content-wrapper {
@@ -1906,6 +2345,35 @@ const StaffComplaintSolve = () => {
             flex-direction: column;
             align-items: flex-start;
             gap: 8px;
+          }
+
+          .toast-notification {
+            top: auto;
+            bottom: 20px;
+            right: 20px;
+            left: 20px;
+            max-width: calc(100% - 40px);
+            min-width: auto;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .content-wrapper {
+            padding: 12px;
+          }
+          
+          .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          
+          .tab-navigation {
+            flex-direction: column;
+          }
+          
+          .tab-btn {
+            width: 100%;
+            text-align: center;
           }
         }
       `}</style>
