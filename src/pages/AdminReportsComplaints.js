@@ -30,6 +30,7 @@ const AdminReportsComplaints = () => {
 
   // Format number with Nepali digits
   const formatNumber = (num) => {
+    if (num === undefined || num === null) return '०';
     if (language === 'np') {
       const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
       return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
@@ -37,7 +38,7 @@ const AdminReportsComplaints = () => {
     return num.toString();
   };
 
-  // Enhanced sample report data with more user details
+  // Report data
   const [reportData, setReportData] = useState({
     summary: {
       totalComplaints: 1247,
@@ -51,245 +52,195 @@ const AdminReportsComplaints = () => {
       growth: 9.8
     },
     categoryBreakdown: [
-      { name: 'इन्टरनेट', enName: 'Internet', count: 425, percentage: 34.1 },
-      { name: 'बिलिङ', enName: 'Billing', count: 312, percentage: 25.0 },
-      { name: 'नेटवर्क', enName: 'Network', count: 198, percentage: 15.9 },
-      { name: 'रिचार्ज', enName: 'Recharge', count: 156, percentage: 12.5 },
-      { name: 'प्राविधिक', enName: 'Technical', count: 98, percentage: 7.9 },
-      { name: 'सक्रियता', enName: 'Activation', count: 58, percentage: 4.6 }
+      { name: 'Internet', count: 425, percentage: 34.1 },
+      { name: 'Billing', count: 312, percentage: 25.0 },
+      { name: 'Network', count: 198, percentage: 15.9 },
+      { name: 'Recharge', count: 156, percentage: 12.5 },
+      { name: 'Technical', count: 98, percentage: 7.9 },
+      { name: 'Activation', count: 58, percentage: 4.6 }
     ],
     statusBreakdown: [
-      { name: 'समाधान', enName: 'Resolved', count: 749, percentage: 60.1 },
-      { name: 'विचाराधीन', enName: 'Pending', count: 342, percentage: 27.4 },
-      { name: 'प्रगतिमा', enName: 'In Progress', count: 156, percentage: 12.5 }
+      { name: 'Resolved', count: 749, percentage: 60.1 },
+      { name: 'Pending', count: 342, percentage: 27.4 },
+      { name: 'In Progress', count: 156, percentage: 12.5 }
     ],
     priorityBreakdown: [
-      { name: 'उच्च', enName: 'High', count: 423, percentage: 33.9 },
-      { name: 'मध्यम', enName: 'Medium', count: 589, percentage: 47.2 },
-      { name: 'न्यून', enName: 'Low', count: 235, percentage: 18.9 }
+      { name: 'High', count: 423, percentage: 33.9 },
+      { name: 'Medium', count: 589, percentage: 47.2 },
+      { name: 'Low', count: 235, percentage: 18.9 }
     ],
     monthlyTrend: [
-      { month: 'जनवरी', enMonth: 'January', count: 95 },
-      { month: 'फेब्रुअरी', enMonth: 'February', count: 102 },
-      { month: 'मार्च', enMonth: 'March', count: 118 },
-      { month: 'अप्रिल', enMonth: 'April', count: 125 },
-      { month: 'मे', enMonth: 'May', count: 132 },
-      { month: 'जुन', enMonth: 'June', count: 145 },
-      { month: 'जुलाई', enMonth: 'July', count: 158 },
-      { month: 'अगस्ट', enMonth: 'August', count: 167 },
-      { month: 'सेप्टेम्बर', enMonth: 'September', count: 175 },
-      { month: 'अक्टोबर', enMonth: 'October', count: 182 },
-      { month: 'नोभेम्बर', enMonth: 'November', count: 190 },
-      { month: 'डिसेम्बर', enMonth: 'December', count: 198 }
+      { month: 'Jan', count: 95 },
+      { month: 'Feb', count: 102 },
+      { month: 'Mar', count: 118 },
+      { month: 'Apr', count: 125 },
+      { month: 'May', count: 132 },
+      { month: 'Jun', count: 145 },
+      { month: 'Jul', count: 158 },
+      { month: 'Aug', count: 167 },
+      { month: 'Sep', count: 175 },
+      { month: 'Oct', count: 182 },
+      { month: 'Nov', count: 190 },
+      { month: 'Dec', count: 198 }
     ],
     allComplaints: [
       { 
         id: 1, 
         ticketId: 'NTC-2024-001', 
-        name: 'रमेश केसी', 
-        enName: 'Ramesh KC',
+        name: 'Ramesh KC', 
         phone: '9841234567',
         email: 'ramesh.kc@example.com',
-        location: 'काठमाडौं',
-        enLocation: 'Kathmandu',
+        location: 'Kathmandu',
         category: 'internet', 
-        date: '२०८०-०१-१५', 
-        enDate: '2024-01-15', 
+        date: '2024-01-15', 
         status: 'in-progress', 
         priority: 'high',
-        description: 'इन्टरनेट जडानमा समस्या',
-        enDescription: 'Internet connection issue',
-        assignedTo: 'प्राविधिक टोली',
-        enAssignedTo: 'Technical Team',
+        description: 'Internet connection issue',
+        assignedTo: 'Technical Team',
         channel: 'website'
       },
       { 
         id: 2, 
         ticketId: 'NTC-2024-002', 
-        name: 'सीता शर्मा', 
-        enName: 'Sita Sharma',
+        name: 'Sita Sharma', 
         phone: '9842345678',
         email: 'sita.sharma@example.com',
-        location: 'ललितपुर',
-        enLocation: 'Lalitpur',
+        location: 'Lalitpur',
         category: 'recharge', 
-        date: '२०८०-०१-१८', 
-        enDate: '2024-01-18', 
+        date: '2024-01-18', 
         status: 'resolved', 
         priority: 'medium',
-        description: 'रिचार्ज नभएको',
-        enDescription: 'Recharge not credited',
-        assignedTo: 'ग्राहक सहायता',
-        enAssignedTo: 'Customer Support',
+        description: 'Recharge not credited',
+        assignedTo: 'Customer Support',
         channel: 'phone'
       },
       { 
         id: 3, 
         ticketId: 'NTC-2024-003', 
-        name: 'हरि प्रसाद', 
-        enName: 'Hari Prasad',
+        name: 'Hari Prasad', 
         phone: '9843456789',
         email: 'hari.prasad@example.com',
-        location: 'भक्तपुर',
-        enLocation: 'Bhaktapur',
+        location: 'Bhaktapur',
         category: 'activation', 
-        date: '२०८०-०१-२०', 
-        enDate: '2024-01-20', 
+        date: '2024-01-20', 
         status: 'pending', 
         priority: 'low',
-        description: 'सिम सक्रियता हुन सकेन',
-        enDescription: 'SIM activation failed',
-        assignedTo: 'प्रशासन',
-        enAssignedTo: 'Administration',
+        description: 'SIM activation failed',
+        assignedTo: 'Administration',
         channel: 'whatsapp'
       },
       { 
         id: 4, 
         ticketId: 'NTC-2024-004', 
-        name: 'गीता अधिकारी', 
-        enName: 'Gita Adhikari',
+        name: 'Gita Adhikari', 
         phone: '9844567890',
         email: 'gita.adhikari@example.com',
-        location: 'पोखरा',
-        enLocation: 'Pokhara',
+        location: 'Pokhara',
         category: 'billing', 
-        date: '२०८०-०१-२२', 
-        enDate: '2024-01-22', 
+        date: '2024-01-22', 
         status: 'pending', 
         priority: 'high',
-        description: 'बिलमा त्रुटि भएको',
-        enDescription: 'Billing error',
-        assignedTo: 'बिलिङ विभाग',
-        enAssignedTo: 'Billing Department',
+        description: 'Billing error',
+        assignedTo: 'Billing Department',
         channel: 'email'
       },
       { 
         id: 5, 
         ticketId: 'NTC-2024-005', 
-        name: 'विकास न्यौपाने', 
-        enName: 'Bikas Neupane',
+        name: 'Bikas Neupane', 
         phone: '9845678901',
         email: 'bikas.neupane@example.com',
-        location: 'बुटवल',
-        enLocation: 'Butwal',
+        location: 'Butwal',
         category: 'network', 
-        date: '२०८०-०१-२५', 
-        enDate: '2024-01-25', 
+        date: '2024-01-25', 
         status: 'in-progress', 
         priority: 'medium',
-        description: 'नेटवर्क कभरेज नभएको',
-        enDescription: 'No network coverage',
-        assignedTo: 'नेटवर्क टोली',
-        enAssignedTo: 'Network Team',
+        description: 'No network coverage',
+        assignedTo: 'Network Team',
         channel: 'facebook'
       },
       { 
         id: 6, 
         ticketId: 'NTC-2024-006', 
-        name: 'मिना बस्नेत', 
-        enName: 'Mina Basnet',
+        name: 'Mina Basnet', 
         phone: '9846789012',
         email: 'mina.basnet@example.com',
-        location: 'धरान',
-        enLocation: 'Dharan',
+        location: 'Dharan',
         category: 'technical', 
-        date: '२०८०-०१-२८', 
-        enDate: '2024-01-28', 
+        date: '2024-01-28', 
         status: 'resolved', 
         priority: 'high',
-        description: 'प्राविधिक सहायता आवश्यक',
-        enDescription: 'Technical assistance needed',
-        assignedTo: 'प्राविधिक सहायता',
-        enAssignedTo: 'Tech Support',
+        description: 'Technical assistance needed',
+        assignedTo: 'Tech Support',
         channel: 'website'
       },
       { 
         id: 7, 
         ticketId: 'NTC-2024-007', 
-        name: 'सुरज थापा', 
-        enName: 'Suraj Thapa',
+        name: 'Suraj Thapa', 
         phone: '9847890123',
         email: 'suraj.thapa@example.com',
-        location: 'हेटौंडा',
-        enLocation: 'Hetauda',
+        location: 'Hetauda',
         category: 'internet', 
-        date: '२०८०-०१-३०', 
-        enDate: '2024-01-30', 
+        date: '2024-01-30', 
         status: 'pending', 
         priority: 'medium',
-        description: 'इन्टरनेट गति सुस्त',
-        enDescription: 'Slow internet speed',
-        assignedTo: 'आईपी कोर टोली',
-        enAssignedTo: 'IP Core Team',
+        description: 'Slow internet speed',
+        assignedTo: 'IP Core Team',
         channel: 'phone'
       },
       { 
         id: 8, 
         ticketId: 'NTC-2024-008', 
-        name: 'अन्जना कार्की', 
-        enName: 'Anjana Karki',
+        name: 'Anjana Karki', 
         phone: '9848901234',
         email: 'anjana.karki@example.com',
-        location: 'विराटनगर',
-        enLocation: 'Biratnagar',
+        location: 'Biratnagar',
         category: 'billing', 
-        date: '२०८०-०२-०२', 
-        enDate: '2024-02-02', 
+        date: '2024-02-02', 
         status: 'in-progress', 
         priority: 'high',
-        description: 'दोहोरो बिल कटौती',
-        enDescription: 'Double billing deduction',
-        assignedTo: 'वित्त विभाग',
-        enAssignedTo: 'Finance Department',
+        description: 'Double billing deduction',
+        assignedTo: 'Finance Department',
         channel: 'whatsapp'
       },
       { 
         id: 9, 
         ticketId: 'NTC-2024-009', 
-        name: 'राजन पौडेल', 
-        enName: 'Rajan Paudel',
+        name: 'Rajan Paudel', 
         phone: '9849012345',
         email: 'rajan.paudel@example.com',
-        location: 'नेपालगन्ज',
-        enLocation: 'Nepalgunj',
+        location: 'Nepalgunj',
         category: 'network', 
-        date: '२०८०-०२-०५', 
-        enDate: '2024-02-05', 
+        date: '2024-02-05', 
         status: 'resolved', 
         priority: 'low',
-        description: 'नेटवर्क ड्रप हुने समस्या',
-        enDescription: 'Network dropping issue',
-        assignedTo: 'नेटवर्क टोली',
-        enAssignedTo: 'Network Team',
+        description: 'Network dropping issue',
+        assignedTo: 'Network Team',
         channel: 'email'
       },
       { 
         id: 10, 
         ticketId: 'NTC-2024-010', 
-        name: 'सम्झना लामिछाने', 
-        enName: 'Samjhana Lamichhane',
+        name: 'Samjhana Lamichhane', 
         phone: '9850123456',
         email: 'samjhana.l@example.com',
-        location: 'चितवन',
-        enLocation: 'Chitwan',
+        location: 'Chitwan',
         category: 'technical', 
-        date: '२०८०-०२-०८', 
-        enDate: '2024-02-08', 
+        date: '2024-02-08', 
         status: 'in-progress', 
         priority: 'high',
-        description: 'फोनमा आवाज नआउने',
-        enDescription: 'No voice on phone',
-        assignedTo: 'प्राविधिक सहायता',
-        enAssignedTo: 'Tech Support',
+        description: 'No voice on phone',
+        assignedTo: 'Tech Support',
         channel: 'facebook'
       }
     ],
     channelBreakdown: [
-      { name: 'वेबसाइट पोर्टल', enName: 'Website Portal', count: 587, percentage: 47.1 },
-      { name: 'फोन', enName: 'Phone', count: 234, percentage: 18.8 },
-      { name: 'व्हाट्सएप', enName: 'WhatsApp', count: 189, percentage: 15.2 },
-      { name: 'इमेल', enName: 'Email', count: 145, percentage: 11.6 },
-      { name: 'फेसबुक', enName: 'Facebook', count: 92, percentage: 7.3 }
+      { name: 'Website Portal', count: 587, percentage: 47.1 },
+      { name: 'Phone', count: 234, percentage: 18.8 },
+      { name: 'WhatsApp', count: 189, percentage: 15.2 },
+      { name: 'Email', count: 145, percentage: 11.6 },
+      { name: 'Facebook', count: 92, percentage: 7.3 }
     ]
   });
 
@@ -368,24 +319,6 @@ const AdminReportsComplaints = () => {
     return priorities[language][priority] || priority;
   };
 
-  const getMonthText = (month) => {
-    const months = {
-      np: {
-        'January': 'जनवरी', 'February': 'फेब्रुअरी', 'March': 'मार्च',
-        'April': 'अप्रिल', 'May': 'मे', 'June': 'जुन',
-        'July': 'जुलाई', 'August': 'अगस्ट', 'September': 'सेप्टेम्बर',
-        'October': 'अक्टोबर', 'November': 'नोभेम्बर', 'December': 'डिसेम्बर'
-      },
-      en: {
-        'जनवरी': 'January', 'फेब्रुअरी': 'February', 'मार्च': 'March',
-        'अप्रिल': 'April', 'मे': 'May', 'जुन': 'June',
-        'जुलाई': 'July', 'अगस्ट': 'August', 'सेप्टेम्बर': 'September',
-        'अक्टोबर': 'October', 'नोभेम्बर': 'November', 'डिसेम्बर': 'December'
-      }
-    };
-    return months[language][month] || month;
-  };
-
   // ===== EXPORT FUNCTIONS =====
 
   // Generate CSV/Excel data
@@ -395,16 +328,16 @@ const AdminReportsComplaints = () => {
     
     return complaints.map(c => ({
       [isNepali ? 'टिकट नं.' : 'Ticket ID']: c.ticketId,
-      [isNepali ? 'उजुरीकर्ता' : 'Complainant']: isNepali ? c.name : c.enName,
+      [isNepali ? 'उजुरीकर्ता' : 'Complainant']: isNepali ? c.name : c.name,
       [isNepali ? 'फोन नं.' : 'Phone']: c.phone,
       [isNepali ? 'इमेल' : 'Email']: c.email,
-      [isNepali ? 'स्थान' : 'Location']: isNepali ? c.location : c.enLocation,
+      [isNepali ? 'स्थान' : 'Location']: isNepali ? c.location : c.location,
       [isNepali ? 'प्रकार' : 'Category']: getCategoryText(c.category),
-      [isNepali ? 'मिति' : 'Date']: isNepali ? c.date : c.enDate,
+      [isNepali ? 'मिति' : 'Date']: isNepali ? c.date : c.date,
       [isNepali ? 'स्थिति' : 'Status']: getStatusText(c.status),
       [isNepali ? 'प्राथमिकता' : 'Priority']: getPriorityText(c.priority),
-      [isNepali ? 'विवरण' : 'Description']: isNepali ? c.description : c.enDescription,
-      [isNepali ? 'जिम्मेवार' : 'Assigned To']: isNepali ? c.assignedTo : c.enAssignedTo,
+      [isNepali ? 'विवरण' : 'Description']: isNepali ? c.description : c.description,
+      [isNepali ? 'जिम्मेवार' : 'Assigned To']: isNepali ? c.assignedTo : c.assignedTo,
       [isNepali ? 'च्यानल' : 'Channel']: c.channel
     }));
   };
@@ -414,7 +347,6 @@ const AdminReportsComplaints = () => {
     const isNepali = language === 'np';
     const data = [];
     
-    // Add summary stats
     data.push({ 
       [isNepali ? 'विवरण' : 'Description']: isNepali ? 'सारांश रिपोर्ट' : 'Summary Report',
       [isNepali ? 'मान' : 'Value']: ''
@@ -452,20 +384,7 @@ const AdminReportsComplaints = () => {
     });
     reportData.categoryBreakdown.forEach(item => {
       data.push({ 
-        [isNepali ? 'विवरण' : 'Description']: isNepali ? item.name : item.enName,
-        [isNepali ? 'मान' : 'Value']: `${item.count} (${item.percentage}%)`
-      });
-    });
-    
-    // Add status breakdown
-    data.push({ [isNepali ? 'विवरण' : 'Description']: '', [isNepali ? 'मान' : 'Value']: '' });
-    data.push({ 
-      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'स्थिति अनुसार विभाजन' : 'Status Breakdown',
-      [isNepali ? 'मान' : 'Value']: ''
-    });
-    reportData.statusBreakdown.forEach(item => {
-      data.push({ 
-        [isNepali ? 'विवरण' : 'Description']: isNepali ? item.name : item.enName,
+        [isNepali ? 'विवरण' : 'Description']: isNepali ? item.name : item.name,
         [isNepali ? 'मान' : 'Value']: `${item.count} (${item.percentage}%)`
       });
     });
@@ -478,437 +397,316 @@ const AdminReportsComplaints = () => {
     setIsExporting(true);
     showToast(t.excelExport, 'info');
     
-    try {
-      let exportData;
-      let sheetName;
-      
-      if (activeTab === 'overview') {
-        exportData = generateSummaryData();
-        sheetName = language === 'np' ? 'सारांश' : 'Summary';
-      } else {
-        exportData = generateExportData();
-        sheetName = language === 'np' ? 'गुनासोहरू' : 'Complaints';
-      }
-      
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(exportData);
-      
-      // Auto column widths
-      const colWidths = Object.keys(exportData[0] || {}).map(key => ({
-        wch: Math.max(key.length, 20)
-      }));
-      ws['!cols'] = colWidths;
-      
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-      
-      // Create filename
-      const date = new Date();
-      const dateStr = date.toISOString().split('T')[0];
-      const filename = `complaints_report_${dateStr}.xlsx`;
-      
-      // Save file
-      XLSX.writeFile(wb, filename);
-      
-      setTimeout(() => {
-        showToast(language === 'np' ? 'एक्सेल फाइल सफलतापूर्वक डाउनलोड भयो' : 'Excel file downloaded successfully', 'success');
+    setTimeout(() => {
+      try {
+        let exportData;
+        let sheetName;
+        
+        if (activeTab === 'overview') {
+          exportData = generateSummaryData();
+          sheetName = language === 'np' ? 'सारांश' : 'Summary';
+        } else {
+          exportData = generateExportData();
+          sheetName = language === 'np' ? 'गुनासोहरू' : 'Complaints';
+        }
+        
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        
+        const date = new Date();
+        const dateStr = date.toISOString().split('T')[0];
+        const filename = `complaints_report_${dateStr}.xlsx`;
+        
+        XLSX.writeFile(wb, filename);
+        
+        showToast(language === 'np' ? '✅ एक्सेल फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ Excel file downloaded successfully', 'success');
         setIsExporting(false);
-      }, 1000);
-      
-    } catch (error) {
-      console.error('Excel export error:', error);
-      showToast(language === 'np' ? 'एक्सेल निर्यात गर्न असफल' : 'Failed to export Excel', 'error');
-      setIsExporting(false);
-    }
+      } catch (error) {
+        console.error('Excel export error:', error);
+        showToast(language === 'np' ? '❌ एक्सेल निर्यात गर्न असफल' : '❌ Failed to export Excel', 'error');
+        setIsExporting(false);
+      }
+    }, 500);
   };
 
-  // Export to PDF with proper handling
+  // ===== FIXED PDF EXPORT FUNCTION - Using English for proper display =====
   const handleExportPDF = () => {
+    if (isExporting) return;
+    
     setIsExporting(true);
     showToast(t.pdfExport, 'info');
     
-    // Use setTimeout to allow UI to update before PDF generation
-    setTimeout(() => {
-      try {
-        const isNepali = language === 'np';
+    try {
+      const now = new Date();
+      
+      // Create PDF with proper settings - Use English for clean display
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+      
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // ===== HEADER =====
+      doc.setFillColor(13, 71, 161);
+      doc.rect(0, 0, pageWidth, 30, 'F');
+      
+      // Title - Use English for clean PDF
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Complaints Report', pageWidth / 2, 18, { align: 'center' });
+      
+      // Date
+      doc.setTextColor(200, 200, 200);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      const dateStr = now.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      doc.text(`Date: ${dateStr}`, pageWidth - 14, 24, { align: 'right' });
+      
+      let yPosition = 38;
+      
+      // ===== SUMMARY CARDS =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Overall Overview', 14, yPosition);
+      yPosition += 8;
+      
+      // Summary cards in 3x2 grid
+      const summaryData = [
+        { label: 'Total Complaints', value: reportData.summary.totalComplaints },
+        { label: 'Pending', value: reportData.summary.pendingComplaints },
+        { label: 'In Progress', value: reportData.summary.inProgressComplaints },
+        { label: 'Resolved', value: reportData.summary.resolvedComplaints },
+        { label: 'Avg Resolution Days', value: `${reportData.summary.avgResolutionDays} days` },
+        { label: 'Satisfaction Rate', value: `${reportData.summary.satisfactionRate}%` }
+      ];
+      
+      const cardWidth = (pageWidth - 40) / 3;
+      const cardHeight = 22;
+      
+      // Draw summary cards
+      summaryData.forEach((item, index) => {
+        const col = index % 3;
+        const row = Math.floor(index / 3);
+        const x = 14 + col * (cardWidth + 5);
+        const y = yPosition + row * (cardHeight + 5);
         
-        // Create PDF with proper settings
-        const doc = new jsPDF({
-          orientation: 'landscape',
-          unit: 'mm',
-          format: 'a4',
-          compress: true
-        });
+        // Card background
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(x, y, cardWidth, cardHeight, 3, 3, 'F');
+        doc.setDrawColor(229, 231, 235);
+        doc.roundedRect(x, y, cardWidth, cardHeight, 3, 3, 'S');
         
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        
-        // Add header with gradient effect
-        doc.setFillColor(13, 71, 161);
-        doc.rect(0, 0, pageWidth, 25, 'F');
-        
-        // Add title
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(16);
+        // Card value
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        const title = isNepali ? 'गुनासो रिपोर्ट' : 'Complaints Report';
-        doc.text(title, pageWidth / 2, 16, { align: 'center' });
+        doc.text(String(item.value), x + 8, y + 12);
         
-        // Add date and time
-        doc.setTextColor(200, 200, 200);
-        doc.setFontSize(8);
+        // Card label
+        doc.setTextColor(100, 116, 139);
+        doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
-        const dateStr = new Date().toLocaleString(isNepali ? 'ne-NP' : 'en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
+        doc.text(item.label, x + 8, y + 19);
+      });
+      
+      yPosition += (2 * (cardHeight + 5)) + 10;
+      
+      // ===== FILTERS SECTION =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Filters', 14, yPosition);
+      yPosition += 7;
+      
+      // Filter values
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      
+      const filters = [
+        `Date Range: ${dateRange === 'month' ? 'This Month' : dateRange}`,
+        `Report Type: ${reportType === 'summary' ? 'Summary' : reportType}`,
+        `Category: ${selectedCategory === 'all' ? 'All' : getCategoryText(selectedCategory)}`,
+        `Status: ${selectedStatus === 'all' ? 'All' : getStatusText(selectedStatus)}`,
+        `Priority: ${selectedPriority === 'all' ? 'All' : getPriorityText(selectedPriority)}`
+      ];
+      
+      const filterText = filters.join('  |  ');
+      doc.text(filterText, 14, yPosition + 4);
+      yPosition += 14;
+      
+      // ===== COMPLAINTS TABLE =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('All Complaints', 14, yPosition);
+      yPosition += 6;
+      
+      // Show count
+      doc.setTextColor(71, 85, 105);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Total: ${filteredComplaints.length} complaints`, 14, yPosition);
+      yPosition += 5;
+      
+      // Table headers
+      const tableHeaders = [
+        'Ticket',
+        'Complainant',
+        'Phone',
+        'Category',
+        'Date',
+        'Status',
+        'Priority',
+        'Assigned'
+      ];
+      
+      // Prepare table rows (limit to first 10 for PDF)
+      const tableRows = filteredComplaints.slice(0, 10).map(c => [
+        c.ticketId,
+        c.name,
+        c.phone,
+        getCategoryText(c.category),
+        c.date,
+        getStatusText(c.status),
+        getPriorityText(c.priority),
+        c.assignedTo
+      ]);
+      
+      if (tableRows.length > 0) {
+        doc.autoTable({
+          startY: yPosition,
+          head: [tableHeaders],
+          body: tableRows,
+          theme: 'striped',
+          styles: { 
+            fontSize: 7,
+            cellPadding: 2.5,
+            overflow: 'linebreak',
+            font: 'helvetica'
+          },
+          headStyles: { 
+            fillColor: [13, 71, 161], 
+            textColor: [255, 255, 255],
+            fontSize: 7.5,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [248, 250, 255] },
+          margin: { left: 14, right: 14 },
+          pageBreak: 'auto',
+          columnStyles: {
+            0: { cellWidth: 22 },
+            1: { cellWidth: 28 },
+            2: { cellWidth: 22 },
+            3: { cellWidth: 22 },
+            4: { cellWidth: 20 },
+            5: { cellWidth: 22 },
+            6: { cellWidth: 20 },
+            7: { cellWidth: 28 }
+          }
         });
-        doc.text(`${isNepali ? 'मिति' : 'Date'}: ${dateStr}`, pageWidth - 14, 20, { align: 'right' });
         
-        let yPosition = 32;
+        yPosition = doc.lastAutoTable.finalY + 8;
         
-        if (activeTab === 'overview') {
-          // ===== SUMMARY SECTION =====
-          doc.setTextColor(13, 71, 161);
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text(isNepali ? 'सारांश' : 'Summary', 14, yPosition);
-          yPosition += 6;
-          
-          // Summary data table
-          const summaryHeaders = [
-            isNepali ? 'विवरण' : 'Description',
-            isNepali ? 'मान' : 'Value'
-          ];
-          const summaryRows = [
-            [isNepali ? 'कुल गुनासो' : 'Total Complaints', String(reportData.summary.totalComplaints)],
-            [isNepali ? 'विचाराधीन' : 'Pending', String(reportData.summary.pendingComplaints)],
-            [isNepali ? 'प्रगतिमा' : 'In Progress', String(reportData.summary.inProgressComplaints)],
-            [isNepali ? 'समाधान' : 'Resolved', String(reportData.summary.resolvedComplaints)],
-            [isNepali ? 'औसत समाधान दिन' : 'Avg Resolution Days', String(reportData.summary.avgResolutionDays)],
-            [isNepali ? 'सन्तुष्टि दर' : 'Satisfaction Rate', `${reportData.summary.satisfactionRate}%`]
-          ];
-          
-          doc.autoTable({
-            startY: yPosition,
-            head: [summaryHeaders],
-            body: summaryRows,
-            theme: 'striped',
-            styles: { 
-              fontSize: 8,
-              cellPadding: 3,
-              overflow: 'linebreak',
-              font: 'helvetica'
-            },
-            headStyles: { 
-              fillColor: [13, 71, 161], 
-              textColor: [255, 255, 255],
-              fontSize: 9,
-              fontStyle: 'bold'
-            },
-            alternateRowStyles: { fillColor: [240, 245, 255] },
-            margin: { left: 14, right: 14 },
-            columnStyles: {
-              0: { cellWidth: 80 },
-              1: { cellWidth: 40, halign: 'right' }
-            }
-          });
-          
-          yPosition = doc.lastAutoTable.finalY + 8;
-          
-          // ===== CATEGORY BREAKDOWN =====
-          doc.setTextColor(13, 71, 161);
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text(isNepali ? 'प्रकार अनुसार विभाजन' : 'Category Breakdown', 14, yPosition);
-          yPosition += 6;
-          
-          const categoryHeaders = [
-            isNepali ? 'प्रकार' : 'Category',
-            isNepali ? 'संख्या' : 'Count',
-            isNepali ? 'प्रतिशत' : 'Percentage'
-          ];
-          const categoryRows = reportData.categoryBreakdown.map(item => [
-            isNepali ? item.name : item.enName,
-            String(item.count),
-            `${item.percentage}%`
-          ]);
-          
-          doc.autoTable({
-            startY: yPosition,
-            head: [categoryHeaders],
-            body: categoryRows,
-            theme: 'striped',
-            styles: { 
-              fontSize: 8,
-              cellPadding: 3,
-              font: 'helvetica'
-            },
-            headStyles: { 
-              fillColor: [13, 71, 161], 
-              textColor: [255, 255, 255],
-              fontSize: 9,
-              fontStyle: 'bold'
-            },
-            alternateRowStyles: { fillColor: [240, 245, 255] },
-            margin: { left: 14, right: 14 },
-            columnStyles: {
-              2: { halign: 'right' }
-            }
-          });
-          
-          yPosition = doc.lastAutoTable.finalY + 8;
-          
-          // ===== STATUS BREAKDOWN =====
-          doc.setTextColor(13, 71, 161);
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text(isNepali ? 'स्थिति अनुसार विभाजन' : 'Status Breakdown', 14, yPosition);
-          yPosition += 6;
-          
-          const statusHeaders = [
-            isNepali ? 'स्थिति' : 'Status',
-            isNepali ? 'संख्या' : 'Count',
-            isNepali ? 'प्रतिशत' : 'Percentage'
-          ];
-          const statusRows = reportData.statusBreakdown.map(item => [
-            isNepali ? item.name : item.enName,
-            String(item.count),
-            `${item.percentage}%`
-          ]);
-          
-          doc.autoTable({
-            startY: yPosition,
-            head: [statusHeaders],
-            body: statusRows,
-            theme: 'striped',
-            styles: { 
-              fontSize: 8,
-              cellPadding: 3,
-              font: 'helvetica'
-            },
-            headStyles: { 
-              fillColor: [13, 71, 161], 
-              textColor: [255, 255, 255],
-              fontSize: 9,
-              fontStyle: 'bold'
-            },
-            alternateRowStyles: { fillColor: [240, 245, 255] },
-            margin: { left: 14, right: 14 },
-            columnStyles: {
-              2: { halign: 'right' }
-            }
-          });
-          
-          yPosition = doc.lastAutoTable.finalY + 8;
-          
-          // ===== PRIORITY BREAKDOWN =====
-          doc.setTextColor(13, 71, 161);
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text(isNepali ? 'प्राथमिकता अनुसार विभाजन' : 'Priority Breakdown', 14, yPosition);
-          yPosition += 6;
-          
-          const priorityHeaders = [
-            isNepali ? 'प्राथमिकता' : 'Priority',
-            isNepali ? 'संख्या' : 'Count',
-            isNepali ? 'प्रतिशत' : 'Percentage'
-          ];
-          const priorityRows = reportData.priorityBreakdown.map(item => [
-            isNepali ? item.name : item.enName,
-            String(item.count),
-            `${item.percentage}%`
-          ]);
-          
-          doc.autoTable({
-            startY: yPosition,
-            head: [priorityHeaders],
-            body: priorityRows,
-            theme: 'striped',
-            styles: { 
-              fontSize: 8,
-              cellPadding: 3,
-              font: 'helvetica'
-            },
-            headStyles: { 
-              fillColor: [13, 71, 161], 
-              textColor: [255, 255, 255],
-              fontSize: 9,
-              fontStyle: 'bold'
-            },
-            alternateRowStyles: { fillColor: [240, 245, 255] },
-            margin: { left: 14, right: 14 },
-            columnStyles: {
-              2: { halign: 'right' }
-            }
-          });
-          
-          yPosition = doc.lastAutoTable.finalY + 8;
-          
-          // ===== CHANNEL BREAKDOWN =====
-          doc.setTextColor(13, 71, 161);
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text(isNepali ? 'च्यानल अनुसार विभाजन' : 'Channel Breakdown', 14, yPosition);
-          yPosition += 6;
-          
-          const channelHeaders = [
-            isNepali ? 'च्यानल' : 'Channel',
-            isNepali ? 'संख्या' : 'Count',
-            isNepali ? 'प्रतिशत' : 'Percentage'
-          ];
-          const channelRows = reportData.channelBreakdown.map(item => [
-            isNepali ? item.name : item.enName,
-            String(item.count),
-            `${item.percentage}%`
-          ]);
-          
-          doc.autoTable({
-            startY: yPosition,
-            head: [channelHeaders],
-            body: channelRows,
-            theme: 'striped',
-            styles: { 
-              fontSize: 8,
-              cellPadding: 3,
-              font: 'helvetica'
-            },
-            headStyles: { 
-              fillColor: [13, 71, 161], 
-              textColor: [255, 255, 255],
-              fontSize: 9,
-              fontStyle: 'bold'
-            },
-            alternateRowStyles: { fillColor: [240, 245, 255] },
-            margin: { left: 14, right: 14 },
-            columnStyles: {
-              2: { halign: 'right' }
-            }
-          });
-          
-        } else {
-          // ===== COMPLAINTS DETAILS =====
-          doc.setTextColor(13, 71, 161);
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text(isNepali ? 'गुनासो विवरण' : 'Complaint Details', 14, yPosition);
-          yPosition += 6;
-          
-          // Show filter info
-          doc.setTextColor(100, 100, 100);
-          doc.setFontSize(8);
+        // Show if more records exist
+        if (filteredComplaints.length > 10) {
+          doc.setTextColor(150, 150, 150);
+          doc.setFontSize(7);
           doc.setFont('helvetica', 'italic');
-          let filterInfo = '';
-          if (selectedCategory !== 'all') filterInfo += `${isNepali ? 'प्रकार' : 'Category'}: ${getCategoryText(selectedCategory)} `;
-          if (selectedStatus !== 'all') filterInfo += `${isNepali ? 'स्थिति' : 'Status'}: ${getStatusText(selectedStatus)} `;
-          if (selectedPriority !== 'all') filterInfo += `${isNepali ? 'प्राथमिकता' : 'Priority'}: ${getPriorityText(selectedPriority)} `;
-          if (filterInfo) {
-            doc.text(`${isNepali ? 'फिल्टर' : 'Filter'}: ${filterInfo}`, 14, yPosition);
-            yPosition += 5;
-          }
-          doc.text(`${isNepali ? 'कुल' : 'Total'}: ${filteredComplaints.length} ${isNepali ? 'गुनासोहरू' : 'complaints'}`, 14, yPosition);
-          yPosition += 6;
-          
-          // Complaint details table
-          const complaintHeaders = [
-            isNepali ? 'टिकट नं.' : 'Ticket ID',
-            isNepali ? 'उजुरीकर्ता' : 'Complainant',
-            isNepali ? 'फोन' : 'Phone',
-            isNepali ? 'प्रकार' : 'Category',
-            isNepali ? 'मिति' : 'Date',
-            isNepali ? 'स्थिति' : 'Status',
-            isNepali ? 'प्राथमिकता' : 'Priority',
-            isNepali ? 'जिम्मेवार' : 'Assigned To'
-          ];
-          
-          const complaintRows = filteredComplaints.map(c => [
-            c.ticketId,
-            isNepali ? c.name : c.enName,
-            c.phone,
-            getCategoryText(c.category),
-            isNepali ? c.date : c.enDate,
-            getStatusText(c.status),
-            getPriorityText(c.priority),
-            isNepali ? c.assignedTo : c.enAssignedTo
-          ]);
-          
-          if (complaintRows.length > 0) {
-            doc.autoTable({
-              startY: yPosition,
-              head: [complaintHeaders],
-              body: complaintRows,
-              theme: 'striped',
-              styles: { 
-                fontSize: 6.5,
-                cellPadding: 2,
-                overflow: 'linebreak',
-                font: 'helvetica'
-              },
-              headStyles: { 
-                fillColor: [13, 71, 161], 
-                textColor: [255, 255, 255],
-                fontSize: 7,
-                fontStyle: 'bold'
-              },
-              alternateRowStyles: { fillColor: [248, 250, 255] },
-              margin: { left: 10, right: 10 },
-              pageBreak: 'auto',
-              columnStyles: {
-                0: { cellWidth: 22 },
-                1: { cellWidth: 28 },
-                2: { cellWidth: 22 },
-                3: { cellWidth: 22 },
-                4: { cellWidth: 20 },
-                5: { cellWidth: 22 },
-                6: { cellWidth: 20 },
-                7: { cellWidth: 28 }
-              }
-            });
-          } else {
-            doc.setTextColor(150, 150, 150);
-            doc.setFontSize(11);
-            doc.setFont('helvetica', 'italic');
-            doc.text(isNepali ? 'कुनै गुनासो फेला परेन' : 'No complaints found', pageWidth / 2, yPosition + 20, { align: 'center' });
-          }
+          doc.text(`... and ${filteredComplaints.length - 10} more complaints`, 14, yPosition);
         }
+      } else {
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'italic');
+        doc.text('No complaints found', pageWidth / 2, yPosition + 20, { align: 'center' });
+      }
+      
+      // ===== ADD FOOTER TO ALL PAGES =====
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
         
-        // ===== ADD FOOTER TO ALL PAGES =====
-        const totalPages = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-          doc.setPage(i);
-          doc.setTextColor(180, 180, 180);
-          doc.setFontSize(6.5);
-          doc.setFont('helvetica', 'italic');
-          const footerText = `NTC Complaint Tracking System - ${new Date().toISOString().split('T')[0]} - Page ${i} of ${totalPages}`;
-          doc.text(footerText, pageWidth / 2, pageHeight - 8, { align: 'center' });
-          
-          // Add a line separator
-          doc.setDrawColor(200, 200, 200);
-          doc.setLineWidth(0.3);
-          doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12);
-        }
+        // Footer line
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12);
         
-        // Save PDF
-        const filename = `complaints_report_${new Date().toISOString().split('T')[0]}.pdf`;
+        // Footer text
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'italic');
+        const footerText = `NTC Complaint Tracking System  |  ${now.toISOString().split('T')[0]}  |  Page ${i} of ${totalPages}`;
+        doc.text(footerText, pageWidth / 2, pageHeight - 6, { align: 'center' });
+      }
+      
+      // Save PDF
+      const filename = `complaints_report_${now.toISOString().split('T')[0]}.pdf`;
+      doc.save(filename);
+      
+      showToast(language === 'np' ? '✅ पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ PDF file downloaded successfully', 'success');
+      setIsExporting(false);
+      
+    } catch (error) {
+      console.error('PDF export error:', error);
+      
+      // Simple fallback PDF
+      try {
+        const now = new Date();
+        const doc = new jsPDF('landscape', 'mm', 'a4');
+        
+        doc.setFontSize(16);
+        doc.text('Complaints Report', 14, 20);
+        doc.setFontSize(10);
+        doc.text(`Date: ${now.toLocaleDateString()}`, 14, 30);
+        
+        let y = 45;
+        doc.setFontSize(12);
+        doc.text('Summary', 14, y);
+        y += 8;
+        doc.setFontSize(10);
+        
+        const summaryData = [
+          ['Total', reportData.summary.totalComplaints],
+          ['Pending', reportData.summary.pendingComplaints],
+          ['In Progress', reportData.summary.inProgressComplaints],
+          ['Resolved', reportData.summary.resolvedComplaints]
+        ];
+        
+        summaryData.forEach(([label, value]) => {
+          doc.text(`${label}: ${value}`, 14, y);
+          y += 7;
+        });
+        
+        const filename = `complaints_report_${now.toISOString().split('T')[0]}.pdf`;
         doc.save(filename);
         
-        setTimeout(() => {
-          showToast(language === 'np' ? 'पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : 'PDF file downloaded successfully', 'success');
-          setIsExporting(false);
-        }, 1000);
-        
-      } catch (error) {
-        console.error('PDF export error:', error);
+        showToast(language === 'np' ? '✅ पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ PDF file downloaded successfully', 'success');
+      } catch (fallbackError) {
+        console.error('Fallback PDF export error:', fallbackError);
         showToast(
           language === 'np' 
-            ? 'पीडीएफ निर्यात गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
-            : 'Failed to export PDF. Please try again.',
+            ? '❌ पीडीएफ निर्यात गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
+            : '❌ Failed to export PDF. Please try again.',
           'error'
         );
-        setIsExporting(false);
       }
-    }, 100);
+      
+      setIsExporting(false);
+    }
   };
 
   // Print function
@@ -1127,7 +925,7 @@ const AdminReportsComplaints = () => {
   const handleViewDetails = (complaint) => {
     const details = language === 'np' 
       ? `टिकट: ${complaint.ticketId}\nनाम: ${complaint.name}\nफोन: ${complaint.phone}\nइमेल: ${complaint.email}\nस्थान: ${complaint.location}\nप्रकार: ${getCategoryText(complaint.category)}\nविवरण: ${complaint.description}\nजिम्मेवार: ${complaint.assignedTo}`
-      : `Ticket: ${complaint.ticketId}\nName: ${complaint.enName}\nPhone: ${complaint.phone}\nEmail: ${complaint.email}\nLocation: ${complaint.enLocation}\nCategory: ${getCategoryText(complaint.category)}\nDescription: ${complaint.enDescription}\nAssigned To: ${complaint.enAssignedTo}`;
+      : `Ticket: ${complaint.ticketId}\nName: ${complaint.name}\nPhone: ${complaint.phone}\nEmail: ${complaint.email}\nLocation: ${complaint.location}\nCategory: ${getCategoryText(complaint.category)}\nDescription: ${complaint.description}\nAssigned To: ${complaint.assignedTo}`;
     showToast(details, 'info');
   };
 
@@ -1372,14 +1170,13 @@ const AdminReportsComplaints = () => {
 
                 {/* Charts Section */}
                 <div className="charts-grid">
-                  {/* Category Breakdown */}
                   <div className="chart-card">
                     <h3>{t.categoryBreakdown}</h3>
                     <div className="chart-content">
                       {reportData.categoryBreakdown.map((item, idx) => (
                         <div key={idx} className="chart-bar-item">
                           <div className="chart-label">
-                            <span>{language === 'np' ? item.name : item.enName}</span>
+                            <span>{language === 'np' ? item.name : item.name}</span>
                             <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                           </div>
                           <div className="chart-bar-bg">
@@ -1393,7 +1190,6 @@ const AdminReportsComplaints = () => {
                     </div>
                   </div>
 
-                  {/* Status Breakdown */}
                   <div className="chart-card">
                     <h3>{t.statusBreakdown}</h3>
                     <div className="pie-chart-container">
@@ -1401,7 +1197,7 @@ const AdminReportsComplaints = () => {
                         <div key={idx} className="pie-segment-info">
                           <div className="pie-color" style={{ backgroundColor: `hsl(${120 + idx * 90}, 70%, 55%)` }} />
                           <div className="pie-label">
-                            <span>{language === 'np' ? item.name : item.enName}</span>
+                            <span>{language === 'np' ? item.name : item.name}</span>
                             <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                           </div>
                         </div>
@@ -1409,7 +1205,6 @@ const AdminReportsComplaints = () => {
                     </div>
                   </div>
 
-                  {/* Priority Breakdown */}
                   <div className="chart-card">
                     <h3>{t.priorityBreakdown}</h3>
                     <div className="pie-chart-container">
@@ -1417,7 +1212,7 @@ const AdminReportsComplaints = () => {
                         <div key={idx} className="pie-segment-info">
                           <div className="pie-color" style={{ backgroundColor: `hsl(${0 + idx * 45}, 70%, 55%)` }} />
                           <div className="pie-label">
-                            <span>{language === 'np' ? item.name : item.enName}</span>
+                            <span>{language === 'np' ? item.name : item.name}</span>
                             <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                           </div>
                         </div>
@@ -1425,14 +1220,13 @@ const AdminReportsComplaints = () => {
                     </div>
                   </div>
 
-                  {/* Channel Breakdown */}
                   <div className="chart-card">
                     <h3>{t.channelBreakdown}</h3>
                     <div className="chart-content">
                       {reportData.channelBreakdown.map((item, idx) => (
                         <div key={idx} className="chart-bar-item">
                           <div className="chart-label">
-                            <span>{language === 'np' ? item.name : item.enName}</span>
+                            <span>{language === 'np' ? item.name : item.name}</span>
                             <span>{formatNumber(item.count)} ({formatNumber(item.percentage)}%)</span>
                           </div>
                           <div className="chart-bar-bg">
@@ -1453,7 +1247,7 @@ const AdminReportsComplaints = () => {
                   <div className="trend-chart">
                     {reportData.monthlyTrend.map((item, idx) => (
                       <div key={idx} className="trend-bar-item">
-                        <div className="trend-label">{getMonthText(item.month)}</div>
+                        <div className="trend-label">{item.month}</div>
                         <div className="trend-bar-bg">
                           <div 
                             className="trend-bar-fill" 
@@ -1472,7 +1266,7 @@ const AdminReportsComplaints = () => {
               </>
             )}
 
-            {/* Complaints Details Tab - Full User Details Table */}
+            {/* Complaints Details Tab */}
             {activeTab === 'complaints' && (
               <div className="table-card">
                 <div className="table-header">
@@ -1505,13 +1299,13 @@ const AdminReportsComplaints = () => {
                           <tr key={complaint.id}>
                             <td className="ticket-id">{complaint.ticketId}</td>
                             <td>
-                              <div className="user-name">{language === 'np' ? complaint.name : complaint.enName}</div>
+                              <div className="user-name">{language === 'np' ? complaint.name : complaint.name}</div>
                             </td>
                             <td className="phone-number">{complaint.phone}</td>
                             <td className="email-address">{complaint.email}</td>
-                            <td>{language === 'np' ? complaint.location : complaint.enLocation}</td>
+                            <td>{language === 'np' ? complaint.location : complaint.location}</td>
                             <td>{getCategoryText(complaint.category)}</td>
-                            <td>{language === 'np' ? complaint.date : complaint.enDate}</td>
+                            <td>{language === 'np' ? complaint.date : complaint.date}</td>
                             <td>
                               <span className={`status-badge status-${complaint.status}`}>
                                 {getStatusText(complaint.status)}
@@ -1523,11 +1317,11 @@ const AdminReportsComplaints = () => {
                               </span>
                             </td>
                             <td className="description-cell">
-                              <div className="description-text" title={language === 'np' ? complaint.description : complaint.enDescription}>
-                                {language === 'np' ? complaint.description : complaint.enDescription}
+                              <div className="description-text" title={language === 'np' ? complaint.description : complaint.description}>
+                                {language === 'np' ? complaint.description : complaint.description}
                               </div>
                             </td>
-                            <td>{language === 'np' ? complaint.assignedTo : complaint.enAssignedTo}</td>
+                            <td>{language === 'np' ? complaint.assignedTo : complaint.assignedTo}</td>
                             <td>
                               <button 
                                 className="view-details-btn"
@@ -1568,7 +1362,6 @@ const AdminReportsComplaints = () => {
           overflow-x: hidden;
         }
 
-        /* Toast Notification */
         .toast-notification {
           position: fixed;
           top: 80px;
@@ -1608,7 +1401,6 @@ const AdminReportsComplaints = () => {
           to { transform: translateX(0); opacity: 1; }
         }
 
-        /* ===== LAYOUT ===== */
         .dashboard-layout {
           display: flex;
           height: calc(100vh - 195px);
@@ -1663,7 +1455,6 @@ const AdminReportsComplaints = () => {
           min-height: 100%;
         }
 
-        /* ===== PAGE HEADER ===== */
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -1700,21 +1491,22 @@ const AdminReportsComplaints = () => {
           font-weight: 500;
           border: none;
           transition: all 0.2s;
+          font-size: 0.85rem;
         }
 
         .export-btn:disabled {
           opacity: 0.6;
           cursor: not-allowed;
+          transform: none !important;
         }
 
         .export-btn.pdf { background: #fee2e2; color: #dc2626; }
-        .export-btn.pdf:hover:not(:disabled) { background: #fecaca; }
+        .export-btn.pdf:hover:not(:disabled) { background: #fecaca; transform: translateY(-2px); }
         .export-btn.excel { background: #d1fae5; color: #059669; }
-        .export-btn.excel:hover:not(:disabled) { background: #a7f3d0; }
+        .export-btn.excel:hover:not(:disabled) { background: #a7f3d0; transform: translateY(-2px); }
         .export-btn.print { background: #dbeafe; color: #2563eb; }
-        .export-btn.print:hover { background: #bfdbfe; }
+        .export-btn.print:hover { background: #bfdbfe; transform: translateY(-2px); }
 
-        /* ===== TAB NAVIGATION ===== */
         .tab-navigation {
           display: flex;
           gap: 12px;
@@ -1746,7 +1538,6 @@ const AdminReportsComplaints = () => {
           background: #3b82f6;
         }
 
-        /* ===== FILTERS ===== */
         .filters-section {
           background: white;
           border-radius: 16px;
@@ -1824,7 +1615,6 @@ const AdminReportsComplaints = () => {
           box-shadow: 0 4px 12px rgba(100,116,139,0.3);
         }
 
-        /* ===== SUMMARY CARDS ===== */
         .summary-cards {
           display: grid;
           grid-template-columns: repeat(6, 1fr);
@@ -1869,7 +1659,6 @@ const AdminReportsComplaints = () => {
         .card-value { font-size: 1.3rem; font-weight: 700; color: #0f172a; }
         .card-label { font-size: 0.7rem; color: #64748b; }
 
-        /* ===== GROWTH CARD ===== */
         .growth-card {
           background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
           border-radius: 16px;
@@ -1887,7 +1676,6 @@ const AdminReportsComplaints = () => {
         .growth-value { font-size: 1.2rem; font-weight: 700; color: #0c4a6e; }
         .growth-value.positive { color: #059669; }
 
-        /* ===== CHARTS GRID ===== */
         .charts-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -1937,7 +1725,6 @@ const AdminReportsComplaints = () => {
           transition: width 0.5s;
         }
 
-        /* ===== PIE CHART INFO ===== */
         .pie-chart-container {
           display: flex;
           flex-direction: column;
@@ -1964,7 +1751,6 @@ const AdminReportsComplaints = () => {
           color: #475569;
         }
 
-        /* ===== TREND CHART ===== */
         .trend-card {
           background: white;
           border-radius: 16px;
@@ -2025,7 +1811,6 @@ const AdminReportsComplaints = () => {
           white-space: nowrap;
         }
 
-        /* ===== TABLE CARD ===== */
         .table-card {
           background: white;
           border-radius: 16px;
@@ -2137,7 +1922,6 @@ const AdminReportsComplaints = () => {
           color: #64748b;
         }
 
-        /* ===== RESPONSIVE ===== */
         @media (max-width: 1200px) {
           .summary-cards { grid-template-columns: repeat(3, 1fr); }
           .charts-grid { grid-template-columns: 1fr; }

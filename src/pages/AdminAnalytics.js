@@ -58,19 +58,19 @@ const AdminAnalytics = () => {
       enAvgResponseTime: '2.5',
       avgResolutionTime: '4.2',
       enAvgResolutionTime: '4.2',
-      peakHour: '१०:०० - १२:००',
+      peakHour: '10:00 - 12:00',
       enPeakHour: '10:00 - 12:00',
-      busiestDay: 'सोमबार',
+      busiestDay: 'Monday',
       enBusiestDay: 'Monday'
     },
     trends: {
       complaints: [65, 78, 82, 74, 88, 92, 95, 89, 91, 87, 93, 98],
       resolved: [45, 52, 58, 56, 62, 68, 72, 70, 73, 71, 76, 80],
-      months: ['जन', 'फेब', 'मार्च', 'अप्रि', 'मे', 'जुन', 'जुला', 'अग', 'सेप', 'अक्टो', 'नोभे', 'डिसे'],
+      months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
       enMonths: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     },
     categories: {
-      labels: ['इन्टरनेट', 'बिलिङ', 'नेटवर्क', 'रिचार्ज', 'प्राविधिक', 'सक्रियता'],
+      labels: ['Internet', 'Billing', 'Network', 'Recharge', 'Technical', 'Activation'],
       enLabels: ['Internet', 'Billing', 'Network', 'Recharge', 'Technical', 'Activation'],
       data: [425, 312, 198, 156, 98, 58],
       colors: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']
@@ -78,34 +78,34 @@ const AdminAnalytics = () => {
     performance: {
       responseTime: [2.1, 2.3, 2.4, 2.5, 2.4, 2.6],
       resolutionTime: [4.5, 4.3, 4.2, 4.1, 4.0, 3.9],
-      labels: ['जन', 'फेब', 'मार्च', 'अप्रि', 'मे', 'जुन'],
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
       enLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
     },
     topPerformers: [
-      { id: 1, name: 'प्राविधिक टोली', enName: 'Technical Team', resolved: 345, avgTime: '1.8', satisfaction: 4.8 },
-      { id: 2, name: 'बिलिङ टोली', enName: 'Billing Team', resolved: 298, avgTime: '2.1', satisfaction: 4.5 },
-      { id: 3, name: 'नेटवर्क टोली', enName: 'Network Team', resolved: 267, avgTime: '2.3', satisfaction: 4.3 },
-      { id: 4, name: 'ग्राहक सेवा', enName: 'Customer Service', resolved: 234, avgTime: '1.5', satisfaction: 4.9 },
-      { id: 5, name: 'प्रशासन', enName: 'Administration', resolved: 189, avgTime: '2.0', satisfaction: 4.6 }
+      { id: 1, name: 'Technical Team', enName: 'Technical Team', resolved: 345, avgTime: '1.8', satisfaction: 4.8 },
+      { id: 2, name: 'Billing Team', enName: 'Billing Team', resolved: 298, avgTime: '2.1', satisfaction: 4.5 },
+      { id: 3, name: 'Network Team', enName: 'Network Team', resolved: 267, avgTime: '2.3', satisfaction: 4.3 },
+      { id: 4, name: 'Customer Service', enName: 'Customer Service', resolved: 234, avgTime: '1.5', satisfaction: 4.9 },
+      { id: 5, name: 'Administration', enName: 'Administration', resolved: 189, avgTime: '2.0', satisfaction: 4.6 }
     ],
     hourlyDistribution: [
-      { hour: '०६-०८', enHour: '06-08', count: 45 },
-      { hour: '०८-१०', enHour: '08-10', count: 89 },
-      { hour: '१०-१२', enHour: '10-12', count: 234 },
-      { hour: '१२-१४', enHour: '12-14', count: 198 },
-      { hour: '१४-१६', enHour: '14-16', count: 167 },
-      { hour: '१६-१८', enHour: '16-18', count: 123 },
-      { hour: '१८-२०', enHour: '18-20', count: 78 },
-      { hour: '२०-२२', enHour: '20-22', count: 45 }
+      { hour: '06-08', enHour: '06-08', count: 45 },
+      { hour: '08-10', enHour: '08-10', count: 89 },
+      { hour: '10-12', enHour: '10-12', count: 234 },
+      { hour: '12-14', enHour: '12-14', count: 198 },
+      { hour: '14-16', enHour: '14-16', count: 167 },
+      { hour: '16-18', enHour: '16-18', count: 123 },
+      { hour: '18-20', enHour: '18-20', count: 78 },
+      { hour: '20-22', enHour: '20-22', count: 45 }
     ],
     dayWiseDistribution: [
-      { day: 'सोमबार', enDay: 'Monday', count: 234 },
-      { day: 'मंगलबार', enDay: 'Tuesday', count: 198 },
-      { day: 'बुधबार', enDay: 'Wednesday', count: 187 },
-      { day: 'बिहीबार', enDay: 'Thursday', count: 203 },
-      { day: 'शुक्रबार', enDay: 'Friday', count: 178 },
-      { day: 'शनिबार', enDay: 'Saturday', count: 98 },
-      { day: 'आइतबार', enDay: 'Sunday', count: 67 }
+      { day: 'Monday', enDay: 'Monday', count: 234 },
+      { day: 'Tuesday', enDay: 'Tuesday', count: 198 },
+      { day: 'Wednesday', enDay: 'Wednesday', count: 187 },
+      { day: 'Thursday', enDay: 'Thursday', count: 203 },
+      { day: 'Friday', enDay: 'Friday', count: 178 },
+      { day: 'Saturday', enDay: 'Saturday', count: 98 },
+      { day: 'Sunday', enDay: 'Sunday', count: 67 }
     ]
   });
 
@@ -152,7 +152,9 @@ const AdminAnalytics = () => {
       total: 'जम्मा',
       category: 'प्रकार',
       count: 'संख्या',
-      percentage: 'प्रतिशत'
+      percentage: 'प्रतिशत',
+      overview: 'सारांश',
+      value: 'मान'
     },
     en: {
       analytics: 'Analytics',
@@ -187,7 +189,9 @@ const AdminAnalytics = () => {
       total: 'Total',
       category: 'Category',
       count: 'Count',
-      percentage: 'Percentage'
+      percentage: 'Percentage',
+      overview: 'Overview',
+      value: 'Value'
     }
   };
 
@@ -218,399 +222,411 @@ const AdminAnalytics = () => {
     return language === 'np' ? performer.name : performer.enName;
   };
 
-  // ===== PDF EXPORT FUNCTION =====
+  // ===== PDF EXPORT FUNCTION - Same style as AdminReportsUsers =====
   const handleExportPDF = () => {
+    if (isExporting) return;
+    
     setIsExporting(true);
     showToast(t.pdfExport, 'info');
 
-    setTimeout(() => {
-      try {
-        const isNepali = language === 'np';
+    try {
+      const isNepali = language === 'np';
+      const now = new Date();
 
-        // Create PDF with proper settings
-        const doc = new jsPDF({
-          orientation: 'landscape',
-          unit: 'mm',
-          format: 'a4',
-          compress: true
-        });
+      // Create PDF with proper settings
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
 
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
 
-        // Add header with gradient effect
-        doc.setFillColor(13, 71, 161);
-        doc.rect(0, 0, pageWidth, 25, 'F');
+      // ===== HEADER =====
+      doc.setFillColor(13, 71, 161);
+      doc.rect(0, 0, pageWidth, 30, 'F');
 
-        // Add title
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        const title = isNepali ? 'विश्लेषण रिपोर्ट' : 'Analytics Report';
-        doc.text(title, pageWidth / 2, 16, { align: 'center' });
+      // Title
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      const title = isNepali ? 'Analytics Report' : 'Analytics Report';
+      doc.text('Analytics Report', pageWidth / 2, 18, { align: 'center' });
 
-        // Add date and time
-        doc.setTextColor(200, 200, 200);
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        const dateStr = new Date().toLocaleString(isNepali ? 'ne-NP' : 'en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        doc.text(`${isNepali ? 'मिति' : 'Date'}: ${dateStr}`, pageWidth - 14, 20, { align: 'right' });
+      // Date
+      doc.setTextColor(200, 200, 200);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      const dateStr = now.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      doc.text(`Date: ${dateStr}`, pageWidth - 14, 24, { align: 'right' });
 
-        let yPosition = 32;
+      let yPosition = 38;
 
-        // ===== OVERVIEW SECTION =====
-        doc.setTextColor(13, 71, 161);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(isNepali ? 'सारांश' : 'Overview', 14, yPosition);
-        yPosition += 6;
+      // ===== OVERVIEW SECTION =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Overview', 14, yPosition);
+      yPosition += 8;
 
-        const overviewHeaders = [
-          isNepali ? 'विवरण' : 'Description',
-          isNepali ? 'मान' : 'Value'
-        ];
-        const overviewRows = [
-          [isNepali ? 'कुल गुनासो' : 'Total Complaints', String(analyticsData.overview.totalComplaints)],
-          [isNepali ? 'समाधान' : 'Resolved', String(analyticsData.overview.resolvedComplaints)],
-          [isNepali ? 'विचाराधीन' : 'Pending', String(analyticsData.overview.pendingComplaints)],
-          [isNepali ? 'प्रगतिमा' : 'In Progress', String(analyticsData.overview.inProgressComplaints)],
-          [isNepali ? 'सन्तुष्टि दर' : 'Satisfaction Rate', `${analyticsData.overview.satisfactionRate}%`],
-          [isNepali ? 'औसत प्रतिक्रिया समय' : 'Avg Response Time', `${isNepali ? analyticsData.overview.avgResponseTime : analyticsData.overview.enAvgResponseTime} ${isNepali ? 'घण्टा' : 'hours'}`],
-          [isNepali ? 'औसत समाधान समय' : 'Avg Resolution Time', `${isNepali ? analyticsData.overview.avgResolutionTime : analyticsData.overview.enAvgResolutionTime} ${isNepali ? 'दिन' : 'days'}`],
-          [isNepali ? 'व्यस्त समय' : 'Peak Hour', isNepali ? analyticsData.overview.peakHour : analyticsData.overview.enPeakHour],
-          [isNepali ? 'व्यस्त दिन' : 'Busiest Day', isNepali ? analyticsData.overview.busiestDay : analyticsData.overview.enBusiestDay]
-        ];
+      const overviewHeaders = ['Description', 'Value'];
+      const overviewRows = [
+        ['Total Complaints', String(analyticsData.overview.totalComplaints)],
+        ['Resolved', String(analyticsData.overview.resolvedComplaints)],
+        ['Pending', String(analyticsData.overview.pendingComplaints)],
+        ['In Progress', String(analyticsData.overview.inProgressComplaints)],
+        ['Satisfaction Rate', `${analyticsData.overview.satisfactionRate}%`],
+        ['Avg Response Time', `${analyticsData.overview.enAvgResponseTime} hours`],
+        ['Avg Resolution Time', `${analyticsData.overview.enAvgResolutionTime} days`],
+        ['Peak Hour', analyticsData.overview.enPeakHour],
+        ['Busiest Day', analyticsData.overview.enBusiestDay]
+      ];
 
-        doc.autoTable({
-          startY: yPosition,
-          head: [overviewHeaders],
-          body: overviewRows,
-          theme: 'striped',
-          styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            overflow: 'linebreak',
-            font: 'helvetica'
-          },
-          headStyles: {
-            fillColor: [13, 71, 161],
-            textColor: [255, 255, 255],
-            fontSize: 9,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: { fillColor: [240, 245, 255] },
-          margin: { left: 14, right: 14 },
-          columnStyles: {
-            0: { cellWidth: 80 },
-            1: { cellWidth: 40, halign: 'right' }
-          }
-        });
-
-        yPosition = doc.lastAutoTable.finalY + 8;
-
-        // ===== CATEGORY DISTRIBUTION =====
-        doc.setTextColor(13, 71, 161);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(isNepali ? 'प्रकार अनुसार वितरण' : 'Category Distribution', 14, yPosition);
-        yPosition += 6;
-
-        const totalCategories = analyticsData.categories.data.reduce((a, b) => a + b, 0);
-        const categoryHeaders = [
-          isNepali ? 'प्रकार' : 'Category',
-          isNepali ? 'संख्या' : 'Count',
-          isNepali ? 'प्रतिशत' : 'Percentage'
-        ];
-        const categoryRows = analyticsData.categories.data.map((value, idx) => {
-          const percentage = ((value / totalCategories) * 100).toFixed(1);
-          return [
-            getCategoryLabels()[idx],
-            String(value),
-            `${percentage}%`
-          ];
-        });
-
-        doc.autoTable({
-          startY: yPosition,
-          head: [categoryHeaders],
-          body: categoryRows,
-          theme: 'striped',
-          styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            font: 'helvetica'
-          },
-          headStyles: {
-            fillColor: [13, 71, 161],
-            textColor: [255, 255, 255],
-            fontSize: 9,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: { fillColor: [240, 245, 255] },
-          margin: { left: 14, right: 14 },
-          columnStyles: {
-            2: { halign: 'right' }
-          }
-        });
-
-        yPosition = doc.lastAutoTable.finalY + 8;
-
-        // ===== MONTHLY TREND =====
-        doc.setTextColor(13, 71, 161);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(isNepali ? 'मासिक प्रवृत्ति' : 'Monthly Trend', 14, yPosition);
-        yPosition += 6;
-
-        const trendHeaders = [
-          isNepali ? 'महिना' : 'Month',
-          isNepali ? 'गुनासो' : 'Complaints',
-          isNepali ? 'समाधान' : 'Resolved'
-        ];
-        const trendRows = analyticsData.trends.complaints.map((value, idx) => [
-          getMonthLabels()[idx],
-          String(value),
-          String(analyticsData.trends.resolved[idx])
-        ]);
-
-        doc.autoTable({
-          startY: yPosition,
-          head: [trendHeaders],
-          body: trendRows,
-          theme: 'striped',
-          styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            font: 'helvetica'
-          },
-          headStyles: {
-            fillColor: [13, 71, 161],
-            textColor: [255, 255, 255],
-            fontSize: 9,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: { fillColor: [240, 245, 255] },
-          margin: { left: 14, right: 14 },
-          columnStyles: {
-            1: { halign: 'right' },
-            2: { halign: 'right' }
-          }
-        });
-
-        yPosition = doc.lastAutoTable.finalY + 8;
-
-        // ===== RESPONSE VS RESOLUTION =====
-        doc.setTextColor(13, 71, 161);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(isNepali ? 'प्रतिक्रिया बनाम समाधान' : 'Response vs Resolution', 14, yPosition);
-        yPosition += 6;
-
-        const perfHeaders = [
-          isNepali ? 'महिना' : 'Month',
-          isNepali ? 'प्रतिक्रिया समय (घण्टा)' : 'Response Time (hours)',
-          isNepali ? 'समाधान समय (दिन)' : 'Resolution Time (days)'
-        ];
-        const perfRows = analyticsData.performance.responseTime.map((value, idx) => [
-          getPerfLabels()[idx],
-          String(value),
-          String(analyticsData.performance.resolutionTime[idx])
-        ]);
-
-        doc.autoTable({
-          startY: yPosition,
-          head: [perfHeaders],
-          body: perfRows,
-          theme: 'striped',
-          styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            font: 'helvetica'
-          },
-          headStyles: {
-            fillColor: [13, 71, 161],
-            textColor: [255, 255, 255],
-            fontSize: 9,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: { fillColor: [240, 245, 255] },
-          margin: { left: 14, right: 14 },
-          columnStyles: {
-            1: { halign: 'right' },
-            2: { halign: 'right' }
-          }
-        });
-
-        yPosition = doc.lastAutoTable.finalY + 8;
-
-        // ===== TOP PERFORMERS =====
-        doc.setTextColor(13, 71, 161);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(isNepali ? 'शीर्ष प्रदर्शनकर्ताहरू' : 'Top Performers', 14, yPosition);
-        yPosition += 6;
-
-        const performerHeaders = [
-          isNepali ? 'टोली' : 'Team',
-          isNepali ? 'समाधान' : 'Resolved',
-          isNepali ? 'औसत समय (दिन)' : 'Avg Time (days)',
-          isNepali ? 'सन्तुष्टि' : 'Satisfaction'
-        ];
-        const performerRows = analyticsData.topPerformers.map(performer => [
-          getTeamName(performer),
-          String(performer.resolved),
-          performer.avgTime,
-          `${performer.satisfaction}/5`
-        ]);
-
-        doc.autoTable({
-          startY: yPosition,
-          head: [performerHeaders],
-          body: performerRows,
-          theme: 'striped',
-          styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            font: 'helvetica'
-          },
-          headStyles: {
-            fillColor: [13, 71, 161],
-            textColor: [255, 255, 255],
-            fontSize: 9,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: { fillColor: [240, 245, 255] },
-          margin: { left: 14, right: 14 },
-          columnStyles: {
-            1: { halign: 'right' },
-            2: { halign: 'right' },
-            3: { halign: 'right' }
-          }
-        });
-
-        yPosition = doc.lastAutoTable.finalY + 8;
-
-        // ===== HOURLY DISTRIBUTION =====
-        doc.setTextColor(13, 71, 161);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(isNepali ? 'घण्टागत वितरण' : 'Hourly Distribution', 14, yPosition);
-        yPosition += 6;
-
-        const hourlyHeaders = [
-          isNepali ? 'समय' : 'Time',
-          isNepali ? 'संख्या' : 'Count'
-        ];
-        const hourlyRows = analyticsData.hourlyDistribution.map(item => [
-          getHourText(item),
-          String(item.count)
-        ]);
-
-        doc.autoTable({
-          startY: yPosition,
-          head: [hourlyHeaders],
-          body: hourlyRows,
-          theme: 'striped',
-          styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            font: 'helvetica'
-          },
-          headStyles: {
-            fillColor: [13, 71, 161],
-            textColor: [255, 255, 255],
-            fontSize: 9,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: { fillColor: [240, 245, 255] },
-          margin: { left: 14, right: 14 },
-          columnStyles: {
-            1: { halign: 'right' }
-          }
-        });
-
-        yPosition = doc.lastAutoTable.finalY + 8;
-
-        // ===== DAY-WISE DISTRIBUTION =====
-        doc.setTextColor(13, 71, 161);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(isNepali ? 'दिनगत वितरण' : 'Day-wise Distribution', 14, yPosition);
-        yPosition += 6;
-
-        const dayHeaders = [
-          isNepali ? 'दिन' : 'Day',
-          isNepali ? 'संख्या' : 'Count'
-        ];
-        const dayRows = analyticsData.dayWiseDistribution.map(item => [
-          getDayText(item),
-          String(item.count)
-        ]);
-
-        doc.autoTable({
-          startY: yPosition,
-          head: [dayHeaders],
-          body: dayRows,
-          theme: 'striped',
-          styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            font: 'helvetica'
-          },
-          headStyles: {
-            fillColor: [13, 71, 161],
-            textColor: [255, 255, 255],
-            fontSize: 9,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: { fillColor: [240, 245, 255] },
-          margin: { left: 14, right: 14 },
-          columnStyles: {
-            1: { halign: 'right' }
-          }
-        });
-
-        // ===== ADD FOOTER =====
-        const totalPages = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-          doc.setPage(i);
-          doc.setTextColor(180, 180, 180);
-          doc.setFontSize(6.5);
-          doc.setFont('helvetica', 'italic');
-          const footerText = `NTC Complaint Tracking System - ${new Date().toISOString().split('T')[0]} - Page ${i} of ${totalPages}`;
-          doc.text(footerText, pageWidth / 2, pageHeight - 8, { align: 'center' });
-
-          doc.setDrawColor(200, 200, 200);
-          doc.setLineWidth(0.3);
-          doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12);
+      doc.autoTable({
+        startY: yPosition,
+        head: [overviewHeaders],
+        body: overviewRows,
+        theme: 'striped',
+        styles: {
+          fontSize: 9,
+          cellPadding: 4,
+          overflow: 'linebreak',
+          font: 'helvetica'
+        },
+        headStyles: {
+          fillColor: [13, 71, 161],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          0: { cellWidth: 90 },
+          1: { cellWidth: 50, halign: 'right' }
         }
+      });
 
-        // Save PDF
-        const filename = `analytics_report_${new Date().toISOString().split('T')[0]}.pdf`;
+      yPosition = doc.lastAutoTable.finalY + 10;
+
+      // ===== CATEGORY DISTRIBUTION =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Category Distribution', 14, yPosition);
+      yPosition += 6;
+
+      const totalCategories = analyticsData.categories.data.reduce((a, b) => a + b, 0);
+      const categoryHeaders = ['Category', 'Count', 'Percentage'];
+      const categoryRows = analyticsData.categories.data.map((value, idx) => {
+        const percentage = ((value / totalCategories) * 100).toFixed(1);
+        return [
+          getCategoryLabels()[idx],
+          String(value),
+          `${percentage}%`
+        ];
+      });
+
+      doc.autoTable({
+        startY: yPosition,
+        head: [categoryHeaders],
+        body: categoryRows,
+        theme: 'striped',
+        styles: {
+          fontSize: 9,
+          cellPadding: 4,
+          font: 'helvetica'
+        },
+        headStyles: {
+          fillColor: [13, 71, 161],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          2: { halign: 'right' }
+        }
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 10;
+
+      // ===== MONTHLY TREND =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Monthly Trend', 14, yPosition);
+      yPosition += 6;
+
+      const trendHeaders = ['Month', 'Complaints', 'Resolved'];
+      const trendRows = analyticsData.trends.complaints.map((value, idx) => [
+        getMonthLabels()[idx],
+        String(value),
+        String(analyticsData.trends.resolved[idx])
+      ]);
+
+      doc.autoTable({
+        startY: yPosition,
+        head: [trendHeaders],
+        body: trendRows,
+        theme: 'striped',
+        styles: {
+          fontSize: 8,
+          cellPadding: 3.5,
+          font: 'helvetica'
+        },
+        headStyles: {
+          fillColor: [13, 71, 161],
+          textColor: [255, 255, 255],
+          fontSize: 9,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          1: { halign: 'right' },
+          2: { halign: 'right' }
+        }
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 10;
+
+      // ===== RESPONSE VS RESOLUTION =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Response vs Resolution', 14, yPosition);
+      yPosition += 6;
+
+      const perfHeaders = ['Month', 'Response Time (hours)', 'Resolution Time (days)'];
+      const perfRows = analyticsData.performance.responseTime.map((value, idx) => [
+        getPerfLabels()[idx],
+        String(value),
+        String(analyticsData.performance.resolutionTime[idx])
+      ]);
+
+      doc.autoTable({
+        startY: yPosition,
+        head: [perfHeaders],
+        body: perfRows,
+        theme: 'striped',
+        styles: {
+          fontSize: 8,
+          cellPadding: 3.5,
+          font: 'helvetica'
+        },
+        headStyles: {
+          fillColor: [13, 71, 161],
+          textColor: [255, 255, 255],
+          fontSize: 9,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          1: { halign: 'right' },
+          2: { halign: 'right' }
+        }
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 10;
+
+      // ===== TOP PERFORMERS =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Top Performers', 14, yPosition);
+      yPosition += 6;
+
+      const performerHeaders = ['Team', 'Resolved', 'Avg Time (days)', 'Satisfaction'];
+      const performerRows = analyticsData.topPerformers.map(performer => [
+        getTeamName(performer),
+        String(performer.resolved),
+        performer.avgTime,
+        `${performer.satisfaction}/5`
+      ]);
+
+      doc.autoTable({
+        startY: yPosition,
+        head: [performerHeaders],
+        body: performerRows,
+        theme: 'striped',
+        styles: {
+          fontSize: 8,
+          cellPadding: 3.5,
+          font: 'helvetica'
+        },
+        headStyles: {
+          fillColor: [13, 71, 161],
+          textColor: [255, 255, 255],
+          fontSize: 9,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          1: { halign: 'right' },
+          2: { halign: 'right' },
+          3: { halign: 'right' }
+        }
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 10;
+
+      // ===== HOURLY DISTRIBUTION =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Hourly Distribution', 14, yPosition);
+      yPosition += 6;
+
+      const hourlyHeaders = ['Time', 'Count'];
+      const hourlyRows = analyticsData.hourlyDistribution.map(item => [
+        getHourText(item),
+        String(item.count)
+      ]);
+
+      doc.autoTable({
+        startY: yPosition,
+        head: [hourlyHeaders],
+        body: hourlyRows,
+        theme: 'striped',
+        styles: {
+          fontSize: 8,
+          cellPadding: 3.5,
+          font: 'helvetica'
+        },
+        headStyles: {
+          fillColor: [13, 71, 161],
+          textColor: [255, 255, 255],
+          fontSize: 9,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          1: { halign: 'right' }
+        }
+      });
+
+      yPosition = doc.lastAutoTable.finalY + 10;
+
+      // ===== DAY-WISE DISTRIBUTION =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Day-wise Distribution', 14, yPosition);
+      yPosition += 6;
+
+      const dayHeaders = ['Day', 'Count'];
+      const dayRows = analyticsData.dayWiseDistribution.map(item => [
+        getDayText(item),
+        String(item.count)
+      ]);
+
+      doc.autoTable({
+        startY: yPosition,
+        head: [dayHeaders],
+        body: dayRows,
+        theme: 'striped',
+        styles: {
+          fontSize: 8,
+          cellPadding: 3.5,
+          font: 'helvetica'
+        },
+        headStyles: {
+          fillColor: [13, 71, 161],
+          textColor: [255, 255, 255],
+          fontSize: 9,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          1: { halign: 'right' }
+        }
+      });
+
+      // ===== ADD FOOTER =====
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12);
+
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'italic');
+        const footerText = `NTC Complaint Tracking System  |  ${now.toISOString().split('T')[0]}  |  Page ${i} of ${totalPages}`;
+        doc.text(footerText, pageWidth / 2, pageHeight - 6, { align: 'center' });
+      }
+
+      // Save PDF
+      const filename = `analytics_report_${now.toISOString().split('T')[0]}.pdf`;
+      doc.save(filename);
+
+      showToast(language === 'np' ? '✅ पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ PDF file downloaded successfully', 'success');
+      setIsExporting(false);
+
+    } catch (error) {
+      console.error('PDF export error:', error);
+
+      // Simple fallback PDF
+      try {
+        const now = new Date();
+        const doc = new jsPDF('landscape', 'mm', 'a4');
+
+        doc.setFontSize(16);
+        doc.text('Analytics Report', 14, 20);
+        doc.setFontSize(10);
+        doc.text(`Date: ${now.toLocaleDateString()}`, 14, 30);
+
+        let y = 45;
+        doc.setFontSize(12);
+        doc.text('Summary', 14, y);
+        y += 8;
+        doc.setFontSize(10);
+
+        const summaryData = [
+          ['Total Complaints', analyticsData.overview.totalComplaints],
+          ['Resolved', analyticsData.overview.resolvedComplaints],
+          ['Pending', analyticsData.overview.pendingComplaints],
+          ['In Progress', analyticsData.overview.inProgressComplaints],
+          ['Satisfaction Rate', `${analyticsData.overview.satisfactionRate}%`]
+        ];
+
+        summaryData.forEach(([label, value]) => {
+          doc.text(`${label}: ${value}`, 14, y);
+          y += 7;
+        });
+
+        const filename = `analytics_report_${now.toISOString().split('T')[0]}.pdf`;
         doc.save(filename);
 
-        setTimeout(() => {
-          showToast(language === 'np' ? 'पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : 'PDF file downloaded successfully', 'success');
-          setIsExporting(false);
-        }, 1000);
-
-      } catch (error) {
-        console.error('PDF export error:', error);
+        showToast(language === 'np' ? '✅ पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ PDF file downloaded successfully', 'success');
+      } catch (fallbackError) {
+        console.error('Fallback PDF export error:', fallbackError);
         showToast(
           language === 'np'
-            ? 'पीडीएफ निर्यात गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।'
-            : 'Failed to export PDF. Please try again.',
+            ? '❌ पीडीएफ निर्यात गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।'
+            : '❌ Failed to export PDF. Please try again.',
           'error'
         );
-        setIsExporting(false);
       }
-    }, 100);
+
+      setIsExporting(false);
+    }
   };
 
   const handleRefresh = () => {
@@ -857,7 +873,7 @@ const AdminAnalytics = () => {
                   <tbody>
                     {analyticsData.topPerformers.map((performer) => (
                       <tr key={performer.id}>
-                        <td className="performer-name">{language === 'np' ? performer.name : performer.enName}</td>
+                        <td className="performer-name">{getTeamName(performer)}</td>
                         <td>{formatNumber(performer.resolved)}</td>
                         <td>{performer.avgTime} {t.days}</td>
                         <td>
@@ -927,9 +943,9 @@ const AdminAnalytics = () => {
         .admin-analytics {
           font-family: 'Poppins', 'Mangal', 'Preeti', 'Segoe UI', sans-serif;
           background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
-          height: 100vh;
+          min-height: 100vh;
           width: 100%;
-          overflow: hidden;
+          overflow-x: hidden;
           position: relative;
         }
 

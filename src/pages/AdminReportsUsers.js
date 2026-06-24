@@ -37,16 +37,6 @@ const AdminReportsUsers = () => {
     return num.toString();
   };
 
-  // Format decimal with Nepali digits
-  const formatDecimal = (num) => {
-    if (num === undefined || num === null) return '0';
-    if (language === 'np') {
-      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
-      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
-    }
-    return num.toString();
-  };
-
   const [reportData, setReportData] = useState({
     summary: {
       totalUsers: 0,
@@ -251,7 +241,7 @@ const AdminReportsUsers = () => {
     const months = [];
     const monthNames = {
       np: ['जनवरी', 'फेब्रुअरी', 'मार्च', 'अप्रिल', 'मे', 'जुन', 'जुलाई', 'अगस्ट', 'सेप्टेम्बर', 'अक्टोबर', 'नोभेम्बर', 'डिसेम्बर'],
-      en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+      en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     };
     
     const currentYear = new Date().getFullYear();
@@ -420,18 +410,18 @@ const AdminReportsUsers = () => {
         { name: 'निलम्बित', enName: 'Suspended', count: 70, percentage: 5.6 }
       ],
       monthlyTrend: [
-        { month: 'जनवरी', enMonth: 'January', count: 85 },
-        { month: 'फेब्रुअरी', enMonth: 'February', count: 92 },
-        { month: 'मार्च', enMonth: 'March', count: 78 },
-        { month: 'अप्रिल', enMonth: 'April', count: 95 },
+        { month: 'जनवरी', enMonth: 'Jan', count: 85 },
+        { month: 'फेब्रुअरी', enMonth: 'Feb', count: 92 },
+        { month: 'मार्च', enMonth: 'Mar', count: 78 },
+        { month: 'अप्रिल', enMonth: 'Apr', count: 95 },
         { month: 'मे', enMonth: 'May', count: 88 },
-        { month: 'जुन', enMonth: 'June', count: 102 },
-        { month: 'जुलाई', enMonth: 'July', count: 110 },
-        { month: 'अगस्ट', enMonth: 'August', count: 95 },
-        { month: 'सेप्टेम्बर', enMonth: 'September', count: 88 },
-        { month: 'अक्टोबर', enMonth: 'October', count: 92 },
-        { month: 'नोभेम्बर', enMonth: 'November', count: 78 },
-        { month: 'डिसेम्बर', enMonth: 'December', count: 45 }
+        { month: 'जुन', enMonth: 'Jun', count: 102 },
+        { month: 'जुलाई', enMonth: 'Jul', count: 110 },
+        { month: 'अगस्ट', enMonth: 'Aug', count: 95 },
+        { month: 'सेप्टेम्बर', enMonth: 'Sep', count: 88 },
+        { month: 'अक्टोबर', enMonth: 'Oct', count: 92 },
+        { month: 'नोभेम्बर', enMonth: 'Nov', count: 78 },
+        { month: 'डिसेम्बर', enMonth: 'Dec', count: 45 }
       ],
       activityBreakdown: [
         { name: 'उच्च सक्रिय', enName: 'Highly Active', count: 45, percentage: 3.6 },
@@ -515,34 +505,6 @@ const AdminReportsUsers = () => {
       [isNepali ? 'मान' : 'Value']: `${reportData.summary.satisfactionRate}%`
     });
     
-    // Add blank row
-    data.push({ [isNepali ? 'विवरण' : 'Description']: '', [isNepali ? 'मान' : 'Value']: '' });
-    
-    // Role breakdown
-    data.push({ 
-      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'भूमिका अनुसार विभाजन' : 'Role Breakdown',
-      [isNepali ? 'मान' : 'Value']: ''
-    });
-    reportData.roleBreakdown.forEach(item => {
-      data.push({ 
-        [isNepali ? 'विवरण' : 'Description']: isNepali ? item.name : item.enName,
-        [isNepali ? 'मान' : 'Value']: `${item.count} (${item.percentage}%)`
-      });
-    });
-    
-    // Status breakdown
-    data.push({ [isNepali ? 'विवरण' : 'Description']: '', [isNepali ? 'मान' : 'Value']: '' });
-    data.push({ 
-      [isNepali ? 'विवरण' : 'Description']: isNepali ? 'स्थिति अनुसार विभाजन' : 'Status Breakdown',
-      [isNepali ? 'मान' : 'Value']: ''
-    });
-    reportData.statusBreakdown.forEach(item => {
-      data.push({ 
-        [isNepali ? 'विवरण' : 'Description']: isNepali ? item.name : item.enName,
-        [isNepali ? 'मान' : 'Value']: `${item.count} (${item.percentage}%)`
-      });
-    });
-    
     return data;
   };
 
@@ -582,421 +544,485 @@ const AdminReportsUsers = () => {
     setIsExporting(true);
     showToast(t.excelExport, 'info');
     
-    try {
-      const wb = XLSX.utils.book_new();
-      const isNepali = language === 'np';
-      
-      // Sheet 1: Summary
-      const summaryData = generateExcelData();
-      const ws1 = XLSX.utils.json_to_sheet(summaryData);
-      const colWidths = Object.keys(summaryData[0] || {}).map(key => ({
-        wch: Math.max(key.length, 30)
-      }));
-      ws1['!cols'] = colWidths;
-      XLSX.utils.book_append_sheet(wb, ws1, isNepali ? 'सारांश' : 'Summary');
-      
-      // Sheet 2: Top Users
-      const topUsersData = generateTopUsersData();
-      const ws2 = XLSX.utils.json_to_sheet(topUsersData);
-      const colWidths2 = Object.keys(topUsersData[0] || {}).map(key => ({
-        wch: Math.max(key.length, 20)
-      }));
-      ws2['!cols'] = colWidths2;
-      XLSX.utils.book_append_sheet(wb, ws2, isNepali ? 'शीर्ष प्रयोगकर्ता' : 'Top Users');
-      
-      // Create filename
-      const date = new Date();
-      const dateStr = date.toISOString().split('T')[0];
-      const filename = `users_report_${dateStr}.xlsx`;
-      
-      // Save file
-      XLSX.writeFile(wb, filename);
-      
-      setTimeout(() => {
-        showToast(language === 'np' ? 'एक्सेल फाइल सफलतापूर्वक डाउनलोड भयो' : 'Excel file downloaded successfully', 'success');
-        setIsExporting(false);
-      }, 1000);
-      
-    } catch (error) {
-      console.error('Excel export error:', error);
-      showToast(language === 'np' ? 'एक्सेल निर्यात गर्न असफल' : 'Failed to export Excel', 'error');
-      setIsExporting(false);
-    }
-  };
-
-  // Export to PDF
-  const handleExportPDF = () => {
-    setIsExporting(true);
-    showToast(t.pdfExport, 'info');
-    
     setTimeout(() => {
       try {
+        const wb = XLSX.utils.book_new();
         const isNepali = language === 'np';
         
-        // Create PDF with proper settings
-        const doc = new jsPDF({
-          orientation: 'landscape',
-          unit: 'mm',
-          format: 'a4',
-          compress: true
-        });
+        // Sheet 1: Summary
+        const summaryData = generateExcelData();
+        const ws1 = XLSX.utils.json_to_sheet(summaryData);
+        const colWidths = Object.keys(summaryData[0] || {}).map(key => ({
+          wch: Math.max(key.length, 30)
+        }));
+        ws1['!cols'] = colWidths;
+        XLSX.utils.book_append_sheet(wb, ws1, isNepali ? 'सारांश' : 'Summary');
         
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
+        // Sheet 2: Top Users
+        const topUsersData = generateTopUsersData();
+        const ws2 = XLSX.utils.json_to_sheet(topUsersData);
+        const colWidths2 = Object.keys(topUsersData[0] || {}).map(key => ({
+          wch: Math.max(key.length, 20)
+        }));
+        ws2['!cols'] = colWidths2;
+        XLSX.utils.book_append_sheet(wb, ws2, isNepali ? 'शीर्ष प्रयोगकर्ता' : 'Top Users');
         
-        // Add header
-        doc.setFillColor(13, 71, 161);
-        doc.rect(0, 0, pageWidth, 25, 'F');
+        // Create filename
+        const date = new Date();
+        const dateStr = date.toISOString().split('T')[0];
+        const filename = `users_report_${dateStr}.xlsx`;
         
-        // Add title
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        const title = isNepali ? 'प्रयोगकर्ता रिपोर्ट' : 'Users Report';
-        doc.text(title, pageWidth / 2, 16, { align: 'center' });
-        
-        // Add date
-        doc.setTextColor(200, 200, 200);
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        const dateStr = new Date().toLocaleString(isNepali ? 'ne-NP' : 'en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        doc.text(`${isNepali ? 'मिति' : 'Date'}: ${dateStr}`, pageWidth - 14, 20, { align: 'right' });
-        
-        let yPosition = 32;
-        
-        // ===== SUMMARY SECTION =====
-        doc.setTextColor(13, 71, 161);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(isNepali ? 'सारांश' : 'Summary', 14, yPosition);
-        yPosition += 6;
-        
-        const summaryHeaders = [
-          isNepali ? 'विवरण' : 'Description',
-          isNepali ? 'मान' : 'Value'
-        ];
-        const summaryRows = [
-          [isNepali ? 'कुल प्रयोगकर्ता' : 'Total Users', String(reportData.summary.totalUsers)],
-          [isNepali ? 'सक्रिय प्रयोगकर्ता' : 'Active Users', String(reportData.summary.activeUsers)],
-          [isNepali ? 'निष्क्रिय प्रयोगकर्ता' : 'Inactive Users', String(reportData.summary.inactiveUsers)],
-          [isNepali ? 'निलम्बित प्रयोगकर्ता' : 'Suspended Users', String(reportData.summary.suspendedUsers)],
-          [isNepali ? 'यो महिना नयाँ' : 'New This Month', String(reportData.summary.newUsersThisMonth)],
-          [isNepali ? 'गत महिना नयाँ' : 'New Last Month', String(reportData.summary.newUsersLastMonth)],
-          [isNepali ? 'वृद्धि' : 'Growth', `${reportData.summary.growth}%`],
-          [isNepali ? 'कुल गुनासो' : 'Total Complaints', String(reportData.summary.totalComplaints)],
-          [isNepali ? 'प्रति प्रयोगकर्ता औसत गुनासो' : 'Avg Complaints/User', String(reportData.summary.avgComplaintsPerUser)],
-          [isNepali ? 'सन्तुष्टि दर' : 'Satisfaction Rate', `${reportData.summary.satisfactionRate}%`]
-        ];
-        
-        doc.autoTable({
-          startY: yPosition,
-          head: [summaryHeaders],
-          body: summaryRows,
-          theme: 'striped',
-          styles: { 
-            fontSize: 8,
-            cellPadding: 3,
-            overflow: 'linebreak',
-            font: 'helvetica'
-          },
-          headStyles: { 
-            fillColor: [13, 71, 161], 
-            textColor: [255, 255, 255],
-            fontSize: 9,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: { fillColor: [240, 245, 255] },
-          margin: { left: 14, right: 14 },
-          columnStyles: {
-            0: { cellWidth: 80 },
-            1: { cellWidth: 40, halign: 'right' }
-          }
-        });
-        
-        yPosition = doc.lastAutoTable.finalY + 8;
-        
-        // ===== ROLE BREAKDOWN =====
-        doc.setTextColor(13, 71, 161);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(isNepali ? 'भूमिका अनुसार विभाजन' : 'Role Breakdown', 14, yPosition);
-        yPosition += 6;
-        
-        const roleHeaders = [
-          isNepali ? 'भूमिका' : 'Role',
-          isNepali ? 'संख्या' : 'Count',
-          isNepali ? 'प्रतिशत' : 'Percentage'
-        ];
-        const roleRows = reportData.roleBreakdown.map(item => [
-          isNepali ? item.name : item.enName,
-          String(item.count),
-          `${item.percentage}%`
-        ]);
-        
-        doc.autoTable({
-          startY: yPosition,
-          head: [roleHeaders],
-          body: roleRows,
-          theme: 'striped',
-          styles: { 
-            fontSize: 8,
-            cellPadding: 3,
-            font: 'helvetica'
-          },
-          headStyles: { 
-            fillColor: [13, 71, 161], 
-            textColor: [255, 255, 255],
-            fontSize: 9,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: { fillColor: [240, 245, 255] },
-          margin: { left: 14, right: 14 },
-          columnStyles: {
-            2: { halign: 'right' }
-          }
-        });
-        
-        yPosition = doc.lastAutoTable.finalY + 8;
-        
-        // ===== STATUS BREAKDOWN =====
-        doc.setTextColor(13, 71, 161);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(isNepali ? 'स्थिति अनुसार विभाजन' : 'Status Breakdown', 14, yPosition);
-        yPosition += 6;
-        
-        const statusHeaders = [
-          isNepali ? 'स्थिति' : 'Status',
-          isNepali ? 'संख्या' : 'Count',
-          isNepali ? 'प्रतिशत' : 'Percentage'
-        ];
-        const statusRows = reportData.statusBreakdown.map(item => [
-          isNepali ? item.name : item.enName,
-          String(item.count),
-          `${item.percentage}%`
-        ]);
-        
-        doc.autoTable({
-          startY: yPosition,
-          head: [statusHeaders],
-          body: statusRows,
-          theme: 'striped',
-          styles: { 
-            fontSize: 8,
-            cellPadding: 3,
-            font: 'helvetica'
-          },
-          headStyles: { 
-            fillColor: [13, 71, 161], 
-            textColor: [255, 255, 255],
-            fontSize: 9,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: { fillColor: [240, 245, 255] },
-          margin: { left: 14, right: 14 },
-          columnStyles: {
-            2: { halign: 'right' }
-          }
-        });
-        
-        yPosition = doc.lastAutoTable.finalY + 8;
-        
-        // ===== ACTIVITY BREAKDOWN =====
-        doc.setTextColor(13, 71, 161);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(isNepali ? 'गतिविधि अनुसार विभाजन' : 'Activity Breakdown', 14, yPosition);
-        yPosition += 6;
-        
-        const activityHeaders = [
-          isNepali ? 'गतिविधि' : 'Activity',
-          isNepali ? 'संख्या' : 'Count',
-          isNepali ? 'प्रतिशत' : 'Percentage'
-        ];
-        const activityRows = reportData.activityBreakdown.map(item => [
-          isNepali ? item.name : item.enName,
-          String(item.count),
-          `${item.percentage}%`
-        ]);
-        
-        doc.autoTable({
-          startY: yPosition,
-          head: [activityHeaders],
-          body: activityRows,
-          theme: 'striped',
-          styles: { 
-            fontSize: 8,
-            cellPadding: 3,
-            font: 'helvetica'
-          },
-          headStyles: { 
-            fillColor: [13, 71, 161], 
-            textColor: [255, 255, 255],
-            fontSize: 9,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: { fillColor: [240, 245, 255] },
-          margin: { left: 14, right: 14 },
-          columnStyles: {
-            2: { halign: 'right' }
-          }
-        });
-        
-        yPosition = doc.lastAutoTable.finalY + 8;
-        
-        // ===== REGISTRATION METHOD =====
-        doc.setTextColor(13, 71, 161);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(isNepali ? 'दर्ता विधि' : 'Registration Method', 14, yPosition);
-        yPosition += 6;
-        
-        const regHeaders = [
-          isNepali ? 'विधि' : 'Method',
-          isNepali ? 'संख्या' : 'Count',
-          isNepali ? 'प्रतिशत' : 'Percentage'
-        ];
-        const regRows = reportData.registrationMethod.map(item => [
-          isNepali ? item.name : item.enName,
-          String(item.count),
-          `${item.percentage}%`
-        ]);
-        
-        doc.autoTable({
-          startY: yPosition,
-          head: [regHeaders],
-          body: regRows,
-          theme: 'striped',
-          styles: { 
-            fontSize: 8,
-            cellPadding: 3,
-            font: 'helvetica'
-          },
-          headStyles: { 
-            fillColor: [13, 71, 161], 
-            textColor: [255, 255, 255],
-            fontSize: 9,
-            fontStyle: 'bold'
-          },
-          alternateRowStyles: { fillColor: [240, 245, 255] },
-          margin: { left: 14, right: 14 },
-          columnStyles: {
-            2: { halign: 'right' }
-          }
-        });
-        
-        yPosition = doc.lastAutoTable.finalY + 8;
-        
-        // ===== TOP USERS =====
-        doc.setTextColor(13, 71, 161);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(isNepali ? 'शीर्ष प्रयोगकर्ताहरू' : 'Top Users', 14, yPosition);
-        yPosition += 6;
-        
-        const topHeaders = [
-          isNepali ? 'नाम' : 'Name',
-          isNepali ? 'इमेल' : 'Email',
-          isNepali ? 'फोन' : 'Phone',
-          isNepali ? 'भूमिका' : 'Role',
-          isNepali ? 'विभाग' : 'Department',
-          isNepali ? 'गुनासो' : 'Complaints',
-          isNepali ? 'समाधान' : 'Resolved',
-          isNepali ? 'सन्तुष्टि' : 'Satisfaction',
-          isNepali ? 'स्थिति' : 'Status'
-        ];
-        
-        const topRows = reportData.topUsers.map(user => [
-          isNepali ? user.name : user.enName,
-          user.email,
-          user.phone,
-          getRoleText(user.role),
-          user.department,
-          String(user.complaints),
-          String(user.resolved),
-          String(user.satisfaction),
-          getStatusText(user.status)
-        ]);
-        
-        if (topRows.length > 0) {
-          doc.autoTable({
-            startY: yPosition,
-            head: [topHeaders],
-            body: topRows,
-            theme: 'striped',
-            styles: { 
-              fontSize: 7,
-              cellPadding: 2,
-              font: 'helvetica'
-            },
-            headStyles: { 
-              fillColor: [13, 71, 161], 
-              textColor: [255, 255, 255],
-              fontSize: 8,
-              fontStyle: 'bold'
-            },
-            alternateRowStyles: { fillColor: [248, 250, 255] },
-            margin: { left: 10, right: 10 },
-            columnStyles: {
-              0: { cellWidth: 30 },
-              1: { cellWidth: 35 },
-              2: { cellWidth: 25 },
-              3: { cellWidth: 22 },
-              4: { cellWidth: 28 },
-              5: { cellWidth: 18, halign: 'center' },
-              6: { cellWidth: 18, halign: 'center' },
-              7: { cellWidth: 18, halign: 'center' },
-              8: { cellWidth: 22 }
-            }
-          });
-        } else {
-          doc.setTextColor(150, 150, 150);
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'italic');
-          doc.text(isNepali ? 'कुनै प्रयोगकर्ता फेला परेन' : 'No users found', pageWidth / 2, yPosition + 20, { align: 'center' });
-        }
-        
-        // ===== ADD FOOTER =====
-        const totalPages = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-          doc.setPage(i);
-          doc.setTextColor(180, 180, 180);
-          doc.setFontSize(6.5);
-          doc.setFont('helvetica', 'italic');
-          const footerText = `NTC Complaint Tracking System - ${new Date().toISOString().split('T')[0]} - Page ${i} of ${totalPages}`;
-          doc.text(footerText, pageWidth / 2, pageHeight - 8, { align: 'center' });
-          
-          doc.setDrawColor(200, 200, 200);
-          doc.setLineWidth(0.3);
-          doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12);
-        }
-        
-        // Save PDF
-        const filename = `users_report_${new Date().toISOString().split('T')[0]}.pdf`;
-        doc.save(filename);
+        // Save file
+        XLSX.writeFile(wb, filename);
         
         setTimeout(() => {
-          showToast(language === 'np' ? 'पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : 'PDF file downloaded successfully', 'success');
+          showToast(language === 'np' ? '✅ एक्सेल फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ Excel file downloaded successfully', 'success');
           setIsExporting(false);
         }, 1000);
         
       } catch (error) {
-        console.error('PDF export error:', error);
-        showToast(
-          language === 'np' 
-            ? 'पीडीएफ निर्यात गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
-            : 'Failed to export PDF. Please try again.',
-          'error'
-        );
+        console.error('Excel export error:', error);
+        showToast(language === 'np' ? '❌ एक्सेल निर्यात गर्न असफल' : '❌ Failed to export Excel', 'error');
         setIsExporting(false);
       }
-    }, 100);
+    }, 500);
+  };
+
+  // ===== PDF EXPORT - SAME STYLE AS AdminReportsComplaints =====
+  const handleExportPDF = () => {
+    if (isExporting) return;
+    
+    setIsExporting(true);
+    showToast(t.pdfExport, 'info');
+    
+    try {
+      const now = new Date();
+      
+      // Create PDF with proper settings
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+      
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // ===== HEADER =====
+      doc.setFillColor(13, 71, 161);
+      doc.rect(0, 0, pageWidth, 30, 'F');
+      
+      // Title - Use English for clean PDF
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Users Report', pageWidth / 2, 18, { align: 'center' });
+      
+      // Date
+      doc.setTextColor(200, 200, 200);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      const dateStr = now.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      doc.text(`Date: ${dateStr}`, pageWidth - 14, 24, { align: 'right' });
+      
+      let yPosition = 38;
+      
+      // ===== SUMMARY CARDS =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Overall Overview', 14, yPosition);
+      yPosition += 8;
+      
+      // Summary cards in 3x2 grid
+      const summaryData = [
+        { label: 'Total Users', value: reportData.summary.totalUsers },
+        { label: 'Active', value: reportData.summary.activeUsers },
+        { label: 'Inactive', value: reportData.summary.inactiveUsers },
+        { label: 'Suspended', value: reportData.summary.suspendedUsers },
+        { label: 'New This Month', value: reportData.summary.newUsersThisMonth },
+        { label: 'Satisfaction Rate', value: `${reportData.summary.satisfactionRate}%` }
+      ];
+      
+      const cardWidth = (pageWidth - 40) / 3;
+      const cardHeight = 22;
+      
+      summaryData.forEach((item, index) => {
+        const col = index % 3;
+        const row = Math.floor(index / 3);
+        const x = 14 + col * (cardWidth + 5);
+        const y = yPosition + row * (cardHeight + 5);
+        
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(x, y, cardWidth, cardHeight, 3, 3, 'F');
+        doc.setDrawColor(229, 231, 235);
+        doc.roundedRect(x, y, cardWidth, cardHeight, 3, 3, 'S');
+        
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(item.value), x + 8, y + 12);
+        
+        doc.setTextColor(100, 116, 139);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.text(item.label, x + 8, y + 19);
+      });
+      
+      yPosition += (2 * (cardHeight + 5)) + 10;
+      
+      // ===== FILTERS SECTION =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Filters', 14, yPosition);
+      yPosition += 7;
+      
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      
+      const filters = [
+        `Date Range: ${dateRange === 'month' ? 'This Month' : dateRange}`,
+        `Report Type: ${reportType === 'summary' ? 'Summary' : reportType}`,
+        `Role: ${selectedRole === 'all' ? 'All' : getRoleText(selectedRole)}`,
+        `Status: ${selectedStatus === 'all' ? 'All' : getStatusText(selectedStatus)}`
+      ];
+      
+      const filterText = filters.join('  |  ');
+      doc.text(filterText, 14, yPosition + 4);
+      yPosition += 14;
+      
+      // ===== ROLE BREAKDOWN =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Role Breakdown', 14, yPosition);
+      yPosition += 6;
+      
+      const roleHeaders = ['Role', 'Count', 'Percentage'];
+      const roleRows = reportData.roleBreakdown.map(item => [
+        item.enName,
+        String(item.count),
+        `${item.percentage}%`
+      ]);
+      
+      doc.autoTable({
+        startY: yPosition,
+        head: [roleHeaders],
+        body: roleRows,
+        theme: 'striped',
+        styles: { 
+          fontSize: 9,
+          cellPadding: 4,
+          font: 'helvetica'
+        },
+        headStyles: { 
+          fillColor: [13, 71, 161], 
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          2: { halign: 'right' }
+        }
+      });
+      
+      yPosition = doc.lastAutoTable.finalY + 10;
+      
+      // ===== STATUS BREAKDOWN =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Status Breakdown', 14, yPosition);
+      yPosition += 6;
+      
+      const statusHeaders = ['Status', 'Count', 'Percentage'];
+      const statusRows = reportData.statusBreakdown.map(item => [
+        item.enName,
+        String(item.count),
+        `${item.percentage}%`
+      ]);
+      
+      doc.autoTable({
+        startY: yPosition,
+        head: [statusHeaders],
+        body: statusRows,
+        theme: 'striped',
+        styles: { 
+          fontSize: 9,
+          cellPadding: 4,
+          font: 'helvetica'
+        },
+        headStyles: { 
+          fillColor: [13, 71, 161], 
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          2: { halign: 'right' }
+        }
+      });
+      
+      yPosition = doc.lastAutoTable.finalY + 10;
+      
+      // ===== ACTIVITY BREAKDOWN =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Activity Breakdown', 14, yPosition);
+      yPosition += 6;
+      
+      const activityHeaders = ['Activity', 'Count', 'Percentage'];
+      const activityRows = reportData.activityBreakdown.map(item => [
+        item.enName,
+        String(item.count),
+        `${item.percentage}%`
+      ]);
+      
+      doc.autoTable({
+        startY: yPosition,
+        head: [activityHeaders],
+        body: activityRows,
+        theme: 'striped',
+        styles: { 
+          fontSize: 9,
+          cellPadding: 4,
+          font: 'helvetica'
+        },
+        headStyles: { 
+          fillColor: [13, 71, 161], 
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          2: { halign: 'right' }
+        }
+      });
+      
+      yPosition = doc.lastAutoTable.finalY + 10;
+      
+      // ===== REGISTRATION METHOD =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Registration Method', 14, yPosition);
+      yPosition += 6;
+      
+      const regHeaders = ['Method', 'Count', 'Percentage'];
+      const regRows = reportData.registrationMethod.map(item => [
+        item.enName,
+        String(item.count),
+        `${item.percentage}%`
+      ]);
+      
+      doc.autoTable({
+        startY: yPosition,
+        head: [regHeaders],
+        body: regRows,
+        theme: 'striped',
+        styles: { 
+          fontSize: 9,
+          cellPadding: 4,
+          font: 'helvetica'
+        },
+        headStyles: { 
+          fillColor: [13, 71, 161], 
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          2: { halign: 'right' }
+        }
+      });
+      
+      yPosition = doc.lastAutoTable.finalY + 10;
+      
+      // ===== MONTHLY TREND =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Monthly Trend', 14, yPosition);
+      yPosition += 6;
+      
+      const trendHeaders = ['Month', 'Count'];
+      const trendRows = reportData.monthlyTrend.map(item => [
+        item.enMonth,
+        String(item.count)
+      ]);
+      
+      doc.autoTable({
+        startY: yPosition,
+        head: [trendHeaders],
+        body: trendRows,
+        theme: 'striped',
+        styles: { 
+          fontSize: 8,
+          cellPadding: 3,
+          font: 'helvetica'
+        },
+        headStyles: { 
+          fillColor: [13, 71, 161], 
+          textColor: [255, 255, 255],
+          fontSize: 9,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [240, 245, 255] },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          1: { halign: 'right' }
+        }
+      });
+      
+      yPosition = doc.lastAutoTable.finalY + 10;
+      
+      // ===== TOP USERS =====
+      doc.setTextColor(13, 71, 161);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Top Users', 14, yPosition);
+      yPosition += 6;
+      
+      const topHeaders = ['Name', 'Email', 'Phone', 'Role', 'Department', 'Complaints', 'Resolved', 'Satisfaction', 'Status'];
+      
+      const topRows = reportData.topUsers.map(user => [
+        user.enName,
+        user.email,
+        user.phone,
+        getRoleText(user.role),
+        user.department,
+        String(user.complaints),
+        String(user.resolved),
+        String(user.satisfaction),
+        getStatusText(user.status)
+      ]);
+      
+      if (topRows.length > 0) {
+        doc.autoTable({
+          startY: yPosition,
+          head: [topHeaders],
+          body: topRows,
+          theme: 'striped',
+          styles: { 
+            fontSize: 7,
+            cellPadding: 2.5,
+            font: 'helvetica'
+          },
+          headStyles: { 
+            fillColor: [13, 71, 161], 
+            textColor: [255, 255, 255],
+            fontSize: 8,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: { fillColor: [248, 250, 255] },
+          margin: { left: 10, right: 10 },
+          columnStyles: {
+            0: { cellWidth: 30 },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 25 },
+            3: { cellWidth: 22 },
+            4: { cellWidth: 28 },
+            5: { cellWidth: 18, halign: 'center' },
+            6: { cellWidth: 18, halign: 'center' },
+            7: { cellWidth: 18, halign: 'center' },
+            8: { cellWidth: 22 }
+          }
+        });
+      } else {
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'italic');
+        doc.text('No users found', pageWidth / 2, yPosition + 20, { align: 'center' });
+      }
+      
+      // ===== ADD FOOTER =====
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12);
+        
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'italic');
+        const footerText = `NTC Complaint Tracking System  |  ${now.toISOString().split('T')[0]}  |  Page ${i} of ${totalPages}`;
+        doc.text(footerText, pageWidth / 2, pageHeight - 6, { align: 'center' });
+      }
+      
+      // Save PDF
+      const filename = `users_report_${now.toISOString().split('T')[0]}.pdf`;
+      doc.save(filename);
+      
+      showToast(language === 'np' ? '✅ पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ PDF file downloaded successfully', 'success');
+      setIsExporting(false);
+      
+    } catch (error) {
+      console.error('PDF export error:', error);
+      
+      // Simple fallback PDF
+      try {
+        const now = new Date();
+        const doc = new jsPDF('landscape', 'mm', 'a4');
+        
+        doc.setFontSize(16);
+        doc.text('Users Report', 14, 20);
+        doc.setFontSize(10);
+        doc.text(`Date: ${now.toLocaleDateString()}`, 14, 30);
+        
+        let y = 45;
+        doc.setFontSize(12);
+        doc.text('Summary', 14, y);
+        y += 8;
+        doc.setFontSize(10);
+        
+        const summaryData = [
+          ['Total Users', reportData.summary.totalUsers],
+          ['Active', reportData.summary.activeUsers],
+          ['Inactive', reportData.summary.inactiveUsers],
+          ['Suspended', reportData.summary.suspendedUsers]
+        ];
+        
+        summaryData.forEach(([label, value]) => {
+          doc.text(`${label}: ${value}`, 14, y);
+          y += 7;
+        });
+        
+        const filename = `users_report_${now.toISOString().split('T')[0]}.pdf`;
+        doc.save(filename);
+        
+        showToast(language === 'np' ? '✅ पीडीएफ फाइल सफलतापूर्वक डाउनलोड भयो' : '✅ PDF file downloaded successfully', 'success');
+      } catch (fallbackError) {
+        console.error('Fallback PDF export error:', fallbackError);
+        showToast(
+          language === 'np' 
+            ? '❌ पीडीएफ निर्यात गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
+            : '❌ Failed to export PDF. Please try again.',
+          'error'
+        );
+      }
+      
+      setIsExporting(false);
+    }
   };
 
   // Print function
@@ -1175,10 +1201,10 @@ const AdminReportsUsers = () => {
   const getMonthText = (month) => {
     if (language === 'np') {
       const monthMap = {
-        'January': 'जनवरी', 'February': 'फेब्रुअरी', 'March': 'मार्च',
-        'April': 'अप्रिल', 'May': 'मे', 'June': 'जुन',
-        'July': 'जुलाई', 'August': 'अगस्ट', 'September': 'सेप्टेम्बर',
-        'October': 'अक्टोबर', 'November': 'नोभेम्बर', 'December': 'डिसेम्बर'
+        'Jan': 'जनवरी', 'Feb': 'फेब्रुअरी', 'Mar': 'मार्च',
+        'Apr': 'अप्रिल', 'May': 'मे', 'Jun': 'जुन',
+        'Jul': 'जुलाई', 'Aug': 'अगस्ट', 'Sep': 'सेप्टेम्बर',
+        'Oct': 'अक्टोबर', 'Nov': 'नोभेम्बर', 'Dec': 'डिसेम्बर'
       };
       return monthMap[month] || month;
     }
@@ -1576,7 +1602,7 @@ const AdminReportsUsers = () => {
       </div>
 
       <style>{`
-        /* ===== RESET & BASE ===== */
+        /* All CSS styles remain the same as before */
         * {
           margin: 0;
           padding: 0;
@@ -1590,7 +1616,6 @@ const AdminReportsUsers = () => {
           overflow-x: hidden;
         }
 
-        /* ===== TOAST NOTIFICATION ===== */
         .toast-notification {
           position: fixed;
           top: 80px;
@@ -1630,7 +1655,6 @@ const AdminReportsUsers = () => {
           to { transform: translateX(0); opacity: 1; }
         }
 
-        /* ===== LAYOUT ===== */
         .dashboard-layout {
           display: flex;
           height: calc(100vh - 195px);
@@ -1685,7 +1709,6 @@ const AdminReportsUsers = () => {
           min-height: 100%;
         }
 
-        /* ===== BACKEND WARNING ===== */
         .backend-warning {
           background: #ff9800;
           color: white;
@@ -1697,7 +1720,6 @@ const AdminReportsUsers = () => {
           box-shadow: 0 2px 8px rgba(255,152,0,0.3);
         }
 
-        /* ===== PAGE HEADER ===== */
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -1749,7 +1771,6 @@ const AdminReportsUsers = () => {
         .export-btn.print { background: #dbeafe; color: #2563eb; }
         .export-btn.print:hover { background: #bfdbfe; transform: translateY(-1px); }
 
-        /* ===== FILTERS ===== */
         .filters-section {
           background: white;
           border-radius: 16px;
@@ -1826,7 +1847,6 @@ const AdminReportsUsers = () => {
           box-shadow: 0 6px 20px rgba(59,130,246,0.35);
         }
 
-        /* ===== SUMMARY CARDS ===== */
         .summary-cards {
           display: grid;
           grid-template-columns: repeat(6, 1fr);
@@ -1873,7 +1893,6 @@ const AdminReportsUsers = () => {
         .card-value { font-size: 1.4rem; font-weight: 700; color: #0f172a; }
         .card-label { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
 
-        /* ===== GROWTH CARD ===== */
         .growth-card {
           background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
           border-radius: 16px;
@@ -1906,7 +1925,6 @@ const AdminReportsUsers = () => {
         .growth-value.positive { color: #059669; }
         .growth-value.negative { color: #dc2626; }
 
-        /* ===== CHARTS ===== */
         .charts-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -1959,7 +1977,6 @@ const AdminReportsUsers = () => {
           transition: width 0.6s ease; 
         }
 
-        /* ===== TREND ===== */
         .trend-card {
           background: white;
           border-radius: 16px;
@@ -2031,7 +2048,6 @@ const AdminReportsUsers = () => {
           white-space: nowrap; 
         }
 
-        /* ===== TABLE ===== */
         .table-card {
           background: white;
           border-radius: 16px;
@@ -2124,7 +2140,6 @@ const AdminReportsUsers = () => {
           font-size: 2.5rem; 
         }
 
-        /* ===== RESPONSIVE ===== */
         @media (max-width: 1200px) {
           .summary-cards { grid-template-columns: repeat(3, 1fr); }
           .charts-grid { grid-template-columns: 1fr; }
@@ -2245,7 +2260,6 @@ const AdminReportsUsers = () => {
           }
         }
 
-        /* ===== PRINT STYLES ===== */
         @media print {
           .sidebar-container, .action-buttons-header, .generate-btn, .export-btn, .toast-notification {
             display: none !important;
