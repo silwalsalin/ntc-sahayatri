@@ -606,26 +606,67 @@ app.post('/api/complaint-regarding', upload.array('attachments', 5), (req, res) 
     }
 });
 
-// POST /api/complaints/track - Track complaint (public)
+// ==================== COMPLAINT TRACKING ROUTES (FIXED) ====================
+
+// POST /api/complaints/track - Track complaint (public) - FIXED
 app.post('/api/complaints/track', (req, res) => {
     try {
-        const { complaintNumber, password } = req.body;
+        const { complaintNumber, password, trackingPassword } = req.body;
+        
+        // Accept both 'password' and 'trackingPassword' for compatibility
+        const trackPassword = password || trackingPassword;
 
-        if (!complaintNumber || !password) {
-            return res.status(400).json({ success: false, message: 'Complaint number and password are required' });
+        if (!complaintNumber || !trackPassword) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Complaint number and password are required' 
+            });
         }
 
-        db.get(`SELECT * FROM complaints WHERE complaint_number = ? AND tracking_password = ?`, [complaintNumber, password], (err, row) => {
-            if (err) {
-                return res.status(500).json({ success: false, error: err.message });
+        // First check regular complaints
+        db.get(`SELECT * FROM complaints WHERE complaint_number = ? AND tracking_password = ?`, 
+            [complaintNumber, trackPassword], 
+            (err, complaint) => {
+                if (err) {
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                
+                if (complaint) {
+                    delete complaint.tracking_password;
+                    return res.json({ 
+                        success: true, 
+                        data: complaint,
+                        type: 'regular'
+                    });
+                }
+                
+                // Then check regarding complaints
+                db.get(`SELECT * FROM complaint_regarding WHERE complaint_number = ? AND tracking_password = ?`, 
+                    [complaintNumber, trackPassword], 
+                    (err, regarding) => {
+                        if (err) {
+                            return res.status(500).json({ success: false, error: err.message });
+                        }
+                        
+                        if (regarding) {
+                            delete regarding.tracking_password;
+                            return res.json({ 
+                                success: true, 
+                                data: regarding,
+                                type: 'regarding'
+                            });
+                        }
+                        
+                        return res.status(404).json({ 
+                            success: false, 
+                            message: 'Invalid complaint number or password' 
+                        });
+                    }
+                );
             }
-            if (!row) {
-                return res.status(404).json({ success: false, message: 'Invalid complaint number or password' });
-            }
-            delete row.tracking_password;
-            res.json({ success: true, data: row });
-        });
+        );
     } catch (error) {
+        console.error('Error tracking complaint:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -686,6 +727,144 @@ app.get('/api/complaints/track/:trackingNumber', (req, res) => {
         );
     } catch (error) {
         console.error('Error tracking complaint:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /api/complaint-regarding/track - Track regarding complaint (public) - FIXED
+app.post('/api/complaint-regarding/track', (req, res) => {
+    try {
+        const { complaintNumber, password, trackingPassword } = req.body;
+        
+        // Accept both 'password' and 'trackingPassword' for compatibility
+        const trackPassword = password || trackingPassword;
+
+        if (!complaintNumber || !trackPassword) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Complaint number and password are required' 
+            });
+        }
+
+        db.get(`SELECT * FROM complaint_regarding WHERE complaint_number = ? AND tracking_password = ?`, 
+            [complaintNumber, trackPassword], 
+            (err, row) => {
+                if (err) {
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                if (!row) {
+                    return res.status(404).json({ 
+                        success: false, 
+                        message: 'Invalid complaint number or password' 
+                    });
+                }
+                delete row.tracking_password;
+                res.json({ success: true, data: row });
+            }
+        );
+    } catch (error) {
+        console.error('Error tracking regarding complaint:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==================== UNIFIED TRACKING ROUTE (RECOMMENDED) ====================
+
+// POST /api/track - Unified tracking for all complaint types
+app.post('/api/track', (req, res) => {
+    try {
+        const { complaintNumber, password, trackingPassword } = req.body;
+        
+        // Accept both 'password' and 'trackingPassword' for compatibility
+        const trackPassword = password || trackingPassword;
+
+        if (!complaintNumber || !trackPassword) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Complaint number and password are required' 
+            });
+        }
+
+        // First check regular complaints
+        db.get(`SELECT * FROM complaints WHERE complaint_number = ? AND tracking_password = ?`, 
+            [complaintNumber, trackPassword], 
+            (err, complaint) => {
+                if (err) {
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                
+                if (complaint) {
+                    delete complaint.tracking_password;
+                    return res.json({ 
+                        success: true, 
+                        data: complaint,
+                        type: 'regular'
+                    });
+                }
+                
+                // Then check regarding complaints
+                db.get(`SELECT * FROM complaint_regarding WHERE complaint_number = ? AND tracking_password = ?`, 
+                    [complaintNumber, trackPassword], 
+                    (err, regarding) => {
+                        if (err) {
+                            return res.status(500).json({ success: false, error: err.message });
+                        }
+                        
+                        if (regarding) {
+                            delete regarding.tracking_password;
+                            return res.json({ 
+                                success: true, 
+                                data: regarding,
+                                type: 'regarding'
+                            });
+                        }
+                        
+                        return res.status(404).json({ 
+                            success: false, 
+                            message: 'Invalid complaint number or password' 
+                        });
+                    }
+                );
+            }
+        );
+    } catch (error) {
+        console.error('Error tracking complaint:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==================== DEBUG TRACKING ROUTE (Admin Only) ====================
+
+// GET /api/debug/tracking/:complaintNumber - Debug tracking (admin only)
+app.get('/api/debug/tracking/:complaintNumber', protect, adminOnly, (req, res) => {
+    try {
+        const { complaintNumber } = req.params;
+        
+        db.get(
+            `SELECT complaint_number, tracking_password, name, email, created_at FROM complaints WHERE complaint_number = ?`,
+            [complaintNumber],
+            (err, complaint) => {
+                if (err) {
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                
+                db.get(
+                    `SELECT complaint_number, tracking_password, name, email, created_at FROM complaint_regarding WHERE complaint_number = ?`,
+                    [complaintNumber],
+                    (err, regarding) => {
+                        res.json({
+                            success: true,
+                            data: {
+                                complaint: complaint || null,
+                                regarding: regarding || null
+                            }
+                        });
+                    }
+                );
+            }
+        );
+    } catch (error) {
+        console.error('Error in debug tracking:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -3416,14 +3595,19 @@ const startServer = async () => {
             console.log(`   9. binod@ntc.gov.np / staff123 (Technical Support)`);
             console.log(`  10. sunita@ntc.gov.np / staff123 (Billing)`);
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`🔍 TRACKING ENDPOINTS (FIXED):`);
+            console.log(`   POST /api/complaints/track - Track complaint`);
+            console.log(`   POST /api/complaint-regarding/track - Track regarding complaint`);
+            console.log(`   POST /api/track - Unified tracking (recommended)`);
+            console.log(`   GET /api/complaints/track/:trackingNumber - Track by number`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             console.log(`📋 PDF Export Endpoints:`);
             console.log(`   📄 GET /api/staff/reports/pdf - Staff PDF report`);
             console.log(`   📄 GET /api/admin/reports/pdf - Admin PDF report`);
             console.log(`   Parameters: reportType (Daily/Weekly/Monthly), startDate, endDate`);
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-            console.log(`📋 API Endpoints:`);
-            console.log(`   🔐 AUTH: ...`);
-            console.log(`   📊 STAFF REPORTS: ...`);
+            console.log(`🔍 DEBUG Endpoint (Admin only):`);
+            console.log(`   GET /api/debug/tracking/:complaintNumber`);
             console.log(`=================================\n`);
         });
     } catch (error) {

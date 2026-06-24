@@ -31,14 +31,11 @@ const getNepaliDate = () => {
   const nepaliDays = ['आइतबार', 'सोमबार', 'मंगलबार', 'बुधबार', 'बिहिबार', 'शुक्रबार', 'शनिबार'];
   
   // Approximate conversion to BS (subtract 57 years, adjust month/day)
-  // For demo purposes - in production use a proper Nepali date library
   let bsYear = date.getFullYear() - 57;
   let bsMonth = date.getMonth();
   let bsDay = date.getDate();
   let bsWeekday = date.getDay();
   
-  // Simple adjustment for month/day offset
-  // This is an approximation - real conversion requires a proper algorithm
   if (date.getMonth() < 3) {
     bsYear = date.getFullYear() - 56;
     bsMonth = date.getMonth() + 9;
@@ -47,13 +44,11 @@ const getNepaliDate = () => {
     bsMonth = date.getMonth() - 3;
   }
   
-  // Ensure month is within 0-11
   if (bsMonth < 0) {
     bsMonth += 12;
     bsYear -= 1;
   }
   
-  // Format the date
   return {
     year: bsYear,
     month: nepaliMonths[bsMonth] || 'बैशाख',
@@ -225,7 +220,7 @@ const SubmitComplaint = () => {
       np: 'लुम्बिनी प्रदेश', 
       en: 'Lumbini Province', 
       districts: {
-        'kapilbastu': { np: 'कपिलवस्तु', en: 'Kapilbastu', municipalities: ['कपिलवस्तु नगरपालिका', 'बाणगंगा नगरपालिका', 'बुद्धभूमि नगरपालिका', 'शिवराज नगरपालिका', 'महाराजगन्ज नगरपालिका', 'कृष्णनगर नगरपालिका', 'यशोधरा गाउँपालिका', 'विजयनगर गाउँपालिका', 'मायादेवी गाउँपालिका', 'सुद्धोधन गाउँपालिका'] },
+        'kapilbastu': { np: 'कपिलवस्तु', en: 'Kapilbastu', municipalities: ['कपिलवस्तु नगरपालिका', 'बाणगंगा नगरपालिका', 'बुद्धभूमि नगरपालिका', 'शिवराज नगरपालिका', 'महाराजगन्ज नगरपालिका', 'कृष्णनगर नगरपालिका', 'यशोधरा गाउँपालिका', 'बिजयनगर गाउँपालिका', 'मायादेवी गाउँपालिका', 'सुद्धोधन गाउँपालिका'] },
         'rupandehi': { np: 'रुपन्देही', en: 'Rupandehi', municipalities: ['बुटवल उपमहानगरपालिका', 'तिलोत्तमा नगरपालिका', 'सिद्धार्थनगर नगरपालिका', 'देवदह नगरपालिका', 'लुम्बिनी सांस्कृतिक नगरपालिका', 'कञ्चन गाउँपालिका', 'गैडहवा गाउँपालिका', 'मायादेवी गाउँपालिका', 'कोटहीमाई गाउँपालिका', 'रोहिणी गाउँपालिका', 'सम्मरीमाई गाउँपालिका', 'शिवराज नगरपालिका'] },
         'arghakhanchi': { np: 'अर्घाखाँची', en: 'Arghakhanchi', municipalities: ['सन्धिखर्क नगरपालिका', 'सितगंगा नगरपालिका', 'भूमिकास्थान नगरपालिका', 'छत्रदेव गाउँपालिका', 'पाणिनी गाउँपालिका', 'मालारानी गाउँपालिका'] },
         'gulmi': { np: 'गुल्मी', en: 'Gulmi', municipalities: ['तम्घास नगरपालिका', 'रेसुङ्गा नगरपालिका', 'मुसिकोट नगरपालिका', 'कालीगण्डकी गाउँपालिका', 'गुल्मी दरबार गाउँपालिका', 'सत्यवती गाउँपालिका', 'चन्द्रकोट गाउँपालिका', 'रुरुक्षेत्र गाउँपालिका', 'छत्रकोट गाउँपालिका', 'धुर्कोट गाउँपालिका', 'मालिका गाउँपालिका'] },
@@ -507,7 +502,7 @@ const SubmitComplaint = () => {
     };
   };
 
-  // Update handleSubmitComplaint to include subject
+  // FIXED: Updated submit handler with correct API endpoints
   const handleSubmitComplaint = async (e) => {
     e.preventDefault();
     
@@ -557,8 +552,10 @@ const SubmitComplaint = () => {
       const nepaliDate = getNepaliDate();
       const englishDate = getEnglishDate();
       
+      // Create form data for submission
       const formDataToSend = new FormData();
       
+      // Append all form fields
       Object.keys(formData).forEach(key => {
         if (formData[key]) {
           formDataToSend.append(key, formData[key]);
@@ -570,7 +567,7 @@ const SubmitComplaint = () => {
         formDataToSend.append('subjectEn', formData.subject);
       }
       
-      // Add date information to the form data
+      // Add date information
       formDataToSend.append('submittedDateEn', englishDate.fullDate);
       formDataToSend.append('submittedDateNp', nepaliDate.fullDate);
       formDataToSend.append('submittedDateShort', englishDate.shortDate);
@@ -589,6 +586,7 @@ const SubmitComplaint = () => {
         formDataToSend.append('attachment', selectedFile);
       }
       
+      // Progress simulation
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 90) {
@@ -599,21 +597,65 @@ const SubmitComplaint = () => {
         });
       }, 200);
       
-      const response = await axios.post(`${API_URL}/submit-complaint`, formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        timeout: 30000
-      });
+      // FIXED: Use correct API endpoint - try both /complaints and /public/complaints
+      let response = null;
+      let lastError = null;
+      
+      // Try the main complaints endpoint first
+      const endpoints = [
+        `${API_URL}/complaints`,
+        `${API_URL}/public/complaints`,
+        `${API_URL}/submit-complaint`
+      ];
+      
+      for (const endpoint of endpoints) {
+        try {
+          console.log('Trying to submit to endpoint:', endpoint);
+          response = await axios.post(endpoint, formDataToSend, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+            timeout: 30000
+          });
+          if (response.data && (response.data.success || response.data.id || response.data._id)) {
+            console.log('Successfully submitted to endpoint:', endpoint);
+            break;
+          }
+        } catch (err) {
+          lastError = err;
+          console.log('Failed at endpoint:', endpoint, err.response?.status, err.response?.data);
+          continue;
+        }
+      }
       
       clearInterval(progressInterval);
+      
+      if (!response) {
+        throw lastError || new Error('No endpoint responded successfully');
+      }
+      
       setUploadProgress(100);
       
-      if (response.data.success) {
-        // Add date information to success data
+      // Extract success data
+      let complaintData = null;
+      if (response.data) {
+        if (response.data.success && response.data.data) {
+          complaintData = response.data.data;
+        } else if (response.data.success && response.data.complaint) {
+          complaintData = response.data.complaint;
+        } else if (response.data.data) {
+          complaintData = response.data.data;
+        } else if (response.data.id || response.data._id) {
+          complaintData = response.data;
+        } else if (response.data.complaintNumber) {
+          complaintData = response.data;
+        }
+      }
+      
+      if (complaintData) {
         const formattedDate = getFormattedDate();
         const successDataWithDate = {
-          ...response.data.data,
+          ...complaintData,
           dateInfo: {
             np: formattedDate.np,
             en: formattedDate.en,
@@ -647,22 +689,29 @@ const SubmitComplaint = () => {
         
         showToast(t.submitSuccess, 'success');
       } else {
-        throw new Error(response.data.message || 'Submission failed');
+        throw new Error('No complaint data in response');
       }
       
     } catch (error) {
       console.error('Submission error:', error);
+      console.error('Error response:', error.response?.data);
       
       let errorMessage = t.submitFailed;
       if (error.code === 'ECONNABORTED') {
         errorMessage = language === 'np' ? 'सर्भरले समयमा प्रतिक्रिया दिएन। कृपया पछि प्रयास गर्नुहोस्।' : 'Server timeout. Please try again later.';
       } else if (error.response) {
-        errorMessage = error.response.data?.message || t.submitFailed;
+        errorMessage = error.response.data?.message || error.response.data?.error || t.submitFailed;
+        if (error.response.status === 404) {
+          errorMessage = language === 'np' 
+            ? 'सर्भरमा उजुरी दर्ता गर्ने मार्ग फेला परेन। कृपया पछि प्रयास गर्नुहोस्।' 
+            : 'Complaint submission endpoint not found. Please try again later.';
+        }
       } else if (error.request) {
         errorMessage = t.connectionError;
       }
       
       showToast(errorMessage, 'error');
+      setUploadProgress(0);
     } finally {
       setIsSubmitting(false);
     }
@@ -828,7 +877,7 @@ const SubmitComplaint = () => {
                 </div>
               </div>
 
-              {/* Subject Field - NEW */}
+              {/* Subject Field */}
               <div className="form-section">
                 <h3 className="section-title">{t.subjectLabel} <span className="required-star">*</span></h3>
                 <div className="form-group">
@@ -1033,20 +1082,18 @@ const SubmitComplaint = () => {
             <div className="success-icon">✅</div>
             <h3>{t.submitSuccess}</h3>
             <div className="success-details">
-              <p><strong>{t.ticketId}:</strong> {language === 'np' ? successData.complaintNumberNp : successData.complaintNumber}</p>
-              <p><strong>{t.password}:</strong> {successData.trackingPassword}</p>
+              <p><strong>{t.ticketId}:</strong> {successData.complaintNumber || successData.ticketId || 'N/A'}</p>
+              <p><strong>{t.password}:</strong> {successData.trackingPassword || 'N/A'}</p>
               
               {/* Date Information Section */}
               <div className="date-info-section">
                 <p className="date-label">{t.dateLabel}</p>
                 <div className="date-display">
-                  {/* Nepali Date */}
                   <div className="date-item nepali-date">
                     <span className="date-icon">🇳🇵</span>
                     <span className="date-label-text">{t.submittedDateNp}:</span>
                     <span className="date-value-text">{successData.dateInfo?.np?.full || ''}</span>
                   </div>
-                  {/* Nepali Date with Digits */}
                   {successData.dateInfo?.np?.withDigits && (
                     <div className="date-item nepali-digits">
                       <span className="date-icon">🔢</span>
@@ -1054,7 +1101,6 @@ const SubmitComplaint = () => {
                       <span className="date-value-text nepali-digit-value">{successData.dateInfo.np.withDigits}</span>
                     </div>
                   )}
-                  {/* English Date */}
                   <div className="date-item english-date">
                     <span className="date-icon">🇬🇧</span>
                     <span className="date-label-text">{t.submittedDateEn}:</span>
@@ -1070,7 +1116,7 @@ const SubmitComplaint = () => {
                 {t.close}
               </button>
               <button className="btn-track" onClick={() => {
-                sessionStorage.setItem('trackingId', successData.complaintNumber);
+                sessionStorage.setItem('trackingId', successData.complaintNumber || successData.ticketId);
                 sessionStorage.setItem('trackingPassword', successData.trackingPassword);
                 navigate('/track-complaint');
               }}>
@@ -1615,17 +1661,6 @@ const SubmitComplaint = () => {
         .btn-close:hover { background: #e0e0e0; }
         .btn-track { background: linear-gradient(135deg, #1565c0, #0d47a1); color: white; }
         .btn-track:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(21,101,192,0.3); }
-
-        /* Footer */
-        .footer {
-          background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
-          color: white;
-          text-align: center;
-          padding: 20px;
-          margin-top: auto;
-        }
-        .footer-content p { margin: 5px 0; font-size: 0.85rem; }
-        .copyright { opacity: 0.7; font-size: 0.75rem; }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
