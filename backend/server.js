@@ -690,6 +690,281 @@ app.get('/api/complaints/track/:trackingNumber', (req, res) => {
     }
 });
 
+// ==================== TRACKING ROUTES (UPDATED - NO PASSWORD REQUIRED) ====================
+
+// GET /api/complaints/track/:ticketNumber - Track complaint by ticket number (public - no password)
+app.get('/api/complaints/track/:ticketNumber', (req, res) => {
+    try {
+        const { ticketNumber } = req.params;
+        
+        if (!ticketNumber) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Ticket number is required' 
+            });
+        }
+
+        console.log('🔍 Tracking complaint with ticket:', ticketNumber);
+        
+        // First check regular complaints
+        db.get(
+            `SELECT * FROM complaints WHERE complaint_number = ? OR complaint_number_np = ? OR id = ?`,
+            [ticketNumber, ticketNumber, ticketNumber],
+            (err, complaint) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                
+                if (complaint) {
+                    // Remove sensitive data
+                    delete complaint.tracking_password;
+                    return res.json({ 
+                        success: true, 
+                        data: complaint,
+                        type: 'regular'
+                    });
+                }
+                
+                // If not found in regular complaints, check complaint_regarding
+                db.get(
+                    `SELECT * FROM complaint_regarding WHERE complaint_number = ? OR complaint_number_np = ? OR id = ?`,
+                    [ticketNumber, ticketNumber, ticketNumber],
+                    (err, regarding) => {
+                        if (err) {
+                            console.error('Database error:', err);
+                            return res.status(500).json({ success: false, error: err.message });
+                        }
+                        
+                        if (regarding) {
+                            // Remove sensitive data
+                            delete regarding.tracking_password;
+                            return res.json({ 
+                                success: true, 
+                                data: regarding,
+                                type: 'regarding'
+                            });
+                        }
+                        
+                        // Try to find by complaint_number if it contains NTC
+                        if (ticketNumber.includes('NTC')) {
+                            const searchTerm = ticketNumber.replace(/[^a-zA-Z0-9]/g, '');
+                            db.get(
+                                `SELECT * FROM complaints WHERE REPLACE(complaint_number, '-', '') LIKE ? OR REPLACE(complaint_number_np, '-', '') LIKE ?`,
+                                [`%${searchTerm}%`, `%${searchTerm}%`],
+                                (err, found) => {
+                                    if (err) {
+                                        console.error('Database error:', err);
+                                        return res.status(500).json({ success: false, error: err.message });
+                                    }
+                                    
+                                    if (found) {
+                                        delete found.tracking_password;
+                                        return res.json({ 
+                                            success: true, 
+                                            data: found,
+                                            type: 'regular'
+                                        });
+                                    }
+                                    
+                                    res.status(404).json({ 
+                                        success: false, 
+                                        message: 'Complaint not found with this ticket number' 
+                                    });
+                                }
+                            );
+                        } else {
+                            res.status(404).json({ 
+                                success: false, 
+                                message: 'Complaint not found with this ticket number' 
+                            });
+                        }
+                    }
+                );
+            }
+        );
+    } catch (error) {
+        console.error('Error tracking complaint:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /api/track - Unified tracking without password
+app.post('/api/track', (req, res) => {
+    try {
+        const { complaintNumber } = req.body;
+
+        if (!complaintNumber) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Complaint number is required' 
+            });
+        }
+
+        console.log('🔍 Tracking complaint via POST:', complaintNumber);
+        
+        // First check regular complaints
+        db.get(
+            `SELECT * FROM complaints WHERE complaint_number = ? OR complaint_number_np = ? OR id = ?`,
+            [complaintNumber, complaintNumber, complaintNumber],
+            (err, complaint) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                
+                if (complaint) {
+                    delete complaint.tracking_password;
+                    return res.json({ 
+                        success: true, 
+                        data: complaint,
+                        type: 'regular'
+                    });
+                }
+                
+                // Check complaint_regarding
+                db.get(
+                    `SELECT * FROM complaint_regarding WHERE complaint_number = ? OR complaint_number_np = ? OR id = ?`,
+                    [complaintNumber, complaintNumber, complaintNumber],
+                    (err, regarding) => {
+                        if (err) {
+                            console.error('Database error:', err);
+                            return res.status(500).json({ success: false, error: err.message });
+                        }
+                        
+                        if (regarding) {
+                            delete regarding.tracking_password;
+                            return res.json({ 
+                                success: true, 
+                                data: regarding,
+                                type: 'regarding'
+                            });
+                        }
+                        
+                        res.status(404).json({ 
+                            success: false, 
+                            message: 'Complaint not found with this number' 
+                        });
+                    }
+                );
+            }
+        );
+    } catch (error) {
+        console.error('Error tracking complaint:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /api/complaints/track - Track complaint (public - no password)
+app.post('/api/complaints/track', (req, res) => {
+    try {
+        const { complaintNumber } = req.body;
+
+        if (!complaintNumber) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Complaint number is required' 
+            });
+        }
+
+        console.log('🔍 Tracking complaint via /complaints/track:', complaintNumber);
+
+        db.get(
+            `SELECT * FROM complaints WHERE complaint_number = ? OR complaint_number_np = ? OR id = ?`,
+            [complaintNumber, complaintNumber, complaintNumber],
+            (err, row) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                
+                if (!row) {
+                    // Check complaint_regarding
+                    db.get(
+                        `SELECT * FROM complaint_regarding WHERE complaint_number = ? OR complaint_number_np = ? OR id = ?`,
+                        [complaintNumber, complaintNumber, complaintNumber],
+                        (err, regarding) => {
+                            if (err) {
+                                console.error('Database error:', err);
+                                return res.status(500).json({ success: false, error: err.message });
+                            }
+                            
+                            if (regarding) {
+                                delete regarding.tracking_password;
+                                return res.json({ 
+                                    success: true, 
+                                    data: regarding,
+                                    type: 'regarding'
+                                });
+                            }
+                            
+                            return res.status(404).json({ 
+                                success: false, 
+                                message: 'Complaint not found with this number' 
+                            });
+                        }
+                    );
+                    return;
+                }
+                
+                delete row.tracking_password;
+                res.json({ 
+                    success: true, 
+                    data: row,
+                    type: 'regular'
+                });
+            }
+        );
+    } catch (error) {
+        console.error('Error tracking complaint:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /api/complaint-regarding/track - Track regarding complaint (public - no password)
+app.post('/api/complaint-regarding/track', (req, res) => {
+    try {
+        const { complaintNumber } = req.body;
+
+        if (!complaintNumber) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Complaint number is required' 
+            });
+        }
+
+        console.log('🔍 Tracking regarding complaint:', complaintNumber);
+
+        db.get(
+            `SELECT * FROM complaint_regarding WHERE complaint_number = ? OR complaint_number_np = ? OR id = ?`,
+            [complaintNumber, complaintNumber, complaintNumber],
+            (err, row) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+                
+                if (!row) {
+                    return res.status(404).json({ 
+                        success: false, 
+                        message: 'Complaint not found with this number' 
+                    });
+                }
+                
+                delete row.tracking_password;
+                res.json({ 
+                    success: true, 
+                    data: row,
+                    type: 'regarding'
+                });
+            }
+        );
+    } catch (error) {
+        console.error('Error tracking regarding complaint:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ==================== AUTHENTICATION ROUTES ====================
 
 // POST /api/auth/login - Unified login for both admin and staff
@@ -3815,7 +4090,13 @@ const startServer = async () => {
             console.log(`   9. binod@ntc.gov.np / staff123 (Technical Support)`);
             console.log(`  10. sunita@ntc.gov.np / staff123 (Billing)`);
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-            console.log(`📋 STAFF COMPLAINT ENDPOINTS (NEW):`);
+            console.log(`📋 TRACKING ENDPOINTS (NO PASSWORD REQUIRED):`);
+            console.log(`   📋 GET /api/complaints/track/:ticketNumber - Track by ticket number`);
+            console.log(`   📋 POST /api/track - Unified tracking (recommended)`);
+            console.log(`   📋 POST /api/complaints/track - Track regular complaint`);
+            console.log(`   📋 POST /api/complaint-regarding/track - Track regarding complaint`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`📋 STAFF COMPLAINT ENDPOINTS:`);
             console.log(`   📋 GET /api/staff/complaints/assigned - View assigned complaints`);
             console.log(`   📋 GET /api/staff/complaints/:id - View complaint by ID`);
             console.log(`   📋 GET /api/staff/complaints/ticket/:ticketNumber - View by ticket number`);

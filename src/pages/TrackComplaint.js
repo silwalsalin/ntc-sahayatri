@@ -126,7 +126,8 @@ const TrackComplaint = () => {
       noUpdates: 'कुनै अपडेट छैन',
       by: 'द्वारा',
       on: 'मिति',
-      loadingStatus: 'लोड हुँदै...'
+      loadingStatus: 'लोड हुँदै...',
+      connectionError: 'सर्भरमा जडान गर्न असफल। कृपया आफ्नो इन्टरनेट जाँच गर्नुहोस्।'
     },
     en: {
       weAreHere: 'We are here for you',
@@ -176,7 +177,8 @@ const TrackComplaint = () => {
       noUpdates: 'No updates yet',
       by: 'by',
       on: 'on',
-      loadingStatus: 'Loading...'
+      loadingStatus: 'Loading...',
+      connectionError: 'Failed to connect to server. Please check your internet connection.'
     }
   };
 
@@ -188,8 +190,118 @@ const TrackComplaint = () => {
     localStorage.setItem('preferredLanguage', lang);
   };
 
+  // Transform complaint data for display
+  const transformComplaintData = (complaint, type = 'regular') => {
+    if (!complaint) return null;
+    
+    const isRegarding = type === 'regarding' || complaint.subject;
+    
+    // Build update history from the complaint data
+    let history = [];
+    if (complaint.updateHistory) {
+      history = complaint.updateHistory.map(item => ({
+        status: item.status,
+        status_np: getStatusText(item.status, 'np'),
+        status_en: getStatusText(item.status, 'en'),
+        notes: item.notes || item.note || '',
+        notesEn: item.notesEn || item.notes || item.note || '',
+        updatedBy: item.updatedBy || 'System',
+        updatedAt: item.timestamp || item.date || new Date().toISOString()
+      }));
+    }
+    
+    return {
+      id: complaint.id,
+      complaintNumber: complaint.complaint_number,
+      complaintNumberNp: complaint.complaint_number_np,
+      name: complaint.name,
+      nameEn: complaint.name_en || complaint.name,
+      email: complaint.email,
+      phone: complaint.phone,
+      category: isRegarding ? complaint.complaint_type : complaint.nature_of_complaint,
+      category_np: getCategoryText(isRegarding ? complaint.complaint_type : complaint.nature_of_complaint, 'np'),
+      category_en: getCategoryText(isRegarding ? complaint.complaint_type : complaint.nature_of_complaint, 'en'),
+      status: complaint.status,
+      status_np: getStatusText(complaint.status, 'np'),
+      status_en: getStatusText(complaint.status, 'en'),
+      complaint: complaint.description || complaint.complaint || '',
+      complaintEn: complaint.description || complaint.complaint || '',
+      subject: complaint.subject || null,
+      channel: complaint.channel || 'वेबसाइट पोर्टल',
+      enChannel: complaint.enChannel || 'Website Portal',
+      priority: complaint.priority || 'medium',
+      resolution: complaint.resolution || null,
+      resolutionEn: complaint.resolution || null,
+      actionTaken: complaint.action_taken || null,
+      actionTakenEn: complaint.action_taken || null,
+      assignedTo: complaint.assigned_to || null,
+      assignedToEn: complaint.assigned_to || null,
+      submittedDateNp: complaint.created_at ? new Date(complaint.created_at).toLocaleDateString('ne-NP') : '-',
+      submittedDateEn: complaint.created_at ? new Date(complaint.created_at).toISOString().split('T')[0] : '-',
+      history: history
+    };
+  };
+
+  const getCategoryText = (category, lang) => {
+    const categories = {
+      np: {
+        'internet': 'इन्टरनेट सेवा',
+        'recharge': 'रिचार्ज र ब्यालेन्स',
+        'activation': 'सेवा सक्रियता/निष्क्रियता',
+        'billing': 'बिलिङ समस्या',
+        'signal': 'सिग्नल समस्या',
+        'network': 'नेटवर्क कभरेज',
+        'technical': 'प्राविधिक समस्या',
+        'service': 'सेवा समस्या',
+        'general': 'सामान्य',
+        'other': 'अन्य'
+      },
+      en: {
+        'internet': 'Internet Service',
+        'recharge': 'Recharge & Balance',
+        'activation': 'Activation/Deactivation',
+        'billing': 'Billing Issues',
+        'signal': 'Signal Issue',
+        'network': 'Network Coverage',
+        'technical': 'Technical Issue',
+        'service': 'Service Issue',
+        'general': 'General',
+        'other': 'Other'
+      }
+    };
+    return categories[lang]?.[category] || category;
+  };
+
+  const getStatusText = (status, lang) => {
+    const statusMap = {
+      np: {
+        'pending': 'विचाराधीन',
+        'in-progress': 'प्रगतिमा',
+        'resolved': 'समाधान',
+        'review': 'समीक्षामा',
+        'rejected': 'अस्वीकृत',
+        'closed': 'बन्द'
+      },
+      en: {
+        'pending': 'Pending',
+        'in-progress': 'In Progress',
+        'resolved': 'Resolved',
+        'review': 'Under Review',
+        'rejected': 'Rejected',
+        'closed': 'Closed'
+      }
+    };
+    return statusMap[lang]?.[status] || status;
+  };
+
+  const getStatusTextDisplay = (status) => {
+    return language === 'np' ? getStatusText(status, 'np') : getStatusText(status, 'en');
+  };
+
   const handleTrackComplaint = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
     
     if (!trackTicket.trim()) {
       showToast(t.enterTicketNumber, 'warning');
@@ -201,37 +313,112 @@ const TrackComplaint = () => {
     setTrackResult(null);
 
     try {
-      // Search for complaint by ticket number
-      const response = await axios.get(`${API_URL}/public/complaints/track`, {
-        params: { ticketNumber: trackTicket.trim() }
-      });
-
-      if (response.data.success && response.data.data) {
-        setTrackResult(response.data.data);
-        showToast(language === 'np' ? 'उजुरी फेला पर्यो' : 'Complaint found', 'success', 2000);
+      const ticketNumber = trackTicket.trim();
+      console.log('🔍 Tracking complaint with ticket:', ticketNumber);
+      
+      let response = null;
+      let lastError = null;
+      
+      // Try all possible tracking endpoints from your backend
+      const endpoints = [
+        {
+          url: `${API_URL}/complaints/track/${encodeURIComponent(ticketNumber)}`,
+          method: 'get'
+        },
+        {
+          url: `${API_URL}/track`,
+          method: 'post',
+          data: { complaintNumber: ticketNumber }
+        },
+        {
+          url: `${API_URL}/complaints/track`,
+          method: 'post',
+          data: { complaintNumber: ticketNumber }
+        },
+        {
+          url: `${API_URL}/complaint-regarding/track`,
+          method: 'post',
+          data: { complaintNumber: ticketNumber }
+        }
+      ];
+      
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`🔄 Trying ${endpoint.method.toUpperCase()} ${endpoint.url}`);
+          
+          let res;
+          if (endpoint.method === 'post') {
+            res = await axios.post(endpoint.url, endpoint.data, {
+              headers: { 'Content-Type': 'application/json' },
+              timeout: 15000
+            });
+          } else {
+            res = await axios.get(endpoint.url, {
+              timeout: 15000
+            });
+          }
+          
+          // Check if response has valid data
+          if (res.data && res.data.success && res.data.data) {
+            response = res;
+            console.log('✅ Success at endpoint:', endpoint.url);
+            break;
+          } else {
+            response = null;
+          }
+        } catch (err) {
+          lastError = err;
+          console.log(`❌ Failed at ${endpoint.url}:`, err.response?.status, err.response?.data);
+          // If we get a 404, continue to next endpoint
+          if (err.response?.status === 404) {
+            continue;
+          }
+          // If we get a 400, break (invalid request)
+          if (err.response?.status === 400) {
+            break;
+          }
+        }
+      }
+      
+      if (response && response.data && response.data.success && response.data.data) {
+        const transformed = transformComplaintData(response.data.data, response.data.type || 'regular');
+        setTrackResult(transformed);
+        showToast(language === 'np' ? '✅ उजुरी फेला पर्यो' : '✅ Complaint found', 'success', 2000);
       } else {
+        // Not found
         setTrackResult(null);
         setError(t.notFound);
         showToast(t.notFound, 'error', 3000);
       }
     } catch (error) {
-      console.error('Error tracking complaint:', error);
+      console.error('❌ Error tracking complaint:', error);
+      console.error('Error response:', error.response?.data);
+      
       setError(t.error);
       setTrackResult(null);
       
-      // If backend is not available, use sample data for demo
-      if (error.code === 'ERR_NETWORK' || error.response?.status === 404) {
-        // Try to find in local sample data
+      if (error.response) {
+        if (error.response.status === 404) {
+          setError(t.notFound);
+          showToast(t.notFound, 'error', 3000);
+        } else if (error.response.status === 400) {
+          const msg = error.response.data?.message || t.notFound;
+          setError(msg);
+          showToast(msg, 'error', 3000);
+        } else if (error.response.status === 500) {
+          showToast(language === 'np' ? 'सर्भर त्रुटि। कृपया पछि प्रयास गर्नुहोस्।' : 'Server error. Please try later.', 'error', 3000);
+        } else {
+          showToast(error.response.data?.message || t.error, 'error', 3000);
+        }
+      } else if (error.request) {
+        // Network error - show connection error
+        showToast(t.connectionError, 'error', 4000);
+        // Try sample data for demo
         const sampleResult = findSampleComplaint(trackTicket.trim());
         if (sampleResult) {
           setTrackResult(sampleResult);
-          showToast(language === 'np' ? 'उजुरी फेला पर्यो (नमूना डाटा)' : 'Complaint found (sample data)', 'success', 2000);
-        } else {
-          setError(t.notFound);
-          showToast(t.notFound, 'error', 3000);
+          showToast(language === 'np' ? '✅ उजुरी फेला पर्यो (नमूना डाटा)' : '✅ Complaint found (sample data)', 'success', 2000);
         }
-      } else {
-        showToast(t.error, 'error', 3000);
       }
     } finally {
       setLoading(false);
@@ -242,103 +429,48 @@ const TrackComplaint = () => {
   const findSampleComplaint = (ticketNumber) => {
     const sampleComplaints = [
       {
-        id: 1,
         complaintNumber: 'NTC-2024-001',
         complaintNumberNp: 'NTC-२०८०-००१',
         name: 'रमेश केसी',
-        nameEn: 'Ramesh KC',
+        name_en: 'Ramesh KC',
         email: 'ramesh@example.com',
         phone: '9841000001',
-        category: 'internet',
-        category_np: 'इन्टरनेट',
-        category_en: 'Internet',
+        nature_of_complaint: 'internet',
         status: 'in-progress',
-        status_np: 'प्रगतिमा',
-        status_en: 'In Progress',
-        complaint: 'फाइबर जडान २ दिनदेखि बन्द छ',
-        complaintEn: 'Fiber connection down since 2 days',
-        date: '२०८०-०१-१५',
-        enDate: '2024-01-15',
+        description: 'फाइबर जडान २ दिनदेखि बन्द छ',
+        created_at: new Date().toISOString(),
         channel: 'वेबसाइट पोर्टल',
         enChannel: 'Website Portal',
         priority: 'high',
         resolution: 'प्राविधिक टोलीले जाँच गरिरहेको छ',
-        resolutionEn: 'Technical team is investigating',
-        actionTaken: 'प्राविधिक टोलीलाई जानकारी दिइयो',
-        actionTakenEn: 'Technical team notified',
-        assignedTo: 'प्राविधिक टोली',
-        assignedToEn: 'Technical Team',
-        submittedDateNp: '२०८०-०१-१५',
-        submittedDateEn: '2024-01-15',
-        history: [
-          { status: 'pending', status_np: 'विचाराधीन', status_en: 'Pending', notes: 'गुनासो दर्ता भयो', notesEn: 'Complaint registered', updatedBy: 'System', updatedAt: '२०८०-०१-१५' },
-          { status: 'in-progress', status_np: 'प्रगतिमा', status_en: 'In Progress', notes: 'प्राविधिक टोलीलाई तोकियो', notesEn: 'Assigned to technical team', updatedBy: 'Admin', updatedAt: '२०८०-०१-१६' }
+        action_taken: 'प्राविधिक टोलीलाई जानकारी दिइयो',
+        assigned_to: 'प्राविधिक टोली',
+        updateHistory: [
+          { status: 'pending', notes: 'गुनासो दर्ता भयो', notesEn: 'Complaint registered', updatedBy: 'System', timestamp: new Date().toISOString() },
+          { status: 'in-progress', notes: 'प्राविधिक टोलीलाई तोकियो', notesEn: 'Assigned to technical team', updatedBy: 'Admin', timestamp: new Date().toISOString() }
         ]
       },
       {
-        id: 2,
         complaintNumber: 'NTC-2024-002',
         complaintNumberNp: 'NTC-२०८०-००२',
         name: 'सीता शर्मा',
-        nameEn: 'Sita Sharma',
+        name_en: 'Sita Sharma',
         email: 'sita@example.com',
         phone: '9812345678',
-        category: 'recharge',
-        category_np: 'रिचार्ज',
-        category_en: 'Recharge',
+        nature_of_complaint: 'recharge',
         status: 'resolved',
-        status_np: 'समाधान',
-        status_en: 'Resolved',
-        complaint: 'रु. ५०० रिचार्ज गरे पनि ब्यालेन्स अपडेट भएन',
-        complaintEn: 'Recharged Rs. 500 but balance not updated',
-        date: '२०८०-०१-२०',
-        enDate: '2024-01-20',
+        description: 'रु. ५०० रिचार्ज गरे पनि ब्यालेन्स अपडेट भएन',
+        created_at: new Date().toISOString(),
         channel: 'व्हाट्सएप',
         enChannel: 'WhatsApp',
         priority: 'medium',
         resolution: 'रिचार्ज सफल भयो र ब्यालेन्स अपडेट गरियो',
-        resolutionEn: 'Recharge successful and balance updated',
-        actionTaken: 'ग्राहकको खातामा रिचार्ज जम्मा गरियो',
-        actionTakenEn: 'Recharge credited to customer account',
-        assignedTo: 'ग्राहक सेवा',
-        assignedToEn: 'Customer Service',
-        submittedDateNp: '२०८०-०१-२०',
-        submittedDateEn: '2024-01-20',
-        history: [
-          { status: 'pending', status_np: 'विचाराधीन', status_en: 'Pending', notes: 'गुनासो दर्ता भयो', notesEn: 'Complaint registered', updatedBy: 'System', updatedAt: '२०८०-०१-२०' },
-          { status: 'in-progress', status_np: 'प्रगतिमा', status_en: 'In Progress', notes: 'ग्राहक सेवालाई तोकियो', notesEn: 'Assigned to customer service', updatedBy: 'Admin', updatedAt: '२०८०-०१-२१' },
-          { status: 'resolved', status_np: 'समाधान', status_en: 'Resolved', notes: 'रिचार्ज सफल भयो', notesEn: 'Recharge successful', updatedBy: 'Customer Service', updatedAt: '२०८०-०१-२२' }
-        ]
-      },
-      {
-        id: 3,
-        complaintNumber: 'NTC-2024-003',
-        complaintNumberNp: 'NTC-२०८०-००३',
-        name: 'हरि प्रसाद',
-        nameEn: 'Hari Prasad',
-        email: 'hari@example.com',
-        phone: '9823456789',
-        category: 'activation',
-        category_np: 'सक्रियता',
-        category_en: 'Activation',
-        status: 'pending',
-        status_np: 'विचाराधीन',
-        status_en: 'Pending',
-        complaint: 'सिम डिएक्टिभेसन अनुरोध प्रक्रिया भएन',
-        complaintEn: 'SIM deactivation request not processed',
-        date: '२०८०-०१-२५',
-        enDate: '2024-01-25',
-        channel: 'कल सेन्टर',
-        enChannel: 'Call Center',
-        priority: 'low',
-        resolution: null,
-        actionTaken: null,
-        assignedTo: 'प्रशासन',
-        assignedToEn: 'Administration',
-        submittedDateNp: '२०८०-०१-२५',
-        submittedDateEn: '2024-01-25',
-        history: [
-          { status: 'pending', status_np: 'विचाराधीन', status_en: 'Pending', notes: 'गुनासो दर्ता भयो', notesEn: 'Complaint registered', updatedBy: 'System', updatedAt: '२०८०-०१-२५' }
+        action_taken: 'ग्राहकको खातामा रिचार्ज जम्मा गरियो',
+        assigned_to: 'ग्राहक सेवा',
+        updateHistory: [
+          { status: 'pending', notes: 'गुनासो दर्ता भयो', notesEn: 'Complaint registered', updatedBy: 'System', timestamp: new Date().toISOString() },
+          { status: 'in-progress', notes: 'ग्राहक सेवालाई तोकियो', notesEn: 'Assigned to customer service', updatedBy: 'Admin', timestamp: new Date().toISOString() },
+          { status: 'resolved', notes: 'रिचार्ज सफल भयो', notesEn: 'Recharge successful', updatedBy: 'Customer Service', timestamp: new Date().toISOString() }
         ]
       }
     ];
@@ -349,7 +481,7 @@ const TrackComplaint = () => {
       c.complaintNumberNp === ticketNumber
     );
 
-    return found || null;
+    return found ? transformComplaintData(found, 'regular') : null;
   };
 
   const getStatusClass = (status) => {
@@ -358,36 +490,16 @@ const TrackComplaint = () => {
       'in-progress': 'status-progress',
       'resolved': 'status-resolved',
       'review': 'status-review',
-      'rejected': 'status-rejected'
+      'rejected': 'status-rejected',
+      'closed': 'status-closed'
     };
     return classes[status] || 'status-pending';
-  };
-
-  const getStatusText = (status) => {
-    if (language === 'np') {
-      const statusMap = {
-        'pending': 'विचाराधीन',
-        'in-progress': 'प्रगतिमा',
-        'resolved': 'समाधान',
-        'review': 'समीक्षामा',
-        'rejected': 'अस्वीकृत'
-      };
-      return statusMap[status] || status;
-    } else {
-      const statusMap = {
-        'pending': 'Pending',
-        'in-progress': 'In Progress',
-        'resolved': 'Resolved',
-        'review': 'Under Review',
-        'rejected': 'Rejected'
-      };
-      return statusMap[status] || status;
-    }
   };
 
   const getPriorityText = (priority) => {
     if (language === 'np') {
       const priorityMap = {
+        'urgent': 'अत्यावश्यक',
         'high': 'उच्च',
         'medium': 'मध्यम',
         'low': 'न्यून'
@@ -395,6 +507,7 @@ const TrackComplaint = () => {
       return priorityMap[priority] || priority;
     } else {
       const priorityMap = {
+        'urgent': 'Urgent',
         'high': 'High',
         'medium': 'Medium',
         'low': 'Low'
@@ -405,6 +518,7 @@ const TrackComplaint = () => {
 
   const getPriorityClass = (priority) => {
     const classes = {
+      'urgent': 'priority-urgent',
       'high': 'priority-high',
       'medium': 'priority-medium',
       'low': 'priority-low'
@@ -595,7 +709,7 @@ const TrackComplaint = () => {
                   <span className="result-icon">✅</span>
                   <h3>{t.complaintStatusLabel}</h3>
                   <span className={`status-badge ${getStatusClass(trackResult.status)}`}>
-                    {getStatusText(trackResult.status)}
+                    {getStatusTextDisplay(trackResult.status)}
                   </span>
                 </div>
                 <div className="result-details">
@@ -643,6 +757,12 @@ const TrackComplaint = () => {
                       <div className="detail-value">{language === 'np' ? trackResult.assignedTo : trackResult.assignedToEn}</div>
                     </div>
                   )}
+                  {trackResult.subject && (
+                    <div className="detail-row full-width">
+                      <div className="detail-label">विषय / Subject:</div>
+                      <div className="detail-value">{trackResult.subject}</div>
+                    </div>
+                  )}
                   <div className="detail-row full-width">
                     <div className="detail-label">{t.description}:</div>
                     <div className="detail-value">{language === 'np' ? trackResult.complaint : trackResult.complaintEn}</div>
@@ -675,10 +795,10 @@ const TrackComplaint = () => {
                                 {language === 'np' ? item.status_np : item.status_en}
                               </span>
                               <span className="history-date">
-                                {t.by} {item.updatedBy} {t.on} {item.updatedAt}
+                                {t.by} {item.updatedBy || 'System'} {t.on} {new Date(item.updatedAt || item.timestamp || Date.now()).toLocaleDateString()}
                               </span>
                             </div>
-                            <p className="history-notes">{language === 'np' ? item.notes : item.notesEn}</p>
+                            <p className="history-notes">{language === 'np' ? (item.notes || item.note || 'अपडेट गरियो') : (item.notesEn || item.notes || item.note || 'Updated')}</p>
                           </div>
                         </div>
                       ))}
@@ -1158,6 +1278,7 @@ const TrackComplaint = () => {
         .status-resolved { background: #d1fae5; color: #059669; }
         .status-review { background: #e0e7ff; color: #4f46e5; }
         .status-rejected { background: #fee2e2; color: #dc2626; }
+        .status-closed { background: #d1d5db; color: #4b5563; }
 
         .priority-badge {
           display: inline-block;
@@ -1167,6 +1288,7 @@ const TrackComplaint = () => {
           font-weight: 500;
         }
 
+        .priority-urgent { background: #7c1d1d; color: #fff; }
         .priority-high { background: #fee2e2; color: #dc2626; }
         .priority-medium { background: #fef3c7; color: #d97706; }
         .priority-low { background: #d1fae5; color: #059669; }
@@ -1298,6 +1420,7 @@ const TrackComplaint = () => {
         .history-status.status-resolved { background: #d1fae5; color: #059669; }
         .history-status.status-review { background: #e0e7ff; color: #4f46e5; }
         .history-status.status-rejected { background: #fee2e2; color: #dc2626; }
+        .history-status.status-closed { background: #d1d5db; color: #4b5563; }
 
         .history-date {
           font-size: 0.7rem;
