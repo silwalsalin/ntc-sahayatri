@@ -128,7 +128,6 @@ const StaffSidebar = ({ language, staffName = "Staff User", staffRole = "Support
       label: t.help,
       children: [
         { id: 'documentation', icon: '📚', label: t.documentation, path: '/staff/documentation' },
-        { id: 'contact-support', icon: '📞', label: t.contactSupport, path: '/staff/contact' }
       ]
     }
   ];

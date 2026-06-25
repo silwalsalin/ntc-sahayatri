@@ -35,7 +35,7 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
     np: {
       weAreHere: 'हामी तपाईंको लागि यहाँ छौं',
       contactNumber: 'सम्पर्क नम्बर: ०१-४९६०००८',
-      emailAddress: 'coo@ntc.net.np',
+      emailAddress: 'support@ntc.gov.np',
       departmentName: 'नेपाल दूरसञ्चार प्राधिकरण',
       departmentAddress: 'भद्रकाली प्लाजा, काठमाडौं',
       logout: 'लगआउट',
@@ -48,7 +48,7 @@ const StaffHeader = ({ language, setLanguage, staffName = "Staff User", staffRol
     en: {
       weAreHere: 'We are here for you',
       contactNumber: 'Contact: 01-4960008',
-      emailAddress: 'coo@ntc.net.np',
+      emailAddress: 'support@ntc.gov.np',
       departmentName: 'Nepal Telecommunications Authority',
       departmentAddress: 'Bhadrakali Plaza, Kathmandu',
       logout: 'Logout',

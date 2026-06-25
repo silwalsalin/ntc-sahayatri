@@ -1,7 +1,6 @@
 // src/pages/StaffDocumentation.js
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import StaffHeader from '../components/StaffHeader';
 import StaffSidebar from '../components/StaffSidebar';
 
@@ -16,7 +15,6 @@ const StaffDocumentation = () => {
   const [showModal, setShowModal] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState(null);
-  const [backendStatus, setBackendStatus] = useState('checking');
   const [recentlyViewed, setRecentlyViewed] = useState([]);
   const [bookmarkedArticles, setBookmarkedArticles] = useState([]);
   const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
@@ -34,40 +32,219 @@ const StaffDocumentation = () => {
     department: ''
   });
 
-  const [documentation, setDocumentation] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [faqs, setFaqs] = useState([]);
-  const [videoTutorials, setVideoTutorials] = useState([]);
-  const [announcements, setAnnouncements] = useState([]);
-
-  // Save language preference
-  useEffect(() => {
-    localStorage.setItem('preferredLanguage', language);
-  }, [language]);
-
-  // Format number with Nepali digits
-  const formatNumber = (num) => {
-    if (num === undefined || num === null) return '०';
-    if (language === 'np') {
-      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
-      return num.toString().replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
+  // Documentation data - static content
+  const documentation = [
+    {
+      id: 1,
+      title: 'स्टाफ पोर्टल सुरु गर्दै',
+      enTitle: 'Getting Started with Staff Portal',
+      category: 'getting-started',
+      content: 'स्टाफ पोर्टल प्रभावकारी रूपमा नेभिगेट गर्न र प्रयोग गर्न सिक्नुहोस्। यो व्यापक गाइडले लगइनदेखि उन्नत सुविधाहरू सम्म सबै कुरा समावेश गर्दछ। ड्यासबोर्ड नेभिगेसन, गुनासो व्यवस्थापन, र रिपोर्टिङ उपकरणहरू सहित सबै कुरा कभर गरिएको छ।',
+      enContent: 'Learn how to navigate and use the staff portal effectively. This comprehensive guide covers everything from login to advanced features including dashboard navigation, complaint management, and reporting tools.',
+      author: 'प्रशासक',
+      enAuthor: 'Admin',
+      date: '2024-01-01',
+      readTime: 5,
+      likes: 45,
+      views: 1200,
+      difficulty: 'beginner',
+      tags: ['गाइड', 'ट्युटोरियल', 'आधारभूत'],
+      featured: true
+    },
+    {
+      id: 2,
+      title: 'गुनासो कसरी ह्यान्डल गर्ने',
+      enTitle: 'How to Handle Complaints',
+      category: 'complaints',
+      content: 'ग्राहक गुनासो प्रभावकारी रूपमा व्यवस्थापन र समाधान गर्न चरण-दर-चरण गाइड। गुनासो समाधानको लागि उत्तम अभ्यासहरू, संचार रणनीतिहरू, र पालना प्रक्रियाहरू सिक्नुहोस्।',
+      enContent: 'Step-by-step guide to managing and resolving customer complaints efficiently. Learn best practices for complaint resolution, communication strategies, and follow-up procedures.',
+      author: 'सहायता टोली',
+      enAuthor: 'Support Team',
+      date: '2024-01-05',
+      readTime: 8,
+      likes: 32,
+      views: 890,
+      difficulty: 'intermediate',
+      tags: ['गुनासो', 'समाधान', 'ग्राहक सेवा'],
+      featured: true
+    },
+    {
+      id: 3,
+      title: 'कार्य व्यवस्थापन गाइड',
+      enTitle: 'Task Management Guide',
+      category: 'tasks',
+      content: 'तपाईंको कार्यहरू प्रभावकारी रूपमा व्यवस्थापन गर्न पूर्ण गाइड। कार्यहरूलाई प्राथमिकता दिन, ट्र्याक गर्न र समयमै पूरा गर्न सिक्नुहोस्। कार्य व्यवस्थापन प्रणालीको पूर्ण उपयोग गर्नुहोस्।',
+      enContent: 'Complete guide to managing your tasks efficiently. Learn how to prioritize, track, and complete tasks on time using the task management system.',
+      author: 'प्रशासक',
+      enAuthor: 'Admin',
+      date: '2024-01-10',
+      readTime: 6,
+      likes: 28,
+      views: 650,
+      difficulty: 'beginner',
+      tags: ['कार्य', 'उत्पादकता', 'व्यवस्थापन'],
+      featured: false
+    },
+    {
+      id: 4,
+      title: 'रिपोर्टहरू बुझ्दै',
+      enTitle: 'Understanding Reports',
+      category: 'reports',
+      content: 'विभिन्न रिपोर्टहरू कसरी उत्पन्न र व्याख्या गर्ने। यो गाइडले सबै रिपोर्ट प्रकार र तिनीहरूको प्रयोगहरू व्याख्या गर्दछ। दैनिक, साप्ताहिक, मासिक, र अनुकूलन रिपोर्टहरू समावेश छन्।',
+      enContent: 'How to generate and interpret various reports. This guide explains all report types and their uses, including daily, weekly, monthly, and custom reports.',
+      author: 'विश्लेषण टोली',
+      enAuthor: 'Analytics Team',
+      date: '2024-01-15',
+      readTime: 7,
+      likes: 22,
+      views: 540,
+      difficulty: 'intermediate',
+      tags: ['रिपोर्ट', 'विश्लेषण', 'डाटा'],
+      featured: false
+    },
+    {
+      id: 5,
+      title: 'तपाईंको प्रदर्शन सुधार गर्दै',
+      enTitle: 'Improving Your Performance',
+      category: 'performance',
+      content: 'तपाईंको प्रदर्शन मेट्रिक्स सुधार गर्न टिप्स र ट्रिक्स। कसरी राम्रो परिणाम प्राप्त गर्ने र लक्ष्यहरू भन्दा बढी गर्ने सिक्नुहोस्। प्रमाणित रणनीतिहरूको साथ आफ्नो प्रदर्शन बढाउनुहोस्।',
+      enContent: 'Tips and tricks to improve your performance metrics. Learn how to achieve better results and exceed targets with proven strategies.',
+      author: 'मानव संसाधन टोली',
+      enAuthor: 'HR Team',
+      date: '2024-01-20',
+      readTime: 4,
+      likes: 38,
+      views: 720,
+      difficulty: 'advanced',
+      tags: ['प्रदर्शन', 'उत्पादकता', 'लक्ष्य'],
+      featured: true
+    },
+    {
+      id: 6,
+      title: 'ग्राहक सेवा उत्कृष्ट अभ्यासहरू',
+      enTitle: 'Customer Service Best Practices',
+      category: 'complaints',
+      content: 'उत्कृष्ट ग्राहक सेवा प्रदान गर्नका लागि आवश्यक सीप र प्रविधिहरू। प्रभावकारी संचार, समस्या समाधान, र ग्राहक सन्तुष्टि बढाउने तरिकाहरू सिक्नुहोस्।',
+      enContent: 'Essential skills and techniques for providing excellent customer service. Learn effective communication, problem-solving, and ways to increase customer satisfaction.',
+      author: 'प्रशिक्षण टोली',
+      enAuthor: 'Training Team',
+      date: '2024-01-25',
+      readTime: 10,
+      likes: 55,
+      views: 1500,
+      difficulty: 'beginner',
+      tags: ['ग्राहक सेवा', 'संचार', 'सीप'],
+      featured: true
+    },
+    {
+      id: 7,
+      title: 'डाटा सुरक्षा र गोपनीयता',
+      enTitle: 'Data Security and Privacy',
+      category: 'getting-started',
+      content: 'प्रणालीमा डाटा सुरक्षा र गोपनीयता कायम राख्नका लागि महत्वपूर्ण दिशानिर्देशहरू। पासवर्ड व्यवस्थापन, डाटा ह्यान्डलिङ, र सुरक्षा सर्वोत्तम अभ्यासहरू।',
+      enContent: 'Important guidelines for maintaining data security and privacy in the system. Password management, data handling, and security best practices.',
+      author: 'आईटी टोली',
+      enAuthor: 'IT Team',
+      date: '2024-01-28',
+      readTime: 6,
+      likes: 42,
+      views: 980,
+      difficulty: 'intermediate',
+      tags: ['सुरक्षा', 'गोपनीयता', 'डाटा'],
+      featured: false
+    },
+    {
+      id: 8,
+      title: 'टोली सहकार्य उपकरणहरू',
+      enTitle: 'Team Collaboration Tools',
+      category: 'tasks',
+      content: 'टोलीमा प्रभावकारी सहकार्यको लागि उपलब्ध उपकरण र प्रविधिहरूको बारेमा जान्नुहोस्। सन्देश, फाइल साझेदारी, र संयुक्त कार्य प्रवाहहरूको उपयोग गर्नुहोस्।',
+      enContent: 'Learn about available tools and techniques for effective team collaboration. Utilize messaging, file sharing, and collaborative workflows.',
+      author: 'प्रबन्धक',
+      enAuthor: 'Manager',
+      date: '2024-02-01',
+      readTime: 5,
+      likes: 30,
+      views: 600,
+      difficulty: 'beginner',
+      tags: ['सहकार्य', 'टोली', 'संचार'],
+      featured: false
     }
-    return num.toString();
-  };
+  ];
 
-  // Format decimal with Nepali digits
-  const formatDecimal = (num) => {
-    if (num === undefined || num === null) return '०';
-    if (language === 'np') {
-      const nepaliDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
-      const parts = num.toString().split('.');
-      const integerPart = parts[0].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
-      if (parts.length === 1) return integerPart;
-      const decimalPart = parts[1].replace(/\d/g, digit => nepaliDigits[parseInt(digit)]);
-      return `${integerPart}.${decimalPart}`;
+  const categories = [
+    { id: 'getting-started', name: 'सुरु गर्दै', enName: 'Getting Started', icon: '🚀', color: '#3b82f6', count: 3 },
+    { id: 'complaints', name: 'गुनासो व्यवस्थापन', enName: 'Complaint Management', icon: '📋', color: '#10b981', count: 2 },
+    { id: 'tasks', name: 'कार्य व्यवस्थापन', enName: 'Task Management', icon: '✅', color: '#f59e0b', count: 2 },
+    { id: 'reports', name: 'रिपोर्ट र विश्लेषण', enName: 'Reports & Analytics', icon: '📊', color: '#8b5cf6', count: 1 },
+    { id: 'performance', name: 'प्रदर्शन', enName: 'Performance', icon: '⭐', color: '#ec4899', count: 1 }
+  ];
+
+  const faqs = [
+    {
+      id: 1,
+      question: 'म कसरी मेरो पासवर्ड परिवर्तन गर्छु?',
+      enQuestion: 'How do I change my password?',
+      answer: 'प्रोफाइल > सुरक्षा सेटिङ्स > पासवर्ड परिवर्तन गर्नुहोस्। आफ्नो हालको पासवर्ड र नयाँ पासवर्ड प्रविष्ट गर्नुहोस्, त्यसपछि सुरक्षित गर्नुहोस् क्लिक गर्नुहोस्। नयाँ पासवर्ड कम्तिमा ६ क्यारेक्टर लामो हुनुपर्छ।',
+      enAnswer: 'Go to Profile > Security Settings > Change Password. Enter your current password and new password, then click Save. Make sure your new password is at least 6 characters long.',
+      category: 'getting-started',
+      helpful: 45,
+      notHelpful: 3
+    },
+    {
+      id: 2,
+      question: 'गुनासो स्थिति कसरी अपडेट गर्ने?',
+      enQuestion: 'How to update complaint status?',
+      answer: 'सूचीबाट गुनासोमा क्लिक गर्नुहोस्, त्यसपछि ड्रपडाउन मेनुबाट "स्थिति अपडेट गर्नुहोस्" चयन गर्नुहोस्। नयाँ स्थिति छान्नुहोस् र कुनै नोटहरू वा समाधान विवरणहरू थप्नुहोस्।',
+      enAnswer: 'Click on the complaint from the list, then select "Update Status" from the dropdown menu. Choose the new status and add any notes or resolution details before saving.',
+      category: 'complaints',
+      helpful: 38,
+      notHelpful: 2
+    },
+    {
+      id: 3,
+      question: 'रिपोर्ट कसरी उत्पन्न गर्ने?',
+      enQuestion: 'How to generate reports?',
+      answer: 'रिपोर्ट सेक्सनमा जानुहोस्, रिपोर्ट प्रकार चयन गर्नुहोस्, मिति दायरा छान्नुहोस्, र "रिपोर्ट उत्पन्न गर्नुहोस्" क्लिक गर्नुहोस्। तपाईं रिपोर्टहरू PDF, Excel, वा CSV ढाँचामा निर्यात गर्न सक्नुहुन्छ।',
+      enAnswer: 'Navigate to Reports section, select the report type, choose date range, and click "Generate Report". You can export reports in PDF, Excel, or CSV format.',
+      category: 'reports',
+      helpful: 30,
+      notHelpful: 1
+    },
+    {
+      id: 4,
+      question: 'म कसरी आफ्नो प्रोफाइल अपडेट गर्छु?',
+      enQuestion: 'How do I update my profile?',
+      answer: 'सेटिङ्स > प्रोफाइलमा जानुहोस्। आफ्नो नाम, इमेल, फोन नम्बर र अन्य व्यक्तिगत जानकारी अपडेट गर्नुहोस्। परिवर्तनहरू सुरक्षित गर्न "अपडेट गर्नुहोस्" क्लिक गर्नुहोस्।',
+      enAnswer: 'Go to Settings > Profile. Update your name, email, phone number and other personal information. Click "Update" to save changes.',
+      category: 'getting-started',
+      helpful: 50,
+      notHelpful: 4
+    },
+    {
+      id: 5,
+      question: 'कार्य कसरी सिर्जना गर्ने?',
+      enQuestion: 'How to create a task?',
+      answer: 'ड्यासबोर्डमा "नयाँ कार्य" क्लिक गर्नुहोस्। शीर्षक, विवरण, प्राथमिकता, र म्याद थप्नुहोस्। कार्य सिर्जना गर्न "पुष्टि गर्नुहोस्" क्लिक गर्नुहोस्।',
+      enAnswer: 'Click "New Task" on the dashboard. Add title, description, priority, and due date. Click "Confirm" to create the task.',
+      category: 'tasks',
+      helpful: 28,
+      notHelpful: 2
     }
-    return num.toString();
-  };
+  ];
+
+  const videoTutorials = [
+    { id: 1, title: 'स्टाफ पोर्टल अवलोकन', enTitle: 'Staff Portal Overview', duration: '5:30', thumbnail: '🎬', category: 'getting-started', views: 1250 },
+    { id: 2, title: 'गुनासो ह्यान्डलिङ ट्युटोरियल', enTitle: 'Handling Complaints Tutorial', duration: '8:15', thumbnail: '🎬', category: 'complaints', views: 890 },
+    { id: 3, title: 'कार्य व्यवस्थापन सुझावहरू', enTitle: 'Task Management Tips', duration: '6:45', thumbnail: '🎬', category: 'tasks', views: 650 },
+    { id: 4, title: 'प्रदर्शन मूल्यांकन गाइड', enTitle: 'Performance Review Guide', duration: '7:00', thumbnail: '🎬', category: 'performance', views: 430 }
+  ];
+
+  const announcements = [
+    { id: 1, title: 'नयाँ कागजात उपलब्ध', enTitle: 'New Documentation Available', date: '2024-01-25', type: 'info' },
+    { id: 2, title: 'भिडियो ट्युटोरियलहरू थपियो', enTitle: 'Video Tutorials Added', date: '2024-01-20', type: 'success' },
+    { id: 3, title: 'प्रणाली अपडेट आउँदै', enTitle: 'System Update Coming Soon', date: '2024-02-01', type: 'warning' }
+  ];
 
   // Show toast notification
   const showToast = (message, type = 'success') => {
@@ -95,211 +272,10 @@ const StaffDocumentation = () => {
     }
   }, []);
 
-  // Fetch documentation
-  const fetchDocumentation = async () => {
-    try {
-      const token = localStorage.getItem('staffToken');
-      if (!token) {
-        navigate('/');
-        return;
-      }
-      
-      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/staff/documentation`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.data.success) {
-        setDocumentation(response.data.data.articles);
-        setCategories(response.data.data.categories);
-        setFaqs(response.data.data.faqs);
-        setVideoTutorials(response.data.data.videos);
-        setAnnouncements(response.data.data.announcements);
-        setBackendStatus('connected');
-      } else {
-        setDocumentation(getSampleArticles());
-        setCategories(getSampleCategories());
-        setFaqs(getSampleFaqs());
-        setVideoTutorials(getSampleVideos());
-        setAnnouncements(getSampleAnnouncements());
-        setBackendStatus('disconnected');
-      }
-    } catch (error) {
-      console.error('Error fetching documentation:', error);
-      setDocumentation(getSampleArticles());
-      setCategories(getSampleCategories());
-      setFaqs(getSampleFaqs());
-      setVideoTutorials(getSampleVideos());
-      setAnnouncements(getSampleAnnouncements());
-      setBackendStatus('disconnected');
-    }
-  };
-
-  // Get sample categories with enhanced data
-  const getSampleCategories = () => {
-    return [
-      { id: 'getting-started', name: 'Getting Started', name_np: 'सुरु गर्दै', icon: '🚀', color: '#3b82f6', count: 8, description: 'Learn the basics of the staff portal' },
-      { id: 'complaints', name: 'Complaint Management', name_np: 'गुनासो व्यवस्थापन', icon: '📋', color: '#10b981', count: 12, description: 'Handle customer complaints effectively' },
-      { id: 'tasks', name: 'Task Management', name_np: 'कार्य व्यवस्थापन', icon: '✅', color: '#f59e0b', count: 6, description: 'Manage your daily tasks efficiently' },
-      { id: 'reports', name: 'Reports & Analytics', name_np: 'रिपोर्ट र विश्लेषण', icon: '📊', color: '#8b5cf6', count: 5, description: 'Generate and analyze reports' },
-      { id: 'performance', name: 'Performance', name_np: 'प्रदर्शन', icon: '⭐', color: '#ec4899', count: 4, description: 'Track and improve your performance' },
-      { id: 'faq', name: 'FAQ', name_np: 'बारम्बार सोधिने प्रश्नहरू', icon: '❓', color: '#64748b', count: 15, description: 'Frequently asked questions' }
-    ];
-  };
-
-  // Get sample articles with enhanced content
-  const getSampleArticles = () => {
-    return [
-      {
-        id: 1,
-        title: 'Getting Started with Staff Portal',
-        title_np: 'स्टाफ पोर्टल सुरु गर्दै',
-        enTitle: 'Getting Started with Staff Portal',
-        category: 'getting-started',
-        content: 'Learn how to navigate and use the staff portal effectively. This comprehensive guide covers everything from login to advanced features including dashboard navigation, complaint management, and reporting tools.',
-        content_np: 'स्टाफ पोर्टल प्रभावकारी रूपमा नेभिगेट गर्न र प्रयोग गर्न सिक्नुहोस्। यो व्यापक गाइडले लगइनदेखि उन्नत सुविधाहरू सम्म सबै कुरा समावेश गर्दछ...',
-        enContent: 'Learn how to navigate and use the staff portal effectively...',
-        author: 'Admin',
-        date: '2024-01-01',
-        readTime: 5,
-        likes: 45,
-        views: 1200,
-        difficulty: 'beginner',
-        tags: ['guide', 'tutorial', 'basics'],
-        featured: true
-      },
-      {
-        id: 2,
-        title: 'How to Handle Complaints',
-        title_np: 'गुनासो कसरी ह्यान्डल गर्ने',
-        enTitle: 'How to Handle Complaints',
-        category: 'complaints',
-        content: 'Step-by-step guide to managing and resolving customer complaints efficiently. Learn best practices for complaint resolution, communication strategies, and follow-up procedures.',
-        content_np: 'ग्राहक गुनासो प्रभावकारी रूपमा व्यवस्थापन र समाधान गर्न चरण-दर-चरण गाइड। गुनासो समाधानको लागि उत्तम अभ्यासहरू सिक्नुहोस्...',
-        enContent: 'Step-by-step guide to managing and resolving customer complaints...',
-        author: 'Support Team',
-        date: '2024-01-05',
-        readTime: 8,
-        likes: 32,
-        views: 890,
-        difficulty: 'intermediate',
-        tags: ['complaints', 'resolution', 'customer-service'],
-        featured: true
-      },
-      {
-        id: 3,
-        title: 'Task Management Guide',
-        title_np: 'कार्य व्यवस्थापन गाइड',
-        enTitle: 'Task Management Guide',
-        category: 'tasks',
-        content: 'Complete guide to managing your tasks efficiently. Learn how to prioritize, track, and complete tasks on time using the task management system.',
-        content_np: 'तपाईंको कार्यहरू प्रभावकारी रूपमा व्यवस्थापन गर्न पूर्ण गाइड। कार्यहरूलाई प्राथमिकता दिन, ट्र्याक गर्न र समयमै पूरा गर्न सिक्नुहोस्...',
-        enContent: 'Complete guide to managing your tasks efficiently...',
-        author: 'Admin',
-        date: '2024-01-10',
-        readTime: 6,
-        likes: 28,
-        views: 650,
-        difficulty: 'beginner',
-        tags: ['tasks', 'productivity', 'management'],
-        featured: false
-      },
-      {
-        id: 4,
-        title: 'Understanding Reports',
-        title_np: 'रिपोर्टहरू बुझ्दै',
-        enTitle: 'Understanding Reports',
-        category: 'reports',
-        content: 'How to generate and interpret various reports. This guide explains all report types and their uses, including daily, weekly, monthly, and custom reports.',
-        content_np: 'विभिन्न रिपोर्टहरू कसरी उत्पन्न र व्याख्या गर्ने। यो गाइडले सबै रिपोर्ट प्रकार र तिनीहरूको प्रयोगहरू व्याख्या गर्दछ...',
-        enContent: 'How to generate and interpret various reports...',
-        author: 'Analytics Team',
-        date: '2024-01-15',
-        readTime: 7,
-        likes: 22,
-        views: 540,
-        difficulty: 'intermediate',
-        tags: ['reports', 'analytics', 'data'],
-        featured: false
-      },
-      {
-        id: 5,
-        title: 'Improving Your Performance',
-        title_np: 'तपाईंको प्रदर्शन सुधार गर्दै',
-        enTitle: 'Improving Your Performance',
-        category: 'performance',
-        content: 'Tips and tricks to improve your performance metrics. Learn how to achieve better results and exceed targets with proven strategies.',
-        content_np: 'तपाईंको प्रदर्शन मेट्रिक्स सुधार गर्न टिप्स र ट्रिक्स। कसरी राम्रो परिणाम प्राप्त गर्ने र लक्ष्यहरू भन्दा बढी गर्ने सिक्नुहोस्...',
-        enContent: 'Tips and tricks to improve your performance metrics...',
-        author: 'HR Team',
-        date: '2024-01-20',
-        readTime: 4,
-        likes: 38,
-        views: 720,
-        difficulty: 'advanced',
-        tags: ['performance', 'productivity', 'goals'],
-        featured: true
-      }
-    ];
-  };
-
-  // Get sample FAQs
-  const getSampleFaqs = () => {
-    return [
-      {
-        id: 1,
-        question: 'How do I change my password?',
-        question_np: 'म कसरी मेरो पासवर्ड परिवर्तन गर्छु?',
-        enQuestion: 'How do I change my password?',
-        answer: 'Go to Profile > Security Settings > Change Password. Enter your current password and new password, then click Save. Make sure your new password is at least 6 characters long.',
-        answer_np: 'प्रोफाइल > सुरक्षा सेटिङ्स > पासवर्ड परिवर्तन गर्नुहोस्। आफ्नो हालको पासवर्ड र नयाँ पासवर्ड प्रविष्ट गर्नुहोस्, त्यसपछि सुरक्षित गर्नुहोस् क्लिक गर्नुहोस्।',
-        enAnswer: 'Go to Profile > Security Settings > Change Password...',
-        category: 'getting-started',
-        helpful: 45,
-        notHelpful: 3
-      },
-      {
-        id: 2,
-        question: 'How to update complaint status?',
-        question_np: 'गुनासो स्थिति कसरी अपडेट गर्ने?',
-        enQuestion: 'How to update complaint status?',
-        answer: 'Click on the complaint from the list, then select "Update Status" from the dropdown menu. Choose the new status and add any notes or resolution details before saving.',
-        answer_np: 'सूचीबाट गुनासोमा क्लिक गर्नुहोस्, त्यसपछि ड्रपडाउन मेनुबाट "स्थिति अपडेट गर्नुहोस्" चयन गर्नुहोस्। नयाँ स्थिति छान्नुहोस् र कुनै नोटहरू थप्नुहोस्।',
-        enAnswer: 'Click on the complaint from the list...',
-        category: 'complaints',
-        helpful: 38,
-        notHelpful: 2
-      },
-      {
-        id: 3,
-        question: 'How to generate reports?',
-        question_np: 'रिपोर्ट कसरी उत्पन्न गर्ने?',
-        enQuestion: 'How to generate reports?',
-        answer: 'Navigate to Reports section, select the report type, choose date range, and click "Generate Report". You can export reports in PDF, Excel, or CSV format.',
-        answer_np: 'रिपोर्ट सेक्सनमा जानुहोस्, रिपोर्ट प्रकार चयन गर्नुहोस्, मिति दायरा छान्नुहोस्, र "रिपोर्ट उत्पन्न गर्नुहोस्" क्लिक गर्नुहोस्।',
-        enAnswer: 'Navigate to Reports section, select the report type...',
-        category: 'reports',
-        helpful: 30,
-        notHelpful: 1
-      }
-    ];
-  };
-
-  // Get sample videos
-  const getSampleVideos = () => {
-    return [
-      { id: 1, title: 'Staff Portal Overview', title_np: 'स्टाफ पोर्टल अवलोकन', duration: '5:30', thumbnail: '🎬', category: 'getting-started', views: 1250 },
-      { id: 2, title: 'Handling Complaints Tutorial', title_np: 'गुनासो ह्यान्डलिङ ट्युटोरियल', duration: '8:15', thumbnail: '🎬', category: 'complaints', views: 890 },
-      { id: 3, title: 'Task Management Tips', title_np: 'कार्य व्यवस्थापन सुझावहरू', duration: '6:45', thumbnail: '🎬', category: 'tasks', views: 650 }
-    ];
-  };
-
-  // Get sample announcements
-  const getSampleAnnouncements = () => {
-    return [
-      { id: 1, title: 'New Documentation Available', title_np: 'नयाँ कागजात उपलब्ध', date: '2024-01-25', type: 'info' },
-      { id: 2, title: 'Video Tutorials Added', title_np: 'भिडियो ट्युटोरियलहरू थपियो', date: '2024-01-20', type: 'success' }
-    ];
-  };
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
 
   // Check authentication
   useEffect(() => {
@@ -309,18 +285,10 @@ const StaffDocumentation = () => {
     if (!token || !user) {
       navigate('/');
     } else {
-      fetchDocumentation();
       loadRecentlyViewed();
       loadBookmarks();
     }
   }, [navigate]);
-
-  // Refresh when language changes
-  useEffect(() => {
-    if (documentation.length > 0) {
-      fetchDocumentation();
-    }
-  }, [language]);
 
   const loadRecentlyViewed = () => {
     const stored = localStorage.getItem('recentlyViewedDocs');
@@ -346,37 +314,23 @@ const StaffDocumentation = () => {
     let updated;
     if (bookmarkedArticles.find(a => a.id === article.id)) {
       updated = bookmarkedArticles.filter(a => a.id !== article.id);
-      showToast(language === 'np' ? 'बुकमार्क हटाइयो' : 'Bookmark removed', 'info');
+      showToast(language === 'np' ? '📑 बुकमार्क हटाइयो' : '📑 Bookmark removed', 'info');
     } else {
       updated = [article, ...bookmarkedArticles];
-      showToast(language === 'np' ? 'बुकमार्क थपियो' : 'Bookmark added', 'success');
+      showToast(language === 'np' ? '🔖 बुकमार्क थपियो' : '🔖 Bookmark added', 'success');
     }
     setBookmarkedArticles(updated);
     localStorage.setItem('bookmarkedDocs', JSON.stringify(updated));
   };
 
   const handleLike = (articleId) => {
-    setDocumentation(prev =>
-      prev.map(article =>
-        article.id === articleId
-          ? { ...article, likes: article.likes + 1 }
-          : article
-      )
-    );
-    showToast(language === 'np' ? 'धन्यवाद! तपाईंको प्रतिक्रिया दर्ता भयो' : 'Thanks! Your feedback recorded', 'success');
+    showToast(language === 'np' ? '❤️ धन्यवाद! तपाईंको प्रतिक्रिया दर्ता भयो' : '❤️ Thanks! Your feedback recorded', 'success');
   };
 
   const openArticle = (article) => {
     setSelectedArticle(article);
     setShowModal(true);
     saveRecentlyViewed(article);
-    setDocumentation(prev =>
-      prev.map(a =>
-        a.id === article.id
-          ? { ...a, views: a.views + 1 }
-          : a
-      )
-    );
     document.body.style.overflow = 'hidden';
   };
 
@@ -409,28 +363,24 @@ const StaffDocumentation = () => {
   const getArticlesToDisplay = () => {
     let articles = [...documentation];
     
-    // Filter by category
     if (selectedCategory !== 'all') {
       articles = articles.filter(article => article.category === selectedCategory);
     }
     
-    // Filter by bookmarks
     if (showBookmarksOnly) {
       articles = articles.filter(article => bookmarkedArticles.find(a => a.id === article.id));
     }
     
-    // Filter by search
     if (searchTerm) {
+      const term = searchTerm.toLowerCase();
       articles = articles.filter(article =>
-        article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (article.title_np && article.title_np.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        article.enTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.enContent.toLowerCase().includes(searchTerm.toLowerCase())
+        article.title.toLowerCase().includes(term) ||
+        article.enTitle.toLowerCase().includes(term) ||
+        article.content.toLowerCase().includes(term) ||
+        article.enContent.toLowerCase().includes(term)
       );
     }
     
-    // Sort articles
     if (sortBy === 'popular') {
       articles.sort((a, b) => b.views - a.views);
     } else if (sortBy === 'newest') {
@@ -449,7 +399,6 @@ const StaffDocumentation = () => {
     const matchesCategory = selectedCategory === 'all' || faq.category === selectedCategory;
     const matchesSearch = searchTerm === '' ||
       faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (faq.question_np && faq.question_np.toLowerCase().includes(searchTerm.toLowerCase())) ||
       faq.enQuestion.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
@@ -479,11 +428,8 @@ const StaffDocumentation = () => {
       yes: 'हो',
       no: 'होइन',
       backToDocs: 'कागजातमा फर्कनुहोस्',
-      refresh: 'रिफ्रेस',
       welcome: 'स्वागत छ',
       dashboard: 'ड्यासबोर्ड',
-      needMoreHelp: 'थप सहायता चाहियो?',
-      contactSupport: 'सहयोग सम्पर्क गर्नुहोस्',
       bookmark: 'बुकमार्क',
       bookmarked: 'बुकमार्क गरियो',
       watchVideo: 'भिडियो हेर्नुहोस्',
@@ -493,10 +439,6 @@ const StaffDocumentation = () => {
       advanced: 'उन्नत',
       difficulty: 'कठिनाई',
       tags: 'ट्यागहरू',
-      previous: 'अघिल्लो',
-      next: 'अर्को',
-      page: 'पृष्ठ',
-      of: 'को',
       close: 'बन्द गर्नुहोस्',
       showBookmarks: 'बुकमार्क देखाउनुहोस्',
       showAll: 'सबै देखाउनुहोस्',
@@ -533,11 +475,8 @@ const StaffDocumentation = () => {
       yes: 'Yes',
       no: 'No',
       backToDocs: 'Back to Documentation',
-      refresh: 'Refresh',
       welcome: 'Welcome',
       dashboard: 'Dashboard',
-      needMoreHelp: 'Need more help?',
-      contactSupport: 'Contact Support',
       bookmark: 'Bookmark',
       bookmarked: 'Bookmarked',
       watchVideo: 'Watch Video',
@@ -547,10 +486,6 @@ const StaffDocumentation = () => {
       advanced: 'Advanced',
       difficulty: 'Difficulty',
       tags: 'Tags',
-      previous: 'Previous',
-      next: 'Next',
-      page: 'Page',
-      of: 'of',
       close: 'Close',
       showBookmarks: 'Show Bookmarks',
       showAll: 'Show All',
@@ -572,7 +507,7 @@ const StaffDocumentation = () => {
   const getCategoryName = (categoryId) => {
     const category = categories.find(c => c.id === categoryId);
     if (!category) return '';
-    return language === 'np' ? category.name_np || category.name : category.name;
+    return language === 'np' ? category.name : category.enName;
   };
 
   const getCategoryIcon = (categoryId) => {
@@ -615,13 +550,6 @@ const StaffDocumentation = () => {
         
         <div className="main-content">
           <div className="content-wrapper">
-            {/* Backend Status Banner */}
-            {backendStatus === 'disconnected' && (
-              <div className="backend-warning">
-                ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।' : 'Backend server not connected. Showing sample data.'}
-              </div>
-            )}
-
             {/* Announcements Banner */}
             {announcements.length > 0 && (
               <div className="announcements-banner">
@@ -629,7 +557,7 @@ const StaffDocumentation = () => {
                 <div className="announcement-content">
                   {announcements.map(announcement => (
                     <div key={announcement.id} className={`announcement-item ${announcement.type}`}>
-                      {language === 'np' ? announcement.title_np || announcement.title : announcement.title}
+                      {language === 'np' ? announcement.title : announcement.enTitle}
                     </div>
                   ))}
                 </div>
@@ -639,22 +567,24 @@ const StaffDocumentation = () => {
             {/* Page Header */}
             <div className="page-header">
               <div>
-                <h1 className="page-title">{t.documentation}</h1>
-                <p className="page-subtitle">Find answers, guides, and resources to help you succeed</p>
+                <h1 className="page-title">📚 {t.documentation}</h1>
+                <p className="page-subtitle">
+                  {language === 'np' 
+                    ? 'उत्तर, गाइड, र सफलताका लागि स्रोतहरू खोज्नुहोस्' 
+                    : 'Find answers, guides, and resources to help you succeed'}
+                </p>
               </div>
-              <button className="refresh-btn" onClick={fetchDocumentation}>
-                🔄 {t.refresh}
-              </button>
             </div>
 
-            {/* Enhanced Search Bar - No Icon */}
-            <div className="search-bar-enhanced">
+            {/* Search Bar */}
+            <div className="search-bar">
               <input
                 type="text"
                 placeholder={t.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 ref={searchInputRef}
+                className="search-input"
               />
               {searchTerm && (
                 <button className="clear-search-btn" onClick={() => setSearchTerm('')}>
@@ -674,7 +604,7 @@ const StaffDocumentation = () => {
                 >
                   <span className="category-icon">📚</span>
                   <span className="category-name">{t.allCategories}</span>
-                  <span className="category-count">{formatNumber(documentation.length)}</span>
+                  <span className="category-count">{documentation.length}</span>
                 </button>
                 {categories.map((category) => (
                   <button
@@ -685,7 +615,7 @@ const StaffDocumentation = () => {
                   >
                     <span className="category-icon">{category.icon}</span>
                     <span className="category-name">{getCategoryName(category.id)}</span>
-                    <span className="category-count">{formatNumber(category.count)}</span>
+                    <span className="category-count">{category.count}</span>
                   </button>
                 ))}
               </div>
@@ -704,7 +634,7 @@ const StaffDocumentation = () => {
                   className={`filter-btn ${showBookmarksOnly ? 'active' : ''}`}
                   onClick={() => setShowBookmarksOnly(true)}
                 >
-                  🔖 {t.showBookmarks} ({formatNumber(bookmarkedArticles.length)})
+                  🔖 {t.showBookmarks} ({bookmarkedArticles.length})
                 </button>
               </div>
               <div className="sort-dropdown">
@@ -723,13 +653,17 @@ const StaffDocumentation = () => {
               <div className="recently-viewed-section">
                 <h2>🕐 {t.recentlyViewed}</h2>
                 <div className="recently-viewed-list">
-                  {recentlyViewed.map(article => (
-                    <button key={article.id} className="recent-item" onClick={() => openArticle(article)}>
-                      <span className="recent-icon">📄</span>
-                      <span>{language === 'np' ? article.title_np || article.title : article.title}</span>
-                      <small>{article.date}</small>
-                    </button>
-                  ))}
+                  {recentlyViewed.map(article => {
+                    const articleData = documentation.find(d => d.id === article.id);
+                    if (!articleData) return null;
+                    return (
+                      <button key={article.id} className="recent-item" onClick={() => openArticle(articleData)}>
+                        <span className="recent-icon">📄</span>
+                        <span>{language === 'np' ? articleData.title : articleData.enTitle}</span>
+                        <small>{articleData.date}</small>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -745,14 +679,14 @@ const StaffDocumentation = () => {
                       <span className="article-category-badge" style={{ backgroundColor: getCategoryColor(article.category) }}>
                         {getCategoryIcon(article.category)} {getCategoryName(article.category)}
                       </span>
-                      <span className="article-read-time">📖 {formatNumber(article.readTime)} {t.minutes}</span>
+                      <span className="article-read-time">📖 {article.readTime} {t.minutes}</span>
                     </div>
-                    <h3>{language === 'np' ? (article.title_np || article.title) : article.title}</h3>
-                    <p>{language === 'np' ? (article.content_np || article.content).substring(0, 100) : article.content.substring(0, 100)}...</p>
+                    <h3>{language === 'np' ? article.title : article.enTitle}</h3>
+                    <p>{language === 'np' ? article.content.substring(0, 120) : article.enContent.substring(0, 120)}...</p>
                     <div className="article-footer">
                       <div className="article-stats">
-                        <span>👁️ {formatNumber(article.views)}</span>
-                        <span>❤️ {formatNumber(article.likes)}</span>
+                        <span>👁️ {article.views}</span>
+                        <span>❤️ {article.likes}</span>
                       </div>
                       <div className="article-actions">
                         <button 
@@ -792,9 +726,9 @@ const StaffDocumentation = () => {
                       <span className="video-icon">🎬</span>
                       <span className="video-duration">{video.duration}</span>
                     </div>
-                    <h4>{language === 'np' ? (video.title_np || video.title) : video.title}</h4>
+                    <h4>{language === 'np' ? video.title : video.enTitle}</h4>
                     <div className="video-stats">
-                      <span>👁️ {formatNumber(video.views || 0)} {t.videoViews}</span>
+                      <span>👁️ {video.views} {t.videoViews}</span>
                     </div>
                     <button className="watch-btn">▶ {t.watchVideo}</button>
                   </div>
@@ -810,16 +744,16 @@ const StaffDocumentation = () => {
                   <details key={faq.id} className="faq-item">
                     <summary className="faq-question">
                       <span className="faq-icon">❓</span>
-                      <span>{language === 'np' ? (faq.question_np || faq.question) : faq.question}</span>
+                      <span>{language === 'np' ? faq.question : faq.enQuestion}</span>
                     </summary>
                     <div className="faq-answer">
                       <span className="faq-answer-icon">💡</span>
-                      <span>{language === 'np' ? (faq.answer_np || faq.answer) : faq.answer}</span>
+                      <span>{language === 'np' ? faq.answer : faq.enAnswer}</span>
                     </div>
                     <div className="faq-helpful">
                       <span>{t.helpful}?</span>
-                      <button className="helpful-btn yes" onClick={(e) => { e.stopPropagation(); showToast(t.yes, 'success'); }}>👍 {formatNumber(faq.helpful)}</button>
-                      <button className="helpful-btn no" onClick={(e) => { e.stopPropagation(); showToast(t.no, 'info'); }}>👎 {formatNumber(faq.notHelpful)}</button>
+                      <button className="helpful-btn yes" onClick={(e) => { e.stopPropagation(); showToast(t.yes, 'success'); }}>👍 {faq.helpful}</button>
+                      <button className="helpful-btn no" onClick={(e) => { e.stopPropagation(); showToast(t.no, 'info'); }}>👎 {faq.notHelpful}</button>
                     </div>
                   </details>
                 ))}
@@ -831,18 +765,6 @@ const StaffDocumentation = () => {
                 </div>
               )}
             </div>
-
-            {/* Need More Help Section */}
-            <div className="help-section">
-              <div className="help-card">
-                <span className="help-icon">💬</span>
-                <h3>{t.needMoreHelp}</h3>
-                <p>{language === 'np' ? 'हाम्रो सहयोग टोली तपाईंको लागि यहाँ छ' : 'Our support team is here for you'}</p>
-                <button className="contact-support-btn" onClick={() => navigate('/staff/contact')}>
-                  📞 {t.contactSupport}
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -852,26 +774,26 @@ const StaffDocumentation = () => {
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{language === 'np' ? (selectedArticle.title_np || selectedArticle.title) : selectedArticle.title}</h2>
+              <h2>{language === 'np' ? selectedArticle.title : selectedArticle.enTitle}</h2>
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
             <div className="modal-body">
               <div className="article-meta">
-                <span>👤 {t.author}: {selectedArticle.author}</span>
+                <span>👤 {t.author}: {language === 'np' ? selectedArticle.author : selectedArticle.enAuthor}</span>
                 <span>📅 {t.published}: {selectedArticle.date}</span>
-                <span>⏱️ {formatNumber(selectedArticle.readTime)} {t.minutes}</span>
+                <span>⏱️ {selectedArticle.readTime} {t.minutes}</span>
                 <span className={`difficulty-badge ${selectedArticle.difficulty}`}>
                   {selectedArticle.difficulty === 'beginner' ? t.beginner :
                    selectedArticle.difficulty === 'intermediate' ? t.intermediate : t.advanced}
                 </span>
               </div>
               <div className="article-tags">
-                {selectedArticle.tags?.map(tag => (
+                {selectedArticle.tags.map(tag => (
                   <span key={tag} className="tag">#{tag}</span>
                 ))}
               </div>
               <div className="article-content">
-                <p>{language === 'np' ? (selectedArticle.content_np || selectedArticle.content) : selectedArticle.content}</p>
+                <p>{language === 'np' ? selectedArticle.content : selectedArticle.enContent}</p>
               </div>
               <div className="article-feedback">
                 <p>{t.helpful}</p>
@@ -901,18 +823,18 @@ const StaffDocumentation = () => {
         <div className="modal-overlay" onClick={closeVideoModal}>
           <div className="modal-content video-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>🎬 {language === 'np' ? (selectedVideo.title_np || selectedVideo.title) : selectedVideo.title}</h2>
+              <h2>🎬 {language === 'np' ? selectedVideo.title : selectedVideo.enTitle}</h2>
               <button className="modal-close" onClick={closeVideoModal}>✕</button>
             </div>
             <div className="modal-body video-body">
               <div className="video-player">
                 <div className="video-placeholder">
                   <span className="video-play-icon">▶</span>
-                  <p>{t.watchVideo}: {selectedVideo.title}</p>
+                  <p>{t.watchVideo}: {language === 'np' ? selectedVideo.title : selectedVideo.enTitle}</p>
                   <small>{t.duration}: {selectedVideo.duration}</small>
                   <div className="video-actions">
-                    <button className="watch-now-btn" onClick={() => window.open('#', '_blank')}>
-                      ▶ Play Now
+                    <button className="watch-now-btn">
+                      ▶ {t.watchVideo}
                     </button>
                   </div>
                 </div>
@@ -941,7 +863,6 @@ const StaffDocumentation = () => {
           position: relative;
         }
 
-        /* Toast Notification */
         .toast-notification {
           position: fixed;
           top: 80px;
@@ -1008,15 +929,6 @@ const StaffDocumentation = () => {
           min-height: 100%;
         }
 
-        .backend-warning {
-          background: #ff9800;
-          color: white;
-          padding: 10px 16px;
-          border-radius: 8px;
-          margin-bottom: 20px;
-          text-align: center;
-        }
-
         .announcements-banner {
           background: linear-gradient(135deg, #fef3c7, #fffbeb);
           border: 1px solid #fde68a;
@@ -1070,25 +982,7 @@ const StaffDocumentation = () => {
           font-size: 0.85rem;
         }
 
-        .refresh-btn {
-          background: white;
-          border: 1px solid #e2e8f0;
-          padding: 8px 20px;
-          border-radius: 8px;
-          cursor: pointer;
-          color: #475569;
-          font-weight: 500;
-          transition: all 0.2s;
-        }
-
-        .refresh-btn:hover {
-          background: #f8fafc;
-          border-color: #0288d1;
-          color: #0288d1;
-        }
-
-        /* Enhanced Search Bar - No Icon */
-        .search-bar-enhanced {
+        .search-bar {
           background: white;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
@@ -1099,7 +993,7 @@ const StaffDocumentation = () => {
           align-items: center;
         }
 
-        .search-bar-enhanced input {
+        .search-input {
           flex: 1;
           border: none;
           outline: none;
@@ -1107,7 +1001,7 @@ const StaffDocumentation = () => {
           background: transparent;
         }
 
-        .search-bar-enhanced input:focus {
+        .search-input:focus {
           outline: none;
         }
 
@@ -1181,7 +1075,7 @@ const StaffDocumentation = () => {
           cursor: pointer;
         }
 
-        .categories-section, .articles-section, .videos-section, .faq-section, .help-section, .recently-viewed-section {
+        .categories-section, .articles-section, .videos-section, .faq-section, .recently-viewed-section {
           margin-bottom: 32px;
         }
 
@@ -1196,7 +1090,7 @@ const StaffDocumentation = () => {
 
         .categories-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
           gap: 16px;
         }
 
@@ -1234,14 +1128,18 @@ const StaffDocumentation = () => {
         }
 
         .category-count {
-          position: absolute;
-          top: -8px;
-          right: -8px;
+          display: inline-block;
+          background: #e2e8f0;
+          color: #475569;
+          font-size: 0.7rem;
+          padding: 1px 8px;
+          border-radius: 20px;
+          margin-top: 4px;
+        }
+
+        .category-card.active .category-count {
           background: #0288d1;
           color: white;
-          font-size: 0.7rem;
-          padding: 2px 6px;
-          border-radius: 20px;
         }
 
         .recently-viewed-list {
@@ -1280,7 +1178,7 @@ const StaffDocumentation = () => {
 
         .articles-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
           gap: 20px;
         }
 
@@ -1568,56 +1466,6 @@ const StaffDocumentation = () => {
 
         .helpful-btn:hover {
           transform: scale(1.05);
-        }
-
-        .help-section {
-          margin-top: 32px;
-        }
-
-        .help-card {
-          background: linear-gradient(135deg, #0288d1, #0277bd);
-          border-radius: 20px;
-          padding: 32px;
-          text-align: center;
-          color: white;
-          transition: all 0.2s;
-        }
-
-        .help-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-        }
-
-        .help-icon {
-          font-size: 3rem;
-          display: block;
-          margin-bottom: 16px;
-        }
-
-        .help-card h3 {
-          font-size: 1.3rem;
-          margin-bottom: 8px;
-        }
-
-        .help-card p {
-          margin-bottom: 20px;
-          opacity: 0.9;
-        }
-
-        .contact-support-btn {
-          background: white;
-          color: #0288d1;
-          border: none;
-          padding: 10px 24px;
-          border-radius: 30px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .contact-support-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
         .empty-state {

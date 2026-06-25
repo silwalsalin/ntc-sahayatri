@@ -1,7 +1,6 @@
 // src/pages/StaffNotifications.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import StaffHeader from '../components/StaffHeader';
 import StaffSidebar from '../components/StaffSidebar';
 
@@ -16,12 +15,9 @@ const StaffNotifications = () => {
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const [backendStatus, setBackendStatus] = useState('checking');
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [unreadCount, setUnreadCount] = useState(0);
-  const pollingInterval = useRef(null);
-  const isMounted = useRef(true);
 
   const [staffData, setStaffData] = useState({
     id: null,
@@ -32,16 +28,12 @@ const StaffNotifications = () => {
     department: ''
   });
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
   // Show toast notification
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => {
-      if (isMounted.current) {
-        setToast({ show: false, message: '', type: '' });
-      }
-    }, 3000);
+      setToast({ show: false, message: '', type: '' });
+    }, 4000);
   };
 
   // Save language preference
@@ -79,32 +71,6 @@ const StaffNotifications = () => {
     }
   }, []);
 
-  // Helper function to get auth token
-  const getAuthToken = () => {
-    return localStorage.getItem('staffToken') || localStorage.getItem('token');
-  };
-
-  // Transform notification data from backend
-  const transformNotificationData = (notification) => ({
-    id: notification.id || notification._id,
-    title: notification.title || 'N/A',
-    enTitle: notification.enTitle || notification.en_title || notification.title || 'N/A',
-    message: notification.message || 'N/A',
-    enMessage: notification.enMessage || notification.en_message || notification.message || 'N/A',
-    type: notification.type || 'info',
-    read: notification.read_status === 1 || notification.read === true,
-    date: notification.created_at ? formatNepaliDate(notification.created_at) : '-',
-    enDate: notification.created_at ? formatEnglishDate(notification.created_at) : '-',
-    createdAt: notification.created_at,
-    priority: notification.priority || 'medium',
-    actionUrl: notification.actionUrl || notification.action_url || null,
-    actionLabel: notification.actionLabel || notification.action_label || null,
-    sender: notification.sender || 'System',
-    userId: notification.userId || notification.user_id,
-    complaintId: notification.complaint_id || notification.complaintId || null,
-    complaintNumber: notification.complaint_number || notification.complaintNumber || null
-  });
-
   const formatNepaliDate = (date) => {
     if (!date) return '-';
     try {
@@ -134,412 +100,166 @@ const StaffNotifications = () => {
     }
   };
 
-  // Get sample notifications (fallback)
-  const getSampleNotifications = () => {
+  // Generate dummy notifications based on staff login
+  const getDummyNotifications = () => {
+    const now = new Date();
+    const staffId = staffData.id || 1;
+    const staffName = staffData.name || 'Staff Member';
+    
+    // Staff-specific complaint numbers
+    const complaintPrefix = `NTC-${String(staffId).padStart(4, '0')}`;
+    
     return [
       { 
         id: 1, 
         title: 'नयाँ गुनासो तोकियो', 
         enTitle: 'New Complaint Assigned',
-        message: 'तपाईंलाई एउटा नयाँ गुनासो #NTC-2024-001 तोकिएको छ। कृपया यसको समीक्षा गर्नुहोस्।',
-        enMessage: 'A new complaint #NTC-2024-001 has been assigned to you. Please review it.',
+        message: `तपाईंलाई एउटा नयाँ गुनासो #${complaintPrefix}-001 तोकिएको छ। कृपया यसको समीक्षा गर्नुहोस्।`,
+        enMessage: `A new complaint #${complaintPrefix}-001 has been assigned to you. Please review it.`,
         type: 'assignment',
         read: false,
-        date: '२०८०-०१-१५',
-        enDate: '2024-01-15',
-        createdAt: '2024-01-15T10:30:00',
+        date: formatNepaliDate(now),
+        enDate: formatEnglishDate(now),
+        createdAt: now.toISOString(),
         priority: 'high',
         actionUrl: '/staff/complaints/assigned',
         actionLabel: 'गुनासो हेर्नुहोस्',
         sender: 'Admin',
-        complaintNumber: 'NTC-2024-001',
-        complaintId: 1
+        complaintNumber: `${complaintPrefix}-001`,
+        complaintId: staffId * 100 + 1,
+        icon: '📋'
       },
       { 
         id: 2, 
         title: 'गुनासो समाधान भयो', 
         enTitle: 'Complaint Resolved',
-        message: 'तपाईंले समाधान गर्नुभएको गुनासो #NTC-2024-002 लाई ग्राहकले पुष्टि गरेको छ।',
-        enMessage: 'The complaint #NTC-2024-002 you resolved has been confirmed by the customer.',
+        message: `तपाईंले समाधान गर्नुभएको गुनासो #${complaintPrefix}-002 लाई ग्राहकले पुष्टि गरेको छ।`,
+        enMessage: `The complaint #${complaintPrefix}-002 you resolved has been confirmed by the customer.`,
         type: 'resolution',
         read: false,
-        date: '२०८०-०१-१८',
-        enDate: '2024-01-18',
-        createdAt: '2024-01-18T14:15:00',
+        date: formatNepaliDate(new Date(now - 86400000)),
+        enDate: formatEnglishDate(new Date(now - 86400000)),
+        createdAt: new Date(now - 86400000).toISOString(),
         priority: 'medium',
         actionUrl: '/staff/complaints/resolved',
         actionLabel: 'विवरण हेर्नुहोस्',
         sender: 'System',
-        complaintNumber: 'NTC-2024-002',
-        complaintId: 2
+        complaintNumber: `${complaintPrefix}-002`,
+        complaintId: staffId * 100 + 2,
+        icon: '✅'
       },
       { 
         id: 3, 
         title: 'बैठकको सूचना', 
         enTitle: 'Meeting Reminder',
-        message: 'आज दिउँसो ३:०० बजे टोली बैठक छ। कृपया समयमै उपस्थित हुनुहोस्।',
+        message: `आज दिउँसो ३:०० बजे टोली बैठक छ। कृपया समयमै उपस्थित हुनुहोस्।`,
         enMessage: 'Team meeting today at 3:00 PM. Please be present on time.',
         type: 'reminder',
         read: true,
-        date: '२०८०-०१-२०',
-        enDate: '2024-01-20',
-        createdAt: '2024-01-20T09:00:00',
+        date: formatNepaliDate(new Date(now - 172800000)),
+        enDate: formatEnglishDate(new Date(now - 172800000)),
+        createdAt: new Date(now - 172800000).toISOString(),
         priority: 'high',
         actionUrl: null,
         actionLabel: null,
-        sender: 'Supervisor'
+        sender: 'Supervisor',
+        icon: '⏰'
+      },
+      { 
+        id: 4, 
+        title: 'प्रशिक्षण कार्यक्रम', 
+        enTitle: 'Training Program',
+        message: 'आगामी सोमबार प्राविधिक प्रशिक्षण कार्यक्रम आयोजना हुँदैछ। सहभागिताको लागि दर्ता गर्नुहोस्।',
+        enMessage: 'Technical training program is being organized next Monday. Register to participate.',
+        type: 'training',
+        read: false,
+        date: formatNepaliDate(new Date(now - 259200000)),
+        enDate: formatEnglishDate(new Date(now - 259200000)),
+        createdAt: new Date(now - 259200000).toISOString(),
+        priority: 'medium',
+        actionUrl: '/staff/training',
+        actionLabel: 'दर्ता गर्नुहोस्',
+        sender: 'HR Department',
+        icon: '📚'
+      },
+      { 
+        id: 5, 
+        title: 'प्रदर्शन समीक्षा', 
+        enTitle: 'Performance Review',
+        message: `तपाईंको मासिक प्रदर्शन समीक्षाको लागि कृपया आफ्नो रिपोर्ट पेश गर्नुहोस्।`,
+        enMessage: 'Please submit your report for the monthly performance review.',
+        type: 'review',
+        read: true,
+        date: formatNepaliDate(new Date(now - 345600000)),
+        enDate: formatEnglishDate(new Date(now - 345600000)),
+        createdAt: new Date(now - 345600000).toISOString(),
+        priority: 'low',
+        actionUrl: '/staff/performance',
+        actionLabel: 'रिपोर्ट पेश गर्नुहोस्',
+        sender: 'Manager',
+        icon: '📊'
+      },
+      { 
+        id: 6, 
+        title: 'नयाँ कार्य तोकियो', 
+        enTitle: 'New Task Assigned',
+        message: `तपाईंलाई एउटा नयाँ कार्य "${staffName} को साप्ताहिक रिपोर्ट" तोकिएको छ।`,
+        enMessage: `A new task "${staffName}'s Weekly Report" has been assigned to you.`,
+        type: 'task',
+        read: false,
+        date: formatNepaliDate(new Date(now - 432000000)),
+        enDate: formatEnglishDate(new Date(now - 432000000)),
+        createdAt: new Date(now - 432000000).toISOString(),
+        priority: 'medium',
+        actionUrl: '/staff/tasks',
+        actionLabel: 'कार्य हेर्नुहोस्',
+        sender: 'Supervisor',
+        icon: '✔️'
+      },
+      { 
+        id: 7, 
+        title: 'प्रणाली मर्मत', 
+        enTitle: 'System Maintenance',
+        message: 'यो शनिबार राति १० बजेदेखि प्रणाली मर्मत गरिनेछ। कृपया आफ्नो कार्य समयमै समाप्त गर्नुहोस्।',
+        enMessage: 'System maintenance will be performed this Saturday at 10 PM. Please complete your work on time.',
+        type: 'maintenance',
+        read: false,
+        date: formatNepaliDate(new Date(now - 518400000)),
+        enDate: formatEnglishDate(new Date(now - 518400000)),
+        createdAt: new Date(now - 518400000).toISOString(),
+        priority: 'high',
+        actionUrl: null,
+        actionLabel: null,
+        sender: 'IT Department',
+        icon: '🔧'
       }
     ];
   };
 
-  // Fetch notifications from backend
-  const fetchNotifications = async () => {
-    if (!isMounted.current) return;
-    
-    try {
-      setIsLoading(true);
-      const token = getAuthToken();
-      
-      if (!token) {
-        console.error('No auth token found');
-        if (isMounted.current) {
-          setBackendStatus('disconnected');
-          setNotifications(getSampleNotifications());
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      const headers = { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
-
-      console.log('🔔 Fetching notifications from:', `${API_URL}/staff/notifications`);
-
-      const response = await axios.get(`${API_URL}/staff/notifications`, {
-        headers,
-        timeout: 15000
-      });
-      
-      if (!isMounted.current) return;
-      
-      if (response.data && response.data.success) {
-        const data = response.data.data || [];
-        const transformedNotifications = data.map(transformNotificationData);
-        setNotifications(transformedNotifications);
-        setBackendStatus('connected');
-        
-        // Update unread count
-        const unread = transformedNotifications.filter(n => !n.read).length;
-        setUnreadCount(unread);
-        
-        // Show toast for new assignment notifications (only if there are new ones)
-        const newAssignments = transformedNotifications.filter(n => 
-          n.type === 'assignment' && !n.read
-        );
-        if (newAssignments.length > 0 && isMounted.current) {
-          const lastAssignment = newAssignments[0];
-          showToast(
-            language === 'np' 
-              ? `📋 नयाँ गुनासो तोकियो: ${lastAssignment.complaintNumber || 'N/A'}`
-              : `📋 New complaint assigned: ${lastAssignment.complaintNumber || 'N/A'}`,
-            'info'
-          );
-        }
-        
-        console.log(`🔔 Loaded ${transformedNotifications.length} notifications from backend`);
-      } else {
-        if (isMounted.current) {
-          setNotifications(getSampleNotifications());
-          setBackendStatus('disconnected');
-        }
-        console.log('🔔 Using sample notifications (unexpected response format)');
-      }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      if (isMounted.current) {
-        setNotifications(getSampleNotifications());
-        setBackendStatus('disconnected');
-        
-        if (error.response?.status === 401) {
-          showToast(
-            language === 'np' ? 'सत्र समाप्त भयो। कृपया पुन: लगइन गर्नुहोस्।' : 'Session expired. Please login again.',
-            'error'
-          );
-        } else if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') {
-          showToast(
-            language === 'np' ? 'ब्याकेन्ड सर्भरमा जडान गर्न सकिएन।' : 'Cannot connect to backend server.',
-            'warning'
-          );
-        }
-      }
-    } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  // Poll for new notifications every 30 seconds
-  const startPolling = () => {
-    if (pollingInterval.current) {
-      clearInterval(pollingInterval.current);
-    }
-    pollingInterval.current = setInterval(() => {
-      if (isMounted.current) {
-        fetchNotifications();
-      }
-    }, 30000); // 30 seconds
-  };
-
-  // Stop polling
-  const stopPolling = () => {
-    if (pollingInterval.current) {
-      clearInterval(pollingInterval.current);
-      pollingInterval.current = null;
-    }
-  };
-
-  // Mark notification as read
-  const markAsRead = async (notificationId) => {
-    try {
-      const token = getAuthToken();
-      if (!token) {
-        // Fallback: update locally
-        setNotifications(prevNotifications =>
-          prevNotifications.map(notification =>
-            notification.id === notificationId
-              ? { ...notification, read: true }
-              : notification
-          )
-        );
-        setUnreadCount(prev => Math.max(0, prev - 1));
-        return;
-      }
-
-      const headers = { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
-
-      await axios.put(
-        `${API_URL}/staff/notifications/${notificationId}/read`,
-        {},
-        { headers }
-      );
-      
-      // Update local state
-      setNotifications(prevNotifications =>
-        prevNotifications.map(notification =>
-          notification.id === notificationId
-            ? { ...notification, read: true }
-            : notification
-        )
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      // Fallback: update locally
-      setNotifications(prevNotifications =>
-        prevNotifications.map(notification =>
-          notification.id === notificationId
-            ? { ...notification, read: true }
-            : notification
-        )
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    }
-  };
-
-  // Mark all notifications as read
-  const markAllAsRead = async () => {
-    try {
-      const token = getAuthToken();
-      if (!token) {
-        setNotifications(prevNotifications =>
-          prevNotifications.map(notification => ({ ...notification, read: true }))
-        );
-        setUnreadCount(0);
-        showToast(
-          language === 'np' ? 'सबै सूचनाहरू पढेको चिन्ह लगाइयो' : 'All notifications marked as read',
-          'success'
-        );
-        return;
-      }
-
-      const headers = { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
-
-      await axios.put(
-        `${API_URL}/staff/notifications/read-all`,
-        {},
-        { headers }
-      );
-      
-      setNotifications(prevNotifications =>
-        prevNotifications.map(notification => ({ ...notification, read: true }))
-      );
-      setUnreadCount(0);
-      
-      showToast(
-        language === 'np' ? 'सबै सूचनाहरू पढेको चिन्ह लगाइयो' : 'All notifications marked as read',
-        'success'
-      );
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-      setNotifications(prevNotifications =>
-        prevNotifications.map(notification => ({ ...notification, read: true }))
-      );
-      setUnreadCount(0);
-      showToast(
-        language === 'np' ? 'सबै सूचनाहरू पढेको चिन्ह लगाइयो' : 'All notifications marked as read',
-        'success'
-      );
-    }
-  };
-
-  // Delete notification
-  const deleteNotification = async (notificationId) => {
-    try {
-      const token = getAuthToken();
-      if (!token) {
-        const deleted = notifications.find(n => n.id === notificationId);
-        setNotifications(prevNotifications =>
-          prevNotifications.filter(notification => notification.id !== notificationId)
-        );
-        if (deleted && !deleted.read) {
-          setUnreadCount(prev => Math.max(0, prev - 1));
-        }
-        setShowModal(false);
-        setSelectedNotification(null);
-        showToast(
-          language === 'np' ? 'सूचना मेटियो' : 'Notification deleted',
-          'success'
-        );
-        return;
-      }
-
-      const headers = { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
-
-      await axios.delete(
-        `${API_URL}/staff/notifications/${notificationId}`,
-        { headers }
-      );
-      
-      const deleted = notifications.find(n => n.id === notificationId);
-      setNotifications(prevNotifications =>
-        prevNotifications.filter(notification => notification.id !== notificationId)
-      );
-      if (deleted && !deleted.read) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
-      setShowModal(false);
-      setSelectedNotification(null);
-      
-      showToast(
-        language === 'np' ? 'सूचना सफलतापूर्वक मेटियो' : 'Notification deleted successfully',
-        'success'
-      );
-    } catch (error) {
-      console.error('Error deleting notification:', error);
-      const deleted = notifications.find(n => n.id === notificationId);
-      setNotifications(prevNotifications =>
-        prevNotifications.filter(notification => notification.id !== notificationId)
-      );
-      if (deleted && !deleted.read) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
-      setShowModal(false);
-      setSelectedNotification(null);
-      showToast(
-        language === 'np' ? 'सूचना मेटियो' : 'Notification deleted',
-        'success'
-      );
-    }
-  };
-
-  // Delete all notifications
-  const deleteAllNotifications = async () => {
-    const confirmMessage = language === 'np' 
-      ? 'के तपाईं पक्कै सबै सूचनाहरू मेटाउन चाहनुहुन्छ?' 
-      : 'Are you sure you want to delete all notifications?';
-    
-    if (window.confirm(confirmMessage)) {
-      try {
-        const token = getAuthToken();
-        if (!token) {
-          setNotifications([]);
-          setUnreadCount(0);
-          showToast(
-            language === 'np' ? 'सबै सूचनाहरू मेटियो' : 'All notifications deleted',
-            'success'
-          );
-          return;
-        }
-
-        const headers = { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        };
-
-        await axios.delete(
-          `${API_URL}/staff/notifications/delete-all`,
-          { headers }
-        );
-        
-        setNotifications([]);
-        setUnreadCount(0);
-        showToast(
-          language === 'np' ? 'सबै सूचनाहरू सफलतापूर्वक मेटियो' : 'All notifications deleted successfully',
-          'success'
-        );
-      } catch (error) {
-        console.error('Error deleting all notifications:', error);
-        setNotifications([]);
-        setUnreadCount(0);
-        showToast(
-          language === 'np' ? 'सबै सूचनाहरू मेटियो' : 'All notifications deleted',
-          'success'
-        );
-      }
-    }
-  };
-
-  // Check authentication and load data
+  // Load notifications on mount
   useEffect(() => {
-    isMounted.current = true;
-    const token = getAuthToken();
+    const token = localStorage.getItem('staffToken');
     const user = localStorage.getItem('staffUser');
     
     if (!token || !user) {
       navigate('/');
     } else {
-      fetchNotifications();
-      startPolling();
+      const dummyNotifications = getDummyNotifications();
+      setNotifications(dummyNotifications);
+      const unread = dummyNotifications.filter(n => !n.read).length;
+      setUnreadCount(unread);
+      setIsLoading(false);
     }
-
-    // Cleanup polling on unmount
-    return () => {
-      isMounted.current = false;
-      stopPolling();
-    };
-  }, [navigate]);
+  }, [navigate, staffData.id]);
 
   // Refresh when filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [filter]);
 
-  // Handle language change - refresh notifications
+  // Handle language change - refresh notifications display
   useEffect(() => {
     if (notifications.length > 0) {
-      // Re-transform dates when language changes
       setNotifications(prevNotifications =>
         prevNotifications.map(notification => ({
           ...notification,
@@ -559,7 +279,15 @@ const StaffNotifications = () => {
   const openModal = (notification) => {
     setSelectedNotification(notification);
     if (!notification.read) {
-      markAsRead(notification.id);
+      // Mark as read locally
+      setNotifications(prevNotifications =>
+        prevNotifications.map(n =>
+          n.id === notification.id
+            ? { ...n, read: true }
+            : n
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
     }
     setShowModal(true);
     document.body.style.overflow = 'hidden';
@@ -572,11 +300,52 @@ const StaffNotifications = () => {
   };
 
   const handleLogout = () => {
-    stopPolling();
     localStorage.removeItem('staffToken');
     localStorage.removeItem('staffUser');
     localStorage.removeItem('staffRole');
     navigate('/');
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prevNotifications =>
+      prevNotifications.map(notification => ({ ...notification, read: true }))
+    );
+    setUnreadCount(0);
+    showToast(
+      language === 'np' ? 'सबै सूचनाहरू पढेको चिन्ह लगाइयो' : 'All notifications marked as read',
+      'success'
+    );
+  };
+
+  const deleteNotification = (notificationId) => {
+    const deleted = notifications.find(n => n.id === notificationId);
+    setNotifications(prevNotifications =>
+      prevNotifications.filter(notification => notification.id !== notificationId)
+    );
+    if (deleted && !deleted.read) {
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    }
+    setShowModal(false);
+    setSelectedNotification(null);
+    showToast(
+      language === 'np' ? 'सूचना मेटियो' : 'Notification deleted',
+      'success'
+    );
+  };
+
+  const deleteAllNotifications = () => {
+    const confirmMessage = language === 'np' 
+      ? 'के तपाईं पक्कै सबै सूचनाहरू मेटाउन चाहनुहुन्छ?' 
+      : 'Are you sure you want to delete all notifications?';
+    
+    if (window.confirm(confirmMessage)) {
+      setNotifications([]);
+      setUnreadCount(0);
+      showToast(
+        language === 'np' ? 'सबै सूचनाहरू मेटियो' : 'All notifications deleted',
+        'success'
+      );
+    }
   };
 
   const getUnreadCount = () => {
@@ -620,7 +389,6 @@ const StaffNotifications = () => {
       delete: 'मेटाउनुहोस्',
       takeAction: 'कार्य गर्नुहोस्',
       noNotifications: 'कुनै सूचना छैन',
-      refresh: 'रिफ्रेस',
       welcome: 'स्वागत छ',
       dashboard: 'ड्यासबोर्ड',
       previous: 'अघिल्लो',
@@ -638,9 +406,7 @@ const StaffNotifications = () => {
       high: 'उच्च',
       medium: 'मध्यम',
       low: 'न्यून',
-      loading: 'लोड हुँदै...',
-      backendNotConnected: 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।',
-      newAssignment: '📋 नयाँ गुनासो तोकियो'
+      loading: 'लोड हुँदै...'
     },
     en: {
       pageTitle: 'Notifications',
@@ -661,7 +427,6 @@ const StaffNotifications = () => {
       delete: 'Delete',
       takeAction: 'Take Action',
       noNotifications: 'No notifications',
-      refresh: 'Refresh',
       welcome: 'Welcome',
       dashboard: 'Dashboard',
       previous: 'Previous',
@@ -679,9 +444,7 @@ const StaffNotifications = () => {
       high: 'High',
       medium: 'Medium',
       low: 'Low',
-      loading: 'Loading...',
-      backendNotConnected: 'Backend server not connected. Showing sample data.',
-      newAssignment: '📋 New complaint assigned'
+      loading: 'Loading...'
     }
   };
 
@@ -744,42 +507,6 @@ const StaffNotifications = () => {
     return texts[type] || type;
   };
 
-  // Loading state
-  if (isLoading && notifications.length === 0) {
-    return (
-      <div className="staff-notifications">
-        <StaffHeader 
-          language={language}
-          setLanguage={setLanguage}
-          staffName={staffData.name}
-          staffRole={staffData.role}
-          onLogout={handleLogout}
-        />
-        <div className="dashboard-layout">
-          <StaffSidebar 
-            language={language}
-            staffName={staffData.name}
-            staffRole={staffData.role}
-            onLogout={handleLogout}
-          />
-          <div className="main-content">
-            <div className="content-wrapper">
-              <div className="loading-container">
-                <div className="loading-spinner"></div>
-                <p>{t.loading}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <style>{`
-          .loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 400px; gap: 20px; }
-          .loading-spinner { width: 50px; height: 50px; border: 4px solid #e2e8f0; border-top: 4px solid #0288d1; border-radius: 50%; animation: spin 1s linear infinite; }
-          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        `}</style>
-      </div>
-    );
-  }
-
   return (
     <div className="staff-notifications">
       {/* Toast Notification */}
@@ -811,13 +538,6 @@ const StaffNotifications = () => {
         
         <div className="main-content">
           <div className="content-wrapper">
-            {/* Backend Status Banner */}
-            {backendStatus === 'disconnected' && (
-              <div className="backend-warning">
-                ⚠️ {t.backendNotConnected}
-              </div>
-            )}
-
             {/* Page Header */}
             <div className="page-header">
               <div>
@@ -830,23 +550,16 @@ const StaffNotifications = () => {
                 <button 
                   className="action-btn mark-read-btn" 
                   onClick={markAllAsRead} 
-                  disabled={getUnreadCount() === 0 || isLoading}
+                  disabled={getUnreadCount() === 0}
                 >
                   📖 {t.markAllRead}
                 </button>
                 <button 
                   className="action-btn delete-all-btn" 
                   onClick={deleteAllNotifications} 
-                  disabled={notifications.length === 0 || isLoading}
+                  disabled={notifications.length === 0}
                 >
                   🗑️ {t.deleteAll}
-                </button>
-                <button 
-                  className="refresh-btn" 
-                  onClick={fetchNotifications} 
-                  disabled={isLoading}
-                >
-                  {isLoading ? '⏳' : '🔄'} {t.refresh}
                 </button>
               </div>
             </div>
@@ -883,7 +596,7 @@ const StaffNotifications = () => {
                     onClick={() => openModal(notification)}
                   >
                     <div className="notification-icon">
-                      <span className="type-icon">{getTypeIcon(notification.type)}</span>
+                      <span className="type-icon">{notification.icon || getTypeIcon(notification.type)}</span>
                       {!notification.read && <span className="unread-dot"></span>}
                     </div>
                     <div className="notification-content">
@@ -961,7 +674,7 @@ const StaffNotifications = () => {
               <div className="detail-row">
                 <label>{t.type}:</label>
                 <span className={`type-badge ${getTypeClass(selectedNotification.type)}`}>
-                  {getTypeIcon(selectedNotification.type)} {getTypeText(selectedNotification.type)}
+                  {selectedNotification.icon || getTypeIcon(selectedNotification.type)} {getTypeText(selectedNotification.type)}
                 </span>
               </div>
               <div className="detail-row">
@@ -1069,29 +782,6 @@ const StaffNotifications = () => {
           to { transform: translateX(0); opacity: 1; }
         }
 
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 400px;
-          gap: 20px;
-        }
-
-        .loading-spinner {
-          width: 50px;
-          height: 50px;
-          border: 4px solid #e2e8f0;
-          border-top: 4px solid #0288d1;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-
         .dashboard-layout {
           display: flex;
           height: calc(100vh - 195px);
@@ -1133,15 +823,6 @@ const StaffNotifications = () => {
           min-height: 100%;
         }
 
-        .backend-warning {
-          background: #ff9800;
-          color: white;
-          padding: 10px 16px;
-          border-radius: 8px;
-          margin-bottom: 20px;
-          text-align: center;
-        }
-
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -1169,7 +850,7 @@ const StaffNotifications = () => {
           flex-wrap: wrap;
         }
 
-        .action-btn, .refresh-btn {
+        .action-btn {
           padding: 8px 20px;
           border-radius: 8px;
           cursor: pointer;
@@ -1178,7 +859,7 @@ const StaffNotifications = () => {
           border: none;
         }
 
-        .action-btn:disabled, .refresh-btn:disabled {
+        .action-btn:disabled {
           opacity: 0.6;
           cursor: not-allowed;
         }
@@ -1193,13 +874,7 @@ const StaffNotifications = () => {
           color: white;
         }
 
-        .refresh-btn {
-          background: white;
-          border: 1px solid #e2e8f0;
-          color: #475569;
-        }
-
-        .action-btn:hover, .refresh-btn:hover {
+        .action-btn:hover {
           transform: translateY(-1px);
           box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
@@ -1604,7 +1279,7 @@ const StaffNotifications = () => {
             width: 100%;
           }
           
-          .staff-header, .staff-sidebar, .refresh-btn, .action-btn, .filter-tabs, .backend-warning {
+          .staff-header, .staff-sidebar, .action-btn, .filter-tabs {
             display: none;
           }
         }
@@ -1642,7 +1317,7 @@ const StaffNotifications = () => {
             flex-direction: column;
           }
           
-          .action-btn, .refresh-btn {
+          .action-btn {
             width: 100%;
             text-align: center;
           }

@@ -1,16 +1,17 @@
 // src/pages/StaffAccountSettings.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import StaffHeader from '../components/StaffHeader';
 import StaffSidebar from '../components/StaffSidebar';
 
 const StaffAccountSettings = () => {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('np');
-  const [updating, setUpdating] = useState(false);
-  const [activeTab, setActiveTab] = useState('general');
-  const [backendStatus, setBackendStatus] = useState('checking');
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('preferredLanguage') || 'np';
+  });
+  const [activeTab, setActiveTab] = useState('profile');
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
 
   const [staffData, setStaffData] = useState({
     id: null,
@@ -19,51 +20,34 @@ const StaffAccountSettings = () => {
     phone: '',
     role: '',
     department: '',
-    profilePicture: null,
-    timezone: 'Asia/Kathmandu',
-    dateFormat: 'YYYY-MM-DD',
-    language: 'ne'
+    joinDate: '',
+    employeeId: ''
   });
 
-  const [generalSettings, setGeneralSettings] = useState({
-    theme: 'light',
-    language: 'ne',
-    timezone: 'Asia/Kathmandu',
-    dateFormat: 'YYYY-MM-DD',
-    timeFormat: '24h',
-    firstDayOfWeek: 'sunday',
-    itemsPerPage: 10,
-    defaultDashboard: 'staff-dashboard'
+  const [profileData, setProfileData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    department: '',
+    address: '',
+    dateOfBirth: '',
+    gender: 'male',
+    bloodGroup: '',
+    qualification: '',
+    experience: ''
+  });
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
   });
 
   const [preferences, setPreferences] = useState({
-    emailNotifications: true,
-    smsNotifications: false,
-    desktopNotifications: true,
-    taskReminders: true,
-    complaintUpdates: true,
-    reportGeneration: true,
-    weeklyDigest: false,
-    marketingEmails: false
+    language: 'np',
+    theme: 'light',
+    notifications: true
   });
-
-  const [privacySettings, setPrivacySettings] = useState({
-    showEmail: true,
-    showPhone: false,
-    showProfileInDirectory: true,
-    allowMessagesFromColleagues: true,
-    twoFactorAuth: false,
-    loginAlerts: true,
-    deviceManagement: true
-  });
-
-  const [sessionData, setSessionData] = useState({
-    sessions: [],
-    activeSessions: 0
-  });
-
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   // Load staff data from localStorage
   useEffect(() => {
@@ -78,267 +62,36 @@ const StaffAccountSettings = () => {
           phone: user.phone || '',
           role: user.role || 'Staff',
           department: user.department || 'Customer Support',
-          timezone: 'Asia/Kathmandu',
-          dateFormat: 'YYYY-MM-DD',
-          language: language === 'np' ? 'ne' : 'en'
+          joinDate: user.joinDate || user.join_date || '2023-01-15',
+          employeeId: user.employeeId || user.employee_id || `EMP-${String(user.id || '001').padStart(3, '0')}`
+        });
+        setProfileData({
+          name: user.name || 'Staff Member',
+          email: user.email || '',
+          phone: user.phone || '',
+          department: user.department || 'Customer Support',
+          address: user.address || '',
+          dateOfBirth: user.dateOfBirth || '',
+          gender: user.gender || 'male',
+          bloodGroup: user.bloodGroup || '',
+          qualification: user.qualification || '',
+          experience: user.experience || ''
         });
       } catch (e) {
         console.error('Error parsing staff user:', e);
       }
     }
-  }, [language]);
-
-  // Fetch account settings
-  const fetchAccountSettings = async () => {
-    try {
-      const token = localStorage.getItem('staffToken');
-      const response = await axios.get('http://localhost:5000/api/staff/account-settings', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.data.success) {
-        setGeneralSettings(response.data.data.general);
-        setPreferences(response.data.data.preferences);
-        setPrivacySettings(response.data.data.privacy);
-        setSessionData(response.data.data.sessions);
-        setBackendStatus('connected');
-      } else {
-        setGeneralSettings(getSampleGeneralSettings());
-        setPreferences(getSamplePreferences());
-        setPrivacySettings(getSamplePrivacySettings());
-        setSessionData(getSampleSessionData());
-        setBackendStatus('disconnected');
-      }
-    } catch (error) {
-      console.error('Error fetching account settings:', error);
-      setGeneralSettings(getSampleGeneralSettings());
-      setPreferences(getSamplePreferences());
-      setPrivacySettings(getSamplePrivacySettings());
-      setSessionData(getSampleSessionData());
-      setBackendStatus('disconnected');
-    }
-  };
-
-  const getSampleGeneralSettings = () => ({
-    theme: 'light',
-    language: language === 'np' ? 'ne' : 'en',
-    timezone: 'Asia/Kathmandu',
-    dateFormat: 'YYYY-MM-DD',
-    timeFormat: '24h',
-    firstDayOfWeek: 'sunday',
-    itemsPerPage: 10,
-    defaultDashboard: 'staff-dashboard'
-  });
-
-  const getSamplePreferences = () => ({
-    emailNotifications: true,
-    smsNotifications: false,
-    desktopNotifications: true,
-    taskReminders: true,
-    complaintUpdates: true,
-    reportGeneration: true,
-    weeklyDigest: false,
-    marketingEmails: false
-  });
-
-  const getSamplePrivacySettings = () => ({
-    showEmail: true,
-    showPhone: false,
-    showProfileInDirectory: true,
-    allowMessagesFromColleagues: true,
-    twoFactorAuth: false,
-    loginAlerts: true,
-    deviceManagement: true
-  });
-
-  const getSampleSessionData = () => ({
-    sessions: [
-      { id: 1, device: 'Chrome on Windows', location: 'Kathmandu, Nepal', ip: '192.168.1.1', lastActive: '2024-01-15 10:30 AM', current: true },
-      { id: 2, device: 'Safari on iPhone', location: 'Kathmandu, Nepal', ip: '192.168.1.2', lastActive: '2024-01-14 08:15 PM', current: false },
-      { id: 3, device: 'Firefox on Mac', location: 'Pokhara, Nepal', ip: '192.168.1.3', lastActive: '2024-01-13 02:00 PM', current: false }
-    ],
-    activeSessions: 1
-  });
-
-  // Update general settings
-  const updateGeneralSettings = async () => {
-    setUpdating(true);
-    setError('');
-    setSuccess('');
     
-    try {
-      const token = localStorage.getItem('staffToken');
-      const response = await axios.put(
-        'http://localhost:5000/api/staff/account-settings/general',
-        generalSettings,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
-        setSuccess(language === 'np' ? 'सामान्य सेटिङ्स अपडेट गरियो' : 'General settings updated');
-        setTimeout(() => setSuccess(''), 3000);
-      } else {
-        throw new Error(response.data.message || 'Update failed');
-      }
-    } catch (error) {
-      console.error('Error updating general settings:', error);
-      setError(language === 'np' 
-        ? 'सेटिङ्स अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
-        : 'Failed to update settings. Please try again.');
-      setTimeout(() => setError(''), 3000);
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  // Update preferences
-  const updatePreferences = async () => {
-    setUpdating(true);
-    setError('');
-    setSuccess('');
-    
-    try {
-      const token = localStorage.getItem('staffToken');
-      const response = await axios.put(
-        'http://localhost:5000/api/staff/account-settings/preferences',
-        preferences,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
-        setSuccess(language === 'np' ? 'प्राथमिकताहरू अपडेट गरियो' : 'Preferences updated');
-        setTimeout(() => setSuccess(''), 3000);
-      } else {
-        throw new Error(response.data.message || 'Update failed');
-      }
-    } catch (error) {
-      console.error('Error updating preferences:', error);
-      setError(language === 'np' 
-        ? 'प्राथमिकता अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
-        : 'Failed to update preferences. Please try again.');
-      setTimeout(() => setError(''), 3000);
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  // Update privacy settings
-  const updatePrivacySettings = async () => {
-    setUpdating(true);
-    setError('');
-    setSuccess('');
-    
-    try {
-      const token = localStorage.getItem('staffToken');
-      const response = await axios.put(
-        'http://localhost:5000/api/staff/account-settings/privacy',
-        privacySettings,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
-        setSuccess(language === 'np' ? 'गोपनीयता सेटिङ्स अपडेट गरियो' : 'Privacy settings updated');
-        setTimeout(() => setSuccess(''), 3000);
-      } else {
-        throw new Error(response.data.message || 'Update failed');
-      }
-    } catch (error) {
-      console.error('Error updating privacy settings:', error);
-      setError(language === 'np' 
-        ? 'गोपनीयता सेटिङ्स अपडेट गर्न असफल। कृपया पुन: प्रयास गर्नुहोस्।' 
-        : 'Failed to update privacy settings. Please try again.');
-      setTimeout(() => setError(''), 3000);
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  // Terminate session
-  const terminateSession = async (sessionId) => {
-    const confirmMessage = language === 'np' 
-      ? 'के तपाईं पक्कै यो सेसन बन्द गर्न चाहनुहुन्छ?' 
-      : 'Are you sure you want to terminate this session?';
-    
-    if (window.confirm(confirmMessage)) {
+    // Load preferences from localStorage
+    const savedPrefs = localStorage.getItem('staffPreferences');
+    if (savedPrefs) {
       try {
-        const token = localStorage.getItem('staffToken');
-        const response = await axios.delete(
-          `http://localhost:5000/api/staff/sessions/${sessionId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        
-        if (response.data.success) {
-          setSessionData(prev => ({
-            ...prev,
-            sessions: prev.sessions.filter(s => s.id !== sessionId),
-            activeSessions: prev.sessions.filter(s => s.id !== sessionId && s.current).length
-          }));
-          setSuccess(language === 'np' ? 'सेसन बन्द गरियो' : 'Session terminated');
-          setTimeout(() => setSuccess(''), 3000);
-        }
-      } catch (error) {
-        console.error('Error terminating session:', error);
-        setError(language === 'np' ? 'सेसन बन्द गर्न असफल' : 'Failed to terminate session');
-        setTimeout(() => setError(''), 3000);
+        setPreferences(JSON.parse(savedPrefs));
+      } catch (e) {
+        console.error('Error parsing preferences:', e);
       }
     }
-  };
-
-  // Terminate all other sessions
-  const terminateAllOtherSessions = async () => {
-    const confirmMessage = language === 'np' 
-      ? 'के तपाईं पक्कै अरू सबै सेसनहरू बन्द गर्न चाहनुहुन्छ?' 
-      : 'Are you sure you want to terminate all other sessions?';
-    
-    if (window.confirm(confirmMessage)) {
-      try {
-        const token = localStorage.getItem('staffToken');
-        const response = await axios.delete(
-          'http://localhost:5000/api/staff/sessions/others',
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        
-        if (response.data.success) {
-          setSessionData(prev => ({
-            ...prev,
-            sessions: prev.sessions.filter(s => s.current),
-            activeSessions: 1
-          }));
-          setSuccess(language === 'np' ? 'अरू सबै सेसनहरू बन्द गरियो' : 'All other sessions terminated');
-          setTimeout(() => setSuccess(''), 3000);
-        }
-      } catch (error) {
-        console.error('Error terminating sessions:', error);
-        setError(language === 'np' ? 'सेसनहरू बन्द गर्न असफल' : 'Failed to terminate sessions');
-        setTimeout(() => setError(''), 3000);
-      }
-    }
-  };
-
-  // Enable 2FA
-  const enableTwoFactorAuth = async () => {
-    setUpdating(true);
-    try {
-      const token = localStorage.getItem('staffToken');
-      const response = await axios.post(
-        'http://localhost:5000/api/staff/2fa/enable',
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
-        setPrivacySettings(prev => ({ ...prev, twoFactorAuth: true }));
-        setSuccess(language === 'np' ? 'दुई-चरण प्रमाणीकरण सक्रिय गरियो' : 'Two-factor authentication enabled');
-        setTimeout(() => setSuccess(''), 3000);
-      }
-    } catch (error) {
-      console.error('Error enabling 2FA:', error);
-      setError(language === 'np' ? '२FA सक्रिय गर्न असफल' : 'Failed to enable 2FA');
-      setTimeout(() => setError(''), 3000);
-    } finally {
-      setUpdating(false);
-    }
-  };
+  }, []);
 
   // Check authentication
   useEffect(() => {
@@ -347,24 +100,103 @@ const StaffAccountSettings = () => {
     
     if (!token || !user) {
       navigate('/');
-    } else {
-      fetchAccountSettings();
     }
   }, [navigate]);
 
-  const handleGeneralChange = (e) => {
+  const handleProfileChange = (e) => {
     const { name, value } = e.target;
-    setGeneralSettings(prev => ({ ...prev, [name]: value }));
+    setProfileData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [name]: value }));
   };
 
   const handlePreferenceChange = (e) => {
-    const { name, checked } = e.target;
-    setPreferences(prev => ({ ...prev, [name]: checked }));
+    const { name, value, type, checked } = e.target;
+    setPreferences(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
-  const handlePrivacyChange = (e) => {
-    const { name, checked } = e.target;
-    setPrivacySettings(prev => ({ ...prev, [name]: checked }));
+  const handleUpdateProfile = () => {
+    setError('');
+    setSuccess('');
+    
+    if (!profileData.name) {
+      setError(language === 'np' ? 'कृपया नाम भर्नुहोस्' : 'Please enter your name');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    
+    // Update local storage
+    const userStr = localStorage.getItem('staffUser');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        const updatedUser = {
+          ...user,
+          name: profileData.name,
+          email: profileData.email,
+          phone: profileData.phone,
+          department: profileData.department,
+          address: profileData.address,
+          dateOfBirth: profileData.dateOfBirth,
+          gender: profileData.gender,
+          bloodGroup: profileData.bloodGroup,
+          qualification: profileData.qualification,
+          experience: profileData.experience
+        };
+        localStorage.setItem('staffUser', JSON.stringify(updatedUser));
+        setStaffData(prev => ({
+          ...prev,
+          name: profileData.name,
+          email: profileData.email,
+          phone: profileData.phone,
+          department: profileData.department
+        }));
+        setSuccess(language === 'np' ? '✅ प्रोफाइल सफलतापूर्वक अपडेट गरियो' : '✅ Profile updated successfully');
+        setTimeout(() => setSuccess(''), 3000);
+      } catch (e) {
+        setError(language === 'np' ? '❌ प्रोफाइल अपडेट गर्न असफल' : '❌ Failed to update profile');
+        setTimeout(() => setError(''), 3000);
+      }
+    }
+  };
+
+  const handleChangePassword = () => {
+    setError('');
+    setSuccess('');
+    
+    if (!passwordData.currentPassword) {
+      setError(language === 'np' ? 'कृपया हालको पासवर्ड भर्नुहोस्' : 'Please enter current password');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    if (!passwordData.newPassword || passwordData.newPassword.length < 6) {
+      setError(language === 'np' ? 'नयाँ पासवर्ड कम्तिमा ६ क्यारेक्टरको हुनुपर्छ' : 'New password must be at least 6 characters');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError(language === 'np' ? 'पासवर्ड मिलेन' : 'Passwords do not match');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    
+    setSuccess(language === 'np' ? '✅ पासवर्ड सफलतापूर्वक परिवर्तन गरियो' : '✅ Password changed successfully');
+    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  const handleSavePreferences = () => {
+    localStorage.setItem('staffPreferences', JSON.stringify(preferences));
+    localStorage.setItem('preferredLanguage', preferences.language);
+    setLanguage(preferences.language);
+    setSuccess(language === 'np' ? '✅ प्राथमिकताहरू सुरक्षित गरियो' : '✅ Preferences saved');
+    setTimeout(() => setSuccess(''), 3000);
   };
 
   const handleLogout = () => {
@@ -377,121 +209,73 @@ const StaffAccountSettings = () => {
   const content = {
     np: {
       pageTitle: 'खाता सेटिङ्स',
-      general: 'साधारण',
+      profile: 'प्रोफाइल',
+      password: 'पासवर्ड',
       preferences: 'प्राथमिकताहरू',
-      privacy: 'गोपनीयता',
-      sessions: 'सेसनहरू',
-      generalSettings: 'साधारण सेटिङ्स',
-      appearance: 'रूप',
-      theme: 'थीम',
-      light: 'उज्यालो',
-      dark: 'अध्यारो',
-      system: 'प्रणाली',
+      profileInfo: 'प्रोफाइल जानकारी',
+      personalInfo: 'व्यक्तिगत जानकारी',
+      name: 'पूरा नाम',
+      email: 'इमेल',
+      phone: 'फोन नम्बर',
+      department: 'विभाग',
+      address: 'ठेगाना',
+      dateOfBirth: 'जन्म मिति',
+      gender: 'लिङ्ग',
+      male: 'पुरुष',
+      female: 'महिला',
+      other: 'अन्य',
+      bloodGroup: 'रक्त समूह',
+      qualification: 'शैक्षिक योग्यता',
+      experience: 'अनुभव',
+      changePassword: 'पासवर्ड परिवर्तन',
+      currentPassword: 'हालको पासवर्ड',
+      newPassword: 'नयाँ पासवर्ड',
+      confirmPassword: 'पासवर्ड पुष्टि गर्नुहोस्',
+      save: 'सुरक्षित गर्नुहोस्',
+      update: 'अपडेट गर्नुहोस्',
       language: 'भाषा',
       nepali: 'नेपाली',
       english: 'अंग्रेजी',
-      timezone: 'समय क्षेत्र',
-      dateFormat: 'मिति ढाँचा',
-      timeFormat: 'समय ढाँचा',
-      hour12: '१२ घण्टा',
-      hour24: '२४ घण्टा',
-      firstDayOfWeek: 'हप्ताको पहिलो दिन',
-      sunday: 'आइतवार',
-      monday: 'सोमवार',
-      itemsPerPage: 'प्रति पृष्ठ वस्तुहरू',
-      defaultDashboard: 'पूर्वनिर्धारित ड्यासबोर्ड',
-      notificationPreferences: 'सूचना प्राथमिकताहरू',
-      emailNotifications: 'इमेल सूचनाहरू',
-      smsNotifications: 'एसएमएस सूचनाहरू',
-      desktopNotifications: 'डेस्कटप सूचनाहरू',
-      taskReminders: 'कार्य सम्झनाहरू',
-      complaintUpdates: 'गुनासो अपडेटहरू',
-      reportGeneration: 'रिपोर्ट उत्पादन',
-      weeklyDigest: 'साप्ताहिक सारांश',
-      marketingEmails: 'विपणन इमेलहरू',
-      privacySettings: 'गोपनीयता सेटिङ्स',
-      profileVisibility: 'प्रोफाइल दृश्यता',
-      showEmail: 'इमेल देखाउनुहोस्',
-      showPhone: 'फोन नम्बर देखाउनुहोस्',
-      showProfileInDirectory: 'निर्देशिकामा प्रोफाइल देखाउनुहोस्',
-      allowMessagesFromColleagues: 'सहकर्मीहरूबाट सन्देश अनुमति दिनुहोस्',
-      security: 'सुरक्षा',
-      twoFactorAuth: 'दुई-चरण प्रमाणीकरण',
-      enable2FA: '२FA सक्रिय गर्नुहोस्',
-      loginAlerts: 'लगइन अलर्टहरू',
-      deviceManagement: 'यन्त्र व्यवस्थापन',
-      activeSessions: 'सक्रिय सेसनहरू',
-      currentSession: 'हालको सेसन',
-      device: 'यन्त्र',
-      location: 'स्थान',
-      ipAddress: 'आईपी ठेगाना',
-      lastActive: 'अन्तिम सक्रिय',
-      actions: 'कार्यहरू',
-      terminate: 'बन्द गर्नुहोस्',
-      terminateAllOthers: 'अरू सबै बन्द गर्नुहोस्',
-      save: 'सुरक्षित गर्नुहोस्',
-      saving: 'सुरक्षित हुँदै...',
-      refresh: 'रिफ्रेस',
-      back: 'पछाडि फर्कनुहोस्'
+      theme: 'थीम',
+      light: 'उज्यालो',
+      dark: 'अध्यारो',
+      notifications: 'सूचनाहरू',
+      enableNotifications: 'सूचनाहरू सक्रिय गर्नुहोस्'
     },
     en: {
       pageTitle: 'Account Settings',
-      general: 'General',
+      profile: 'Profile',
+      password: 'Password',
       preferences: 'Preferences',
-      privacy: 'Privacy',
-      sessions: 'Sessions',
-      generalSettings: 'General Settings',
-      appearance: 'Appearance',
-      theme: 'Theme',
-      light: 'Light',
-      dark: 'Dark',
-      system: 'System',
+      profileInfo: 'Profile Information',
+      personalInfo: 'Personal Information',
+      name: 'Full Name',
+      email: 'Email',
+      phone: 'Phone Number',
+      department: 'Department',
+      address: 'Address',
+      dateOfBirth: 'Date of Birth',
+      gender: 'Gender',
+      male: 'Male',
+      female: 'Female',
+      other: 'Other',
+      bloodGroup: 'Blood Group',
+      qualification: 'Qualification',
+      experience: 'Experience',
+      changePassword: 'Change Password',
+      currentPassword: 'Current Password',
+      newPassword: 'New Password',
+      confirmPassword: 'Confirm Password',
+      save: 'Save',
+      update: 'Update',
       language: 'Language',
       nepali: 'Nepali',
       english: 'English',
-      timezone: 'Timezone',
-      dateFormat: 'Date Format',
-      timeFormat: 'Time Format',
-      hour12: '12 Hour',
-      hour24: '24 Hour',
-      firstDayOfWeek: 'First Day of Week',
-      sunday: 'Sunday',
-      monday: 'Monday',
-      itemsPerPage: 'Items Per Page',
-      defaultDashboard: 'Default Dashboard',
-      notificationPreferences: 'Notification Preferences',
-      emailNotifications: 'Email Notifications',
-      smsNotifications: 'SMS Notifications',
-      desktopNotifications: 'Desktop Notifications',
-      taskReminders: 'Task Reminders',
-      complaintUpdates: 'Complaint Updates',
-      reportGeneration: 'Report Generation',
-      weeklyDigest: 'Weekly Digest',
-      marketingEmails: 'Marketing Emails',
-      privacySettings: 'Privacy Settings',
-      profileVisibility: 'Profile Visibility',
-      showEmail: 'Show Email',
-      showPhone: 'Show Phone Number',
-      showProfileInDirectory: 'Show Profile in Directory',
-      allowMessagesFromColleagues: 'Allow Messages from Colleagues',
-      security: 'Security',
-      twoFactorAuth: 'Two-Factor Authentication',
-      enable2FA: 'Enable 2FA',
-      loginAlerts: 'Login Alerts',
-      deviceManagement: 'Device Management',
-      activeSessions: 'Active Sessions',
-      currentSession: 'Current Session',
-      device: 'Device',
-      location: 'Location',
-      ipAddress: 'IP Address',
-      lastActive: 'Last Active',
-      actions: 'Actions',
-      terminate: 'Terminate',
-      terminateAllOthers: 'Terminate All Others',
-      save: 'Save',
-      saving: 'Saving...',
-      refresh: 'Refresh',
-      back: 'Back'
+      theme: 'Theme',
+      light: 'Light',
+      dark: 'Dark',
+      notifications: 'Notifications',
+      enableNotifications: 'Enable Notifications'
     }
   };
 
@@ -517,170 +301,238 @@ const StaffAccountSettings = () => {
         
         <div className="main-content">
           <div className="content-wrapper">
-            {/* Backend Status Banner */}
-            {backendStatus === 'disconnected' && (
-              <div className="backend-warning">
-                ⚠️ {language === 'np' ? 'ब्याकेन्ड सर्भर जडान भएन। नमूना डाटा देखाउँदै।' : 'Backend server not connected. Showing sample data.'}
-              </div>
-            )}
-
             {/* Page Header */}
             <div className="page-header">
-              <h1 className="page-title">{t.pageTitle}</h1>
-              <button className="refresh-btn" onClick={fetchAccountSettings}>
-                🔄 {t.refresh}
-              </button>
+              <h1 className="page-title">⚙️ {t.pageTitle}</h1>
+            </div>
+
+            {/* Staff Info Card */}
+            <div className="staff-info-card">
+              <div className="staff-avatar">
+                <span className="avatar-icon">👤</span>
+              </div>
+              <div className="staff-details">
+                <h2>{staffData.name}</h2>
+                <p>{staffData.role} | {staffData.department}</p>
+                <div className="staff-meta">
+                  <span>🆔 {staffData.employeeId}</span>
+                  <span>📧 {staffData.email}</span>
+                  <span>📞 {staffData.phone}</span>
+                </div>
+              </div>
             </div>
 
             {/* Tab Navigation */}
             <div className="tab-navigation">
               <button 
-                className={`tab-btn ${activeTab === 'general' ? 'active' : ''}`}
-                onClick={() => setActiveTab('general')}
+                className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`}
+                onClick={() => setActiveTab('profile')}
               >
-                ⚙️ {t.general}
+                👤 {t.profile}
+              </button>
+              <button 
+                className={`tab-btn ${activeTab === 'password' ? 'active' : ''}`}
+                onClick={() => setActiveTab('password')}
+              >
+                🔒 {t.password}
               </button>
               <button 
                 className={`tab-btn ${activeTab === 'preferences' ? 'active' : ''}`}
                 onClick={() => setActiveTab('preferences')}
               >
-                🎯 {t.preferences}
-              </button>
-              <button 
-                className={`tab-btn ${activeTab === 'privacy' ? 'active' : ''}`}
-                onClick={() => setActiveTab('privacy')}
-              >
-                🔒 {t.privacy}
-              </button>
-              <button 
-                className={`tab-btn ${activeTab === 'sessions' ? 'active' : ''}`}
-                onClick={() => setActiveTab('sessions')}
-              >
-                💻 {t.sessions}
+                ⚙️ {t.preferences}
               </button>
             </div>
 
-            {/* Error/Success Messages */}
-            {error && (
-              <div className="error-message">
-                <span className="error-icon">⚠️</span>
-                <span>{error}</span>
-              </div>
-            )}
-
+            {/* Success/Error Messages */}
             {success && (
               <div className="success-message">
                 <span className="success-icon">✅</span>
                 <span>{success}</span>
               </div>
             )}
+            {error && (
+              <div className="error-message">
+                <span className="error-icon">❌</span>
+                <span>{error}</span>
+              </div>
+            )}
 
-            {/* General Settings Tab */}
-            {activeTab === 'general' && (
+            {/* Profile Tab */}
+            {activeTab === 'profile' && (
               <div className="settings-container">
                 <div className="settings-card">
-                  <h3>{t.generalSettings}</h3>
+                  <h3>{t.profileInfo}</h3>
                   
                   <div className="form-section">
-                    <h4>{t.appearance}</h4>
+                    <h4>{t.personalInfo}</h4>
+                    
                     <div className="form-group">
-                      <label>{t.theme}</label>
-                      <select name="theme" value={generalSettings.theme} onChange={handleGeneralChange}>
-                        <option value="light">{t.light}</option>
-                        <option value="dark">{t.dark}</option>
-                        <option value="system">{t.system}</option>
-                      </select>
+                      <label>{t.name} <span className="required">*</span></label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={profileData.name}
+                        onChange={handleProfileChange}
+                        placeholder={t.name}
+                      />
                     </div>
-                  </div>
 
-                  <div className="form-section">
-                    <h4>{t.language}</h4>
+                    <div className="form-row">
+                      <div className="form-group half">
+                        <label>{t.email}</label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={profileData.email}
+                          onChange={handleProfileChange}
+                          placeholder={t.email}
+                          disabled
+                        />
+                      </div>
+                      <div className="form-group half">
+                        <label>{t.phone}</label>
+                        <input
+                          type="text"
+                          name="phone"
+                          value={profileData.phone}
+                          onChange={handleProfileChange}
+                          placeholder={t.phone}
+                        />
+                      </div>
+                    </div>
+
                     <div className="form-group">
-                      <label>{t.language}</label>
-                      <select name="language" value={generalSettings.language} onChange={handleGeneralChange}>
-                        <option value="ne">{t.nepali}</option>
-                        <option value="en">{t.english}</option>
-                      </select>
+                      <label>{t.department}</label>
+                      <input
+                        type="text"
+                        name="department"
+                        value={profileData.department}
+                        onChange={handleProfileChange}
+                        placeholder={t.department}
+                      />
                     </div>
-                  </div>
 
-                  <div className="form-section">
-                    <h4>{t.timezone}</h4>
                     <div className="form-group">
-                      <label>{t.timezone}</label>
-                      <select name="timezone" value={generalSettings.timezone} onChange={handleGeneralChange}>
-                        <option value="Asia/Kathmandu">Asia/Kathmandu (GMT+5:45)</option>
-                        <option value="Asia/Kolkata">Asia/Kolkata (GMT+5:30)</option>
-                        <option value="Asia/Dubai">Asia/Dubai (GMT+4)</option>
-                        <option value="Asia/Tokyo">Asia/Tokyo (GMT+9)</option>
-                      </select>
+                      <label>{t.address}</label>
+                      <input
+                        type="text"
+                        name="address"
+                        value={profileData.address}
+                        onChange={handleProfileChange}
+                        placeholder={t.address}
+                      />
                     </div>
-                  </div>
 
-                  <div className="form-row">
-                    <div className="form-section half">
-                      <h4>{t.dateFormat}</h4>
-                      <div className="form-group">
-                        <select name="dateFormat" value={generalSettings.dateFormat} onChange={handleGeneralChange}>
-                          <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                          <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                          <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                          <option value="DD MMM YYYY">DD MMM YYYY</option>
+                    <div className="form-row">
+                      <div className="form-group half">
+                        <label>{t.dateOfBirth}</label>
+                        <input
+                          type="date"
+                          name="dateOfBirth"
+                          value={profileData.dateOfBirth}
+                          onChange={handleProfileChange}
+                        />
+                      </div>
+                      <div className="form-group half">
+                        <label>{t.gender}</label>
+                        <select name="gender" value={profileData.gender} onChange={handleProfileChange}>
+                          <option value="male">{t.male}</option>
+                          <option value="female">{t.female}</option>
+                          <option value="other">{t.other}</option>
                         </select>
                       </div>
                     </div>
 
-                    <div className="form-section half">
-                      <h4>{t.timeFormat}</h4>
-                      <div className="form-group">
-                        <select name="timeFormat" value={generalSettings.timeFormat} onChange={handleGeneralChange}>
-                          <option value="12h">{t.hour12}</option>
-                          <option value="24h">{t.hour24}</option>
-                        </select>
+                    <div className="form-row">
+                      <div className="form-group half">
+                        <label>{t.bloodGroup}</label>
+                        <input
+                          type="text"
+                          name="bloodGroup"
+                          value={profileData.bloodGroup}
+                          onChange={handleProfileChange}
+                          placeholder="A+, B+, O+, etc."
+                        />
+                      </div>
+                      <div className="form-group half">
+                        <label>{t.qualification}</label>
+                        <input
+                          type="text"
+                          name="qualification"
+                          value={profileData.qualification}
+                          onChange={handleProfileChange}
+                          placeholder={t.qualification}
+                        />
                       </div>
                     </div>
-                  </div>
 
-                  <div className="form-row">
-                    <div className="form-section half">
-                      <h4>{t.firstDayOfWeek}</h4>
-                      <div className="form-group">
-                        <select name="firstDayOfWeek" value={generalSettings.firstDayOfWeek} onChange={handleGeneralChange}>
-                          <option value="sunday">{t.sunday}</option>
-                          <option value="monday">{t.monday}</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="form-section half">
-                      <h4>{t.itemsPerPage}</h4>
-                      <div className="form-group">
-                        <select name="itemsPerPage" value={generalSettings.itemsPerPage} onChange={handleGeneralChange}>
-                          <option value="5">5</option>
-                          <option value="10">10</option>
-                          <option value="20">20</option>
-                          <option value="50">50</option>
-                          <option value="100">100</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="form-section">
-                    <h4>{t.defaultDashboard}</h4>
                     <div className="form-group">
-                      <select name="defaultDashboard" value={generalSettings.defaultDashboard} onChange={handleGeneralChange}>
-                        <option value="staff-dashboard">Staff Dashboard</option>
-                        <option value="staff-complaints-assigned">Assigned Complaints</option>
-                        <option value="staff-tasks">My Tasks</option>
-                        <option value="staff-performance">Performance</option>
-                      </select>
+                      <label>{t.experience}</label>
+                      <input
+                        type="text"
+                        name="experience"
+                        value={profileData.experience}
+                        onChange={handleProfileChange}
+                        placeholder="e.g., 5 years"
+                      />
                     </div>
                   </div>
 
                   <div className="form-actions">
-                    <button className="btn-save" onClick={updateGeneralSettings} disabled={updating}>
-                      {updating ? t.saving : t.save}
+                    <button className="btn-save" onClick={handleUpdateProfile}>
+                      💾 {t.update}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Password Tab */}
+            {activeTab === 'password' && (
+              <div className="settings-container">
+                <div className="settings-card">
+                  <h3>{t.changePassword}</h3>
+                  
+                  <div className="form-section">
+                    <div className="form-group">
+                      <label>{t.currentPassword} <span className="required">*</span></label>
+                      <input
+                        type="password"
+                        name="currentPassword"
+                        value={passwordData.currentPassword}
+                        onChange={handlePasswordChange}
+                        placeholder={t.currentPassword}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>{t.newPassword} <span className="required">*</span></label>
+                      <input
+                        type="password"
+                        name="newPassword"
+                        value={passwordData.newPassword}
+                        onChange={handlePasswordChange}
+                        placeholder={t.newPassword}
+                      />
+                      <small>{language === 'np' ? 'कम्तिमा ६ क्यारेक्टर' : 'Minimum 6 characters'}</small>
+                    </div>
+
+                    <div className="form-group">
+                      <label>{t.confirmPassword} <span className="required">*</span></label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={passwordData.confirmPassword}
+                        onChange={handlePasswordChange}
+                        placeholder={t.confirmPassword}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-actions">
+                    <button className="btn-save" onClick={handleChangePassword}>
+                      🔒 {t.update}
                     </button>
                   </div>
                 </div>
@@ -691,255 +543,51 @@ const StaffAccountSettings = () => {
             {activeTab === 'preferences' && (
               <div className="settings-container">
                 <div className="settings-card">
-                  <h3>{t.notificationPreferences}</h3>
+                  <h3>⚙️ {t.preferences}</h3>
                   
-                  <div className="preferences-list">
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">📧</span>
-                        <span className="preference-label">{t.emailNotifications}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="emailNotifications" checked={preferences.emailNotifications} onChange={handlePreferenceChange} />
-                        <span className="slider round"></span>
-                      </label>
+                  <div className="form-section">
+                    <div className="form-group">
+                      <label>{t.language}</label>
+                      <select 
+                        name="language"
+                        value={preferences.language} 
+                        onChange={handlePreferenceChange}
+                      >
+                        <option value="np">{t.nepali}</option>
+                        <option value="en">{t.english}</option>
+                      </select>
                     </div>
 
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">📱</span>
-                        <span className="preference-label">{t.smsNotifications}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="smsNotifications" checked={preferences.smsNotifications} onChange={handlePreferenceChange} />
-                        <span className="slider round"></span>
-                      </label>
+                    <div className="form-group">
+                      <label>{t.theme}</label>
+                      <select 
+                        name="theme"
+                        value={preferences.theme} 
+                        onChange={handlePreferenceChange}
+                      >
+                        <option value="light">{t.light}</option>
+                        <option value="dark">{t.dark}</option>
+                      </select>
                     </div>
 
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">💻</span>
-                        <span className="preference-label">{t.desktopNotifications}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="desktopNotifications" checked={preferences.desktopNotifications} onChange={handlePreferenceChange} />
-                        <span className="slider round"></span>
-                      </label>
-                    </div>
-
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">✅</span>
-                        <span className="preference-label">{t.taskReminders}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="taskReminders" checked={preferences.taskReminders} onChange={handlePreferenceChange} />
-                        <span className="slider round"></span>
-                      </label>
-                    </div>
-
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">💬</span>
-                        <span className="preference-label">{t.complaintUpdates}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="complaintUpdates" checked={preferences.complaintUpdates} onChange={handlePreferenceChange} />
-                        <span className="slider round"></span>
-                      </label>
-                    </div>
-
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">📊</span>
-                        <span className="preference-label">{t.reportGeneration}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="reportGeneration" checked={preferences.reportGeneration} onChange={handlePreferenceChange} />
-                        <span className="slider round"></span>
-                      </label>
-                    </div>
-
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">📰</span>
-                        <span className="preference-label">{t.weeklyDigest}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="weeklyDigest" checked={preferences.weeklyDigest} onChange={handlePreferenceChange} />
-                        <span className="slider round"></span>
-                      </label>
-                    </div>
-
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">📢</span>
-                        <span className="preference-label">{t.marketingEmails}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="marketingEmails" checked={preferences.marketingEmails} onChange={handlePreferenceChange} />
-                        <span className="slider round"></span>
+                    <div className="form-group checkbox-group">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          name="notifications"
+                          checked={preferences.notifications}
+                          onChange={handlePreferenceChange}
+                        />
+                        <span>{t.enableNotifications}</span>
                       </label>
                     </div>
                   </div>
 
                   <div className="form-actions">
-                    <button className="btn-save" onClick={updatePreferences} disabled={updating}>
-                      {updating ? t.saving : t.save}
+                    <button className="btn-save" onClick={handleSavePreferences}>
+                      💾 {t.save}
                     </button>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Privacy Tab */}
-            {activeTab === 'privacy' && (
-              <div className="settings-container">
-                <div className="settings-card">
-                  <h3>{t.privacySettings}</h3>
-                  
-                  <div className="form-section">
-                    <h4>{t.profileVisibility}</h4>
-                    
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">📧</span>
-                        <span className="preference-label">{t.showEmail}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="showEmail" checked={privacySettings.showEmail} onChange={handlePrivacyChange} />
-                        <span className="slider round"></span>
-                      </label>
-                    </div>
-
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">📞</span>
-                        <span className="preference-label">{t.showPhone}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="showPhone" checked={privacySettings.showPhone} onChange={handlePrivacyChange} />
-                        <span className="slider round"></span>
-                      </label>
-                    </div>
-
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">👥</span>
-                        <span className="preference-label">{t.showProfileInDirectory}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="showProfileInDirectory" checked={privacySettings.showProfileInDirectory} onChange={handlePrivacyChange} />
-                        <span className="slider round"></span>
-                      </label>
-                    </div>
-
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">💬</span>
-                        <span className="preference-label">{t.allowMessagesFromColleagues}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="allowMessagesFromColleagues" checked={privacySettings.allowMessagesFromColleagues} onChange={handlePrivacyChange} />
-                        <span className="slider round"></span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="form-section">
-                    <h4>{t.security}</h4>
-                    
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">🔐</span>
-                        <span className="preference-label">{t.twoFactorAuth}</span>
-                      </div>
-                      <div className="preference-action">
-                        {privacySettings.twoFactorAuth ? (
-                          <span className="enabled-badge">✅ Enabled</span>
-                        ) : (
-                          <button className="btn-enable" onClick={enableTwoFactorAuth} disabled={updating}>
-                            {t.enable2FA}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">🔔</span>
-                        <span className="preference-label">{t.loginAlerts}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="loginAlerts" checked={privacySettings.loginAlerts} onChange={handlePrivacyChange} />
-                        <span className="slider round"></span>
-                      </label>
-                    </div>
-
-                    <div className="preference-item">
-                      <div className="preference-info">
-                        <span className="preference-icon">📱</span>
-                        <span className="preference-label">{t.deviceManagement}</span>
-                      </div>
-                      <label className="switch">
-                        <input type="checkbox" name="deviceManagement" checked={privacySettings.deviceManagement} onChange={handlePrivacyChange} />
-                        <span className="slider round"></span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="form-actions">
-                    <button className="btn-save" onClick={updatePrivacySettings} disabled={updating}>
-                      {updating ? t.saving : t.save}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Sessions Tab */}
-            {activeTab === 'sessions' && (
-              <div className="settings-container">
-                <div className="settings-card">
-                  <div className="sessions-header">
-                    <h3>{t.activeSessions}</h3>
-                    <button className="btn-terminate-all" onClick={terminateAllOtherSessions}>
-                      {t.terminateAllOthers}
-                    </button>
-                  </div>
-                  
-                  <div className="sessions-list">
-                    {sessionData.sessions.map((session) => (
-                      <div key={session.id} className={`session-item ${session.current ? 'current' : ''}`}>
-                        <div className="session-info">
-                          <div className="session-device">
-                            <span className="device-icon">💻</span>
-                            <div>
-                              <strong>{session.device}</strong>
-                              {session.current && <span className="current-badge">{t.currentSession}</span>}
-                            </div>
-                          </div>
-                          <div className="session-details">
-                            <span>📍 {session.location}</span>
-                            <span>🌐 {session.ip}</span>
-                            <span>🕐 {session.lastActive}</span>
-                          </div>
-                        </div>
-                        {!session.current && (
-                          <button className="btn-terminate" onClick={() => terminateSession(session.id)}>
-                            {t.terminate}
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {sessionData.sessions.length === 0 && (
-                    <div className="empty-state">
-                      <span className="empty-icon">💻</span>
-                      <p>{t.noActiveSessions || 'No active sessions'}</p>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -1004,15 +652,6 @@ const StaffAccountSettings = () => {
           min-height: 100%;
         }
 
-        .backend-warning {
-          background: #ff9800;
-          color: white;
-          padding: 10px 16px;
-          border-radius: 8px;
-          margin-bottom: 20px;
-          text-align: center;
-        }
-
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -1028,56 +667,94 @@ const StaffAccountSettings = () => {
           color: #0f172a;
         }
 
-        .refresh-btn {
+        /* Staff Info Card */
+        .staff-info-card {
           background: white;
+          border-radius: 16px;
+          padding: 20px 24px;
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          margin-bottom: 24px;
           border: 1px solid #e2e8f0;
-          padding: 8px 20px;
-          border-radius: 8px;
-          cursor: pointer;
-          color: #475569;
-          font-weight: 500;
-          transition: all 0.2s;
+          flex-wrap: wrap;
         }
 
-        .refresh-btn:hover {
-          background: #f8fafc;
-          border-color: #0288d1;
-          color: #0288d1;
+        .staff-avatar {
+          width: 70px;
+          height: 70px;
+          background: linear-gradient(135deg, #0288d1, #0277bd);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
+        .avatar-icon {
+          font-size: 2rem;
+          color: white;
+        }
+
+        .staff-details {
+          flex: 1;
+        }
+
+        .staff-details h2 {
+          font-size: 1.2rem;
+          color: #0f172a;
+          margin-bottom: 2px;
+        }
+
+        .staff-details p {
+          color: #64748b;
+          font-size: 0.85rem;
+          margin-bottom: 6px;
+        }
+
+        .staff-meta {
+          display: flex;
+          gap: 16px;
+          font-size: 0.8rem;
+          color: #64748b;
+          flex-wrap: wrap;
+        }
+
+        /* Tab Navigation */
         .tab-navigation {
           display: flex;
-          gap: 12px;
+          gap: 8px;
           margin-bottom: 24px;
-          border-bottom: 2px solid #e2e8f0;
-          padding-bottom: 0;
+          background: white;
+          padding: 6px;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
           flex-wrap: wrap;
         }
 
         .tab-btn {
-          padding: 12px 24px;
+          padding: 10px 24px;
           background: transparent;
           border: none;
-          font-size: 0.95rem;
+          font-size: 0.9rem;
           font-weight: 500;
           cursor: pointer;
           color: #64748b;
+          border-radius: 8px;
           transition: all 0.2s;
-          border-radius: 8px 8px 0 0;
         }
 
         .tab-btn:hover {
+          background: #f1f5f9;
           color: #0288d1;
-          background: #f0f9ff;
         }
 
         .tab-btn.active {
-          color: #0288d1;
-          border-bottom: 2px solid #0288d1;
-          margin-bottom: -2px;
+          background: #0288d1;
+          color: white;
         }
 
-        .error-message, .success-message {
+        /* Messages */
+        .success-message, .error-message {
           padding: 12px 16px;
           border-radius: 12px;
           display: flex;
@@ -1086,33 +763,34 @@ const StaffAccountSettings = () => {
           margin-bottom: 20px;
         }
 
-        .error-message {
-          background: #ffebee;
-          border-left: 4px solid #f44336;
-        }
-
         .success-message {
           background: #e8f5e9;
           border-left: 4px solid #4caf50;
         }
 
-        .error-icon, .success-icon {
+        .error-message {
+          background: #ffebee;
+          border-left: 4px solid #f44336;
+        }
+
+        .success-icon, .error-icon {
           font-size: 1.1rem;
         }
 
+        /* Settings */
         .settings-container {
           margin-bottom: 24px;
         }
 
         .settings-card {
           background: white;
-          border-radius: 20px;
+          border-radius: 16px;
           border: 1px solid #e2e8f0;
           overflow: hidden;
         }
 
         .settings-card h3 {
-          padding: 20px 24px;
+          padding: 16px 24px;
           font-size: 1.1rem;
           font-weight: 600;
           color: #0f172a;
@@ -1123,7 +801,6 @@ const StaffAccountSettings = () => {
 
         .form-section {
           padding: 20px 24px;
-          border-bottom: 1px solid #e2e8f0;
         }
 
         .form-section h4 {
@@ -1143,238 +820,82 @@ const StaffAccountSettings = () => {
           display: block;
           font-weight: 500;
           color: #475569;
-          margin-bottom: 6px;
+          margin-bottom: 4px;
           font-size: 0.85rem;
         }
 
-        .form-group select {
+        .required {
+          color: #ef4444;
+        }
+
+        .form-group input, .form-group select {
           width: 100%;
-          padding: 10px 12px;
+          padding: 10px 14px;
           border: 1px solid #e2e8f0;
           border-radius: 10px;
-          font-size: 0.85rem;
+          font-size: 0.9rem;
           background: white;
           transition: border-color 0.2s;
+          font-family: inherit;
         }
 
-        .form-group select:focus {
+        .form-group input:focus, .form-group select:focus {
           outline: none;
           border-color: #0288d1;
+          box-shadow: 0 0 0 3px rgba(2, 136, 209, 0.1);
+        }
+
+        .form-group input:disabled {
+          background: #f1f5f9;
+          cursor: not-allowed;
+          opacity: 0.7;
+        }
+
+        .form-group small {
+          display: block;
+          margin-top: 4px;
+          font-size: 0.7rem;
+          color: #94a3b8;
         }
 
         .form-row {
           display: flex;
-          gap: 20px;
+          gap: 16px;
           flex-wrap: wrap;
         }
 
-        .form-section.half {
+        .form-group.half {
           flex: 1;
+          min-width: 200px;
         }
 
-        .preferences-list, .sessions-list {
-          padding: 8px 0;
+        .checkbox-group {
+          margin-top: 8px;
         }
 
-        .preference-item, .session-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 14px 24px;
-          border-bottom: 1px solid #e2e8f0;
-          transition: background 0.2s;
-        }
-
-        .preference-item:hover, .session-item:hover {
-          background: #f8fafc;
-        }
-
-        .preference-info {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .preference-icon {
-          font-size: 1.2rem;
-        }
-
-        .preference-label {
-          font-weight: 500;
-          color: #0f172a;
-        }
-
-        .switch {
-          position: relative;
-          display: inline-block;
-          width: 50px;
-          height: 24px;
-        }
-
-        .switch input {
-          opacity: 0;
-          width: 0;
-          height: 0;
-        }
-
-        .slider {
-          position: absolute;
-          cursor: pointer;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: #ccc;
-          transition: 0.3s;
-        }
-
-        .slider:before {
-          position: absolute;
-          content: "";
-          height: 18px;
-          width: 18px;
-          left: 3px;
-          bottom: 3px;
-          background-color: white;
-          transition: 0.3s;
-        }
-
-        input:checked + .slider {
-          background-color: #0288d1;
-        }
-
-        input:checked + .slider:before {
-          transform: translateX(26px);
-        }
-
-        .slider.round {
-          border-radius: 34px;
-        }
-
-        .slider.round:before {
-          border-radius: 50%;
-        }
-
-        .preference-action {
-          display: flex;
-          align-items: center;
-        }
-
-        .btn-enable {
-          padding: 6px 16px;
-          background: linear-gradient(135deg, #10b981, #059669);
-          color: white;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.75rem;
-          font-weight: 500;
-          transition: all 0.2s;
-        }
-
-        .btn-enable:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-
-        .enabled-badge {
-          color: #10b981;
-          font-weight: 500;
-        }
-
-        .sessions-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 16px 24px;
-          border-bottom: 1px solid #e2e8f0;
-          flex-wrap: wrap;
-          gap: 12px;
-        }
-
-        .btn-terminate-all {
-          padding: 6px 16px;
-          background: #fee2e2;
-          color: #dc2626;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.75rem;
-          font-weight: 500;
-          transition: all 0.2s;
-        }
-
-        .btn-terminate-all:hover {
-          background: #fecaca;
-        }
-
-        .session-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 12px;
-        }
-
-        .session-item.current {
-          background: #f0f9ff;
-        }
-
-        .session-info {
-          flex: 1;
-        }
-
-        .session-device {
+        .checkbox-label {
           display: flex;
           align-items: center;
           gap: 10px;
-          margin-bottom: 8px;
-        }
-
-        .device-icon {
-          font-size: 1.2rem;
-        }
-
-        .current-badge {
-          display: inline-block;
-          margin-left: 10px;
-          padding: 2px 8px;
-          background: #0288d1;
-          color: white;
-          border-radius: 12px;
-          font-size: 0.65rem;
-        }
-
-        .session-details {
-          display: flex;
-          gap: 20px;
-          font-size: 0.75rem;
-          color: #64748b;
-          flex-wrap: wrap;
-        }
-
-        .btn-terminate {
-          padding: 6px 16px;
-          background: #fee2e2;
-          color: #dc2626;
-          border: none;
-          border-radius: 6px;
           cursor: pointer;
-          font-size: 0.75rem;
           font-weight: 500;
-          transition: all 0.2s;
+          color: #475569;
         }
 
-        .btn-terminate:hover {
-          background: #fecaca;
+        .checkbox-label input[type="checkbox"] {
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+          accent-color: #0288d1;
         }
 
         .form-actions {
-          padding: 20px 24px;
+          padding: 16px 24px;
           display: flex;
           justify-content: flex-end;
           background: #f8fafc;
           border-top: 1px solid #e2e8f0;
+          gap: 12px;
         }
 
         .btn-save {
@@ -1386,28 +907,12 @@ const StaffAccountSettings = () => {
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s;
+          font-size: 0.9rem;
         }
 
-        .btn-save:hover:not(:disabled) {
+        .btn-save:hover {
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(2, 136, 209, 0.3);
-        }
-
-        .btn-save:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 60px;
-          color: #94a3b8;
-        }
-
-        .empty-icon {
-          font-size: 3rem;
-          display: block;
-          margin-bottom: 12px;
         }
 
         @media (max-width: 768px) {
@@ -1433,40 +938,30 @@ const StaffAccountSettings = () => {
             padding: 16px;
           }
           
+          .staff-info-card {
+            flex-direction: column;
+            text-align: center;
+          }
+          
+          .staff-meta {
+            flex-direction: column;
+            align-items: center;
+          }
+          
           .form-row {
             flex-direction: column;
           }
           
-          .session-details {
-            flex-direction: column;
-            gap: 4px;
-          }
-          
-          .session-item {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-          
-          .sessions-header {
-            flex-direction: column;
-            align-items: flex-start;
+          .form-group.half {
+            min-width: unset;
           }
           
           .tab-navigation {
             flex-direction: column;
-            border-bottom: none;
-            gap: 8px;
           }
           
           .tab-btn {
             text-align: center;
-            border-radius: 8px;
-          }
-          
-          .tab-btn.active {
-            background: #0288d1;
-            color: white;
-            border-bottom: none;
           }
         }
 
@@ -1475,26 +970,17 @@ const StaffAccountSettings = () => {
             padding: 12px;
           }
           
-          .settings-card {
-            border-radius: 12px;
-          }
-          
-          .settings-card h3 {
-            padding: 16px;
-            font-size: 1rem;
-          }
-          
           .form-section {
             padding: 16px;
           }
           
           .form-actions {
-            padding: 16px;
+            flex-direction: column;
           }
           
           .btn-save {
             width: 100%;
-            justify-content: center;
+            text-align: center;
           }
         }
       `}</style>
