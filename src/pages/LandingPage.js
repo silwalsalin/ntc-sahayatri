@@ -77,6 +77,12 @@ const LandingPage = () => {
   // API URL
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+  // Contact numbers
+  const WHATSAPP_NUMBER = '9851234567';
+  const VIBER_NUMBER = '9851234567';
+  const PHONE_NUMBER = '198';
+  const SMS_NUMBER = '988';
+
   const content = {
     np: {
       weAreHere: 'हामी तपाईंको लागि यहाँ छौं',
@@ -618,6 +624,7 @@ const LandingPage = () => {
     setCurrentPage(1);
   }, []);
 
+  // Updated complaint channels with proper actions
   const complaintChannels = [
     { 
       id: 'website', 
@@ -638,7 +645,8 @@ const LandingPage = () => {
       fallback: '📞', 
       color: '#42a5f5', 
       bgColor: '#e3f2fd', 
-      contact: '198' 
+      contact: PHONE_NUMBER,
+      action: () => window.location.href = `tel:${PHONE_NUMBER}`
     },
     { 
       id: 'sms', 
@@ -649,7 +657,16 @@ const LandingPage = () => {
       fallback: '💬', 
       color: '#4caf50', 
       bgColor: '#e8f5e9', 
-      contact: '988' 
+      contact: SMS_NUMBER,
+      action: () => {
+        if (navigator.userAgent.match(/Android/i)) {
+          window.location.href = `sms:${SMS_NUMBER}?body=नमस्ते, मलाई NTC सेवा सम्बन्धी गुनासो गर्नु छ। / Hello, I have a complaint regarding NTC service.`;
+        } else if (navigator.userAgent.match(/iPhone|iPad/i)) {
+          window.location.href = `sms:${SMS_NUMBER}&body=नमस्ते, मलाई NTC सेवा सम्बन्धी गुनासो गर्नु छ। / Hello, I have a complaint regarding NTC service.`;
+        } else {
+          window.location.href = `sms:${SMS_NUMBER}?body=नमस्ते, मलाई NTC सेवा सम्बन्धी गुनासो गर्नु छ।`;
+        }
+      }
     },
     { 
       id: 'whatsapp', 
@@ -660,7 +677,19 @@ const LandingPage = () => {
       fallback: '💬', 
       color: '#25D366', 
       bgColor: '#d4edda', 
-      contact: '9851234567' 
+      contact: WHATSAPP_NUMBER,
+      action: () => {
+        const message = encodeURIComponent('नमस्ते, मलाई NTC सेवा सम्बन्धी गुनासो गर्नु छ। / Hello, I have a complaint regarding NTC service.');
+        // Check if on mobile
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isMobile) {
+          // Open WhatsApp app on mobile
+          window.location.href = `whatsapp://send?phone=977${WHATSAPP_NUMBER}&text=${message}`;
+        } else {
+          // Open WhatsApp Web on desktop
+          window.open(`https://web.whatsapp.com/send?phone=977${WHATSAPP_NUMBER}&text=${message}`, '_blank');
+        }
+      }
     },
     { 
       id: 'viber', 
@@ -671,7 +700,22 @@ const LandingPage = () => {
       fallback: '📱', 
       color: '#7360f2', 
       bgColor: '#e8e0f5',
-      contact: '9851234567' 
+      contact: VIBER_NUMBER,
+      action: () => {
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isMobile) {
+          // Check if Viber is installed
+          window.location.href = `viber://chat?number=%2B977${VIBER_NUMBER}`;
+          // Fallback: if Viber is not installed, redirect to Viber download page after 2 seconds
+          setTimeout(() => {
+            // If the user is still on the page, Viber is not installed
+            window.location.href = 'https://www.viber.com/download/';
+          }, 2000);
+        } else {
+          // Desktop: Open Viber Web or download page
+          window.open('https://www.viber.com/en/download/', '_blank');
+        }
+      }
     },
     { 
       id: 'email', 
@@ -683,9 +727,27 @@ const LandingPage = () => {
       color: '#ea4335', 
       bgColor: '#fce4ec', 
       contact: 'coo@ntc.net.np',
-      action: () => window.location.href = 'mailto:coo@ntc.net.np' 
+      action: () => {
+        const subject = encodeURIComponent('NTC सेवा सम्बन्धी गुनासो / NTC Service Complaint');
+        const body = encodeURIComponent('नमस्ते, \n\nमलाई NTC सेवा सम्बन्धी गुनासो गर्नु छ। कृपया मेरो समस्या समाधान गरिदिनुहोस्।\n\nHello,\n\nI have a complaint regarding NTC service. Please help resolve my issue.');
+        window.location.href = `mailto:coo@ntc.net.np?subject=${subject}&body=${body}`;
+      }
     },
   ];
+
+  // Updated channel click handler
+  const handleChannelClick = (channel) => {
+    if (channel.action) {
+      channel.action();
+    } else {
+      showToast(
+        language === 'np' ? 'यो च्यानल हाल उपलब्ध छैन' : 'This channel is currently not available',
+        'info'
+      );
+    }
+  };
+
+  const complaintChannelsList = complaintChannels;
 
   // Update status counts based on actual data with proper number formatting
   const getUpdatedStatusCounts = () => {
@@ -1143,17 +1205,17 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* Complaint Channels Section */}
+        {/* Complaint Channels Section - Updated with onClick handlers */}
         <section className="channels-section">
           <div className="channels-container">
             <h3 className="channels-title">{t.channelsTitle}</h3>
             <div className="channels-list">
-              {complaintChannels.map((channel, index) => (
+              {complaintChannelsList.map((channel, index) => (
                 <div 
                   key={index} 
                   className="channel-item"
-                  onClick={channel.action}
-                  style={{ cursor: channel.action ? 'pointer' : 'default' }}
+                  onClick={() => handleChannelClick(channel)}
+                  style={{ cursor: 'pointer' }}
                 >
                   <div className="channel-icon-wrapper" style={{ backgroundColor: channel.bgColor }}>
                     <ChannelIcon channel={channel} />
@@ -1920,7 +1982,7 @@ const LandingPage = () => {
           border-radius: 14px;
           border: 1px solid #e2e8f0;
           transition: all 0.3s ease;
-          cursor: default;
+          cursor: pointer;
           min-width: 90px;
         }
         .channel-item:hover {
