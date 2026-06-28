@@ -30,7 +30,6 @@ const getNepaliDate = () => {
   ];
   const nepaliDays = ['आइतबार', 'सोमबार', 'मंगलबार', 'बुधबार', 'बिहिबार', 'शुक्रबार', 'शनिबार'];
   
-  // Approximate conversion to BS (subtract 57 years, adjust month/day)
   let bsYear = date.getFullYear() - 57;
   let bsMonth = date.getMonth();
   let bsDay = date.getDate();
@@ -144,123 +143,1196 @@ const SubmitComplaint = () => {
     }, 5000);
   };
 
-  // Complete Nepal Location Data with all 77 districts (same as before)
+  // Complete Nepal Location Data with all 77 districts and bilingual municipalities
   const locationData = {
+    // Province 1 - Koshi Province (14 districts)
     province1: { 
       np: 'कोशी प्रदेश', 
       en: 'Koshi Province', 
       districts: {
-        'taplejung': { np: 'ताप्लेजुङ', en: 'Taplejung', municipalities: ['फुङलिङ नगरपालिका', 'सिदिङ्वा गाउँपालिका', 'मैवाखोला गाउँपालिका', 'मिक्वाखोला गाउँपालिका', 'आठराई त्रिवेणी गाउँपालिका', 'सिरीजङ्घा गाउँपालिका', 'पाथीभरा याङवरक गाउँपालिका'] },
-        'panchthar': { np: 'पाँचथर', en: 'Panchthar', municipalities: ['फिदिम नगरपालिका', 'फालेलुङ गाउँपालिका', 'फाल्गुनन्द गाउँपालिका', 'हिलिहाङ गाउँपालिका', 'कुम्मायक गाउँपालिका', 'मिक्लाजुङ गाउँपालिका', 'तुम्बेवा गाउँपालिका', 'याङवरक गाउँपालिका'] },
-        'ilam': { np: 'इलाम', en: 'Ilam', municipalities: ['इलाम नगरपालिका', 'सूर्योदय नगरपालिका', 'देउमाई नगरपालिका', 'माई नगरपालिका', 'माङसेबुङ गाउँपालिका', 'रोङ गाउँपालिका', 'फाकफोकथुम गाउँपालिका', 'चुलाचुली गाउँपालिका', 'सन्दकपुर गाउँपालिका', 'जिरीखिम्ती गाउँपालिका'] },
-        'jhapa': { np: 'झापा', en: 'Jhapa', municipalities: ['मेचीनगर नगरपालिका', 'बिर्तामोड नगरपालिका', 'दमक नगरपालिका', 'भद्रपुर नगरपालिका', 'शिवसताक्षी नगरपालिका', 'अर्जुनधारा नगरपालिका', 'गौरादह नगरपालिका', 'कन्काई नगरपालिका', 'बाह्रदशी गाउँपालिका', 'हल्दिवारी गाउँपालिका', 'कमल गाउँपालिका', 'बुद्धशान्ति गाउँपालिका', 'झापा गाउँपालिका', 'बारहपोखरी गाउँपालिका'] },
-        'morang': { np: 'मोरङ', en: 'Morang', municipalities: ['बिराटनगर महानगरपालिका', 'सुन्दरहरैंचा नगरपालिका', 'बेलवारी नगरपालिका', 'पथरी शनिश्चरे नगरपालिका', 'रंगेली नगरपालिका', 'लेटाङ नगरपालिका', 'उर्लावारी नगरपालिका', 'कटहरी गाउँपालिका', 'ग्रामथान गाउँपालिका', 'केरावारी गाउँपालिका', 'मिक्लाजुङ गाउँपालिका', 'धनपालथान गाउँपालिका', 'जहदा गाउँपालिका', 'बुढीगंगा गाउँपालिका'] },
-        'sunsari': { np: 'सुनसरी', en: 'Sunsari', municipalities: ['धरान उपमहानगरपालिका', 'ईटहरी उपमहानगरपालिका', 'इनरुवा नगरपालिका', 'दुहबी नगरपालिका', 'रामधुनी नगरपालिका', 'बराहक्षेत्र नगरपालिका', 'कोशी गाउँपालिका', 'हरिनगरा गाउँपालिका', 'भोक्राहा नरसिंह गाउँपालिका', 'देवानगन्ज गाउँपालिका', 'गढी गाउँपालिका'] },
-        'bhojpur': { np: 'भोजपुर', en: 'Bhojpur', municipalities: ['भोजपुर नगरपालिका', 'शदानन्द नगरपालिका', 'पौवादुङमा गाउँपालिका', 'रामप्रसाद राई गाउँपालिका', 'अरुण गाउँपालिका', 'साल्पासिलिछो गाउँपालिका', 'हतुवागढी गाउँपालिका', 'टेम्केमैयुङ गाउँपालिका'] },
-        'dhankuta': { np: 'धनकुटा', en: 'Dhankuta', municipalities: ['धनकुटा नगरपालिका', 'पाख्रिवास नगरपालिका', 'महालक्ष्मी नगरपालिका', 'साँगुरीगढी गाउँपालिका', 'चौविसे गाउँपालिका', 'सहिदभूमि गाउँपालिका', 'खाल्सा छिन्ताङ गाउँपालिका'] },
-        'terhathum': { np: 'तेह्रथुम', en: 'Terhathum', municipalities: ['म्याङलुङ नगरपालिका', 'लालीगुराँस नगरपालिका', 'आठराई गाउँपालिका', 'छथर गाउँपालिका', 'पेदाङ गाउँपालिका', 'मेन्छयायेम गाउँपालिका'] },
-        'sankhuwasabha': { np: 'सङ्खुवासभा', en: 'Sankhuwasabha', municipalities: ['खाँदबारी नगरपालिका', 'चैनपुर नगरपालिका', 'धर्मदेवी नगरपालिका', 'पाँचखपन गाउँपालिका', 'मादी गाउँपालिका', 'सभापोखरी गाउँपालिका', 'सिलीचोङ गाउँपालिका', 'भोटखोला गाउँपालिका', 'चिचिला गाउँपालिका'] },
-        'solukhumbu': { np: 'सोलुखुम्बु', en: 'Solukhumbu', municipalities: ['सोलुदुधकुण्ड नगरपालिका', 'नेचासल्यान गाउँपालिका', 'दुधकोशी गाउँपालिका', 'माप्या दुधकोशी गाउँपालिका', 'खुम्बु पासाङल्हामु गाउँपालिका', 'लिखुपिके गाउँपालिका', 'महाकुलुङ गाउँपालिका', 'सोताङ गाउँपालिका'] },
-        'okhaldhunga': { np: 'ओखलढुंगा', en: 'Okhaldhunga', municipalities: ['सिद्धिचरण नगरपालिका', 'खिजिदेम्बा गाउँपालिका', 'चम्पादेवी गाउँपालिका', 'चिसंखुगढी गाउँपालिका', 'मानेभञ्ज्याङ गाउँपालिका', 'मोलुङ गाउँपालिका', 'लिकु गाउँपालिका', 'सुनकोशी गाउँपालिका'] },
-        'khotang': { np: 'खोटाङ', en: 'Khotang', municipalities: ['दिप्रुङ नगरपालिका', 'हलेसी तुवाचुङ नगरपालिका', 'ऐसेलुखर्क गाउँपालिका', 'बराहपोखरी गाउँपालिका', 'कपिलकोट गाउँपालिका', 'खोटेहाङ गाउँपालिका', 'जन्तेढुङ्गा गाउँपालिका', 'केपिलासगढी गाउँपालिका', 'रावा बेसी गाउँपालिका', 'साकेला गाउँपालिका'] },
-        'udayapur': { np: 'उदयपुर', en: 'Udayapur', municipalities: ['त्रियुगा नगरपालिका', 'चौदण्डीगढी नगरपालिका', 'कटारी नगरपालिका', 'बेलका नगरपालिका', 'उदयपुरगढी गाउँपालिका', 'रौतामाई गाउँपालिका', 'सुनकोशी गाउँपालिका', 'ताप्ली गाउँपालिका'] }
+        'taplejung': { 
+          np: 'ताप्लेजुङ', 
+          en: 'Taplejung', 
+          municipalities: [
+            { np: 'फुङलिङ नगरपालिका', en: 'Phungling Municipality' },
+            { np: 'सिदिङ्वा गाउँपालिका', en: 'Sidingwa Rural Municipality' },
+            { np: 'मैवाखोला गाउँपालिका', en: 'Maiwakhola Rural Municipality' },
+            { np: 'मिक्वाखोला गाउँपालिका', en: 'Mikwakhola Rural Municipality' },
+            { np: 'आठराई त्रिवेणी गाउँपालिका', en: 'Aathrai Tribeni Rural Municipality' },
+            { np: 'सिरीजङ्घा गाउँपालिका', en: 'Sirijangha Rural Municipality' },
+            { np: 'पाथीभरा याङवरक गाउँपालिका', en: 'Pathibhara Yangwarak Rural Municipality' }
+          ] 
+        },
+        'panchthar': { 
+          np: 'पाँचथर', 
+          en: 'Panchthar', 
+          municipalities: [
+            { np: 'फिदिम नगरपालिका', en: 'Phidim Municipality' },
+            { np: 'फालेलुङ गाउँपालिका', en: 'Phalelung Rural Municipality' },
+            { np: 'फाल्गुनन्द गाउँपालिका', en: 'Falgunanda Rural Municipality' },
+            { np: 'हिलिहाङ गाउँपालिका', en: 'Hilijhang Rural Municipality' },
+            { np: 'कुम्मायक गाउँपालिका', en: 'Kummayak Rural Municipality' },
+            { np: 'मिक्लाजुङ गाउँपालिका', en: 'Miklajung Rural Municipality' },
+            { np: 'तुम्बेवा गाउँपालिका', en: 'Tumbewa Rural Municipality' },
+            { np: 'याङवरक गाउँपालिका', en: 'Yangwarak Rural Municipality' }
+          ] 
+        },
+        'ilam': { 
+          np: 'इलाम', 
+          en: 'Ilam', 
+          municipalities: [
+            { np: 'इलाम नगरपालिका', en: 'Ilam Municipality' },
+            { np: 'सूर्योदय नगरपालिका', en: 'Suryodaya Municipality' },
+            { np: 'देउमाई नगरपालिका', en: 'Deumai Municipality' },
+            { np: 'माई नगरपालिका', en: 'Mai Municipality' },
+            { np: 'माङसेबुङ गाउँपालिका', en: 'Mangsebung Rural Municipality' },
+            { np: 'रोङ गाउँपालिका', en: 'Rong Rural Municipality' },
+            { np: 'फाकफोकथुम गाउँपालिका', en: 'Phakphokthum Rural Municipality' },
+            { np: 'चुलाचुली गाउँपालिका', en: 'Chulachuli Rural Municipality' },
+            { np: 'सन्दकपुर गाउँपालिका', en: 'Sandakpur Rural Municipality' },
+            { np: 'जिरीखिम्ती गाउँपालिका', en: 'Jirikhimti Rural Municipality' }
+          ] 
+        },
+        'jhapa': { 
+          np: 'झापा', 
+          en: 'Jhapa', 
+          municipalities: [
+            { np: 'मेचीनगर नगरपालिका', en: 'Mechinagar Municipality' },
+            { np: 'बिर्तामोड नगरपालिका', en: 'Birtamod Municipality' },
+            { np: 'दमक नगरपालिका', en: 'Damak Municipality' },
+            { np: 'भद्रपुर नगरपालिका', en: 'Bhadrapur Municipality' },
+            { np: 'शिवसताक्षी नगरपालिका', en: 'Shivasatakshi Municipality' },
+            { np: 'अर्जुनधारा नगरपालिका', en: 'Arjundhara Municipality' },
+            { np: 'गौरादह नगरपालिका', en: 'Gauradaha Municipality' },
+            { np: 'कन्काई नगरपालिका', en: 'Kankai Municipality' },
+            { np: 'बाह्रदशी गाउँपालिका', en: 'Bahradashi Rural Municipality' },
+            { np: 'हल्दिवारी गाउँपालिका', en: 'Haldibari Rural Municipality' },
+            { np: 'कमल गाउँपालिका', en: 'Kamal Rural Municipality' },
+            { np: 'बुद्धशान्ति गाउँपालिका', en: 'Buddhashanti Rural Municipality' },
+            { np: 'झापा गाउँपालिका', en: 'Jhapa Rural Municipality' },
+            { np: 'बारहपोखरी गाउँपालिका', en: 'Barahapokhari Rural Municipality' }
+          ] 
+        },
+        'morang': { 
+          np: 'मोरङ', 
+          en: 'Morang', 
+          municipalities: [
+            { np: 'बिराटनगर महानगरपालिका', en: 'Biratnagar Metropolitan City' },
+            { np: 'सुन्दरहरैंचा नगरपालिका', en: 'Sundar Haraicha Municipality' },
+            { np: 'बेलवारी नगरपालिका', en: 'Belwari Municipality' },
+            { np: 'पथरी शनिश्चरे नगरपालिका', en: 'Pathari Shanishchare Municipality' },
+            { np: 'रंगेली नगरपालिका', en: 'Rangeli Municipality' },
+            { np: 'लेटाङ नगरपालिका', en: 'Letang Municipality' },
+            { np: 'उर्लावारी नगरपालिका', en: 'Urlabari Municipality' },
+            { np: 'कटहरी गाउँपालिका', en: 'Katahari Rural Municipality' },
+            { np: 'ग्रामथान गाउँपालिका', en: 'Gramthan Rural Municipality' },
+            { np: 'केरावारी गाउँपालिका', en: 'Kerabari Rural Municipality' },
+            { np: 'मिक्लाजुङ गाउँपालिका', en: 'Miklajung Rural Municipality' },
+            { np: 'धनपालथान गाउँपालिका', en: 'Dhanpalthan Rural Municipality' },
+            { np: 'जहदा गाउँपालिका', en: 'Jahada Rural Municipality' },
+            { np: 'बुढीगंगा गाउँपालिका', en: 'Budhiganga Rural Municipality' }
+          ] 
+        },
+        'sunsari': { 
+          np: 'सुनसरी', 
+          en: 'Sunsari', 
+          municipalities: [
+            { np: 'धरान उपमहानगरपालिका', en: 'Dharan Sub-Metropolitan City' },
+            { np: 'ईटहरी उपमहानगरपालिका', en: 'Itahari Sub-Metropolitan City' },
+            { np: 'इनरुवा नगरपालिका', en: 'Inaruwa Municipality' },
+            { np: 'दुहबी नगरपालिका', en: 'Duhabi Municipality' },
+            { np: 'रामधुनी नगरपालिका', en: 'Ramdhuni Municipality' },
+            { np: 'बराहक्षेत्र नगरपालिका', en: 'Barahkshetra Municipality' },
+            { np: 'कोशी गाउँपालिका', en: 'Koshi Rural Municipality' },
+            { np: 'हरिनगरा गाउँपालिका', en: 'Haringara Rural Municipality' },
+            { np: 'भोक्राहा नरसिंह गाउँपालिका', en: 'Bhokraha Narsingh Rural Municipality' },
+            { np: 'देवानगन्ज गाउँपालिका', en: 'Devanaganj Rural Municipality' },
+            { np: 'गढी गाउँपालिका', en: 'Gadhi Rural Municipality' }
+          ] 
+        },
+        'bhojpur': { 
+          np: 'भोजपुर', 
+          en: 'Bhojpur', 
+          municipalities: [
+            { np: 'भोजपुर नगरपालिका', en: 'Bhojpur Municipality' },
+            { np: 'शदानन्द नगरपालिका', en: 'Shadananda Municipality' },
+            { np: 'पौवादुङमा गाउँपालिका', en: 'Pauwadungma Rural Municipality' },
+            { np: 'रामप्रसाद राई गाउँपालिका', en: 'Ramprasad Rai Rural Municipality' },
+            { np: 'अरुण गाउँपालिका', en: 'Arun Rural Municipality' },
+            { np: 'साल्पासिलिछो गाउँपालिका', en: 'Salpasilichho Rural Municipality' },
+            { np: 'हतुवागढी गाउँपालिका', en: 'Hatuvagadhi Rural Municipality' },
+            { np: 'टेम्केमैयुङ गाउँपालिका', en: 'Temkemaiyung Rural Municipality' }
+          ] 
+        },
+        'dhankuta': { 
+          np: 'धनकुटा', 
+          en: 'Dhankuta', 
+          municipalities: [
+            { np: 'धनकुटा नगरपालिका', en: 'Dhankuta Municipality' },
+            { np: 'पाख्रिवास नगरपालिका', en: 'Pakribas Municipality' },
+            { np: 'महालक्ष्मी नगरपालिका', en: 'Mahalaxmi Municipality' },
+            { np: 'साँगुरीगढी गाउँपालिका', en: 'Sangurigadhi Rural Municipality' },
+            { np: 'चौविसे गाउँपालिका', en: 'Chauwisse Rural Municipality' },
+            { np: 'सहिदभूमि गाउँपालिका', en: 'Sahidbhumi Rural Municipality' },
+            { np: 'खाल्सा छिन्ताङ गाउँपालिका', en: 'Khalsa Chhintang Rural Municipality' }
+          ] 
+        },
+        'terhathum': { 
+          np: 'तेह्रथुम', 
+          en: 'Terhathum', 
+          municipalities: [
+            { np: 'म्याङलुङ नगरपालिका', en: 'Myanglung Municipality' },
+            { np: 'लालीगुराँस नगरपालिका', en: 'Laligurans Municipality' },
+            { np: 'आठराई गाउँपालिका', en: 'Aathrai Rural Municipality' },
+            { np: 'छथर गाउँपालिका', en: 'Chhathar Rural Municipality' },
+            { np: 'पेदाङ गाउँपालिका', en: 'Pedang Rural Municipality' },
+            { np: 'मेन्छयायेम गाउँपालिका', en: 'Menchhyayem Rural Municipality' }
+          ] 
+        },
+        'sankhuwasabha': { 
+          np: 'सङ्खुवासभा', 
+          en: 'Sankhuwasabha', 
+          municipalities: [
+            { np: 'खाँदबारी नगरपालिका', en: 'Khandbari Municipality' },
+            { np: 'चैनपुर नगरपालिका', en: 'Chainpur Municipality' },
+            { np: 'धर्मदेवी नगरपालिका', en: 'Dharmadevi Municipality' },
+            { np: 'पाँचखपन गाउँपालिका', en: 'Panchkhapan Rural Municipality' },
+            { np: 'मादी गाउँपालिका', en: 'Madi Rural Municipality' },
+            { np: 'सभापोखरी गाउँपालिका', en: 'Sabhapokhari Rural Municipality' },
+            { np: 'सिलीचोङ गाउँपालिका', en: 'Silichong Rural Municipality' },
+            { np: 'भोटखोला गाउँपालिका', en: 'Bhotkhola Rural Municipality' },
+            { np: 'चिचिला गाउँपालिका', en: 'Chichila Rural Municipality' }
+          ] 
+        },
+        'solukhumbu': { 
+          np: 'सोलुखुम्बु', 
+          en: 'Solukhumbu', 
+          municipalities: [
+            { np: 'सोलुदुधकुण्ड नगरपालिका', en: 'Solududhkunda Municipality' },
+            { np: 'नेचासल्यान गाउँपालिका', en: 'Nechasalyan Rural Municipality' },
+            { np: 'दुधकोशी गाउँपालिका', en: 'Dudhkoshi Rural Municipality' },
+            { np: 'माप्या दुधकोशी गाउँपालिका', en: 'Mapya Dudhkoshi Rural Municipality' },
+            { np: 'खुम्बु पासाङल्हामु गाउँपालिका', en: 'Khumbu Pasang Lhamu Rural Municipality' },
+            { np: 'लिखुपिके गाउँपालिका', en: 'Likhupike Rural Municipality' },
+            { np: 'महाकुलुङ गाउँपालिका', en: 'Mahakulung Rural Municipality' },
+            { np: 'सोताङ गाउँपालिका', en: 'Sotang Rural Municipality' }
+          ] 
+        },
+        'okhaldhunga': { 
+          np: 'ओखलढुंगा', 
+          en: 'Okhaldhunga', 
+          municipalities: [
+            { np: 'सिद्धिचरण नगरपालिका', en: 'Siddhicharan Municipality' },
+            { np: 'खिजिदेम्बा गाउँपालिका', en: 'Khijidemba Rural Municipality' },
+            { np: 'चम्पादेवी गाउँपालिका', en: 'Champadevi Rural Municipality' },
+            { np: 'चिसंखुगढी गाउँपालिका', en: 'Chisankhugadhi Rural Municipality' },
+            { np: 'मानेभञ्ज्याङ गाउँपालिका', en: 'Manebhanjyang Rural Municipality' },
+            { np: 'मोलुङ गाउँपालिका', en: 'Molung Rural Municipality' },
+            { np: 'लिकु गाउँपालिका', en: 'Liku Rural Municipality' },
+            { np: 'सुनकोशी गाउँपालिका', en: 'Sunkoshi Rural Municipality' }
+          ] 
+        },
+        'khotang': { 
+          np: 'खोटाङ', 
+          en: 'Khotang', 
+          municipalities: [
+            { np: 'दिप्रुङ नगरपालिका', en: 'Diprung Municipality' },
+            { np: 'हलेसी तुवाचुङ नगरपालिका', en: 'Halesi Tuwachung Municipality' },
+            { np: 'ऐसेलुखर्क गाउँपालिका', en: 'Aiselukharka Rural Municipality' },
+            { np: 'बराहपोखरी गाउँपालिका', en: 'Barahapokhari Rural Municipality' },
+            { np: 'कपिलकोट गाउँपालिका', en: 'Kapilkot Rural Municipality' },
+            { np: 'खोटेहाङ गाउँपालिका', en: 'Khotehang Rural Municipality' },
+            { np: 'जन्तेढुङ्गा गाउँपालिका', en: 'Jantedhunga Rural Municipality' },
+            { np: 'केपिलासगढी गाउँपालिका', en: 'Kepilasagadhi Rural Municipality' },
+            { np: 'रावा बेसी गाउँपालिका', en: 'Rawa Besi Rural Municipality' },
+            { np: 'साकेला गाउँपालिका', en: 'Sakela Rural Municipality' }
+          ] 
+        },
+        'udayapur': { 
+          np: 'उदयपुर', 
+          en: 'Udayapur', 
+          municipalities: [
+            { np: 'त्रियुगा नगरपालिका', en: 'Triyuga Municipality' },
+            { np: 'चौदण्डीगढी नगरपालिका', en: 'Chaudandigadhi Municipality' },
+            { np: 'कटारी नगरपालिका', en: 'Katari Municipality' },
+            { np: 'बेलका नगरपालिका', en: 'Belka Municipality' },
+            { np: 'उदयपुरगढी गाउँपालिका', en: 'Udayapur Gadhi Rural Municipality' },
+            { np: 'रौतामाई गाउँपालिका', en: 'Rautamai Rural Municipality' },
+            { np: 'सुनकोशी गाउँपालिका', en: 'Sunkoshi Rural Municipality' },
+            { np: 'ताप्ली गाउँपालिका', en: 'Tapali Rural Municipality' }
+          ] 
+        }
       }
     },
+    // Province 2 - Madhesh Province (8 districts)
     province2: { 
       np: 'मधेश प्रदेश', 
       en: 'Madhesh Province', 
       districts: {
-        'saptari': { np: 'सप्तरी', en: 'Saptari', municipalities: ['राजविराज नगरपालिका', 'कञ्चनरूप नगरपालिका', 'शम्भुनाथ नगरपालिका', 'सप्तकोशी नगरपालिका', 'सुरुङ्गा नगरपालिका', 'बोदेबरसाइन नगरपालिका', 'खडक नगरपालिका', 'तिरहुत गाउँपालिका', 'महादेवा गाउँपालिका', 'रुपनी गाउँपालिका', 'बलान-बिहुल गाउँपालिका', 'राजगढ गाउँपालिका', 'विष्णुपुर गाउँपालिका', 'छिन्नमस्ता गाउँपालिका', 'आग्नीपुर गाउँपालिका'] },
-        'siraha': { np: 'सिराहा', en: 'Siraha', municipalities: ['सिराहा नगरपालिका', 'लहान नगरपालिका', 'धनगढीमाई नगरपालिका', 'गोलबजार नगरपालिका', 'मिर्चैया नगरपालिका', 'कर्जन्हा नगरपालिका', 'सुखीपुर नगरपालिका', 'भगवानपुर गाउँपालिका', 'अर्नमा गाउँपालिका', 'औरही गाउँपालिका', 'बरियारपट्टी गाउँपालिका', 'लक्ष्मीपुर पटारी गाउँपालिका', 'नरहा गाउँपालिका', 'सखुवा नान्करकट्टी गाउँपालिका', 'विष्णुपुर गाउँपालिका', 'नवराजपुर गाउँपालिका'] },
-        'dhanusa': { np: 'धनुषा', en: 'Dhanusa', municipalities: ['जनकपुरधाम उपमहानगरपालिका', 'धनुषाधाम नगरपालिका', 'क्षिरेश्वरनाथ नगरपालिका', 'गणेशमान चारनाथ नगरपालिका', 'मिथिला नगरपालिका', 'सबैला नगरपालिका', 'विदेह नगरपालिका', 'कमला नगरपालिका', 'मिथिला बिहारी नगरपालिका', 'हंसपुर नगरपालिका', 'लक्ष्मीनिया गाउँपालिका', 'औरही गाउँपालिका', 'बटेश्वर गाउँपालिका', 'मुखियापट्टी मुसहरनिया गाउँपालिका', 'जनकनन्दनी गाउँपालिका'] },
-        'mahottari': { np: 'महोत्तरी', en: 'Mahottari', municipalities: ['बर्दिबास नगरपालिका', 'जलेश्वर नगरपालिका', 'गौशाला नगरपालिका', 'बलवा नगरपालिका', 'मनरा शिसवा नगरपालिका', 'मटिहानी नगरपालिका', 'भङ्गाहा नगरपालिका', 'रामगोपालपुर नगरपालिका', 'लोहरपट्टी नगरपालिका', 'एकडारा गाउँपालिका', 'सोनमा गाउँपालिका', 'साम्सी गाउँपालिका', 'पिपरा गाउँपालिका'] },
-        'sarlahi': { np: 'सर्लाही', en: 'Sarlahi', municipalities: ['मलङ्गवा नगरपालिका', 'हरिवन नगरपालिका', 'लालबन्दी नगरपालिका', 'ईश्वरपुर नगरपालिका', 'बरहथवा नगरपालिका', 'हरिपुर नगरपालिका', 'गोडैता नगरपालिका', 'ब्रह्मपुरी नगरपालिका', 'कौडेना गाउँपालिका', 'चक्रघट्टा गाउँपालिका', 'चन्द्रनगर गाउँपालिका', 'धनकौल गाउँपालिका', 'पर्सा गाउँपालिका', 'बसबरिया गाउँपालिका', 'रामनगर गाउँपालिका'] },
-        'rautahat': { np: 'रौतहट', en: 'Rautahat', municipalities: ['गौर नगरपालिका', 'बौधीमाई नगरपालिका', 'ब्रह्मपुरी नगरपालिका', 'गरुडा नगरपालिका', 'कटहरिया नगरपालिका', 'माधवनारायण नगरपालिका', 'चन्द्रपुर नगरपालिका', 'देवाही गोनाही नगरपालिका', 'गुजरा नगरपालिका', 'राजदेवी नगरपालिका', 'दुर्गाभगवती गाउँपालिका', 'यमुनामाई गाउँपालिका', 'परोहा गाउँपालिका', 'ईशनाथ गाउँपालिका'] },
-        'bara': { np: 'बारा', en: 'Bara', municipalities: ['कलैया उपमहानगरपालिका', 'जीतपुरसिमरा उपमहानगरपालिका', 'कोल्हवी नगरपालिका', 'निजगढ नगरपालिका', 'महागढीमाई नगरपालिका', 'सिम्रौनगढ नगरपालिका', 'पचरौता नगरपालिका', 'अडर्सकोट गाउँपालिका', 'करैयामाई गाउँपालिका', 'देवताल गाउँपालिका', 'परवानीपुर गाउँपालिका', 'बारागढी गाउँपालिका', 'फेटा गाउँपालिका', 'प्रसौनी गाउँपालिका', 'सुवर्ण गाउँपालिका'] },
-        'parsa': { np: 'पर्सा', en: 'Parsa', municipalities: ['बीरगञ्ज महानगरपालिका', 'बहुदरमाई नगरपालिका', 'पोखरिया नगरपालिका', 'विश्रामपुर नगरपालिका', 'धोबीनी गाउँपालिका', 'जगरनाथपुर गाउँपालिका', 'जिरा भवानी गाउँपालिका', 'कल्याणिया गाउँपालिका', 'पकाहा मैनपुर गाउँपालिका', 'पटेर्वा सुगौली गाउँपालिका', 'सखुवा प्रसौनी गाउँपालिका', 'ठोरी गाउँपालिका'] }
+        'saptari': { 
+          np: 'सप्तरी', 
+          en: 'Saptari', 
+          municipalities: [
+            { np: 'राजविराज नगरपालिका', en: 'Rajbiraj Municipality' },
+            { np: 'कञ्चनरूप नगरपालिका', en: 'Kanchanrup Municipality' },
+            { np: 'शम्भुनाथ नगरपालिका', en: 'Shambhunath Municipality' },
+            { np: 'सप्तकोशी नगरपालिका', en: 'Saptakoshi Municipality' },
+            { np: 'सुरुङ्गा नगरपालिका', en: 'Surunga Municipality' },
+            { np: 'बोदेबरसाइन नगरपालिका', en: 'Bodebarsain Municipality' },
+            { np: 'खडक नगरपालिका', en: 'Khadak Municipality' },
+            { np: 'तिरहुत गाउँपालिका', en: 'Tirhut Rural Municipality' },
+            { np: 'महादेवा गाउँपालिका', en: 'Mahadeva Rural Municipality' },
+            { np: 'रुपनी गाउँपालिका', en: 'Rupani Rural Municipality' },
+            { np: 'बलान-बिहुल गाउँपालिका', en: 'Balan-Bihul Rural Municipality' },
+            { np: 'राजगढ गाउँपालिका', en: 'Rajgadh Rural Municipality' },
+            { np: 'विष्णुपुर गाउँपालिका', en: 'Bishnupur Rural Municipality' },
+            { np: 'छिन्नमस्ता गाउँपालिका', en: 'Chhinnamasta Rural Municipality' },
+            { np: 'आग्नीपुर गाउँपालिका', en: 'Agnipur Rural Municipality' }
+          ] 
+        },
+        'siraha': { 
+          np: 'सिराहा', 
+          en: 'Siraha', 
+          municipalities: [
+            { np: 'सिराहा नगरपालिका', en: 'Siraha Municipality' },
+            { np: 'लहान नगरपालिका', en: 'Lahan Municipality' },
+            { np: 'धनगढीमाई नगरपालिका', en: 'Dhangadhimai Municipality' },
+            { np: 'गोलबजार नगरपालिका', en: 'Golbazar Municipality' },
+            { np: 'मिर्चैया नगरपालिका', en: 'Mirchaiya Municipality' },
+            { np: 'कर्जन्हा नगरपालिका', en: 'Karjanha Municipality' },
+            { np: 'सुखीपुर नगरपालिका', en: 'Sukhipur Municipality' },
+            { np: 'भगवानपुर गाउँपालिका', en: 'Bhagwanpur Rural Municipality' },
+            { np: 'अर्नमा गाउँपालिका', en: 'Arnama Rural Municipality' },
+            { np: 'औरही गाउँपालिका', en: 'Aurahi Rural Municipality' },
+            { np: 'बरियारपट्टी गाउँपालिका', en: 'Bariyarpatti Rural Municipality' },
+            { np: 'लक्ष्मीपुर पटारी गाउँपालिका', en: 'Laxmipur Patari Rural Municipality' },
+            { np: 'नरहा गाउँपालिका', en: 'Naraha Rural Municipality' },
+            { np: 'सखुवा नान्करकट्टी गाउँपालिका', en: 'Sakhuwa Nankarkatti Rural Municipality' },
+            { np: 'विष्णुपुर गाउँपालिका', en: 'Bishnupur Rural Municipality' },
+            { np: 'नवराजपुर गाउँपालिका', en: 'Nawarajpur Rural Municipality' }
+          ] 
+        },
+        'dhanusa': { 
+          np: 'धनुषा', 
+          en: 'Dhanusa', 
+          municipalities: [
+            { np: 'जनकपुरधाम उपमहानगरपालिका', en: 'Janakpur Sub-Metropolitan City' },
+            { np: 'धनुषाधाम नगरपालिका', en: 'Dhanushadham Municipality' },
+            { np: 'क्षिरेश्वरनाथ नगरपालिका', en: 'Ksireshwarnath Municipality' },
+            { np: 'गणेशमान चारनाथ नगरपालिका', en: 'Ganeshman Charnath Municipality' },
+            { np: 'मिथिला नगरपालिका', en: 'Mithila Municipality' },
+            { np: 'सबैला नगरपालिका', en: 'Sabailla Municipality' },
+            { np: 'विदेह नगरपालिका', en: 'Videha Municipality' },
+            { np: 'कमला नगरपालिका', en: 'Kamala Municipality' },
+            { np: 'मिथिला बिहारी नगरपालिका', en: 'Mithila Bihari Municipality' },
+            { np: 'हंसपुर नगरपालिका', en: 'Hansapur Municipality' },
+            { np: 'लक्ष्मीनिया गाउँपालिका', en: 'Laxminiya Rural Municipality' },
+            { np: 'औरही गाउँपालिका', en: 'Aurahi Rural Municipality' },
+            { np: 'बटेश्वर गाउँपालिका', en: 'Bateshwar Rural Municipality' },
+            { np: 'मुखियापट्टी मुसहरनिया गाउँपालिका', en: 'Mukhiyapatti Musaharniya Rural Municipality' },
+            { np: 'जनकनन्दनी गाउँपालिका', en: 'Janak Nandini Rural Municipality' }
+          ] 
+        },
+        'mahottari': { 
+          np: 'महोत्तरी', 
+          en: 'Mahottari', 
+          municipalities: [
+            { np: 'बर्दिबास नगरपालिका', en: 'Bardibas Municipality' },
+            { np: 'जलेश्वर नगरपालिका', en: 'Jaleshwar Municipality' },
+            { np: 'गौशाला नगरपालिका', en: 'Gaushala Municipality' },
+            { np: 'बलवा नगरपालिका', en: 'Balwa Municipality' },
+            { np: 'मनरा शिसवा नगरपालिका', en: 'Manra Shiswa Municipality' },
+            { np: 'मटिहानी नगरपालिका', en: 'Matihani Municipality' },
+            { np: 'भङ्गाहा नगरपालिका', en: 'Bhangaha Municipality' },
+            { np: 'रामगोपालपुर नगरपालिका', en: 'Ramgopalpur Municipality' },
+            { np: 'लोहरपट्टी नगरपालिका', en: 'Loharpatti Municipality' },
+            { np: 'एकडारा गाउँपालिका', en: 'Ekadara Rural Municipality' },
+            { np: 'सोनमा गाउँपालिका', en: 'Sonama Rural Municipality' },
+            { np: 'साम्सी गाउँपालिका', en: 'Samsi Rural Municipality' },
+            { np: 'पिपरा गाउँपालिका', en: 'Pipra Rural Municipality' }
+          ] 
+        },
+        'sarlahi': { 
+          np: 'सर्लाही', 
+          en: 'Sarlahi', 
+          municipalities: [
+            { np: 'मलङ्गवा नगरपालिका', en: 'Malangwa Municipality' },
+            { np: 'हरिवन नगरपालिका', en: 'Harivan Municipality' },
+            { np: 'लालबन्दी नगरपालिका', en: 'Lalbandi Municipality' },
+            { np: 'ईश्वरपुर नगरपालिका', en: 'Ishwarpur Municipality' },
+            { np: 'बरहथवा नगरपालिका', en: 'Barahathawa Municipality' },
+            { np: 'हरिपुर नगरपालिका', en: 'Haripur Municipality' },
+            { np: 'गोडैता नगरपालिका', en: 'Godaita Municipality' },
+            { np: 'ब्रह्मपुरी नगरपालिका', en: 'Brahmapuri Municipality' },
+            { np: 'कौडेना गाउँपालिका', en: 'Kaudena Rural Municipality' },
+            { np: 'चक्रघट्टा गाउँपालिका', en: 'Chakraghatta Rural Municipality' },
+            { np: 'चन्द्रनगर गाउँपालिका', en: 'Chandranagar Rural Municipality' },
+            { np: 'धनकौल गाउँपालिका', en: 'Dhankaul Rural Municipality' },
+            { np: 'पर्सा गाउँपालिका', en: 'Parsa Rural Municipality' },
+            { np: 'बसबरिया गाउँपालिका', en: 'Basbaria Rural Municipality' },
+            { np: 'रामनगर गाउँपालिका', en: 'Ramnagar Rural Municipality' }
+          ] 
+        },
+        'rautahat': { 
+          np: 'रौतहट', 
+          en: 'Rautahat', 
+          municipalities: [
+            { np: 'गौर नगरपालिका', en: 'Gaur Municipality' },
+            { np: 'बौधीमाई नगरपालिका', en: 'Baudhimai Municipality' },
+            { np: 'ब्रह्मपुरी नगरपालिका', en: 'Brahmapuri Municipality' },
+            { np: 'गरुडा नगरपालिका', en: 'Garuda Municipality' },
+            { np: 'कटहरिया नगरपालिका', en: 'Katahariya Municipality' },
+            { np: 'माधवनारायण नगरपालिका', en: 'Madhavnarayan Municipality' },
+            { np: 'चन्द्रपुर नगरपालिका', en: 'Chandrapur Municipality' },
+            { np: 'देवाही गोनाही नगरपालिका', en: 'Devahi Gonahi Municipality' },
+            { np: 'गुजरा नगरपालिका', en: 'Gujara Municipality' },
+            { np: 'राजदेवी नगरपालिका', en: 'Rajdevi Municipality' },
+            { np: 'दुर्गाभगवती गाउँपालिका', en: 'Durgabhagwati Rural Municipality' },
+            { np: 'यमुनामाई गाउँपालिका', en: 'Yamunamai Rural Municipality' },
+            { np: 'परोहा गाउँपालिका', en: 'Paroha Rural Municipality' },
+            { np: 'ईशनाथ गाउँपालिका', en: 'Ishnath Rural Municipality' }
+          ] 
+        },
+        'bara': { 
+          np: 'बारा', 
+          en: 'Bara', 
+          municipalities: [
+            { np: 'कलैया उपमहानगरपालिका', en: 'Kalaiya Sub-Metropolitan City' },
+            { np: 'जीतपुरसिमरा उपमहानगरपालिका', en: 'Jitpursimara Sub-Metropolitan City' },
+            { np: 'कोल्हवी नगरपालिका', en: 'Kolhabi Municipality' },
+            { np: 'निजगढ नगरपालिका', en: 'Nijgadh Municipality' },
+            { np: 'महागढीमाई नगरपालिका', en: 'Mahagadhimai Municipality' },
+            { np: 'सिम्रौनगढ नगरपालिका', en: 'Simraungadh Municipality' },
+            { np: 'पचरौता नगरपालिका', en: 'Pacharauta Municipality' },
+            { np: 'अडर्सकोट गाउँपालिका', en: 'Adarskot Rural Municipality' },
+            { np: 'करैयामाई गाउँपालिका', en: 'Karaiyamai Rural Municipality' },
+            { np: 'देवताल गाउँपालिका', en: 'Devtal Rural Municipality' },
+            { np: 'परवानीपुर गाउँपालिका', en: 'Parwanipur Rural Municipality' },
+            { np: 'बारागढी गाउँपालिका', en: 'Baragadhi Rural Municipality' },
+            { np: 'फेटा गाउँपालिका', en: 'Pheta Rural Municipality' },
+            { np: 'प्रसौनी गाउँपालिका', en: 'Prasauni Rural Municipality' },
+            { np: 'सुवर्ण गाउँपालिका', en: 'Suvarna Rural Municipality' }
+          ] 
+        },
+        'parsa': { 
+          np: 'पर्सा', 
+          en: 'Parsa', 
+          municipalities: [
+            { np: 'बीरगञ्ज महानगरपालिका', en: 'Birgunj Metropolitan City' },
+            { np: 'बहुदरमाई नगरपालिका', en: 'Bahudarmai Municipality' },
+            { np: 'पोखरिया नगरपालिका', en: 'Pokhariya Municipality' },
+            { np: 'विश्रामपुर नगरपालिका', en: 'Bishrampur Municipality' },
+            { np: 'धोबीनी गाउँपालिका', en: 'Dhobini Rural Municipality' },
+            { np: 'जगरनाथपुर गाउँपालिका', en: 'Jagarnathpur Rural Municipality' },
+            { np: 'जिरा भवानी गाउँपालिका', en: 'Jira Bhawani Rural Municipality' },
+            { np: 'कल्याणिया गाउँपालिका', en: 'Kalyaniya Rural Municipality' },
+            { np: 'पकाहा मैनपुर गाउँपालिका', en: 'Pakaha Mainpur Rural Municipality' },
+            { np: 'पटेर्वा सुगौली गाउँपालिका', en: 'Paterwa Sugauli Rural Municipality' },
+            { np: 'सखुवा प्रसौनी गाउँपालिका', en: 'Sakhuwa Prasauni Rural Municipality' },
+            { np: 'ठोरी गाउँपालिका', en: 'Thori Rural Municipality' }
+          ] 
+        }
       }
     },
+    // Province 3 - Bagmati Province (13 districts)
     province3: { 
       np: 'बागमती प्रदेश', 
       en: 'Bagmati Province', 
       districts: {
-        'kathmandu': { np: 'काठमाडौं', en: 'Kathmandu', municipalities: ['काठमाडौं महानगरपालिका', 'कीर्तिपुर नगरपालिका', 'टोखा नगरपालिका', 'तारकेश्वर नगरपालिका', 'चन्द्रागिरी नगरपालिका', 'नागार्जुन नगरपालिका', 'गोकर्णेश्वर नगरपालिका', 'बुढानीलकण्ठ नगरपालिका', 'डाँछी गाउँपालिका', 'शंखरापुर गाउँपालिका', 'कागेश्वरी मनोहरा नगरपालिका'] },
-        'lalitpur': { np: 'ललितपुर', en: 'Lalitpur', municipalities: ['ललितपुर महानगरपालिका', 'गोदावरी नगरपालिका', 'महालक्ष्मी नगरपालिका', 'बज्रबाराही गाउँपालिका', 'बागमती गाउँपालिका', 'कोन्ज्योसोम गाउँपालिका'] },
-        'bhaktapur': { np: 'भक्तपुर', en: 'Bhaktapur', municipalities: ['भक्तपुर नगरपालिका', 'मध्यपुर थिमी नगरपालिका', 'सूर्यविनायक नगरपालिका', 'चाँगुनारायण नगरपालिका'] },
-        'kavrepalanchok': { np: 'काभ्रेपलान्चोक', en: 'Kavrepalanchok', municipalities: ['बनेपा नगरपालिका', 'धुलिखेल नगरपालिका', 'पनौती नगरपालिका', 'नमोबुद्ध नगरपालिका', 'मण्डनदेउपुर नगरपालिका', 'खानीखोला गाउँपालिका', 'रोशी गाउँपालिका', 'बेथानचोक गाउँपालिका', 'तेमाल गाउँपालिका', 'महाभारत गाउँपालिका', 'भुम्लु गाउँपालिका'] },
-        'sindhupalchok': { np: 'सिन्धुपाल्चोक', en: 'Sindhupalchok', municipalities: ['चौतारा नगरपालिका', 'मेलम्ची नगरपालिका', 'बाह्रबिसे नगरपालिका', 'इन्द्रावती गाउँपालिका', 'जुगल गाउँपालिका', 'पाँचपोखरी गाउँपालिका', 'बलेफी गाउँपालिका', 'सुनकोशी गाउँपालिका', 'हेलम्बु गाउँपालिका', 'त्रिपुरासुन्दरी गाउँपालिका', 'लिसाङखु गाउँपालिका'] },
-        'rasuwa': { np: 'रसुवा', en: 'Rasuwa', municipalities: ['उत्तरगया गाउँपालिका', 'कालिका गाउँपालिका', 'गोसाइँकुण्ड गाउँपालिका', 'नौकुण्ड गाउँपालिका', 'पार्वतीकुण्ड गाउँपालिका', 'आमाछोदिङ्मो गाउँपालिका'] },
-        'dhading': { np: 'धादिङ', en: 'Dhading', municipalities: ['धादिङबेसी नगरपालिका', 'निलकण्ठ नगरपालिका', 'खनियाबास गाउँपालिका', 'गजुरी गाउँपालिका', 'गल्छी गाउँपालिका', 'ज्वालामुखी गाउँपालिका', 'थाक्रे गाउँपालिका', 'नेत्रावती डबजोङ गाउँपालिका', 'बेनीघाट रोराङ गाउँपालिका', 'रुबी भ्याली गाउँपालिका', 'सिद्धलेक गाउँपालिका', 'त्रिपुरासुन्दरी गाउँपालिका', 'गंगाजमुना गाउँपालिका'] },
-        'nuwakot': { np: 'नुवाकोट', en: 'Nuwakot', municipalities: ['विदुर नगरपालिका', 'ककनी गाउँपालिका', 'किस्पाङ गाउँपालिका', 'तादी गाउँपालिका', 'तारकेश्वर गाउँपालिका', 'दुप्चेश्वर गाउँपालिका', 'पञ्चकन्या गाउँपालिका', 'म्यागङ गाउँपालिका', 'सूर्यगढी गाउँपालिका', 'शिखर गाउँपालिका', 'बेलकोटगढी नगरपालिका', 'शिवपुरी गाउँपालिका'] },
-        'sindhuli': { np: 'सिन्धुली', en: 'Sindhuli', municipalities: ['कमलामाई नगरपालिका', 'दुधौली नगरपालिका', 'मरिण गाउँपालिका', 'फिक्कल गाउँपालिका', 'घ्याङलेख गाउँपालिका', 'सुनकोशी गाउँपालिका', 'हरिहरपुरगढी गाउँपालिका', 'तिनपाटन गाउँपालिका', 'गोलन्जोर गाउँपालिका'] },
-        'makwanpur': { np: 'मकवानपुर', en: 'Makwanpur', municipalities: ['हेटौंडा उपमहानगरपालिका', 'थाहा नगरपालिका', 'भीमफेदी गाउँपालिका', 'बकैया गाउँपालिका', 'बागमती गाउँपालिका', 'मकवानपुरगढी गाउँपालिका', 'मनहरी गाउँपालिका', 'राक्सिराङ गाउँपालिका', 'इन्द्रसरोवर गाउँपालिका', 'कैलाश गाउँपालिका'] },
-        'ramechhap': { np: 'रामेछाप', en: 'Ramechhap', municipalities: ['मन्थली नगरपालिका', 'रामेछाप नगरपालिका', 'गोकुलगंगा गाउँपालिका', 'उमाकुण्ड गाउँपालिका', 'लिखु गाउँपालिका', 'दोरम्बा गाउँपालिका', 'खाँडादेवी गाउँपालिका', 'सुनापती गाउँपालिका', 'भञ्जीखोला गाउँपालिका'] },
-        'dolakha': { np: 'दोलखा', en: 'Dolakha', municipalities: ['भीमेश्वर नगरपालिका', 'जिरी नगरपालिका', 'कालिञ्चोक गाउँपालिका', 'गौरीशंकर गाउँपालिका', 'तामाकोशी गाउँपालिका', 'बैतेश्वर गाउँपालिका', 'मेलुङ गाउँपालिका', 'शैलुङ गाउँपालिका', 'बिगु गाउँपालिका'] },
-        'chitwan': { np: 'चितवन', en: 'Chitwan', municipalities: ['भरतपुर महानगरपालिका', 'रत्ननगर नगरपालिका', 'कालिका नगरपालिका', 'खैरहनी नगरपालिका', 'माडी नगरपालिका', 'इच्छाकामना गाउँपालिका'] }
+        'kathmandu': { 
+          np: 'काठमाडौं', 
+          en: 'Kathmandu', 
+          municipalities: [
+            { np: 'काठमाडौं महानगरपालिका', en: 'Kathmandu Metropolitan City' },
+            { np: 'कीर्तिपुर नगरपालिका', en: 'Kirtipur Municipality' },
+            { np: 'टोखा नगरपालिका', en: 'Tokha Municipality' },
+            { np: 'तारकेश्वर नगरपालिका', en: 'Tarkeshwar Municipality' },
+            { np: 'चन्द्रागिरी नगरपालिका', en: 'Chandragiri Municipality' },
+            { np: 'नागार्जुन नगरपालिका', en: 'Nagarjun Municipality' },
+            { np: 'गोकर्णेश्वर नगरपालिका', en: 'Gokarneshwar Municipality' },
+            { np: 'बुढानीलकण्ठ नगरपालिका', en: 'Budhanilkantha Municipality' },
+            { np: 'डाँछी गाउँपालिका', en: 'Daanchhi Rural Municipality' },
+            { np: 'शंखरापुर गाउँपालिका', en: 'Shankharapur Rural Municipality' },
+            { np: 'कागेश्वरी मनोहरा नगरपालिका', en: 'Kageshwari Manohara Municipality' }
+          ] 
+        },
+        'lalitpur': { 
+          np: 'ललितपुर', 
+          en: 'Lalitpur', 
+          municipalities: [
+            { np: 'ललितपुर महानगरपालिका', en: 'Lalitpur Metropolitan City' },
+            { np: 'गोदावरी नगरपालिका', en: 'Godawari Municipality' },
+            { np: 'महालक्ष्मी नगरपालिका', en: 'Mahalaxmi Municipality' },
+            { np: 'बागमती गाउँपालिका', en: 'Bagmati Rural Municipality' },
+            { np: 'कोन्ज्योसोम गाउँपालिका', en: 'Konjyosom Rural Municipality' }
+          ] 
+        },
+        'bhaktapur': { 
+          np: 'भक्तपुर', 
+          en: 'Bhaktapur', 
+          municipalities: [
+            { np: 'भक्तपुर नगरपालिका', en: 'Bhaktapur Municipality' },
+            { np: 'मध्यपुर थिमी नगरपालिका', en: 'Madhyapur Thimi Municipality' },
+            { np: 'सूर्यविनायक नगरपालिका', en: 'Suryabinayak Municipality' },
+            { np: 'चाँगुनारायण नगरपालिका', en: 'Changunarayan Municipality' }
+          ] 
+        },
+        'kavrepalanchok': { 
+          np: 'काभ्रेपलान्चोक', 
+          en: 'Kavrepalanchok', 
+          municipalities: [
+            { np: 'बनेपा नगरपालिका', en: 'Banepa Municipality' },
+            { np: 'धुलिखेल नगरपालिका', en: 'Dhulikhel Municipality' },
+            { np: 'पनौती नगरपालिका', en: 'Panauti Municipality' },
+            { np: 'नमोबुद्ध नगरपालिका', en: 'Namobuddha Municipality' },
+            { np: 'मण्डनदेउपुर नगरपालिका', en: 'Mandandeupur Municipality' },
+            { np: 'खानीखोला गाउँपालिका', en: 'Khanikhola Rural Municipality' },
+            { np: 'रोशी गाउँपालिका', en: 'Rosi Rural Municipality' },
+            { np: 'बेथानचोक गाउँपालिका', en: 'Bethanchok Rural Municipality' },
+            { np: 'तेमाल गाउँपालिका', en: 'Temal Rural Municipality' },
+            { np: 'महाभारत गाउँपालिका', en: 'Mahabharat Rural Municipality' },
+            { np: 'भुम्लु गाउँपालिका', en: 'Bhumlu Rural Municipality' }
+          ] 
+        },
+        'sindhupalchok': { 
+          np: 'सिन्धुपाल्चोक', 
+          en: 'Sindhupalchok', 
+          municipalities: [
+            { np: 'चौतारा नगरपालिका', en: 'Chautara Municipality' },
+            { np: 'मेलम्ची नगरपालिका', en: 'Melamchi Municipality' },
+            { np: 'बाह्रबिसे नगरपालिका', en: 'Bahrabise Municipality' },
+            { np: 'इन्द्रावती गाउँपालिका', en: 'Indrawati Rural Municipality' },
+            { np: 'जुगल गाउँपालिका', en: 'Jugal Rural Municipality' },
+            { np: 'पाँचपोखरी गाउँपालिका', en: 'Panchpokhari Rural Municipality' },
+            { np: 'बलेफी गाउँपालिका', en: 'Balephi Rural Municipality' },
+            { np: 'सुनकोशी गाउँपालिका', en: 'Sunkoshi Rural Municipality' },
+            { np: 'हेलम्बु गाउँपालिका', en: 'Helambu Rural Municipality' },
+            { np: 'त्रिपुरासुन्दरी गाउँपालिका', en: 'Tripurasundari Rural Municipality' },
+            { np: 'लिसाङखु गाउँपालिका', en: 'Lisankhu Rural Municipality' }
+          ] 
+        },
+        'rasuwa': { 
+          np: 'रसुवा', 
+          en: 'Rasuwa', 
+          municipalities: [
+            { np: 'उत्तरगया गाउँपालिका', en: 'Uttargaya Rural Municipality' },
+            { np: 'कालिका गाउँपालिका', en: 'Kalika Rural Municipality' },
+            { np: 'गोसाइँकुण्ड गाउँपालिका', en: 'Gosaikunda Rural Municipality' },
+            { np: 'नौकुण्ड गाउँपालिका', en: 'Naukunda Rural Municipality' },
+            { np: 'पार्वतीकुण्ड गाउँपालिका', en: 'Parvatikunda Rural Municipality' },
+            { np: 'आमाछोदिङ्मो गाउँपालिका', en: 'Amachhodingmo Rural Municipality' }
+          ] 
+        },
+        'dhading': { 
+          np: 'धादिङ', 
+          en: 'Dhading', 
+          municipalities: [
+            { np: 'धादिङबेसी नगरपालिका', en: 'Dhadingbesi Municipality' },
+            { np: 'निलकण्ठ नगरपालिका', en: 'Nilkantha Municipality' },
+            { np: 'खनियाबास गाउँपालिका', en: 'Khaniyabas Rural Municipality' },
+            { np: 'गजुरी गाउँपालिका', en: 'Gajuri Rural Municipality' },
+            { np: 'गल्छी गाउँपालिका', en: 'Galchi Rural Municipality' },
+            { np: 'ज्वालामुखी गाउँपालिका', en: 'Jwalamukhi Rural Municipality' },
+            { np: 'थाक्रे गाउँपालिका', en: 'Thakre Rural Municipality' },
+            { np: 'नेत्रावती डबजोङ गाउँपालिका', en: 'Netrawati Dabjong Rural Municipality' },
+            { np: 'बेनीघाट रोराङ गाउँपालिका', en: 'Benighat Rorang Rural Municipality' },
+            { np: 'रुबी भ्याली गाउँपालिका', en: 'Rubi Valley Rural Municipality' },
+            { np: 'सिद्धलेक गाउँपालिका', en: 'Siddhalek Rural Municipality' },
+            { np: 'त्रिपुरासुन्दरी गाउँपालिका', en: 'Tripurasundari Rural Municipality' },
+            { np: 'गंगाजमुना गाउँपालिका', en: 'Gangajamuna Rural Municipality' }
+          ] 
+        },
+        'nuwakot': { 
+          np: 'नुवाकोट', 
+          en: 'Nuwakot', 
+          municipalities: [
+            { np: 'विदुर नगरपालिका', en: 'Vidur Municipality' },
+            { np: 'बेलकोटगढी नगरपालिका', en: 'Belkotgadhi Municipality' },
+            { np: 'ककनी गाउँपालिका', en: 'Kakani Rural Municipality' },
+            { np: 'किस्पाङ गाउँपालिका', en: 'Kispang Rural Municipality' },
+            { np: 'तादी गाउँपालिका', en: 'Tadi Rural Municipality' },
+            { np: 'तारकेश्वर गाउँपालिका', en: 'Tarkeshwar Rural Municipality' },
+            { np: 'दुप्चेश्वर गाउँपालिका', en: 'Dupcheshwar Rural Municipality' },
+            { np: 'पञ्चकन्या गाउँपालिका', en: 'Panchakanya Rural Municipality' },
+            { np: 'म्यागङ गाउँपालिका', en: 'Myagang Rural Municipality' },
+            { np: 'सूर्यगढी गाउँपालिका', en: 'Suryagadhi Rural Municipality' },
+            { np: 'शिखर गाउँपालिका', en: 'Shikhar Rural Municipality' },
+            { np: 'शिवपुरी गाउँपालिका', en: 'Shivapuri Rural Municipality' }
+          ] 
+        },
+        'sindhuli': { 
+          np: 'सिन्धुली', 
+          en: 'Sindhuli', 
+          municipalities: [
+            { np: 'कमलामाई नगरपालिका', en: 'Kamalamai Municipality' },
+            { np: 'दुधौली नगरपालिका', en: 'Dudhauli Municipality' },
+            { np: 'मरिण गाउँपालिका', en: 'Marin Rural Municipality' },
+            { np: 'फिक्कल गाउँपालिका', en: 'Phikkal Rural Municipality' },
+            { np: 'घ्याङलेख गाउँपालिका', en: 'Ghyanglekh Rural Municipality' },
+            { np: 'सुनकोशी गाउँपालिका', en: 'Sunkoshi Rural Municipality' },
+            { np: 'हरिहरपुरगढी गाउँपालिका', en: 'Hariharpurgadhi Rural Municipality' },
+            { np: 'तिनपाटन गाउँपालिका', en: 'Tinpatan Rural Municipality' },
+            { np: 'गोलन्जोर गाउँपालिका', en: 'Golanjor Rural Municipality' }
+          ] 
+        },
+        'makwanpur': { 
+          np: 'मकवानपुर', 
+          en: 'Makwanpur', 
+          municipalities: [
+            { np: 'हेटौंडा उपमहानगरपालिका', en: 'Hetauda Sub-Metropolitan City' },
+            { np: 'थाहा नगरपालिका', en: 'Thaha Municipality' },
+            { np: 'भीमफेदी गाउँपालिका', en: 'Bhimfedi Rural Municipality' },
+            { np: 'बकैया गाउँपालिका', en: 'Bakaiya Rural Municipality' },
+            { np: 'बागमती गाउँपालिका', en: 'Bagmati Rural Municipality' },
+            { np: 'मकवानपुरगढी गाउँपालिका', en: 'Makwanpurgadhi Rural Municipality' },
+            { np: 'मनहरी गाउँपालिका', en: 'Manahari Rural Municipality' },
+            { np: 'राक्सिराङ गाउँपालिका', en: 'Raksirang Rural Municipality' },
+            { np: 'इन्द्रसरोवर गाउँपालिका', en: 'Indrasarowar Rural Municipality' },
+            { np: 'कैलाश गाउँपालिका', en: 'Kailash Rural Municipality' }
+          ] 
+        },
+        'ramechhap': { 
+          np: 'रामेछाप', 
+          en: 'Ramechhap', 
+          municipalities: [
+            { np: 'मन्थली नगरपालिका', en: 'Manthali Municipality' },
+            { np: 'रामेछाप नगरपालिका', en: 'Ramechhap Municipality' },
+            { np: 'गोकुलगंगा गाउँपालिका', en: 'Gokulganga Rural Municipality' },
+            { np: 'उमाकुण्ड गाउँपालिका', en: 'Umakunda Rural Municipality' },
+            { np: 'लिखु गाउँपालिका', en: 'Likhu Rural Municipality' },
+            { np: 'दोरम्बा गाउँपालिका', en: 'Doramba Rural Municipality' },
+            { np: 'खाँडादेवी गाउँपालिका', en: 'Khandadevi Rural Municipality' },
+            { np: 'सुनापती गाउँपालिका', en: 'Sunapati Rural Municipality' },
+            { np: 'भञ्जीखोला गाउँपालिका', en: 'Bhanjikhola Rural Municipality' }
+          ] 
+        },
+        'dolakha': { 
+          np: 'दोलखा', 
+          en: 'Dolakha', 
+          municipalities: [
+            { np: 'भीमेश्वर नगरपालिका', en: 'Bhimeshwar Municipality' },
+            { np: 'जिरी नगरपालिका', en: 'Jiri Municipality' },
+            { np: 'कालिञ्चोक गाउँपालिका', en: 'Kalinchok Rural Municipality' },
+            { np: 'गौरीशंकर गाउँपालिका', en: 'Gaurishankar Rural Municipality' },
+            { np: 'तामाकोशी गाउँपालिका', en: 'Tamakoshi Rural Municipality' },
+            { np: 'बैतेश्वर गाउँपालिका', en: 'Baiteshwar Rural Municipality' },
+            { np: 'मेलुङ गाउँपालिका', en: 'Melung Rural Municipality' },
+            { np: 'शैलुङ गाउँपालिका', en: 'Shailung Rural Municipality' },
+            { np: 'बिगु गाउँपालिका', en: 'Bigu Rural Municipality' }
+          ] 
+        },
+        'chitwan': { 
+          np: 'चितवन', 
+          en: 'Chitwan', 
+          municipalities: [
+            { np: 'भरतपुर महानगरपालिका', en: 'Bharatpur Metropolitan City' },
+            { np: 'रत्ननगर नगरपालिका', en: 'Ratnanagar Municipality' },
+            { np: 'कालिका नगरपालिका', en: 'Kalika Municipality' },
+            { np: 'खैरहनी नगरपालिका', en: 'Khairahani Municipality' },
+            { np: 'माडी नगरपालिका', en: 'Madi Municipality' },
+            { np: 'इच्छाकामना गाउँपालिका', en: 'Ichchhakamana Rural Municipality' }
+          ] 
+        }
       }
     },
+    // Province 4 - Gandaki Province (11 districts)
     province4: { 
       np: 'गण्डकी प्रदेश', 
       en: 'Gandaki Province', 
       districts: {
-        'gorkha': { np: 'गोरखा', en: 'Gorkha', municipalities: ['गोरखा नगरपालिका', 'पालुङटार नगरपालिका', 'शहिद लखन गाउँपालिका', 'अजिरकोट गाउँपालिका', 'चुमनुव्री गाउँपालिका', 'धार्चे गाउँपालिका', 'भीमसेनथापा गाउँपालिका', 'सुलिकोट गाउँपालिका', 'सिरानचोक गाउँपालिका', 'गण्डकी गाउँपालिका'] },
-        'lamjung': { np: 'लमजुङ', en: 'Lamjung', municipalities: ['बेसीशहर नगरपालिका', 'मध्यनेपाल नगरपालिका', 'राइनास नगरपालिका', 'सुन्दरबजार नगरपालिका', 'दोर्दी गाउँपालिका', 'क्व्होलासोथार गाउँपालिका', 'मर्स्याङ्दी गाउँपालिका', 'दूधपोखरी गाउँपालिका'] },
-        'tanahu': { np: 'तनहुँ', en: 'Tanahun', municipalities: ['दमौली नगरपालिका', 'बन्दीपुर नगरपालिका', 'भानु नगरपालिका', 'शुक्लागण्डकी नगरपालिका', 'ब्यास नगरपालिका', 'ऋषिङ गाउँपालिका', 'देवघाट गाउँपालिका', 'म्याग्दे गाउँपालिका', 'आँबुखैरेनी गाउँपालिका', 'भिमाद गाउँपालिका', 'घिरिङ गाउँपालिका'] },
-        'kaski': { np: 'कास्की', en: 'Kaski', municipalities: ['पोखरा महानगरपालिका', 'मादी नगरपालिका', 'रूपा गाउँपालिका', 'अन्नपूर्ण गाउँपालिका', 'माचापुच्छ्रे गाउँपालिका'] },
-        'manang': { np: 'मनाङ', en: 'Manang', municipalities: ['चामे गाउँपालिका', 'नासो गाउँपालिका', 'नार्फु गाउँपालिका', 'मनाङ ङिस्याङ गाउँपालिका'] },
-        'mustang': { np: 'मुस्ताङ', en: 'Mustang', municipalities: ['घरपझोङ गाउँपालिका', 'थासाङ गाउँपालिका', 'बाह्रगाउँ मुक्तिक्षेत्र गाउँपालिका', 'लोमान्थाङ गाउँपालिका', 'लोघेकर दामोदरकुण्ड गाउँपालिका'] },
-        'myagdi': { np: 'म्याग्दी', en: 'Myagdi', municipalities: ['बेनी नगरपालिका', 'अन्नपूर्ण गाउँपालिका', 'मालिका गाउँपालिका', 'मंगला गाउँपालिका', 'धवलागिरी गाउँपालिका', 'रघुगंगा गाउँपालिका'] },
-        'parbat': { np: 'पर्वत', en: 'Parbat', municipalities: ['कुश्मा नगरपालिका', 'फलेवास नगरपालिका', 'जलजला गाउँपालिका', 'पैयुँ गाउँपालिका', 'मोदी गाउँपालिका', 'बिहादी गाउँपालिका'] },
-        'baglung': { np: 'बागलुङ', en: 'Baglung', municipalities: ['बागलुङ नगरपालिका', 'गलकोट नगरपालिका', 'जैमुनी नगरपालिका', 'ढोरपाटन नगरपालिका', 'बरेङ गाउँपालिका', 'काठेखोला गाउँपालिका', 'तमानखोला गाउँपालिका', 'निसीखोला गाउँपालिका', 'वडिगाड गाउँपालिका'] },
-        'syangja': { np: 'स्याङ्जा', en: 'Syangja', municipalities: ['पुतलीबजार नगरपालिका', 'वालिङ नगरपालिका', 'चापाकोट नगरपालिका', 'गल्याङ नगरपालिका', 'विरुवा गाउँपालिका', 'अर्जुनचौपारी गाउँपालिका', 'कालीगण्डकी गाउँपालिका', 'फेदीखोला गाउँपालिका', 'आँधीखोला गाउँपालिका', 'हरिनास गाउँपालिका'] },
-        'nawalpur': { np: 'नवलपुर', en: 'Nawalpur', municipalities: ['कावासोती नगरपालिका', 'गैंडाकोट नगरपालिका', 'देवचुली नगरपालिका', 'मध्यविन्दु नगरपालिका', 'बुलिङटार गाउँपालिका', 'बौदीकाली गाउँपालिका', 'हुप्सेकोट गाउँपालिका'] }
+        'gorkha': { 
+          np: 'गोरखा', 
+          en: 'Gorkha', 
+          municipalities: [
+            { np: 'गोरखा नगरपालिका', en: 'Gorkha Municipality' },
+            { np: 'पालुङटार नगरपालिका', en: 'Palungtar Municipality' },
+            { np: 'शहिद लखन गाउँपालिका', en: 'Shahid Lakhan Rural Municipality' },
+            { np: 'अजिरकोट गाउँपालिका', en: 'Ajirot Rural Municipality' },
+            { np: 'चुमनुव्री गाउँपालिका', en: 'Chumanuvri Rural Municipality' },
+            { np: 'धार्चे गाउँपालिका', en: 'Dharche Rural Municipality' },
+            { np: 'भीमसेनथापा गाउँपालिका', en: 'Bhimsenthapa Rural Municipality' },
+            { np: 'सुलिकोट गाउँपालिका', en: 'Sulikot Rural Municipality' },
+            { np: 'सिरानचोक गाउँपालिका', en: 'Siranchok Rural Municipality' },
+            { np: 'गण्डकी गाउँपालिका', en: 'Gandaki Rural Municipality' }
+          ] 
+        },
+        'lamjung': { 
+          np: 'लमजुङ', 
+          en: 'Lamjung', 
+          municipalities: [
+            { np: 'बेसीशहर नगरपालिका', en: 'Besisahar Municipality' },
+            { np: 'मध्यनेपाल नगरपालिका', en: 'Madhyanepal Municipality' },
+            { np: 'राइनास नगरपालिका', en: 'Rainas Municipality' },
+            { np: 'सुन्दरबजार नगरपालिका', en: 'Sundarbazar Municipality' },
+            { np: 'दोर्दी गाउँपालिका', en: 'Dordi Rural Municipality' },
+            { np: 'क्व्होलासोथार गाउँपालिका', en: 'Kwholasothar Rural Municipality' },
+            { np: 'मर्स्याङ्दी गाउँपालिका', en: 'Marsyangdi Rural Municipality' },
+            { np: 'दूधपोखरी गाउँपालिका', en: 'Dudhpokhari Rural Municipality' }
+          ] 
+        },
+        'tanahu': { 
+          np: 'तनहुँ', 
+          en: 'Tanahun', 
+          municipalities: [
+            { np: 'दमौली नगरपालिका', en: 'Damauli Municipality' },
+            { np: 'बन्दीपुर नगरपालिका', en: 'Bandipur Municipality' },
+            { np: 'भानु नगरपालिका', en: 'Bhanu Municipality' },
+            { np: 'शुक्लागण्डकी नगरपालिका', en: 'Shuklagandaki Municipality' },
+            { np: 'ब्यास नगरपालिका', en: 'Byas Municipality' },
+            { np: 'ऋषिङ गाउँपालिका', en: 'Rishing Rural Municipality' },
+            { np: 'देवघाट गाउँपालिका', en: 'Devghat Rural Municipality' },
+            { np: 'म्याग्दे गाउँपालिका', en: 'Myagde Rural Municipality' },
+            { np: 'आँबुखैरेनी गाउँपालिका', en: 'Aambukhaireni Rural Municipality' },
+            { np: 'भिमाद गाउँपालिका', en: 'Bhimad Rural Municipality' },
+            { np: 'घिरिङ गाउँपालिका', en: 'Ghiring Rural Municipality' }
+          ] 
+        },
+        'kaski': { 
+          np: 'कास्की', 
+          en: 'Kaski', 
+          municipalities: [
+            { np: 'पोखरा महानगरपालिका', en: 'Pokhara Metropolitan City' },
+            { np: 'मादी नगरपालिका', en: 'Madi Municipality' },
+            { np: 'रूपा गाउँपालिका', en: 'Rupa Rural Municipality' },
+            { np: 'अन्नपूर्ण गाउँपालिका', en: 'Annapurna Rural Municipality' },
+            { np: 'माचापुच्छ्रे गाउँपालिका', en: 'Machhapuchhre Rural Municipality' }
+          ] 
+        },
+        'manang': { 
+          np: 'मनाङ', 
+          en: 'Manang', 
+          municipalities: [
+            { np: 'चामे गाउँपालिका', en: 'Chame Rural Municipality' },
+            { np: 'नासो गाउँपालिका', en: 'Naso Rural Municipality' },
+            { np: 'नार्फु गाउँपालिका', en: 'Narphu Rural Municipality' },
+            { np: 'मनाङ ङिस्याङ गाउँपालिका', en: 'Manang Ngisyang Rural Municipality' }
+          ] 
+        },
+        'mustang': { 
+          np: 'मुस्ताङ', 
+          en: 'Mustang', 
+          municipalities: [
+            { np: 'घरपझोङ गाउँपालिका', en: 'Gharapjhong Rural Municipality' },
+            { np: 'थासाङ गाउँपालिका', en: 'Thasang Rural Municipality' },
+            { np: 'बाह्रगाउँ मुक्तिक्षेत्र गाउँपालिका', en: 'Bahragaun Muktikshetra Rural Municipality' },
+            { np: 'लोमान्थाङ गाउँपालिका', en: 'Lomanthang Rural Municipality' },
+            { np: 'लोघेकर दामोदरकुण्ड गाउँपालिका', en: 'Loghekar Damodarkunda Rural Municipality' }
+          ] 
+        },
+        'myagdi': { 
+          np: 'म्याग्दी', 
+          en: 'Myagdi', 
+          municipalities: [
+            { np: 'बेनी नगरपालिका', en: 'Beni Municipality' },
+            { np: 'अन्नपूर्ण गाउँपालिका', en: 'Annapurna Rural Municipality' },
+            { np: 'मालिका गाउँपालिका', en: 'Malika Rural Municipality' },
+            { np: 'मंगला गाउँपालिका', en: 'Mangala Rural Municipality' },
+            { np: 'धवलागिरी गाउँपालिका', en: 'Dhaulagiri Rural Municipality' },
+            { np: 'रघुगंगा गाउँपालिका', en: 'Raghuganga Rural Municipality' }
+          ] 
+        },
+        'parbat': { 
+          np: 'पर्वत', 
+          en: 'Parbat', 
+          municipalities: [
+            { np: 'कुश्मा नगरपालिका', en: 'Kushma Municipality' },
+            { np: 'फलेवास नगरपालिका', en: 'Phalewas Municipality' },
+            { np: 'जलजला गाउँपालिका', en: 'Jaljala Rural Municipality' },
+            { np: 'पैयुँ गाउँपालिका', en: 'Paiyun Rural Municipality' },
+            { np: 'मोदी गाउँपालिका', en: 'Modi Rural Municipality' },
+            { np: 'बिहादी गाउँपालिका', en: 'Bihadi Rural Municipality' }
+          ] 
+        },
+        'baglung': { 
+          np: 'बागलुङ', 
+          en: 'Baglung', 
+          municipalities: [
+            { np: 'बागलुङ नगरपालिका', en: 'Baglung Municipality' },
+            { np: 'गलकोट नगरपालिका', en: 'Galkot Municipality' },
+            { np: 'जैमुनी नगरपालिका', en: 'Jaimuni Municipality' },
+            { np: 'ढोरपाटन नगरपालिका', en: 'Dhorpatan Municipality' },
+            { np: 'बरेङ गाउँपालिका', en: 'Bareng Rural Municipality' },
+            { np: 'काठेखोला गाउँपालिका', en: 'Kathekhola Rural Municipality' },
+            { np: 'तमानखोला गाउँपालिका', en: 'Taman Khola Rural Municipality' },
+            { np: 'निसीखोला गाउँपालिका', en: 'Nisikhola Rural Municipality' },
+            { np: 'वडिगाड गाउँपालिका', en: 'Badigad Rural Municipality' }
+          ] 
+        },
+        'syangja': { 
+          np: 'स्याङ्जा', 
+          en: 'Syangja', 
+          municipalities: [
+            { np: 'पुतलीबजार नगरपालिका', en: 'Putalibazar Municipality' },
+            { np: 'वालिङ नगरपालिका', en: 'Waling Municipality' },
+            { np: 'चापाकोट नगरपालिका', en: 'Chapakot Municipality' },
+            { np: 'गल्याङ नगरपालिका', en: 'Galyang Municipality' },
+            { np: 'बिरुवा गाउँपालिका', en: 'Biruwa Rural Municipality' },
+            { np: 'अर्जुनचौपारी गाउँपालिका', en: 'Arjun Chaupari Rural Municipality' },
+            { np: 'कालीगण्डकी गाउँपालिका', en: 'Kaligandaki Rural Municipality' },
+            { np: 'फेदीखोला गाउँपालिका', en: 'Fedikhola Rural Municipality' },
+            { np: 'आँधीखोला गाउँपालिका', en: 'Aandhikhola Rural Municipality' },
+            { np: 'हरिनास गाउँपालिका', en: 'Harinas Rural Municipality' }
+          ] 
+        },
+        'nawalpur': { 
+          np: 'नवलपुर', 
+          en: 'Nawalpur', 
+          municipalities: [
+            { np: 'कावासोती नगरपालिका', en: 'Kawasoti Municipality' },
+            { np: 'गैंडाकोट नगरपालिका', en: 'Gaindakot Municipality' },
+            { np: 'देवचुली नगरपालिका', en: 'Devchuli Municipality' },
+            { np: 'मध्यविन्दु नगरपालिका', en: 'Madhyabindu Municipality' },
+            { np: 'बुलिङटार गाउँपालिका', en: 'Bulingtar Rural Municipality' },
+            { np: 'बौदीकाली गाउँपालिका', en: 'Baudikali Rural Municipality' },
+            { np: 'हुप्सेकोट गाउँपालिका', en: 'Hupsekot Rural Municipality' }
+          ] 
+        }
       }
     },
+    // Province 5 - Lumbini Province (12 districts)
     province5: { 
       np: 'लुम्बिनी प्रदेश', 
       en: 'Lumbini Province', 
       districts: {
-        'kapilbastu': { np: 'कपिलवस्तु', en: 'Kapilbastu', municipalities: ['कपिलवस्तु नगरपालिका', 'बाणगंगा नगरपालिका', 'बुद्धभूमि नगरपालिका', 'शिवराज नगरपालिका', 'महाराजगन्ज नगरपालिका', 'कृष्णनगर नगरपालिका', 'यशोधरा गाउँपालिका', 'बिजयनगर गाउँपालिका', 'मायादेवी गाउँपालिका', 'सुद्धोधन गाउँपालिका'] },
-        'rupandehi': { np: 'रुपन्देही', en: 'Rupandehi', municipalities: ['बुटवल उपमहानगरपालिका', 'तिलोत्तमा नगरपालिका', 'सिद्धार्थनगर नगरपालिका', 'देवदह नगरपालिका', 'लुम्बिनी सांस्कृतिक नगरपालिका', 'कञ्चन गाउँपालिका', 'गैडहवा गाउँपालिका', 'मायादेवी गाउँपालिका', 'कोटहीमाई गाउँपालिका', 'रोहिणी गाउँपालिका', 'सम्मरीमाई गाउँपालिका', 'शिवराज नगरपालिका'] },
-        'arghakhanchi': { np: 'अर्घाखाँची', en: 'Arghakhanchi', municipalities: ['सन्धिखर्क नगरपालिका', 'सितगंगा नगरपालिका', 'भूमिकास्थान नगरपालिका', 'छत्रदेव गाउँपालिका', 'पाणिनी गाउँपालिका', 'मालारानी गाउँपालिका'] },
-        'gulmi': { np: 'गुल्मी', en: 'Gulmi', municipalities: ['तम्घास नगरपालिका', 'रेसुङ्गा नगरपालिका', 'मुसिकोट नगरपालिका', 'कालीगण्डकी गाउँपालिका', 'गुल्मी दरबार गाउँपालिका', 'सत्यवती गाउँपालिका', 'चन्द्रकोट गाउँपालिका', 'रुरुक्षेत्र गाउँपालिका', 'छत्रकोट गाउँपालिका', 'धुर्कोट गाउँपालिका', 'मालिका गाउँपालिका'] },
-        'palpa': { np: 'पाल्पा', en: 'Palpa', municipalities: ['तानसेन नगरपालिका', 'रामपुर नगरपालिका', 'पूर्वखोला गाउँपालिका', 'निस्दी गाउँपालिका', 'रिब्दीकोट गाउँपालिका', 'रैनादेवी छहरा गाउँपालिका', 'माथागढी गाउँपालिका', 'बगनासकाली गाउँपालिका', 'तिनाउ गाउँपालिका'] },
-        'dang': { np: 'दाङ', en: 'Dang', municipalities: ['घोराही उपमहानगरपालिका', 'तुल्सीपुर उपमहानगरपालिका', 'लमही नगरपालिका', 'गढवा गाउँपालिका', 'राप्ती गाउँपालिका', 'बंगलाचुली गाउँपालिका', 'बबई गाउँपालिका', 'राजपुर गाउँपालिका', 'शान्तिनगर गाउँपालिका', 'धनगढी गाउँपालिका'] },
-        'pyuthan': { np: 'प्युठान', en: 'Pyuthan', municipalities: ['प्युठान नगरपालिका', 'स्वर्गद्वारी नगरपालिका', 'ऐरावती गाउँपालिका', 'झिमरुक गाउँपालिका', 'मल्लरानी गाउँपालिका', 'नौवहिनी गाउँपालिका', 'गौमुखी गाउँपालिका', 'मण्डवी गाउँपालिका'] },
-        'rolpa': { np: 'रोल्पा', en: 'Rolpa', municipalities: ['लिवाङ नगरपालिका', 'सुलिचौर नगरपालिका', 'थवाङ गाउँपालिका', 'परिवर्तन गाउँपालिका', 'माडी गाउँपालिका', 'रुन्टीगढी गाउँपालिका', 'गंगादेव गाउँपालिका', 'सुनछहरी गाउँपालिका', 'सुनिल स्मृति गाउँपालिका'] },
-        'banke': { np: 'बाँके', en: 'Banke', municipalities: ['नेपालगञ्ज उपमहानगरपालिका', 'कोहलपुर नगरपालिका', 'राप्ती सोनारी गाउँपालिका', 'बैजनाथ गाउँपालिका', 'नरैनापुर गाउँपालिका', 'डुडुवा गाउँपालिका', 'खजुरा गाउँपालिका', 'जानकी गाउँपालिका'] },
-        'bardiya': { np: 'बर्दिया', en: 'Bardiya', municipalities: ['गुलरिया नगरपालिका', 'राजापुर नगरपालिका', 'मधुवन नगरपालिका', 'ठाकुरबाबा नगरपालिका', 'बाँसगढी नगरपालिका', 'बर्बर्दिया गाउँपालिका', 'गेरुवा गाउँपालिका'] }
+        'kapilbastu': { 
+          np: 'कपिलवस्तु', 
+          en: 'Kapilvastu', 
+          municipalities: [
+            { np: 'कपिलवस्तु नगरपालिका', en: 'Kapilvastu Municipality' },
+            { np: 'बाणगंगा नगरपालिका', en: 'Banganga Municipality' },
+            { np: 'बुद्धभूमि नगरपालिका', en: 'Buddhabhumi Municipality' },
+            { np: 'शिवराज नगरपालिका', en: 'Shivaraj Municipality' },
+            { np: 'महाराजगन्ज नगरपालिका', en: 'Maharajganj Municipality' },
+            { np: 'कृष्णनगर नगरपालिका', en: 'Krishnanagar Municipality' },
+            { np: 'यशोधरा गाउँपालिका', en: 'Yashodhara Rural Municipality' },
+            { np: 'बिजयनगर गाउँपालिका', en: 'Bijaynagar Rural Municipality' },
+            { np: 'मायादेवी गाउँपालिका', en: 'Mayadevi Rural Municipality' },
+            { np: 'सुद्धोधन गाउँपालिका', en: 'Suddhodhan Rural Municipality' }
+          ] 
+        },
+        'rupandehi': { 
+          np: 'रुपन्देही', 
+          en: 'Rupandehi', 
+          municipalities: [
+            { np: 'बुटवल उपमहानगरपालिका', en: 'Butwal Sub-Metropolitan City' },
+            { np: 'तिलोत्तमा नगरपालिका', en: 'Tilottama Municipality' },
+            { np: 'सिद्धार्थनगर नगरपालिका', en: 'Siddharthanagar Municipality' },
+            { np: 'देवदह नगरपालिका', en: 'Devdaha Municipality' },
+            { np: 'लुम्बिनी सांस्कृतिक नगरपालिका', en: 'Lumbini Sanskritik Municipality' },
+            { np: 'कञ्चन गाउँपालिका', en: 'Kanchan Rural Municipality' },
+            { np: 'गैडहवा गाउँपालिका', en: 'Gaidahawa Rural Municipality' },
+            { np: 'मायादेवी गाउँपालिका', en: 'Mayadevi Rural Municipality' },
+            { np: 'कोटहीमाई गाउँपालिका', en: 'Kotahimai Rural Municipality' },
+            { np: 'रोहिणी गाउँपालिका', en: 'Rohini Rural Municipality' },
+            { np: 'सम्मरीमाई गाउँपालिका', en: 'Sammarimai Rural Municipality' },
+            { np: 'शिवराज नगरपालिका', en: 'Shivaraj Municipality' }
+          ] 
+        },
+        'arghakhanchi': { 
+          np: 'अर्घाखाँची', 
+          en: 'Arghakhanchi', 
+          municipalities: [
+            { np: 'सन्धिखर्क नगरपालिका', en: 'Sandhikharka Municipality' },
+            { np: 'सितगंगा नगरपालिका', en: 'Sitganga Municipality' },
+            { np: 'भूमिकास्थान नगरपालिका', en: 'Bhumikasthan Municipality' },
+            { np: 'छत्रदेव गाउँपालिका', en: 'Chhatradev Rural Municipality' },
+            { np: 'पाणिनी गाउँपालिका', en: 'Panini Rural Municipality' },
+            { np: 'मालारानी गाउँपालिका', en: 'Malarani Rural Municipality' }
+          ] 
+        },
+        'gulmi': { 
+          np: 'गुल्मी', 
+          en: 'Gulmi', 
+          municipalities: [
+            { np: 'तम्घास नगरपालिका', en: 'Tamghas Municipality' },
+            { np: 'रेसुङ्गा नगरपालिका', en: 'Resunga Municipality' },
+            { np: 'मुसिकोट नगरपालिका', en: 'Musikot Municipality' },
+            { np: 'कालीगण्डकी गाउँपालिका', en: 'Kaligandaki Rural Municipality' },
+            { np: 'गुल्मी दरबार गाउँपालिका', en: 'Gulmi Darabar Rural Municipality' },
+            { np: 'सत्यवती गाउँपालिका', en: 'Satyawati Rural Municipality' },
+            { np: 'चन्द्रकोट गाउँपालिका', en: 'Chandrakot Rural Municipality' },
+            { np: 'रुरुक्षेत्र गाउँपालिका', en: 'Rurukshetra Rural Municipality' },
+            { np: 'छत्रकोट गाउँपालिका', en: 'Chhatrakot Rural Municipality' },
+            { np: 'धुर्कोट गाउँपालिका', en: 'Dhurkot Rural Municipality' },
+            { np: 'मालिका गाउँपालिका', en: 'Malika Rural Municipality' }
+          ] 
+        },
+        'palpa': { 
+          np: 'पाल्पा', 
+          en: 'Palpa', 
+          municipalities: [
+            { np: 'तानसेन नगरपालिका', en: 'Tansen Municipality' },
+            { np: 'रामपुर नगरपालिका', en: 'Rampur Municipality' },
+            { np: 'पूर्वखोला गाउँपालिका', en: 'Purwakhola Rural Municipality' },
+            { np: 'निस्दी गाउँपालिका', en: 'Nisdi Rural Municipality' },
+            { np: 'रिब्दीकोट गाउँपालिका', en: 'Ribdikot Rural Municipality' },
+            { np: 'रैनादेवी छहरा गाउँपालिका', en: 'Rainadevi Chhahara Rural Municipality' },
+            { np: 'माथागढी गाउँपालिका', en: 'Mathagadhi Rural Municipality' },
+            { np: 'बगनासकाली गाउँपालिका', en: 'Bagnaskali Rural Municipality' },
+            { np: 'तिनाउ गाउँपालिका', en: 'Tinau Rural Municipality' }
+          ] 
+        },
+        'dang': { 
+          np: 'दाङ', 
+          en: 'Dang', 
+          municipalities: [
+            { np: 'घोराही उपमहानगरपालिका', en: 'Ghorahi Sub-Metropolitan City' },
+            { np: 'तुल्सीपुर उपमहानगरपालिका', en: 'Tulsipur Sub-Metropolitan City' },
+            { np: 'लमही नगरपालिका', en: 'Lamahi Municipality' },
+            { np: 'गढवा गाउँपालिका', en: 'Gadhawa Rural Municipality' },
+            { np: 'राप्ती गाउँपालिका', en: 'Rapti Rural Municipality' },
+            { np: 'बंगलाचुली गाउँपालिका', en: 'Bangalachuli Rural Municipality' },
+            { np: 'बबई गाउँपालिका', en: 'Babai Rural Municipality' },
+            { np: 'राजपुर गाउँपालिका', en: 'Rajpur Rural Municipality' },
+            { np: 'शान्तिनगर गाउँपालिका', en: 'Shantinagar Rural Municipality' },
+            { np: 'धनगढी गाउँपालिका', en: 'Dhangadhi Rural Municipality' }
+          ] 
+        },
+        'pyuthan': { 
+          np: 'प्युठान', 
+          en: 'Pyuthan', 
+          municipalities: [
+            { np: 'प्युठान नगरपालिका', en: 'Pyuthan Municipality' },
+            { np: 'स्वर्गद्वारी नगरपालिका', en: 'Swargadwari Municipality' },
+            { np: 'ऐरावती गाउँपालिका', en: 'Airawati Rural Municipality' },
+            { np: 'झिमरुक गाउँपालिका', en: 'Jhimruk Rural Municipality' },
+            { np: 'मल्लरानी गाउँपालिका', en: 'Mallarani Rural Municipality' },
+            { np: 'नौवहिनी गाउँपालिका', en: 'Nauwahini Rural Municipality' },
+            { np: 'गौमुखी गाउँपालिका', en: 'Gaumukhi Rural Municipality' },
+            { np: 'मण्डवी गाउँपालिका', en: 'Mandavi Rural Municipality' }
+          ] 
+        },
+        'rolpa': { 
+          np: 'रोल्पा', 
+          en: 'Rolpa', 
+          municipalities: [
+            { np: 'लिवाङ नगरपालिका', en: 'Libang Municipality' },
+            { np: 'सुलिचौर नगरपालिका', en: 'Sulichaur Municipality' },
+            { np: 'थवाङ गाउँपालिका', en: 'Thawang Rural Municipality' },
+            { np: 'परिवर्तन गाउँपालिका', en: 'Parivartan Rural Municipality' },
+            { np: 'माडी गाउँपालिका', en: 'Madi Rural Municipality' },
+            { np: 'रुन्टीगढी गाउँपालिका', en: 'Runtigadhi Rural Municipality' },
+            { np: 'गंगादेव गाउँपालिका', en: 'Gangadev Rural Municipality' },
+            { np: 'सुनछहरी गाउँपालिका', en: 'Sunchhahari Rural Municipality' },
+            { np: 'सुनिल स्मृति गाउँपालिका', en: 'Sunil Smriti Rural Municipality' }
+          ] 
+        },
+        'banke': { 
+          np: 'बाँके', 
+          en: 'Banke', 
+          municipalities: [
+            { np: 'नेपालगञ्ज उपमहानगरपालिका', en: 'Nepalgunj Sub-Metropolitan City' },
+            { np: 'कोहलपुर नगरपालिका', en: 'Kohalpur Municipality' },
+            { np: 'राप्ती सोनारी गाउँपालिका', en: 'Rapti Sonari Rural Municipality' },
+            { np: 'बैजनाथ गाउँपालिका', en: 'Baijanath Rural Municipality' },
+            { np: 'नरैनापुर गाउँपालिका', en: 'Narainapur Rural Municipality' },
+            { np: 'डुडुवा गाउँपालिका', en: 'Duduwa Rural Municipality' },
+            { np: 'खजुरा गाउँपालिका', en: 'Khajura Rural Municipality' },
+            { np: 'जानकी गाउँपालिका', en: 'Janaki Rural Municipality' }
+          ] 
+        },
+        'bardiya': { 
+          np: 'बर्दिया', 
+          en: 'Bardiya', 
+          municipalities: [
+            { np: 'गुलरिया नगरपालिका', en: 'Gulariya Municipality' },
+            { np: 'राजापुर नगरपालिका', en: 'Rajapur Municipality' },
+            { np: 'मधुवन नगरपालिका', en: 'Madhuban Municipality' },
+            { np: 'ठाकुरबाबा नगरपालिका', en: 'Thakurbaba Municipality' },
+            { np: 'बाँसगढी नगरपालिका', en: 'Bansgadhi Municipality' },
+            { np: 'बर्बर्दिया गाउँपालिका', en: 'Barbardiya Rural Municipality' },
+            { np: 'गेरुवा गाउँपालिका', en: 'Geruwa Rural Municipality' }
+          ] 
+        }
       }
     },
+    // Province 6 - Karnali Province (10 districts)
     province6: { 
       np: 'कर्णाली प्रदेश', 
       en: 'Karnali Province', 
       districts: {
-        'western_ruku': { np: 'पश्चिमी रुकुम', en: 'Western Rukum', municipalities: ['मुसिकोट नगरपालिका', 'चौरजहारी नगरपालिका', 'आठबिसकोट नगरपालिका', 'बाँफिकोट गाउँपालिका', 'त्रिवेणी गाउँपालिका', 'सानीभेरी गाउँपालिका', 'पुथा उत्तरगंगा गाउँपालिका'] },
-        'salyan': { np: 'सल्यान', en: 'Salyan', municipalities: ['शारदा नगरपालिका', 'बागचौर नगरपालिका', 'बनगाड कुपिण्डे नगरपालिका', 'कालिमाटी गाउँपालिका', 'त्रिवेणी गाउँपालिका', 'कपुरकोट गाउँपालिका', 'छत्रेश्वरी गाउँपालिका', 'दार्मा गाउँपालिका', 'सिद्धकुमाख गाउँपालिका'] },
-        'dolpa': { np: 'डोल्पा', en: 'Dolpa', municipalities: ['ठुली भेरी नगरपालिका', 'त्रिपुरासुन्दरी नगरपालिका', 'डोल्पो बुद्ध गाउँपालिका', 'शे फोक्सुण्डो गाउँपालिका', 'मुड्केचुला गाउँपालिका', 'जगदुल्ला गाउँपालिका', 'काइके गाउँपालिका', 'छर्का तांग्सोन गाउँपालिका'] },
-        'jumla': { np: 'जुम्ला', en: 'Jumla', municipalities: ['चन्दननाथ नगरपालिका', 'कनकासुन्दरी गाउँपालिका', 'सिञ्जा गाउँपालिका', 'हिमा गाउँपालिका', 'तिला गाउँपालिका', 'गुठीचौर गाउँपालिका', 'तातोपानी गाउँपालिका', 'पातारासी गाउँपालिका'] },
-        'mugu': { np: 'मुगु', en: 'Mugu', municipalities: ['गमगढी नगरपालिका', 'सोरु गाउँपालिका', 'मुगुम कार्मारोङ गाउँपालिका', 'छायानाथ रारा गाउँपालिका'] },
-        'humla': { np: 'हुम्ला', en: 'Humla', municipalities: ['सिमकोट गाउँपालिका', 'नाम्खा गाउँपालिका', 'खार्पुनाथ गाउँपालिका', 'सर्कीगाड गाउँपालिका', 'चंखेली गाउँपालिका', 'अदानचुली गाउँपालिका', 'ताँजाकोट गाउँपालिका'] },
-        'kalikot': { np: 'कालिकोट', en: 'Kalikot', municipalities: ['खाँडाचक्र नगरपालिका', 'रास्कोट नगरपालिका', 'तिलागुफा नगरपालिका', 'पच्चालझरना गाउँपालिका', 'महावै गाउँपालिका', 'पलाता गाउँपालिका', 'नरहरिनाथ गाउँपालिका', 'कक्रेगाउँ गाउँपालिका', 'शुभकालिका गाउँपालिका', 'सान्नी त्रिवेणी गाउँपालिका'] },
-        'dailekh': { np: 'दैलेख', en: 'Dailekh', municipalities: ['नारायण नगरपालिका', 'दुल्लु नगरपालिका', 'आठबीस नगरपालिका', 'चामुण्डा नगरपालिका', 'भैरवी गाउँपालिका', 'ठाँटीकाँध गाउँपालिका', 'गुराँस गाउँपालिका', 'डुंगेश्वर गाउँपालिका', 'महाबु गाउँपालिका', 'नवस्थान गाउँपालिका', 'सिंहासैन गाउँपालिका'] },
-        'surkhet': { np: 'सुर्खेत', en: 'Surkhet', municipalities: ['वीरेन्द्रनगर नगरपालिका', 'भेरीगंगा नगरपालिका', 'गुर्भाकोट नगरपालिका', 'लेकबेशी नगरपालिका', 'पञ्चपुरी नगरपालिका', 'सिम्ता गाउँपालिका', 'चौकुने गाउँपालिका', 'बराहताल गाउँपालिका', 'चिङ्गाड गाउँपालिका'] },
-        'jajarkot': { np: 'जाजरकोट', en: 'Jajarkot', municipalities: ['भेरी नगरपालिका', 'चेडागाड नगरपालिका', 'शिवालय गाउँपालिका', 'जुनीचाँदे गाउँपालिका', 'कुसे गाउँपालिका', 'नलगाड नगरपालिका'] }
+        'western_ruku': { 
+          np: 'पश्चिमी रुकुम', 
+          en: 'Western Rukum', 
+          municipalities: [
+            { np: 'मुसिकोट नगरपालिका', en: 'Musikot Municipality' },
+            { np: 'चौरजहारी नगरपालिका', en: 'Chaurjahari Municipality' },
+            { np: 'आठबिसकोट नगरपालिका', en: 'Aathbiskot Municipality' },
+            { np: 'बाँफिकोट गाउँपालिका', en: 'Banphikot Rural Municipality' },
+            { np: 'त्रिवेणी गाउँपालिका', en: 'Tribeni Rural Municipality' },
+            { np: 'सानीभेरी गाउँपालिका', en: 'Sanibheri Rural Municipality' },
+            { np: 'पुथा उत्तरगंगा गाउँपालिका', en: 'Putha Uttarganga Rural Municipality' }
+          ] 
+        },
+        'salyan': { 
+          np: 'सल्यान', 
+          en: 'Salyan', 
+          municipalities: [
+            { np: 'शारदा नगरपालिका', en: 'Sharada Municipality' },
+            { np: 'बागचौर नगरपालिका', en: 'Bagchaur Municipality' },
+            { np: 'बनगाड कुपिण्डे नगरपालिका', en: 'Bangad Kupinde Municipality' },
+            { np: 'कालिमाटी गाउँपालिका', en: 'Kalimati Rural Municipality' },
+            { np: 'त्रिवेणी गाउँपालिका', en: 'Tribeni Rural Municipality' },
+            { np: 'कपुरकोट गाउँपालिका', en: 'Kapurkot Rural Municipality' },
+            { np: 'छत्रेश्वरी गाउँपालिका', en: 'Chhatreshwari Rural Municipality' },
+            { np: 'दार्मा गाउँपालिका', en: 'Darma Rural Municipality' },
+            { np: 'सिद्धकुमाख गाउँपालिका', en: 'Siddhakumakh Rural Municipality' }
+          ] 
+        },
+        'dolpa': { 
+          np: 'डोल्पा', 
+          en: 'Dolpa', 
+          municipalities: [
+            { np: 'ठुली भेरी नगरपालिका', en: 'Thuli Bheri Municipality' },
+            { np: 'त्रिपुरासुन्दरी नगरपालिका', en: 'Tripurasundari Municipality' },
+            { np: 'डोल्पो बुद्ध गाउँपालिका', en: 'Dolpo Buddha Rural Municipality' },
+            { np: 'शे फोक्सुण्डो गाउँपालिका', en: 'She Phoksundo Rural Municipality' },
+            { np: 'मुड्केचुला गाउँपालिका', en: 'Mudkechula Rural Municipality' },
+            { np: 'जगदुल्ला गाउँपालिका', en: 'Jagadulla Rural Municipality' },
+            { np: 'काइके गाउँपालिका', en: 'Kaike Rural Municipality' },
+            { np: 'छर्का तांग्सोन गाउँपालिका', en: 'Chharka Tangson Rural Municipality' }
+          ] 
+        },
+        'jumla': { 
+          np: 'जुम्ला', 
+          en: 'Jumla', 
+          municipalities: [
+            { np: 'चन्दननाथ नगरपालिका', en: 'Chandannath Municipality' },
+            { np: 'कनकासुन्दरी गाउँपालिका', en: 'Kanakasundari Rural Municipality' },
+            { np: 'सिञ्जा गाउँपालिका', en: 'Sinja Rural Municipality' },
+            { np: 'हिमा गाउँपालिका', en: 'Hima Rural Municipality' },
+            { np: 'तिला गाउँपालिका', en: 'Tila Rural Municipality' },
+            { np: 'गुठीचौर गाउँपालिका', en: 'Guthichaur Rural Municipality' },
+            { np: 'तातोपानी गाउँपालिका', en: 'Tatopani Rural Municipality' },
+            { np: 'पातारासी गाउँपालिका', en: 'Patarasi Rural Municipality' }
+          ] 
+        },
+        'mugu': { 
+          np: 'मुगु', 
+          en: 'Mugu', 
+          municipalities: [
+            { np: 'गमगढी नगरपालिका', en: 'Gamgadhi Municipality' },
+            { np: 'सोरु गाउँपालिका', en: 'Soru Rural Municipality' },
+            { np: 'मुगुम कार्मारोङ गाउँपालिका', en: 'Mugum Karmarong Rural Municipality' },
+            { np: 'छायानाथ रारा गाउँपालिका', en: 'Chhayanath Rara Rural Municipality' }
+          ] 
+        },
+        'humla': { 
+          np: 'हुम्ला', 
+          en: 'Humla', 
+          municipalities: [
+            { np: 'सिमकोट गाउँपालिका', en: 'Simkot Rural Municipality' },
+            { np: 'नाम्खा गाउँपालिका', en: 'Namkha Rural Municipality' },
+            { np: 'खार्पुनाथ गाउँपालिका', en: 'Kharpunath Rural Municipality' },
+            { np: 'सर्कीगाड गाउँपालिका', en: 'Sarkigad Rural Municipality' },
+            { np: 'चंखेली गाउँपालिका', en: 'Chankheli Rural Municipality' },
+            { np: 'अदानचुली गाउँपालिका', en: 'Adanchuli Rural Municipality' },
+            { np: 'ताँजाकोट गाउँपालिका', en: 'Tanjakot Rural Municipality' }
+          ] 
+        },
+        'kalikot': { 
+          np: 'कालिकोट', 
+          en: 'Kalikot', 
+          municipalities: [
+            { np: 'खाँडाचक्र नगरपालिका', en: 'Khandachakra Municipality' },
+            { np: 'रास्कोट नगरपालिका', en: 'Raskot Municipality' },
+            { np: 'तिलागुफा नगरपालिका', en: 'Tilagupha Municipality' },
+            { np: 'पच्चालझरना गाउँपालिका', en: 'Pachchaljharana Rural Municipality' },
+            { np: 'महावै गाउँपालिका', en: 'Mahawai Rural Municipality' },
+            { np: 'पलाता गाउँपालिका', en: 'Palata Rural Municipality' },
+            { np: 'नरहरिनाथ गाउँपालिका', en: 'Naraharinath Rural Municipality' },
+            { np: 'कक्रेगाउँ गाउँपालिका', en: 'Kakregaun Rural Municipality' },
+            { np: 'शुभकालिका गाउँपालिका', en: 'Shubhakalika Rural Municipality' },
+            { np: 'सान्नी त्रिवेणी गाउँपालिका', en: 'Sanni Triveni Rural Municipality' }
+          ] 
+        },
+        'dailekh': { 
+          np: 'दैलेख', 
+          en: 'Dailekh', 
+          municipalities: [
+            { np: 'नारायण नगरपालिका', en: 'Narayan Municipality' },
+            { np: 'दुल्लु नगरपालिका', en: 'Dullu Municipality' },
+            { np: 'आठबीस नगरपालिका', en: 'Aathbis Municipality' },
+            { np: 'चामुण्डा नगरपालिका', en: 'Chamunda Municipality' },
+            { np: 'भैरवी गाउँपालिका', en: 'Bhairwi Rural Municipality' },
+            { np: 'ठाँटीकाँध गाउँपालिका', en: 'Thantikandh Rural Municipality' },
+            { np: 'गुराँस गाउँपालिका', en: 'Gurans Rural Municipality' },
+            { np: 'डुंगेश्वर गाउँपालिका', en: 'Dungeshwar Rural Municipality' },
+            { np: 'महाबु गाउँपालिका', en: 'Mahabu Rural Municipality' },
+            { np: 'नवस्थान गाउँपालिका', en: 'Navasthan Rural Municipality' },
+            { np: 'सिंहासैन गाउँपालिका', en: 'Sinhasain Rural Municipality' }
+          ] 
+        },
+        'surkhet': { 
+          np: 'सुर्खेत', 
+          en: 'Surkhet', 
+          municipalities: [
+            { np: 'वीरेन्द्रनगर नगरपालिका', en: 'Birendranagar Municipality' },
+            { np: 'भेरीगंगा नगरपालिका', en: 'Bheriganga Municipality' },
+            { np: 'गुर्भाकोट नगरपालिका', en: 'Gurbhakot Municipality' },
+            { np: 'लेकबेशी नगरपालिका', en: 'Lekbesi Municipality' },
+            { np: 'पञ्चपुरी नगरपालिका', en: 'Panchapuri Municipality' },
+            { np: 'सिम्ता गाउँपालिका', en: 'Simta Rural Municipality' },
+            { np: 'चौकुने गाउँपालिका', en: 'Chaukune Rural Municipality' },
+            { np: 'बराहताल गाउँपालिका', en: 'Barahatal Rural Municipality' },
+            { np: 'चिङ्गाड गाउँपालिका', en: 'Chingad Rural Municipality' }
+          ] 
+        },
+        'jajarkot': { 
+          np: 'जाजरकोट', 
+          en: 'Jajarkot', 
+          municipalities: [
+            { np: 'भेरी नगरपालिका', en: 'Bheri Municipality' },
+            { np: 'चेडागाड नगरपालिका', en: 'Chedagad Municipality' },
+            { np: 'नलगाड नगरपालिका', en: 'Nalgad Municipality' },
+            { np: 'शिवालय गाउँपालिका', en: 'Shivalaya Rural Municipality' },
+            { np: 'जुनीचाँदे गाउँपालिका', en: 'Juni Chande Rural Municipality' },
+            { np: 'कुसे गाउँपालिका', en: 'Kuse Rural Municipality' }
+          ] 
+        }
       }
     },
+    // Province 7 - Sudurpashchim Province (9 districts)
     province7: { 
       np: 'सुदूरपश्चिम प्रदेश', 
       en: 'Sudurpashchim Province', 
       districts: {
-        'bajura': { np: 'बाजुरा', en: 'Bajura', municipalities: ['बडीमालिका नगरपालिका', 'त्रिवेणी नगरपालिका', 'बुढीगंगा नगरपालिका', 'बुढीनन्दा नगरपालिका', 'जगन्नाथ गाउँपालिका', 'स्वामीकार्तिक गाउँपालिका', 'पाण्डव गाउँपालिका', 'हात्तीकाट गाउँपालिका', 'गौमुल गाउँपालिका'] },
-        'bajhang': { np: 'बझाङ', en: 'Bajhang', municipalities: ['जयपृथ्वी नगरपालिका', 'बुङ्गल नगरपालिका', 'छबिसपाथिभेरा गाउँपालिका', 'दुर्गाथली गाउँपालिका', 'काँडा गाउँपालिका', 'केदारस्युँ गाउँपालिका', 'खप्तडछान्ना गाउँपालिका', 'मष्टा गाउँपालिका', 'साइपाल गाउँपालिका', 'तलकोट गाउँपालिका', 'थलारा गाउँपालिका'] },
-        'doti': { np: 'डोटी', en: 'Doti', municipalities: ['दिपायल सिलगढी नगरपालिका', 'शिखर नगरपालिका', 'पूर्वीचौकी गाउँपालिका', 'बडीकेदार गाउँपालिका', 'जोरायल गाउँपालिका', 'केआइसिं गाउँपालिका', 'आदर्श गाउँपालिका', 'बोगटान गाउँपालिका'] },
-        'achham': { np: 'अछाम', en: 'Achham', municipalities: ['मंगलसेन नगरपालिका', 'कमलबजार नगरपालिका', 'साँफेबगर नगरपालिका', 'पञ्चदेवल विनायक नगरपालिका', 'रामारोशन गाउँपालिका', 'चौरपाटी गाउँपालिका', 'तुर्माखाँद गाउँपालिका', 'ढकारी गाउँपालिका', 'बान्नीगढी जयगढ गाउँपालिका'] },
-        'dadeldhura': { np: 'डडेल्धुरा', en: 'Dadeldhura', municipalities: ['अमरगढी नगरपालिका', 'परशुराम नगरपालिका', 'आलिताल गाउँपालिका', 'भागेश्वर गाउँपालिका', 'नवदुर्गा गाउँपालिका', 'अजयमेरु गाउँपालिका', 'गन्यापधुरा गाउँपालिका'] },
-        'baitadi': { np: 'बैतडी', en: 'Baitadi', municipalities: ['दशरथचन्द नगरपालिका', 'पाटन नगरपालिका', 'मेलौली नगरपालिका', 'सुर्नया गाउँपालिका', 'सिगास गाउँपालिका', 'शिवनाथ गाउँपालिका', 'पञ्चेश्वर गाउँपालिका', 'दोगडाकेदार गाउँपालिका', 'दिलासैनी गाउँपालिका'] },
-        'darchula': { np: 'दार्चुला', en: 'Darchula', municipalities: ['महाकाली नगरपालिका', 'शैल्यशिखर नगरपालिका', 'मालिकार्जुन गाउँपालिका', 'अपी हिमाल गाउँपालिका', 'दुहु गाउँपालिका', 'नौगाढ गाउँपालिका', 'लयाटी गाउँपालिका', 'लेकम गाउँपालिका'] },
-        'kanchanpur': { np: 'कञ्चनपुर', en: 'Kanchanpur', municipalities: ['भीमदत्त नगरपालिका', 'पुनर्वास नगरपालिका', 'बेलौरी नगरपालिका', 'कृष्णपुर नगरपालिका', 'बेदकोट नगरपालिका', 'शुक्लाफाँटा नगरपालिका', 'महाकाली नगरपालिका', 'बेलडाँडी गाउँपालिका', 'लालझाँडी गाउँपालिका'] },
-        'kailali': { np: 'कैलाली', en: 'Kailali', municipalities: ['धनगढी उपमहानगरपालिका', 'टीकापुर नगरपालिका', 'घोडाघोडी नगरपालिका', 'लम्की चुहा नगरपालिका', 'भजनी नगरपालिका', 'गोदावरी नगरपालिका', 'गौरीगंगा नगरपालिका', 'जानकी गाउँपालिका', 'बर्दगोरिया गाउँपालिका', 'मोहन्याल गाउँपालिका', 'कैलारी गाउँपालिका', 'चुरे गाउँपालिका'] }
+        'bajura': { 
+          np: 'बाजुरा', 
+          en: 'Bajura', 
+          municipalities: [
+            { np: 'बडीमालिका नगरपालिका', en: 'Badimalika Municipality' },
+            { np: 'त्रिवेणी नगरपालिका', en: 'Tribeni Municipality' },
+            { np: 'बुढीगंगा नगरपालिका', en: 'Budhiganga Municipality' },
+            { np: 'बुढीनन्दा नगरपालिका', en: 'Budhinanda Municipality' },
+            { np: 'जगन्नाथ गाउँपालिका', en: 'Jagannath Rural Municipality' },
+            { np: 'स्वामीकार्तिक गाउँपालिका', en: 'Swamikartik Rural Municipality' },
+            { np: 'पाण्डव गाउँपालिका', en: 'Pandav Rural Municipality' },
+            { np: 'हात्तीकाट गाउँपालिका', en: 'Hattikat Rural Municipality' },
+            { np: 'गौमुल गाउँपालिका', en: 'Gaumul Rural Municipality' }
+          ] 
+        },
+        'bajhang': { 
+          np: 'बझाङ', 
+          en: 'Bajhang', 
+          municipalities: [
+            { np: 'जयपृथ्वी नगरपालिका', en: 'Jayaprithvi Municipality' },
+            { np: 'बुङ्गल नगरपालिका', en: 'Bungal Municipality' },
+            { np: 'छबिसपाथिभेरा गाउँपालिका', en: 'Chhabispathibhera Rural Municipality' },
+            { np: 'दुर्गाथली गाउँपालिका', en: 'Durgathali Rural Municipality' },
+            { np: 'काँडा गाउँपालिका', en: 'Kanda Rural Municipality' },
+            { np: 'केदारस्युँ गाउँपालिका', en: 'Kedarsyun Rural Municipality' },
+            { np: 'खप्तडछान्ना गाउँपालिका', en: 'Kaptadchhanna Rural Municipality' },
+            { np: 'मष्टा गाउँपालिका', en: 'Mashta Rural Municipality' },
+            { np: 'साइपाल गाउँपालिका', en: 'Saipal Rural Municipality' },
+            { np: 'तलकोट गाउँपालिका', en: 'Talkot Rural Municipality' },
+            { np: 'थलारा गाउँपालिका', en: 'Thalara Rural Municipality' }
+          ] 
+        },
+        'doti': { 
+          np: 'डोटी', 
+          en: 'Doti', 
+          municipalities: [
+            { np: 'दिपायल सिलगढी नगरपालिका', en: 'Dipayal Silgadhi Municipality' },
+            { np: 'शिखर नगरपालिका', en: 'Shikhar Municipality' },
+            { np: 'पूर्वीचौकी गाउँपालिका', en: 'Purvichauki Rural Municipality' },
+            { np: 'बडीकेदार गाउँपालिका', en: 'Badikedar Rural Municipality' },
+            { np: 'जोरायल गाउँपालिका', en: 'Jorayal Rural Municipality' },
+            { np: 'केआइसिं गाउँपालिका', en: 'K.I. Singh Rural Municipality' },
+            { np: 'आदर्श गाउँपालिका', en: 'Adarsha Rural Municipality' },
+            { np: 'बोगटान गाउँपालिका', en: 'Bogtan Rural Municipality' }
+          ] 
+        },
+        'achham': { 
+          np: 'अछाम', 
+          en: 'Achham', 
+          municipalities: [
+            { np: 'मंगलसेन नगरपालिका', en: 'Mangalsen Municipality' },
+            { np: 'कमलबजार नगरपालिका', en: 'Kamalbazar Municipality' },
+            { np: 'साँफेबगर नगरपालिका', en: 'Sanphebagar Municipality' },
+            { np: 'पञ्चदेवल विनायक नगरपालिका', en: 'Panchadeval Binayak Municipality' },
+            { np: 'रामारोशन गाउँपालिका', en: 'Ramaroshan Rural Municipality' },
+            { np: 'चौरपाटी गाउँपालिका', en: 'Chaurapati Rural Municipality' },
+            { np: 'तुर्माखाँद गाउँपालिका', en: 'Turmakhad Rural Municipality' },
+            { np: 'ढकारी गाउँपालिका', en: 'Dhakari Rural Municipality' },
+            { np: 'बान्नीगढी जयगढ गाउँपालिका', en: 'Bannigadhi Jayagadh Rural Municipality' }
+          ] 
+        },
+        'dadeldhura': { 
+          np: 'डडेल्धुरा', 
+          en: 'Dadeldhura', 
+          municipalities: [
+            { np: 'अमरगढी नगरपालिका', en: 'Amargadhi Municipality' },
+            { np: 'परशुराम नगरपालिका', en: 'Parashuram Municipality' },
+            { np: 'आलिताल गाउँपालिका', en: 'Alital Rural Municipality' },
+            { np: 'भागेश्वर गाउँपालिका', en: 'Bhageshwar Rural Municipality' },
+            { np: 'नवदुर्गा गाउँपालिका', en: 'Navadurga Rural Municipality' },
+            { np: 'अजयमेरु गाउँपालिका', en: 'Ajayameru Rural Municipality' },
+            { np: 'गन्यापधुरा गाउँपालिका', en: 'Ganyapadhura Rural Municipality' }
+          ] 
+        },
+        'baitadi': { 
+          np: 'बैतडी', 
+          en: 'Baitadi', 
+          municipalities: [
+            { np: 'दशरथचन्द नगरपालिका', en: 'Dasharathchand Municipality' },
+            { np: 'पाटन नगरपालिका', en: 'Patan Municipality' },
+            { np: 'मेलौली नगरपालिका', en: 'Melauli Municipality' },
+            { np: 'सुर्नया गाउँपालिका', en: 'Surnaya Rural Municipality' },
+            { np: 'सिगास गाउँपालिका', en: 'Sigas Rural Municipality' },
+            { np: 'शिवनाथ गाउँपालिका', en: 'Shivanath Rural Municipality' },
+            { np: 'पञ्चेश्वर गाउँपालिका', en: 'Pancheshwar Rural Municipality' },
+            { np: 'दोगडाकेदार गाउँपालिका', en: 'Dogadakedar Rural Municipality' },
+            { np: 'दिलासैनी गाउँपालिका', en: 'Dilasaini Rural Municipality' }
+          ] 
+        },
+        'darchula': { 
+          np: 'दार्चुला', 
+          en: 'Darchula', 
+          municipalities: [
+            { np: 'महाकाली नगरपालिका', en: 'Mahakali Municipality' },
+            { np: 'शैल्यशिखर नगरपालिका', en: 'Shailyashikhar Municipality' },
+            { np: 'मालिकार्जुन गाउँपालिका', en: 'Malikarjun Rural Municipality' },
+            { np: 'अपी हिमाल गाउँपालिका', en: 'Api Himal Rural Municipality' },
+            { np: 'दुहु गाउँपालिका', en: 'Duhu Rural Municipality' },
+            { np: 'नौगाढ गाउँपालिका', en: 'Naugadh Rural Municipality' },
+            { np: 'लयाटी गाउँपालिका', en: 'Layati Rural Municipality' },
+            { np: 'लेकम गाउँपालिका', en: 'Lekam Rural Municipality' }
+          ] 
+        },
+        'kanchanpur': { 
+          np: 'कञ्चनपुर', 
+          en: 'Kanchanpur', 
+          municipalities: [
+            { np: 'भीमदत्त नगरपालिका', en: 'Bhimdatta Municipality' },
+            { np: 'पुनर्वास नगरपालिका', en: 'Punarbas Municipality' },
+            { np: 'बेलौरी नगरपालिका', en: 'Belauri Municipality' },
+            { np: 'कृष्णपुर नगरपालिका', en: 'Krishnapur Municipality' },
+            { np: 'बेदकोट नगरपालिका', en: 'Bedkot Municipality' },
+            { np: 'शुक्लाफाँटा नगरपालिका', en: 'Shuklaphanta Municipality' },
+            { np: 'महाकाली नगरपालिका', en: 'Mahakali Municipality' },
+            { np: 'बेलडाँडी गाउँपालिका', en: 'Beladandi Rural Municipality' },
+            { np: 'लालझाँडी गाउँपालिका', en: 'Laljhadi Rural Municipality' }
+          ] 
+        },
+        'kailali': { 
+          np: 'कैलाली', 
+          en: 'Kailali', 
+          municipalities: [
+            { np: 'धनगढी उपमहानगरपालिका', en: 'Dhangadhi Sub-Metropolitan City' },
+            { np: 'टीकापुर नगरपालिका', en: 'Tikapur Municipality' },
+            { np: 'घोडाघोडी नगरपालिका', en: 'Ghodaghodi Municipality' },
+            { np: 'लम्की चुहा नगरपालिका', en: 'Lamki Chuha Municipality' },
+            { np: 'भजनी नगरपालिका', en: 'Bhajani Municipality' },
+            { np: 'गोदावरी नगरपालिका', en: 'Godawari Municipality' },
+            { np: 'गौरीगंगा नगरपालिका', en: 'Gauriganga Municipality' },
+            { np: 'जानकी गाउँपालिका', en: 'Janaki Rural Municipality' },
+            { np: 'बर्दगोरिया गाउँपालिका', en: 'Bardgoriya Rural Municipality' },
+            { np: 'मोहन्याल गाउँपालिका', en: 'Mohanyal Rural Municipality' },
+            { np: 'कैलारी गाउँपालिका', en: 'Kailari Rural Municipality' },
+            { np: 'चुरे गाउँपालिका', en: 'Chure Rural Municipality' }
+          ] 
+        }
       }
     }
   };
@@ -282,8 +1354,8 @@ const SubmitComplaint = () => {
     if (!districtData || !districtData.municipalities) return [];
     
     return districtData.municipalities.map(mun => ({
-      value: mun.toLowerCase().replace(/\s+/g, '_'),
-      label: mun
+      value: mun.np.toLowerCase().replace(/\s+/g, '_'),
+      label: language === 'np' ? mun.np : mun.en
     }));
   };
 
@@ -502,7 +1574,6 @@ const SubmitComplaint = () => {
     };
   };
 
-  // FIXED: Updated submit handler with correct API endpoints
   const handleSubmitComplaint = async (e) => {
     e.preventDefault();
     
@@ -597,11 +1668,10 @@ const SubmitComplaint = () => {
         });
       }, 200);
       
-      // FIXED: Use correct API endpoint - try both /complaints and /public/complaints
+      // Try the main complaints endpoint
       let response = null;
       let lastError = null;
       
-      // Try the main complaints endpoint first
       const endpoints = [
         `${API_URL}/complaints`,
         `${API_URL}/public/complaints`,
